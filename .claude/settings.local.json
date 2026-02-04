@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git config:*)",
+      "Bash(wc:*)",
+      "Bash(pandoc:*)",
+      "Bash(sudo apt-get install:*)",
+      "Bash(pip install:*)",
+      "Bash(pip3 install:*)",
+      "Bash(python3 -m pip install:*)",
+      "Bash(python3:*)",
+      "Bash(/tmp/docx_env/bin/pip install:*)",
+      "Bash(/tmp/docx_env/bin/python:*)"
+    ]
+  }
+}

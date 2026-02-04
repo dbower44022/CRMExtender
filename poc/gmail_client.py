@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import email.utils
+import html as html_mod
 import logging
 import re
 from datetime import datetime, timezone
@@ -83,6 +84,41 @@ def _decode_body(payload: dict) -> tuple[str, str]:
     return plain, html
 
 
+# Patterns for _html_to_text — compiled once at module level
+_RE_STYLE_SCRIPT = re.compile(r"<(style|script)[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
+_RE_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+_RE_BR = re.compile(r"<br\s*/?>", re.IGNORECASE)
+_RE_BLOCK = re.compile(r"</?(?:p|div|tr|li|h[1-6]|blockquote|table|thead|tbody|tfoot)\b[^>]*>", re.IGNORECASE)
+_RE_TAG = re.compile(r"<[^>]+>")
+_RE_MULTI_SPACE = re.compile(r"[^\S\n]+")
+_RE_MULTI_NEWLINE = re.compile(r"\n{3,}")
+
+
+def _html_to_text(html: str) -> str:
+    """Convert HTML to readable plain text using only the standard library."""
+    text = html
+    # Remove style/script blocks entirely (the main source of CSS noise)
+    text = _RE_STYLE_SCRIPT.sub("", text)
+    # Remove HTML comments
+    text = _RE_COMMENT.sub("", text)
+    # Convert <br> to newlines
+    text = _RE_BR.sub("\n", text)
+    # Insert newlines around block-level elements
+    text = _RE_BLOCK.sub("\n", text)
+    # Strip remaining tags
+    text = _RE_TAG.sub(" ", text)
+    # Decode HTML entities (&nbsp; &ndash; &#8212; etc.)
+    text = html_mod.unescape(text)
+    # Collapse runs of whitespace (but preserve newlines)
+    text = _RE_MULTI_SPACE.sub(" ", text)
+    # Collapse excessive blank lines to at most one
+    text = _RE_MULTI_NEWLINE.sub("\n\n", text)
+    # Clean up each line
+    text = "\n".join(line.strip() for line in text.splitlines())
+    # Strip leading/trailing whitespace
+    return text.strip()
+
+
 def _parse_date(date_str: str) -> datetime | None:
     """Parse an email Date header into a datetime."""
     if not date_str:
@@ -115,10 +151,9 @@ def _parse_message(msg: dict) -> ParsedEmail:
 
     body_plain, body_html = _decode_body(payload)
 
-    # Strip HTML tags for a plain-text fallback if no plain body
+    # Convert HTML to readable plain text if no plain body available
     if not body_plain and body_html:
-        body_plain = re.sub(r"<[^>]+>", " ", body_html)
-        body_plain = re.sub(r"\s+", " ", body_plain).strip()
+        body_plain = _html_to_text(body_html)
 
     return ParsedEmail(
         message_id=msg.get("id", ""),
@@ -147,11 +182,13 @@ def fetch_threads(
     query: str | None = None,
     max_threads: int | None = None,
     rate_limiter: RateLimiter | None = None,
-) -> list[list[ParsedEmail]]:
+    page_token: str | None = None,
+) -> tuple[list[list[ParsedEmail]], str | None]:
     """Fetch Gmail threads and return as lists of parsed emails.
 
-    Returns a list of threads, each thread being a list of ParsedEmail
-    sorted by date ascending.
+    Returns (threads, next_page_token) where threads is a list of threads,
+    each thread being a list of ParsedEmail sorted by date ascending.
+    The next_page_token can be passed back to continue fetching.
     """
     service = build("gmail", "v1", credentials=creds)
     query = query or config.GMAIL_QUERY
@@ -159,7 +196,6 @@ def fetch_threads(
 
     # Step 1: List thread IDs
     thread_ids: list[str] = []
-    page_token: str | None = None
 
     while len(thread_ids) < max_threads:
         if rate_limiter:
@@ -218,4 +254,4 @@ def fetch_threads(
 
     log.info("Fetched %d threads with %d total messages",
              len(threads), sum(len(t) for t in threads))
-    return threads
+    return threads, page_token

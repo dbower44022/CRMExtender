@@ -35,6 +35,9 @@ GMAIL_MAX_THREADS = int(_env("POC_GMAIL_MAX_THREADS", "50"))
 ANTHROPIC_API_KEY = _env("ANTHROPIC_API_KEY")
 CLAUDE_MODEL = _env("POC_CLAUDE_MODEL", "claude-sonnet-4-20250514")
 
+# Conversation target — keep fetching batches until this many pass triage
+TARGET_CONVERSATIONS = int(_env("POC_TARGET_CONVERSATIONS", "5"))
+
 # Rate limiting (requests per second)
 GMAIL_RATE_LIMIT = float(_env("POC_GMAIL_RATE_LIMIT", "5"))
 CLAUDE_RATE_LIMIT = float(_env("POC_CLAUDE_RATE_LIMIT", "2"))

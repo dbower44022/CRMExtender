@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import date
 
 import anthropic
 
@@ -13,26 +14,40 @@ from .rate_limiter import RateLimiter
 
 log = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = """\
-You are an email conversation analyst. Given an email thread, you must:
+_SYSTEM_PROMPT_TEMPLATE = """\
+You are an email conversation analyst working on behalf of {user_email}.
+Today's date is {today}.
+
+Given an email thread, you must:
 
 1. Write a concise summary (2-4 sentences) of the conversation.
-2. Determine the conversation status:
-   - OPEN: There is an unanswered question, a pending request, an expected follow-up, \
-or someone is waiting for a response.
-   - CLOSED: The question has been answered, the matter is resolved, goodbyes have been \
-exchanged, or it's a one-way notification with no expected reply.
+2. Determine the conversation status from {user_email}'s perspective:
+   - OPEN: The conversation is still active. Use OPEN if ANY of these apply:
+     * Someone asked a question that hasn't been answered yet.
+     * There is a pending request, task, or action item that hasn't been completed.
+     * A follow-up or future plan was mentioned (e.g. a visit, a meeting, sending something).
+     * The last message introduces new information, shares something for review, or \
+continues a discussion — even without an explicit question.
+     * The conversation is between people who regularly communicate and the thread \
+could naturally continue.
+     Bias toward OPEN for multi-message threads between known contacts. Casual sign-offs \
+like "sounds good", "talk soon", or mentioning upcoming plans are NOT closers — they \
+indicate the relationship and conversation are ongoing.
+   - CLOSED: The conversation is definitively finished. Use CLOSED ONLY if:
+     * A specific question was asked AND fully answered with no follow-up expected.
+     * Both parties explicitly said goodbye with no outstanding items.
+     * It's a one-way notification with no expected reply (e.g. receipts, alerts).
    - UNCERTAIN: Not enough context to determine status confidently.
 3. List any action items (things someone needs to do).
 4. List key topics discussed (2-5 short phrases).
 
 Respond ONLY with valid JSON in this exact format:
-{
+{{
   "status": "OPEN" | "CLOSED" | "UNCERTAIN",
   "summary": "...",
   "action_items": ["...", "..."],
   "key_topics": ["...", "..."]
-}"""
+}}"""
 
 
 def _format_thread_for_prompt(conv: Conversation) -> str:
@@ -89,10 +104,15 @@ def _format_thread_for_prompt(conv: Conversation) -> str:
 def summarize_conversation(
     conv: Conversation,
     client: anthropic.Anthropic,
+    user_email: str,
     rate_limiter: RateLimiter | None = None,
 ) -> ConversationSummary:
     """Summarize a single conversation using Claude."""
     thread_text = _format_thread_for_prompt(conv)
+    system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(
+        user_email=user_email,
+        today=date.today().isoformat(),
+    )
 
     try:
         if rate_limiter:
@@ -101,7 +121,7 @@ def summarize_conversation(
         response = client.messages.create(
             model=config.CLAUDE_MODEL,
             max_tokens=512,
-            system=_SYSTEM_PROMPT,
+            system=system_prompt,
             messages=[
                 {
                     "role": "user",
@@ -157,6 +177,7 @@ def summarize_conversation(
 
 def summarize_all(
     conversations: list[Conversation],
+    user_email: str = "",
     rate_limiter: RateLimiter | None = None,
 ) -> list[ConversationSummary]:
     """Summarize all conversations, skipping failures gracefully."""
@@ -176,7 +197,7 @@ def summarize_all(
     summaries: list[ConversationSummary] = []
 
     for conv in conversations:
-        summary = summarize_conversation(conv, client, rate_limiter)
+        summary = summarize_conversation(conv, client, user_email, rate_limiter)
         summaries.append(summary)
 
     succeeded = sum(1 for s in summaries if not s.error)

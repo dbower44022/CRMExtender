@@ -13,6 +13,7 @@ from .models import (
     ConversationSummary,
     FilterReason,
     KnownContact,
+    ParsedEmail,
     TriageResult,
 )
 
@@ -29,6 +30,17 @@ _STATUS_EMOJI = {
     ConversationStatus.CLOSED: "[green]CLOSED[/green]",
     ConversationStatus.UNCERTAIN: "[yellow]UNCERTAIN[/yellow]",
 }
+
+
+def _format_sender_name(email: ParsedEmail, contacts: dict[str, KnownContact]) -> str:
+    """Resolve display name: prefer matched contact, fall back to sender field."""
+    contact = contacts.get(email.sender_email.lower())
+    if contact and contact.name:
+        return contact.name
+    # sender field is like "Paul Charles McMillian <paul@...>" — use the name part
+    if email.sender and "<" in email.sender:
+        return email.sender.split("<")[0].strip()
+    return email.sender or email.sender_email
 
 
 def _format_participant(email: str, contacts: dict[str, KnownContact]) -> str:
@@ -170,6 +182,19 @@ def _display_conversation(
     if summary.error:
         lines.append("")
         lines.append(f"[dim red]Error: {summary.error}[/dim red]")
+
+    # Conversation details — full email text
+    if conv.emails:
+        lines.append("")
+        lines.append("[dim]────────── [/dim][bold]Conversation[/bold][dim] ──────────[/dim]")
+        for email in conv.emails:
+            lines.append("")
+            date_str = email.date.strftime("%b %d %H:%M") if email.date else "Unknown"
+            sender_name = _format_sender_name(email, conv.matched_contacts)
+            lines.append(f"[dim]{date_str}  {sender_name}[/dim]")
+            if email.body_plain:
+                for body_line in email.body_plain.splitlines():
+                    lines.append(f"  {body_line}")
 
     title = f"[{color}]{_STATUS_EMOJI[summary.status]}[/{color}]  {conv.subject}"
     panel = Panel(

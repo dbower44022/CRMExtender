@@ -10,7 +10,16 @@
       "Bash(python3 -m pip install:*)",
       "Bash(python3:*)",
       "Bash(/tmp/docx_env/bin/pip install:*)",
-      "Bash(/tmp/docx_env/bin/python:*)"
+      "Bash(/tmp/docx_env/bin/python:*)",
+      "Bash(tree:*)",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender log --oneline --all)",
+      "Bash(pip3 list:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(.venv/bin/pip:*)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(python -c:*)",
+      "Bash(/home/doug/Dropbox/Projects/CRM_Extender/CRMExtender/.venv/bin/python3:*)"
     ]
   }
 }

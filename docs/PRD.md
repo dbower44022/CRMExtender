@@ -118,6 +118,9 @@ Browser Extension (Chrome/Firefox — Plasmo)
 | **Object Storage** | S3-compatible (MinIO) | Contact photos, file attachments, exported reports |
 | **AI/LLM** | Anthropic Claude API | Contact insights, summarization, natural language queries |
 | **Browser Extension** | TypeScript / Plasmo | Chrome/Firefox extension for LinkedIn/Twitter intelligence capture |
+| **Email (Gmail)** | Gmail API (direct) | Free API access, native threading, webhook push for new mail |
+| **Email (Microsoft)** | Microsoft Graph API | Free API access, native conversationId, webhook subscriptions |
+| **Email (Other)** | IMAP/SMTP | Fallback for non-Gmail/Outlook providers (Yahoo, corporate Exchange, etc.) |
 
 ### 4.3 Hybrid Event Sourcing Architecture
 
@@ -374,22 +377,60 @@ Lightweight but functional sales pipeline.
 - Win/loss analysis with reason tracking
 - Revenue forecasting based on pipeline stage probabilities and AI-adjusted confidence
 
-### 5.8 Communication Hub
+### 5.8 Email Integration & Conversations
 
-Centralized interaction tracking.
+The email system syncs inbound and outbound emails from connected accounts, automatically associates them with contacts, and organizes them into threaded Conversations.
 
-**Integrations:**
-- Email (Gmail, Outlook via OAuth — bi-directional sync)
-- Calendar (Google Calendar, Outlook Calendar)
-- Phone/SMS logging (manual + integration with VoIP providers)
-- Video conferencing (Zoom, Teams — meeting metadata)
+**Integration Approach (Hybrid):**
+
+The system uses a cost-optimized hybrid approach — no per-mailbox fees from third-party aggregators like Nylas:
+
+- **Gmail** — Direct Gmail API integration via OAuth 2.0. Uses Gmail's native `threadId` for conversation threading. Push notifications via Google Pub/Sub for real-time new mail detection.
+- **Microsoft Outlook/Exchange** — Direct Microsoft Graph API via OAuth 2.0. Uses native `conversationId` for threading. Webhook subscriptions for new mail notifications.
+- **Other providers** — IMAP/SMTP fallback for Yahoo, corporate Exchange, self-hosted mail, etc. Threading reconstructed from `References` and `In-Reply-To` headers. IMAP IDLE or polling for new mail detection.
+
+Each provider adapter normalizes email data to a common internal schema, so the rest of the system is provider-agnostic.
+
+**Sync Behavior:**
+- **Direction:** Bi-directional — both inbound and outbound emails are synced.
+- **Initial sync:** On account connection, performs a historical backfill (configurable depth, default: 90 days).
+- **Ongoing sync:** Real-time via provider webhooks/push (Gmail, Outlook) or polling (IMAP, configurable interval).
+- **Storage:** Full email body (text and HTML) stored in PostgreSQL for search, AI summarization, and sentiment analysis.
+- **Attachments:** Metadata stored; attachment files stored in object storage (S3/MinIO) on demand.
+
+**Conversations Model:**
+
+A Conversation represents a threaded email exchange, mapped from provider-native threading:
+
+- **Thread grouping** — Emails are grouped using provider thread IDs (Gmail `threadId`, Outlook `conversationId`) or header-based threading for IMAP (`Message-ID`, `References`, `In-Reply-To`).
+- **Contact association** — All participants (from, to, cc) are matched against known contacts via the entity resolution pipeline. Unknown participants can be auto-created as contacts or queued for review.
+- **Conversation status:**
+  - **Active** — A reply was sent or received within the activity window (configurable, default: 7 days).
+  - **Stale** — No activity within the activity window but not explicitly closed.
+  - **Closed** — Manually marked as closed by a user, or auto-closed after a configurable inactivity period.
+- **Conversation view** — Chronological thread display with sender/recipient context, linked contact profiles, and AI-generated thread summary.
+- **Deal linking** — Conversations can be associated with deals, providing email context on the deal timeline.
 
 **Capabilities:**
-- Unified inbox showing contact-relevant communications
-- Auto-association of emails/meetings to contacts and deals
-- Email open/click tracking (opt-in)
+- Unified inbox showing all synced email across connected accounts
+- Conversation list with filtering by status (active/stale/closed), contact, company, or deal
+- Auto-association of emails to contacts via participant email matching
+- Full-text search across email bodies and subjects (indexed in Meilisearch)
+- AI thread summarization — one-line summary of the conversation state
+- Sentiment tracking per conversation over time
 - Communication templates with merge fields
 - Scheduled send and follow-up reminders
+
+### 5.9 Calendar & Other Communication
+
+**Calendar Integration:**
+- Google Calendar and Outlook Calendar via OAuth 2.0
+- Meeting sync with contact association
+- Meeting prep brief triggers (auto-generate before scheduled meetings with known contacts)
+
+**Other Channels:**
+- Phone/SMS logging (manual + integration with VoIP providers)
+- Video conferencing (Zoom, Teams — meeting metadata, post-MVP)
 
 ---
 
@@ -458,6 +499,24 @@ GET    /api/v1/intel/alerts
 POST   /api/v1/intel/search
 GET    /api/v1/intel/osint/{contact_id}
 POST   /api/v1/intel/capture           # Browser extension endpoint
+
+# Email Accounts
+GET    /api/v1/email/accounts
+POST   /api/v1/email/accounts              # Connect new email account
+DELETE /api/v1/email/accounts/{id}
+GET    /api/v1/email/accounts/{id}/status   # Sync status
+
+# Conversations
+GET    /api/v1/conversations                # List (filter: status, contact, company, deal)
+GET    /api/v1/conversations/{id}
+PATCH  /api/v1/conversations/{id}           # Update status, link to deal
+GET    /api/v1/conversations/{id}/emails    # Full thread
+GET    /api/v1/contacts/{id}/conversations  # Conversations for a contact
+
+# Emails
+GET    /api/v1/emails                       # Unified inbox (all accounts)
+GET    /api/v1/emails/{id}
+GET    /api/v1/emails/search?q={query}      # Full-text email search
 
 # Deals / Pipeline
 GET    /api/v1/pipelines
@@ -578,6 +637,35 @@ osint_monitors (id, entity_type, entity_id,
 interactions (id, contact_id, deal_id, type,
              direction, subject, body_preview, sentiment_score,
              occurred_at, created_at)
+
+-- Email accounts
+email_accounts (id, user_id, provider, email_address,
+                auth_type, credentials_encrypted,
+                sync_cursor, sync_status, last_synced_at,
+                backfill_depth_days, created_at)
+
+-- Conversations (email threads)
+conversations (id, email_account_id, provider_thread_id,
+               subject, status, last_activity_at,
+               message_count, ai_summary,
+               deal_id, created_at, updated_at)
+
+conversation_contacts (conversation_id, contact_id)
+
+-- Emails
+emails (id, email_account_id, conversation_id,
+        provider_message_id, direction,
+        from_address, to_addresses, cc_addresses, bcc_addresses,
+        subject, body_text, body_html,
+        sent_at, received_at, is_read,
+        has_attachments, sentiment_score,
+        created_at)
+
+email_contacts (email_id, contact_id, role)
+    -- role: from, to, cc
+
+email_attachments (id, email_id, filename, content_type,
+                   size_bytes, storage_key, created_at)
 
 -- Pipeline (conventional tables, not event-sourced)
 pipelines (id, name, stages, is_default, created_at)
@@ -722,9 +810,11 @@ write_queue_log (id, user_id, device_id, operation,
 
 | Integration | Type | Purpose |
 |---|---|---|
-| Gmail | OAuth 2.0 | Email sync, contact enrichment |
+| Gmail | Gmail API (direct, OAuth 2.0) | Bi-directional email sync, conversation threading, contact enrichment |
+| Outlook/Exchange | Microsoft Graph API (OAuth 2.0) | Bi-directional email sync, conversation threading, calendar sync |
+| IMAP/SMTP (fallback) | IMAP IDLE + OAuth/password | Email sync for non-Gmail/Outlook providers |
 | Google Calendar | OAuth 2.0 | Meeting sync, availability |
-| Outlook/Exchange | OAuth 2.0 | Email and calendar sync |
+| Outlook Calendar | Microsoft Graph API | Meeting sync, availability |
 | LinkedIn (manual) | CSV import | Bulk contact import from export |
 
 ### 9.2 Planned Integrations (Post-MVP)
@@ -787,12 +877,18 @@ write_queue_log (id, user_id, device_id, operation,
 
 **Goal:** Replace standalone CRM tools for sales workflows.
 
-- Email integration (Gmail, Outlook bi-directional sync)
-- Calendar integration
+- Email integration: Gmail API + Microsoft Graph API (direct, no Nylas)
+- IMAP/SMTP fallback adapter for other email providers
+- Bi-directional email sync with historical backfill
+- Conversations model with auto-threading and status tracking (active/stale/closed)
+- Auto-association of emails to contacts via entity resolution
+- Full-text email search (Meilisearch)
+- AI conversation summarization and sentiment tracking
+- Calendar integration (Google Calendar, Outlook)
 - Pipeline and deal management (Kanban, forecasting)
 - Deal-specific relationship roles (Decision Maker, Influencer, Champion)
-- Communication templates
-- Email tracking (opens, clicks)
+- Conversation-to-deal linking
+- Communication templates with merge fields
 - Win/loss analysis
 - AI-powered pipeline predictions
 
@@ -835,6 +931,8 @@ write_queue_log (id, user_id, device_id, operation,
 6. **Pricing model** — Per-seat, per-contact, or hybrid? Impacts multi-tenancy quotas and rate limiting design.
 7. **Note format** — Rich text (better UX) vs. Markdown (portable) vs. plain text (simplest). Impacts search indexing and offline sync payload size.
 8. **File attachments** — Full file storage support vs. external link references in MVP. Storage costs and offline sync complexity implications.
+9. **Email backfill depth** — Default 90-day historical sync on account connection. Should this be configurable per tenant? Storage implications for teams with high email volume.
+10. **Email body storage retention** — How long to retain full email bodies vs. compacting to metadata + summary? Balances AI/search utility against storage cost.
 
 ---
 
@@ -855,6 +953,8 @@ write_queue_log (id, user_id, device_id, operation,
 | **Sync delta** | The set of changes between local and server state since last sync |
 | **Write queue** | Local buffer storing offline write operations for replay on reconnect |
 | **Schema-per-tenant** | Multi-tenancy model where each tenant gets a dedicated database schema |
+| **Conversation** | A threaded email exchange grouped by provider thread ID or message headers |
+| **Hybrid email integration** | Using direct provider APIs (Gmail, Microsoft Graph) with IMAP fallback for other providers |
 
 ---
 

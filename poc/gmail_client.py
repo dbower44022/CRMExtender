@@ -255,3 +255,92 @@ def fetch_threads(
     log.info("Fetched %d threads with %d total messages",
              len(threads), sum(len(t) for t in threads))
     return threads, page_token
+
+
+def get_history_id(creds: Credentials) -> str:
+    """Return the current Gmail historyId for the authenticated user."""
+    service = build("gmail", "v1", credentials=creds)
+    profile = service.users().getProfile(userId="me").execute()
+    return str(profile["historyId"])
+
+
+def fetch_history(
+    creds: Credentials,
+    start_history_id: str,
+    rate_limiter: RateLimiter | None = None,
+) -> tuple[list[str], list[str]]:
+    """Fetch Gmail history changes since start_history_id.
+
+    Returns (added_message_ids, deleted_message_ids).
+    """
+    service = build("gmail", "v1", credentials=creds)
+    added: list[str] = []
+    deleted: list[str] = []
+    page_token: str | None = None
+
+    while True:
+        if rate_limiter:
+            rate_limiter.acquire()
+
+        try:
+            params: dict = {
+                "userId": "me",
+                "startHistoryId": start_history_id,
+                "historyTypes": ["messageAdded", "messageDeleted"],
+            }
+            if page_token:
+                params["pageToken"] = page_token
+
+            result = service.users().history().list(**params).execute()
+        except Exception as exc:
+            log.warning("History fetch failed (historyId=%s): %s", start_history_id, exc)
+            break
+
+        for record in result.get("history", []):
+            for msg_added in record.get("messagesAdded", []):
+                mid = msg_added.get("message", {}).get("id")
+                if mid:
+                    added.append(mid)
+            for msg_deleted in record.get("messagesDeleted", []):
+                mid = msg_deleted.get("message", {}).get("id")
+                if mid:
+                    deleted.append(mid)
+
+        page_token = result.get("nextPageToken")
+        if not page_token:
+            break
+
+    log.info("History since %s: %d added, %d deleted",
+             start_history_id, len(added), len(deleted))
+    return added, deleted
+
+
+def fetch_messages(
+    creds: Credentials,
+    message_ids: list[str],
+    rate_limiter: RateLimiter | None = None,
+) -> list[ParsedEmail]:
+    """Fetch full message data for a list of message IDs.
+
+    Returns parsed emails (skips failures).
+    """
+    service = build("gmail", "v1", credentials=creds)
+    emails: list[ParsedEmail] = []
+
+    for mid in message_ids:
+        try:
+            if rate_limiter:
+                rate_limiter.acquire()
+
+            msg = (
+                service.users()
+                .messages()
+                .get(userId="me", id=mid, format="full")
+                .execute()
+            )
+            emails.append(_parse_message(msg))
+        except Exception as exc:
+            log.warning("Failed to fetch message %s: %s", mid, exc)
+
+    log.info("Fetched %d/%d messages", len(emails), len(message_ids))
+    return emails

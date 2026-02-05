@@ -42,5 +42,8 @@ TARGET_CONVERSATIONS = int(_env("POC_TARGET_CONVERSATIONS", "5"))
 GMAIL_RATE_LIMIT = float(_env("POC_GMAIL_RATE_LIMIT", "5"))
 CLAUDE_RATE_LIMIT = float(_env("POC_CLAUDE_RATE_LIMIT", "2"))
 
+# Database
+DB_PATH = Path(_env("POC_DB_PATH", "") or str(_PROJECT_ROOT / "data" / "crm_extender.db"))
+
 # Summarization
 MAX_CONVERSATION_CHARS = int(_env("POC_MAX_CONVERSATION_CHARS", "6000"))

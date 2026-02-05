@@ -22,7 +22,8 @@
       "Bash(/home/doug/Dropbox/Projects/CRM_Extender/CRMExtender/.venv/bin/python3:*)",
       "Bash(python -m poc:*)",
       "Bash(/home/doug/Dropbox/Projects/CRM_Extender/CRMExtender/.venv/bin/python -m poc:*)",
-      "Bash(/home/doug/Dropbox/Projects/CRM_Extender/CRMExtender/.venv/bin/pip list:*)"
+      "Bash(/home/doug/Dropbox/Projects/CRM_Extender/CRMExtender/.venv/bin/pip list:*)",
+      "Bash(/home/doug/Dropbox/Projects/CRM_Extender/CRMExtender/.venv/bin/python:*)"
     ]
   }
 }

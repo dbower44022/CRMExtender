@@ -126,3 +126,6 @@ dmypy.json
 # OAuth credentials and tokens
 credentials/*.json
 !credentials/.gitkeep
+
+# Database
+data/

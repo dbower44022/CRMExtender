@@ -157,6 +157,7 @@ class Conversation:
     emails: list[ParsedEmail] = field(default_factory=list)
     participants: list[str] = field(default_factory=list)
     matched_contacts: dict[str, KnownContact] = field(default_factory=dict)
+    account_email: str = ""  # which account this belongs to (display-time only)
 
     @property
     def message_count(self) -> int:

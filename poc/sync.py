@@ -48,13 +48,14 @@ def register_account(
     creds: Credentials,
     provider: str = "gmail",
     backfill_query: str | None = None,
+    token_path: str | None = None,
 ) -> str:
     """Register an email account or return its existing ID.
 
     Returns the account_id (UUID).
     """
     user_email = get_user_email(creds)
-    token_path = str(config.TOKEN_PATH)
+    token_path = token_path or str(config.TOKEN_PATH)
     now = _now_iso()
 
     with get_connection() as conn:
@@ -90,6 +91,15 @@ def get_account(account_id: str) -> dict | None:
             (account_id,),
         ).fetchone()
         return dict(row) if row else None
+
+
+def get_all_accounts() -> list[dict]:
+    """Return all registered email accounts."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM email_accounts ORDER BY created_at"
+        ).fetchall()
+        return [dict(r) for r in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -717,32 +727,48 @@ def _store_topics(conversation_id: str, topics: list[str]) -> int:
 # ---------------------------------------------------------------------------
 
 def load_conversations_for_display(
-    account_id: str,
+    account_id: str | None = None,
     *,
+    account_ids: list[str] | None = None,
     include_triaged: bool = False,
     limit: int | None = None,
 ) -> tuple[list[Conversation], list[ConversationSummary], list]:
     """Load conversations with their summaries from DB.
 
+    Pass a single account_id or a list of account_ids for multi-account.
     Returns (conversations, summaries, triage_filtered) ready for display.py.
     """
+    # Resolve the list of IDs to query
+    ids = account_ids or ([account_id] if account_id else [])
+    if not ids:
+        return [], [], []
+
+    placeholders = ",".join("?" for _ in ids)
+
+    # Build email-address lookup for account badges
+    account_email_map: dict[str, str] = {}
     with get_connection() as conn:
-        # Load summarized conversations
+        for aid in ids:
+            row = conn.execute(
+                "SELECT email_address FROM email_accounts WHERE id = ?", (aid,)
+            ).fetchone()
+            if row:
+                account_email_map[aid] = row["email_address"]
+
+    with get_connection() as conn:
         if include_triaged:
-            query = """SELECT * FROM conversations
-                       WHERE account_id = ?
+            query = f"""SELECT * FROM conversations
+                       WHERE account_id IN ({placeholders})
                        ORDER BY last_message_at DESC"""
-            params: tuple = (account_id,)
         else:
-            query = """SELECT * FROM conversations
-                       WHERE account_id = ? AND triage_result IS NULL
+            query = f"""SELECT * FROM conversations
+                       WHERE account_id IN ({placeholders}) AND triage_result IS NULL
                        ORDER BY last_message_at DESC"""
-            params = (account_id,)
 
         if limit:
             query += f" LIMIT {limit}"
 
-        conv_rows = conn.execute(query, params).fetchall()
+        conv_rows = conn.execute(query, ids).fetchall()
 
     conversations: list[Conversation] = []
     summaries: list[ConversationSummary] = []
@@ -784,6 +810,7 @@ def load_conversations_for_display(
             subject=cr["subject"] or "",
             emails=emails,
             participants=[],
+            account_email=account_email_map.get(cr["account_id"], ""),
         )
 
         # Load participants and match contacts
@@ -815,10 +842,10 @@ def load_conversations_for_display(
     if not include_triaged:
         with get_connection() as conn:
             triaged_rows = conn.execute(
-                """SELECT * FROM conversations
-                   WHERE account_id = ? AND triage_result IS NOT NULL
+                f"""SELECT * FROM conversations
+                   WHERE account_id IN ({placeholders}) AND triage_result IS NOT NULL
                    ORDER BY last_message_at DESC""",
-                (account_id,),
+                ids,
             ).fetchall()
         for tr in triaged_rows:
             triage_filtered.append(

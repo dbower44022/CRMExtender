@@ -21,6 +21,13 @@ CREDENTIALS_DIR = _PROJECT_ROOT / "credentials"
 CLIENT_SECRET_PATH = CREDENTIALS_DIR / "client_secret.json"
 TOKEN_PATH = CREDENTIALS_DIR / "token.json"
 
+
+def token_path_for_account(email: str) -> Path:
+    """Return the token file path for a specific account."""
+    safe = email.replace("@", "_at_").replace(".", "_")
+    return CREDENTIALS_DIR / f"token_{safe}.json"
+
+
 # Google API scopes
 GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",

@@ -81,6 +81,8 @@ def display_triage_stats(filtered: list[TriageResult]) -> None:
 def display_results(
     conversations: list[Conversation],
     summaries: list[ConversationSummary],
+    *,
+    multi_account: bool = False,
 ) -> None:
     """Display conversation summaries grouped by status using Rich."""
     # Build lookup from thread_id to summary and conversation
@@ -108,6 +110,10 @@ def display_results(
     stats = Table(show_header=False, box=None, padding=(0, 2))
     stats.add_column(style="bold")
     stats.add_column()
+    if multi_account:
+        distinct_emails = sorted({c.account_email for c in conversations if c.account_email})
+        if distinct_emails:
+            stats.add_row("Accounts:", ", ".join(distinct_emails))
     stats.add_row("Total conversations:", str(len(conversations)))
     stats.add_row("Open:", f"[red]{len(grouped[ConversationStatus.OPEN])}[/red]")
     stats.add_row("Closed:", f"[green]{len(grouped[ConversationStatus.CLOSED])}[/green]")
@@ -129,13 +135,15 @@ def display_results(
         console.print()
 
         for conv, summary in items:
-            _display_conversation(conv, summary, color)
+            _display_conversation(conv, summary, color, multi_account=multi_account)
 
 
 def _display_conversation(
     conv: Conversation,
     summary: ConversationSummary,
     color: str,
+    *,
+    multi_account: bool = False,
 ) -> None:
     """Display a single conversation panel."""
     first_date, last_date = conv.date_range
@@ -197,6 +205,8 @@ def _display_conversation(
                     lines.append(f"  {body_line}")
 
     title = f"[{color}]{_STATUS_EMOJI[summary.status]}[/{color}]  {conv.subject}"
+    if multi_account and conv.account_email:
+        title += f"  [dim]({conv.account_email})[/dim]"
     panel = Panel(
         "\n".join(lines),
         title=title,

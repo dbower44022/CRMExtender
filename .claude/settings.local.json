@@ -23,7 +23,14 @@
       "Bash(python -m poc:*)",
       "Bash(/home/doug/Dropbox/Projects/CRM_Extender/CRMExtender/.venv/bin/python -m poc:*)",
       "Bash(/home/doug/Dropbox/Projects/CRM_Extender/CRMExtender/.venv/bin/pip list:*)",
-      "Bash(/home/doug/Dropbox/Projects/CRM_Extender/CRMExtender/.venv/bin/python:*)"
+      "Bash(/home/doug/Dropbox/Projects/CRM_Extender/CRMExtender/.venv/bin/python:*)",
+      "WebFetch(domain:www.mailgun.com)",
+      "WebFetch(domain:docs.revealdata.com)",
+      "WebFetch(domain:www.cs.cmu.edu)",
+      "WebFetch(domain:termly.io)",
+      "WebFetch(domain:exclaimer.com)",
+      "WebFetch(domain:medium.com)",
+      "Bash(python -m pytest:*)"
     ]
   }
 }

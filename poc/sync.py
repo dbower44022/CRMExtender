@@ -173,7 +173,7 @@ def _store_thread(
 
     # Strip quotes from bodies
     for em in thread_emails:
-        em.body_plain = strip_quotes(em.body_plain)
+        em.body_plain = strip_quotes(em.body_plain, em.body_html or None)
 
     # Check if conversation already exists
     existing = conn.execute(

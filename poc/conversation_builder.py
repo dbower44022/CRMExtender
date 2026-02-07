@@ -30,7 +30,7 @@ def build_conversations(threads: list[list[ParsedEmail]]) -> list[Conversation]:
 
         # Strip quotes from each email body
         for em in emails:
-            em.body_plain = strip_quotes(em.body_plain)
+            em.body_plain = strip_quotes(em.body_plain, em.body_html or None)
 
         # Collect unique participants across all emails in the thread
         all_participants: dict[str, None] = {}

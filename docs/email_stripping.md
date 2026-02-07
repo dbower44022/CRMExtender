@@ -146,7 +146,33 @@ After finding a valediction, the algorithm checks the content that follows. It o
 
 This two-phase approach prevents false positives where someone writes "Thanks, let me know if you have questions" mid-email.
 
-### Step 6: Whitespace Cleanup
+### Step 6: Line Unwrapping
+
+Plain text emails often have hard line breaks at 70-80 characters due to email client formatting or RFC 2822 compliance. This step joins these artificially broken lines back into natural paragraphs.
+
+**How it works:**
+1. Groups consecutive non-empty lines into paragraphs
+2. Joins lines within each paragraph with spaces
+3. Preserves intentional breaks:
+   - Empty lines (paragraph separators)
+   - List items (lines starting with `-`, `*`, `•`, or numbers like `1.`)
+   - Signature separators (`--`)
+   - Field labels (lines matching `Label: value` pattern)
+
+**Before:**
+```
+As many of you know, we have had the privilege of serving the SCORE
+Cleveland chapter for the past five years for Sharon and fifteen years for
+Anita. During that time, we worked side by side with you to build a chapter
+grounded in collaboration, mutual respect, and a shared commitment.
+```
+
+**After:**
+```
+As many of you know, we have had the privilege of serving the SCORE Cleveland chapter for the past five years for Sharon and fifteen years for Anita. During that time, we worked side by side with you to build a chapter grounded in collaboration, mutual respect, and a shared commitment.
+```
+
+### Step 7: Whitespace Cleanup
 
 Collapses excessive blank lines (3+ consecutive newlines) down to double newlines for consistent formatting.
 
@@ -203,8 +229,9 @@ All patterns use the `re.MULTILINE` flag to match `^` and `$` at line boundaries
 
 ## Testing
 
-The test suite in `tests/test_email_parser.py` covers:
+The test suites cover both pipelines:
 
+**`tests/test_email_parser.py`** — Plain-text pipeline:
 - **Regression tests**: Verify existing functionality still works
 - **Confidentiality notices**: 10 variations of legal disclaimers
 - **Environmental messages**: 4 common patterns
@@ -213,9 +240,19 @@ The test suite in `tests/test_email_parser.py` covers:
 - **Combined boilerplate**: 3 tests with multiple boilerplate types
 - **Real-world examples**: 3 comprehensive email samples
 
+**`tests/test_html_email_parser.py`** — HTML-aware pipeline:
+- **Gmail quote stripping**: `div.gmail_quote`, `div.gmail_quote_container`, `blockquote.gmail_quote`
+- **Gmail signature stripping**: `div.gmail_signature`, `data-smartmail` attribute
+- **Outlook quote stripping**: `div#appendonsend`, `div#divRplyFwdMsg`, border-top separator
+- **Outlook signature stripping**: `div#Signature`
+- **Apple Mail quote stripping**: `blockquote[type=cite]`
+- **Yahoo quote stripping**: `div.yahoo_quoted`
+- **Fallback behavior**: empty/malformed HTML falls back to plain-text pipeline
+- **Text cleanup integration**: mobile sigs and disclaimers in HTML-extracted text
+
 Run tests with:
 ```bash
-pytest tests/test_email_parser.py -v
+pytest tests/ -v
 ```
 
 ## Limitations
@@ -224,9 +261,60 @@ pytest tests/test_email_parser.py -v
 
 2. **Custom signatures**: Unusual signature formats without standard markers may not be detected.
 
-3. **Inline signatures**: If someone signs off mid-email and continues writing, the detection may incorrectly truncate (mitigated by sentence detection).
+3. **Inline signatures**: In plain-text mode, if someone signs off mid-email and continues writing, the detection may incorrectly truncate (mitigated by sentence detection). The HTML track avoids this by relying on structural elements.
 
-4. **HTML content**: This pipeline operates on plain text. HTML emails should be converted to text first.
+## HTML-Aware Processing
+
+When an HTML body is available (`body_html` parameter), `strip_quotes()` uses an HTML-first pipeline that leverages structural cues for far more accurate stripping. This is implemented in `poc/html_email_parser.py`.
+
+### HTML Pipeline
+
+```
+strip_quotes(body, body_html)
+│
+├─ HTML available? ──YES──> HTML Track
+│                           1. quotequail.quote_html() → remove quoted regions
+│                           2. BeautifulSoup: remove structural elements (see below)
+│                           3. soup.get_text() → convert to plain text
+│                           4. Lightweight text cleanup (mobile sigs, disclaimers,
+│                              line unwrapping, whitespace)
+│                           5. Return result
+│
+└─ No HTML ──────> Plain Text Track (existing pipeline, unchanged)
+```
+
+### Structural Elements Removed
+
+| Selector | Source | Purpose |
+|----------|--------|---------|
+| `div.gmail_quote` | Gmail | Quoted reply container |
+| `div.gmail_quote_container` | Gmail | Alternate quote container |
+| `div.gmail_extra` | Gmail | Extra content after reply |
+| `blockquote.gmail_quote` | Gmail | Blockquote-style quote |
+| `div.gmail_signature` | Gmail | Signature block |
+| `[data-smartmail=gmail_signature]` | Gmail | Smart signature |
+| `div.yahoo_quoted` | Yahoo | Quoted content |
+| `blockquote[type=cite]` | Apple Mail | Cited content |
+| `div#appendonsend` | Outlook | Reply separator |
+| `div#divRplyFwdMsg` | Outlook | Reply/forward header |
+| `div#Signature` | Outlook | Signature block |
+| `border-top:solid #E1E1E1` (style) | Outlook | Horizontal separator |
+
+### Dependencies
+
+- `quotequail>=0.4.0` — HTML quote/reply detection (by Close.io)
+- `beautifulsoup4>=4.12.0` — HTML parsing for structural removal
+- `lxml>=5.0.0` — Fast HTML parser backend
+
+### Audit Tool
+
+Before running migrations with the new pipeline, use the audit tool to compare results:
+
+```bash
+python -m poc.audit_parser [--limit N] [--show-diffs N]
+```
+
+This processes all stored emails through both pipelines and reports differences, character reduction, and potential over-stripping.
 
 ## Future Improvements
 
@@ -234,5 +322,4 @@ Potential enhancements:
 
 - Multi-language support for valedictions and disclaimers
 - Machine learning-based signature detection
-- HTML-aware processing
 - Configurable pattern sets per organization

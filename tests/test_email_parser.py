@@ -353,6 +353,74 @@ This message is confidential and intended only for the recipient."""
         assert "confidential" not in result
 
 
+class TestLineUnwrapping:
+    """Tests for hard-wrapped line unwrapping."""
+
+    def test_unwraps_hard_wrapped_paragraph(self):
+        body = """We wanted to reach out personally to you following the recent and
+unexpected decision to remove us from our SCORE roles."""
+        result = strip_quotes(body)
+        assert "\n" not in result
+        assert "recent and unexpected" in result
+
+    def test_preserves_paragraph_breaks(self):
+        body = """First paragraph here.
+
+Second paragraph here."""
+        result = strip_quotes(body)
+        assert "\n\n" in result
+        assert "First paragraph" in result
+        assert "Second paragraph" in result
+
+    def test_preserves_list_items(self):
+        body = """Here are the items:
+1. First item
+2. Second item
+- Bullet item
+* Star item"""
+        result = strip_quotes(body)
+        assert "1. First item" in result
+        assert "2. Second item" in result
+        assert "- Bullet item" in result
+        assert "* Star item" in result
+
+    def test_preserves_signature_separator(self):
+        body = """Message content here.
+
+--
+John Smith"""
+        result = strip_quotes(body)
+        assert "--" in result
+
+    def test_unwraps_multiple_paragraphs(self):
+        body = """First paragraph that spans multiple lines because it is
+quite long and was hard wrapped by the email client.
+
+Second paragraph that also spans multiple lines because it is
+quite long and was hard wrapped too."""
+        result = strip_quotes(body)
+        lines = [l for l in result.split('\n') if l.strip()]
+        # Should have 2 paragraphs, each on one line
+        assert len(lines) == 2
+        assert "hard wrapped by the email client" in lines[0]
+        assert "hard wrapped too" in lines[1]
+
+    def test_detects_paragraph_breaks_without_empty_lines(self):
+        """Paragraphs separated by sentence endings + capital starts."""
+        body = """First paragraph that ends with a period after being
+wrapped across multiple lines.
+Second paragraph starts with capital letter and should be
+detected as a new paragraph even without empty line.
+Third paragraph here."""
+        result = strip_quotes(body)
+        lines = [l for l in result.split('\n') if l.strip()]
+        # Should detect 3 paragraphs
+        assert len(lines) == 3
+        assert "First paragraph" in lines[0]
+        assert "Second paragraph" in lines[1]
+        assert "Third paragraph" in lines[2]
+
+
 class TestRealWorldExamples:
     """Tests using realistic email content."""
 

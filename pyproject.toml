@@ -11,6 +11,9 @@ dependencies = [
     "rich>=13.7.0",
     "mail-parser-reply>=0.1.2",
     "python-dotenv>=1.0.0",
+    "quotequail>=0.4.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.0.0",
 ]
 
 [project.scripts]

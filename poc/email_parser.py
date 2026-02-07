@@ -2,6 +2,10 @@
 
 Uses mail-parser-reply for standard quoted content detection,
 plus custom patterns for forwarded messages and mobile signatures.
+
+When an HTML body is available, an HTML-first track uses structural
+cues (CSS classes, element IDs) for far more accurate stripping,
+falling back to the plain-text pipeline when HTML is absent.
 """
 
 from __future__ import annotations
@@ -81,7 +85,8 @@ _VALEDICTION = re.compile(
     r"Best\s+wishes?|"
     r"All\s+the\s+best|"
     r"Take\s+care|"
-    r"Respectfully"
+    r"Respectfully|"
+    r"Best"  # Standalone "Best" or "Best,"
     r"),?[\s]*$",
     re.MULTILINE | re.IGNORECASE,
 )
@@ -89,56 +94,335 @@ _VALEDICTION = re.compile(
 # Patterns that indicate signature content (not message content)
 _SIGNATURE_CONTENT = re.compile(
     r"(?:"
-    r"(?:Tel|Phone|Fax|Mobile|Cell)\s*[:\.]?\s*[\+\d\(\)\-\s]{7,}|"
+    r"(?:Tel|Phone|Fax|Mobile|Cell|Direct|Office)\s*[:\.]?\s*[\+\d\(\)\-\s]{7,}|"
     r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|"
     r"(?:www\.|https?://)|"
     r"(?:Dept\.|Department|University|Corp\.|Corporation|Inc\.|LLC|Ltd\.)|"
-    r"(?:Professor|Director|Manager|CEO|CTO|CFO|VP|Vice\s+President|President|Engineer|Analyst)"
+    r"(?:Professor|Director|Manager|CEO|CTO|CFO|VP|Vice\s+President|President|Engineer|Analyst|"
+    r"Partner|Associate|Advisor|Consultant|Specialist|Coordinator|Administrator|Assistant)|"
+    r"(?:CFP|CPA|CFA|MBA|JD|PhD|MD|Esq|PMP|CPWA|ChFC|CLU|RICP|AIF|CAIA)®?"  # Professional credentials
     r")",
     re.IGNORECASE,
 )
 
+# Embedded image markers (Outlook/Exchange)
+_EMBEDDED_IMAGE = re.compile(
+    r"\[cid:[^\]]+\]",
+    re.IGNORECASE,
+)
+
+# Professional credentials after names
+_CREDENTIALS = re.compile(
+    r"(?:,?\s*(?:CFP|CPA|CFA|MBA|JD|PhD|MD|Esq|PMP|CPWA|ChFC|CLU|RICP|AIF|CAIA)®?\s*)+",
+    re.IGNORECASE,
+)
+
+# Social media / promotional link blocks
+_SOCIAL_LINKS = re.compile(
+    r"^.*(?:"
+    r"LinkedIn\s*<|Twitter\s*<|Facebook\s*<|Instagram\s*<|"
+    r"Follow\s+(?:us|me)\s+(?:on|at)|"
+    r"Connect\s+(?:with\s+(?:us|me)|on\s+LinkedIn)"
+    r").*$",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+# VCard and secure file exchange patterns
+_VCARD_PATTERN = re.compile(
+    r"^.*(?:"
+    r"Download\s+(?:my\s+)?VCard|"
+    r"(?:Click\s+Here|request\s+a\s+link)\s*<.*>?\s*to\s+send\s+files\s+securely|"
+    r"To\s+request\s+a\s+link\s+to\s+send\s+files\s+securely"
+    r").*$",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+# Awards/Rankings promotional text
+_AWARDS_PATTERN = re.compile(
+    r"^.*(?:"
+    r"Named\s+to\s+(?:the\s+)?\d{4}\s+Forbes|"
+    r"Forbes\s+(?:Best|Top|America)|"
+    r"Ranking\s+Forbes|"
+    r"Source:\s*Forbes"
+    r").*$",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+# Standalone signature start - name line with optional credentials
+# Matches lines like "John Smith" or "JOHN SMITH, CPA" or "John Smith, CFP®, MBA"
+_NAME_LINE = re.compile(
+    r"^[\s]*([A-Z][a-z]+(?:\s+[A-Z]\.?)?(?:\s+[A-Z][a-z]+){1,3})"  # Name pattern
+    r"(?:,?\s*(?:CFP|CPA|CFA|MBA|JD|PhD|MD|Esq|PMP|CPWA|ChFC|CLU|RICP|AIF|CAIA)®?\s*)*"  # Optional credentials
+    r"[\s]*$",
+    re.MULTILINE,
+)
+
+# All-caps name line (like "ROBIN BAUM, CPA")
+_CAPS_NAME_LINE = re.compile(
+    r"^[\s]*[A-Z]{2,}(?:\s+[A-Z]\.?)?(?:\s+[A-Z]{2,}){1,3}"  # All caps name
+    r"(?:,?\s*(?:CFP|CPA|CFA|MBA|JD|PhD|MD|Esq|PMP|CPWA|ChFC|CLU|RICP|AIF|CAIA)®?\s*)*"  # Optional credentials
+    r"[\s]*$",
+    re.MULTILINE,
+)
+
+
+def _unwrap_lines(body: str) -> str:
+    """Unwrap hard-wrapped lines from plain text emails.
+
+    Email clients often wrap lines at 70-80 characters. This function joins
+    lines that were artificially broken, while preserving intentional breaks
+    like paragraph separators and list items.
+
+    Key insight: A line ending with terminal punctuation (. ! ?) followed by
+    a line starting with a capital letter indicates a paragraph break, even
+    without an empty line between them.
+    """
+    if not body:
+        return body
+
+    lines = body.split('\n')
+    result = []
+    current_paragraph = []
+
+    for i, line in enumerate(lines):
+        stripped = line.rstrip()
+
+        # Empty line = paragraph break
+        if not stripped:
+            if current_paragraph:
+                result.append(' '.join(current_paragraph))
+                current_paragraph = []
+            result.append('')
+            continue
+
+        # Check if this is a special line that shouldn't be joined
+        is_special_line = (
+            stripped.startswith(('-', '*', '•', '>', '|')) or
+            re.match(r'^\d+[\.\)]\s', stripped) or  # Numbered list
+            stripped.startswith('--') or  # Signature separator
+            re.match(r'^[A-Z][a-z]*:\s', stripped)  # Field: value
+        )
+
+        # Check if this line starts a new paragraph
+        # A new paragraph starts when:
+        # 1. Previous line ended with sentence-ending punctuation, AND
+        # 2. This line starts with a capital letter
+        starts_new_paragraph = False
+        if current_paragraph:
+            prev_line = current_paragraph[-1]
+            prev_ends_sentence = prev_line and prev_line[-1] in '.!?'
+            this_starts_capital = stripped and stripped[0].isupper()
+            starts_new_paragraph = prev_ends_sentence and this_starts_capital
+
+        # Flush current paragraph if starting a new one
+        if (is_special_line or starts_new_paragraph) and current_paragraph:
+            result.append(' '.join(current_paragraph))
+            current_paragraph = []
+
+        if is_special_line:
+            # Special lines go on their own
+            result.append(stripped)
+        else:
+            # Add to current paragraph
+            current_paragraph.append(stripped)
+
+    # Flush any remaining paragraph
+    if current_paragraph:
+        result.append(' '.join(current_paragraph))
+
+    return '\n'.join(result)
+
 
 def _strip_signature_block(body: str) -> str:
     """Remove signature block if it follows a valediction."""
-    match = _VALEDICTION.search(body)
-    if not match:
+    valediction_match = _VALEDICTION.search(body)
+    if not valediction_match:
         return body
 
     # Get content after valediction
-    after_valediction = body[match.end():].strip()
+    after_valediction = body[valediction_match.end():].strip()
     if not after_valediction:
-        return body[:match.start()].rstrip()
+        return body[:valediction_match.start()].rstrip()
 
-    # Check first ~500 chars or 10 lines for signature indicators
-    check_content = after_valediction[:500]
-    lines_after = after_valediction.split('\n')[:10]
+    # Check first ~1000 chars or 15 lines for signature indicators
+    check_content = after_valediction[:1000]
+    lines_after = after_valediction.split('\n')[:15]
 
-    # If remaining content has signature patterns and is short, truncate
+    # If remaining content has signature patterns and is reasonably short, truncate
+    # Corporate signatures can be quite long (name, titles, contact info, disclaimers)
     has_signature_markers = _SIGNATURE_CONTENT.search(check_content)
-    is_short = len(after_valediction) < 500 or len(lines_after) < 10
+    is_short = len(after_valediction) < 1500 or len(lines_after) <= 15
 
     # Check for substantive sentences - must have verb-like patterns on a single line
-    # Exclude URLs, emails, and typical signature lines
+    # Exclude URLs, emails, typical signature lines, and disclaimer sentences
     # Look for sentences with 4+ words ending in punctuation (on same line)
     # Use [^\n] to ensure matching within a single line
-    has_sentences = bool(re.search(
+    has_sentences = False
+    sentence_pattern = re.compile(
         r"^[A-Z][a-z]+(?:[ \t]+\w+){3,}[^\n]*[.!?]\s*$",
-        check_content,
         re.MULTILINE
-    ))
+    )
+    # Patterns that indicate a signature/disclaimer sentence (not real content)
+    signature_sentence_patterns = [
+        r"(?:tax|legal).*(?:guidance|advice)",  # "tax or legal guidance"
+        r"consult\s+(?:your|a)\s+(?:CPA|attorney|advisor|tax)",
+        r"(?:click|book)\s+(?:here|time)\s+(?:to|with)",
+        r"please\s+let\s+me\s+know\s+if\s+you\s+have",
+        r"thank\s+you\s+(?:for|and)",
+        r"as\s+discussed",
+        r"nmls\s*#?\d+",
+        r"looking\s+forward\s+to",
+    ]
+    signature_sentence_re = re.compile(
+        '|'.join(signature_sentence_patterns),
+        re.IGNORECASE
+    )
+
+    for sent_match in sentence_pattern.finditer(check_content):
+        sentence = sent_match.group(0)
+        if not signature_sentence_re.search(sentence):
+            has_sentences = True
+            break
 
     if has_signature_markers and is_short and not has_sentences:
-        return body[:match.start()].rstrip()
+        return body[:valediction_match.start()].rstrip()
 
     return body
 
 
-def strip_quotes(body: str) -> str:
-    """Remove quoted replies, forwarded headers, and mobile signatures from email body."""
+def _strip_standalone_signature(body: str) -> str:
+    """Remove signature blocks that don't follow a standard valediction.
+
+    Detects signatures by looking for patterns like:
+    - A name line (possibly with credentials) followed by title/contact info
+    - Embedded image markers [cid:...]
+    - Social media link blocks
+    """
+    lines = body.split('\n')
+
+    # Look for signature start indicators
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        # Check for embedded image marker - strong signal of signature start
+        if _EMBEDDED_IMAGE.search(stripped):
+            # Look back for the actual signature start (name line)
+            sig_start = i
+            for j in range(max(0, i - 3), i):
+                prev_line = lines[j].strip()
+                if prev_line and (_NAME_LINE.match(prev_line) or _CAPS_NAME_LINE.match(prev_line)):
+                    sig_start = j
+                    break
+            return '\n'.join(lines[:sig_start]).rstrip()
+
+        # Check for all-caps name with credentials (strong signature indicator)
+        if _CAPS_NAME_LINE.match(stripped):
+            # Verify next few lines look like signature content
+            remaining = '\n'.join(lines[i:i+5])
+            if _SIGNATURE_CONTENT.search(remaining):
+                return '\n'.join(lines[:i]).rstrip()
+
+        # Check for name line followed by title
+        name_match = _NAME_LINE.match(stripped)
+        if name_match and i < len(lines) - 1:
+            next_lines = '\n'.join(lines[i:i+4])
+            # Check if followed by title patterns or contact info
+            has_title = bool(re.search(
+                r"(?:Managing\s+)?Director|Partner|President|"
+                r"Vice\s+President|Chief|Officer|Manager|"
+                r"Associate|Advisor|Consultant|Administrator",
+                next_lines, re.IGNORECASE
+            ))
+            has_contact = _SIGNATURE_CONTENT.search(next_lines)
+
+            if has_title or has_contact:
+                # Make sure there's actual message content before this
+                content_before = '\n'.join(lines[:i]).strip()
+                if content_before and len(content_before) > 20:
+                    return content_before
+
+    return body
+
+
+def _strip_promotional_content(body: str) -> str:
+    """Remove promotional signature content like social links, awards, vcard links."""
+    # Remove social media link blocks
+    match = _SOCIAL_LINKS.search(body)
+    if match:
+        body = body[:match.start()].rstrip()
+
+    # Remove VCard/secure file patterns
+    match = _VCARD_PATTERN.search(body)
+    if match:
+        body = body[:match.start()].rstrip()
+
+    # Remove awards/rankings promotional text
+    match = _AWARDS_PATTERN.search(body)
+    if match:
+        body = body[:match.start()].rstrip()
+
+    # Remove embedded images that remain
+    body = _EMBEDDED_IMAGE.sub('', body)
+
+    return body.rstrip()
+
+
+def strip_quotes(body: str, body_html: str | None = None) -> str:
+    """Remove quoted replies, forwarded headers, and mobile signatures from email body.
+
+    When *body_html* is provided the function uses an HTML-first pipeline
+    that leverages structural cues (CSS classes, element IDs) for more
+    accurate stripping.  Falls back to the plain-text pipeline when HTML
+    is absent or when the HTML track fails.
+    """
     if not body or not body.strip():
         return ""
 
+    # ── HTML track ──────────────────────────────────────────────────
+    if body_html and body_html.strip():
+        try:
+            from .html_email_parser import strip_html_quotes
+
+            html_result = strip_html_quotes(body_html)
+            if html_result and html_result.strip():
+                # Apply lightweight text cleanup only (mobile sigs,
+                # disclaimers, line unwrapping, whitespace).  The heavy
+                # plain-text steps (mail-parser-reply, forwarded headers,
+                # Outlook separators, "On...wrote:") are already handled
+                # better by HTML structure.
+                text = html_result
+
+                # Mobile signatures
+                text = _MOBILE_SIGNATURE.sub("", text).rstrip()
+
+                # Confidentiality notices
+                match = _CONFIDENTIAL_NOTICE.search(text)
+                if match:
+                    text = text[:match.start()].rstrip()
+
+                # Environmental messages
+                match = _ENVIRONMENTAL_MESSAGE.search(text)
+                if match:
+                    text = text[:match.start()].rstrip()
+
+                # Unwrap hard-wrapped lines
+                text = _unwrap_lines(text)
+
+                # Collapse excessive whitespace
+                text = re.sub(r"\n{3,}", "\n\n", text)
+
+                cleaned = text.strip()
+                if cleaned:
+                    return cleaned
+                # HTML track produced empty result after cleanup;
+                # fall through to plain-text pipeline.
+                log.debug("HTML track produced empty result after cleanup, falling back")
+        except Exception as exc:
+            log.debug("HTML track failed, falling back to plain text: %s", exc)
+
+    # ── Plain-text track (original pipeline) ────────────────────────
     # Step 1: Use mail-parser-reply for standard quote detection
     try:
         reply_parser = EmailReplyParser()
@@ -179,7 +463,16 @@ def strip_quotes(body: str) -> str:
     # Step 5.3: Remove signature blocks after valedictions
     body = _strip_signature_block(body)
 
-    # Step 6: Clean up excessive whitespace
+    # Step 5.4: Remove standalone signatures (without valedictions)
+    body = _strip_standalone_signature(body)
+
+    # Step 5.5: Remove promotional content (social links, awards, vcards)
+    body = _strip_promotional_content(body)
+
+    # Step 6: Unwrap hard-wrapped lines
+    body = _unwrap_lines(body)
+
+    # Step 7: Clean up excessive whitespace
     body = re.sub(r"\n{3,}", "\n\n", body)
 
     return body.strip()

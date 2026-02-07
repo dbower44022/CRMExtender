@@ -27,7 +27,8 @@ _MOBILE_SIGNATURE = re.compile(
     r"^(Sent from my (iPhone|iPad|Galaxy|Android|Pixel|BlackBerry)|"
     r"Get Outlook for (iOS|Android)|"
     r"Sent from Yahoo Mail|"
-    r"Sent from Mail for Windows)\s*$",
+    r"Sent from Mail for Windows|"
+    r"This email was sent from a notification[\-\s]*(?:only\s+)?(?:email\s+)?address)\s*$",
     re.MULTILINE | re.IGNORECASE,
 )
 
@@ -290,6 +291,39 @@ def _strip_signature_block(body: str) -> str:
     return body
 
 
+def _strip_dash_dash_signature(body: str) -> str:
+    """Remove signature blocks preceded by a ``-- `` or ``--`` separator.
+
+    Only truncates when the content after ``--`` looks like a signature:
+    short (< 500 chars / <= 10 lines) and contains signature markers or
+    starts with a name-like line.  This avoids false positives from ``--``
+    used as markdown section dividers.
+    """
+    match = re.search(r"^--\s*$", body, re.MULTILINE)
+    if not match:
+        return body
+
+    after = body[match.end():].strip()
+    if not after:
+        # Trailing -- with nothing after it — just strip it
+        return body[:match.start()].rstrip()
+
+    lines_after = after.split('\n')
+    is_short = len(after) < 500 and len(lines_after) <= 10
+
+    if not is_short:
+        return body
+
+    has_sig_markers = _SIGNATURE_CONTENT.search(after)
+    first_line = lines_after[0].strip()
+    has_name = bool(_NAME_LINE.match(first_line) or _CAPS_NAME_LINE.match(first_line))
+
+    if has_sig_markers or has_name:
+        return body[:match.start()].rstrip()
+
+    return body
+
+
 def _strip_standalone_signature(body: str) -> str:
     """Remove signature blocks that don't follow a standard valediction.
 
@@ -343,6 +377,18 @@ def _strip_standalone_signature(body: str) -> str:
                 if content_before and len(content_before) > 20:
                     return content_before
 
+    return body
+
+
+def _strip_unsubscribe_footer(body: str) -> str:
+    """Remove newsletter unsubscribe footers and everything after them."""
+    match = re.search(
+        r"^.*unsubscribe.*$",
+        body,
+        re.MULTILINE | re.IGNORECASE,
+    )
+    if match:
+        body = body[:match.start()].rstrip()
     return body
 
 
@@ -407,6 +453,17 @@ def strip_quotes(body: str, body_html: str | None = None) -> str:
                 if match:
                     text = text[:match.start()].rstrip()
 
+                # Dash-dash signature separators
+                text = _strip_dash_dash_signature(text)
+
+                # Signature/promotional detection (catches sigs without CSS markup)
+                text = _strip_signature_block(text)
+                text = _strip_standalone_signature(text)
+                text = _strip_promotional_content(text)
+
+                # Unsubscribe footers (text-level fallback)
+                text = _strip_unsubscribe_footer(text)
+
                 # Unwrap hard-wrapped lines
                 text = _unwrap_lines(text)
 
@@ -463,11 +520,17 @@ def strip_quotes(body: str, body_html: str | None = None) -> str:
     # Step 5.3: Remove signature blocks after valedictions
     body = _strip_signature_block(body)
 
+    # Step 5.35: Remove -- signature separators
+    body = _strip_dash_dash_signature(body)
+
     # Step 5.4: Remove standalone signatures (without valedictions)
     body = _strip_standalone_signature(body)
 
     # Step 5.5: Remove promotional content (social links, awards, vcards)
     body = _strip_promotional_content(body)
+
+    # Step 5.6: Remove unsubscribe footers
+    body = _strip_unsubscribe_footer(body)
 
     # Step 6: Unwrap hard-wrapped lines
     body = _unwrap_lines(body)

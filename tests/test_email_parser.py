@@ -384,13 +384,14 @@ Second paragraph here."""
         assert "- Bullet item" in result
         assert "* Star item" in result
 
-    def test_preserves_signature_separator(self):
+    def test_strips_dash_dash_signature(self):
         body = """Message content here.
 
 --
 John Smith"""
         result = strip_quotes(body)
-        assert "--" in result
+        assert "Message content here." in result
+        assert "John Smith" not in result
 
     def test_unwraps_multiple_paragraphs(self):
         body = """First paragraph that spans multiple lines because it is
@@ -481,3 +482,99 @@ This email is confidential and privileged."""
         assert "FYI - see below." in result
         assert "Forwarded message" not in result
         assert "Contract Update" not in result
+
+
+class TestNotificationSignatures:
+    """Tests for 'sent from a notification' variant stripping."""
+
+    def test_notification_only_address(self):
+        body = "Your order has shipped.\n\nThis email was sent from a notification-only address"
+        result = strip_quotes(body)
+        assert "Your order has shipped." in result
+        assert "notification-only address" not in result
+
+    def test_notification_email_address(self):
+        body = "Meeting reminder.\n\nThis email was sent from a notification email address"
+        result = strip_quotes(body)
+        assert "Meeting reminder." in result
+        assert "notification email address" not in result
+
+    def test_notification_only_email_address(self):
+        body = "Payment received.\n\nThis email was sent from a notification-only email address"
+        result = strip_quotes(body)
+        assert "Payment received." in result
+        assert "notification-only email address" not in result
+
+
+class TestDashDashSignature:
+    """Tests for -- signature separator stripping."""
+
+    def test_dash_dash_with_name(self):
+        body = "See you tomorrow.\n\n--\nJohn Smith"
+        result = strip_quotes(body)
+        assert "See you tomorrow." in result
+        assert "John Smith" not in result
+
+    def test_dash_dash_with_contact_info(self):
+        body = "Here is the report.\n\n--\njsmith@example.com\nTel: 555-1234"
+        result = strip_quotes(body)
+        assert "Here is the report." in result
+        assert "jsmith@example.com" not in result
+
+    def test_dash_dash_with_full_signature(self):
+        body = """Thanks for the update.
+
+--
+Jane Doe
+Senior Analyst
+Acme Corp.
+Phone: 555-9876"""
+        result = strip_quotes(body)
+        assert "Thanks for the update." in result
+        assert "Senior Analyst" not in result
+
+    def test_dash_dash_preserves_long_content(self):
+        """-- followed by many lines of content should not be truncated."""
+        long_content = "\n".join([f"Line {i} of important content." for i in range(20)])
+        body = f"Intro.\n\n--\n{long_content}"
+        result = strip_quotes(body)
+        assert "important content" in result
+
+    def test_dash_dash_preserves_markdown_divider(self):
+        """-- used as a section divider with non-signature content after."""
+        body = "Section one.\n\n--\nSection two continues here with more discussion."
+        result = strip_quotes(body)
+        # No signature markers, no name — should be preserved
+        assert "Section two" in result
+
+    def test_trailing_dash_dash(self):
+        body = "Message content.\n\n--"
+        result = strip_quotes(body)
+        assert "Message content." in result
+
+
+class TestUnsubscribeFooter:
+    """Tests for unsubscribe footer stripping."""
+
+    def test_plain_unsubscribe(self):
+        body = "Great news about the product.\n\nTo unsubscribe click here."
+        result = strip_quotes(body)
+        assert "Great news about the product." in result
+        assert "unsubscribe" not in result
+
+    def test_unsubscribe_with_trailing_content(self):
+        body = """Newsletter content here.
+
+Click here to unsubscribe from this mailing list.
+Company Address
+123 Main St"""
+        result = strip_quotes(body)
+        assert "Newsletter content here." in result
+        assert "unsubscribe" not in result
+        assert "123 Main St" not in result
+
+    def test_unsubscribe_case_insensitive(self):
+        body = "Important update.\n\nUNSUBSCRIBE from future emails"
+        result = strip_quotes(body)
+        assert "Important update." in result
+        assert "UNSUBSCRIBE" not in result

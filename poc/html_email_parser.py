@@ -47,6 +47,43 @@ _ALL_REMOVE_SELECTORS = _QUOTE_SELECTORS + _SIGNATURE_SELECTORS
 _OUTLOOK_BORDER_RE = re.compile(r"border-top\s*:\s*solid\s+#E1E1E1", re.IGNORECASE)
 
 
+def _remove_unsubscribe_footers(soup: BeautifulSoup) -> None:
+    """Remove newsletter/unsubscribe footer blocks from the HTML tree.
+
+    Targets:
+    1. Elements with IDs starting with ``footerUnsubscribe``.
+    2. Elements containing the word "unsubscribe" in their text.
+
+    In both cases the matched element and all following siblings are removed.
+    """
+    # 1. ID-based: footerUnsubscribe*
+    for tag in soup.find_all(id=re.compile(r"^footerUnsubscribe", re.IGNORECASE)):
+        if isinstance(tag, Tag):
+            for sibling in list(tag.find_next_siblings()):
+                sibling.decompose()
+            tag.decompose()
+
+    # 2. Text-based: any element whose *direct* text contains "unsubscribe"
+    for tag in soup.find_all(string=re.compile(r"unsubscribe", re.IGNORECASE)):
+        # Navigate up to a block-level container
+        parent = tag.parent
+        if parent and isinstance(parent, Tag):
+            # Walk up to find a reasonable block container (div, td, p, tr, table)
+            container = parent
+            for _ in range(5):
+                if container.name in ("div", "td", "p", "tr", "table", "body"):
+                    break
+                if container.parent and isinstance(container.parent, Tag):
+                    container = container.parent
+                else:
+                    break
+            if container.name != "body":
+                for sibling in list(container.find_next_siblings()):
+                    sibling.decompose()
+                container.decompose()
+                break  # only need first match
+
+
 def _remove_outlook_separators(soup: BeautifulSoup) -> None:
     """Remove Outlook-style separators identified by inline border-top style."""
     for tag in soup.find_all(style=True):
@@ -98,6 +135,9 @@ def strip_html_quotes(html: str) -> str:
 
     # Remove Outlook border-top separators
     _remove_outlook_separators(soup)
+
+    # Remove newsletter / unsubscribe footers
+    _remove_unsubscribe_footers(soup)
 
     # Step 3: Convert to plain text
     text = soup.get_text(separator="\n", strip=True)

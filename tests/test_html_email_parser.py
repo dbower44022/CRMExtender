@@ -333,3 +333,118 @@ class TestStripQuotesHTMLIntegration:
         result = strip_quotes(body)
         assert "Hello, simple message." in result
         assert "Sent from my iPhone" not in result
+
+
+# ---------------------------------------------------------------------------
+# HTML-level unsubscribe footer stripping
+# ---------------------------------------------------------------------------
+
+class TestHTMLUnsubscribeFooter:
+    """Test removal of newsletter/unsubscribe footers in HTML."""
+
+    def test_footer_unsubscribe_id(self):
+        html = _wrap_html(
+            '<div>Great article content here.</div>'
+            '<div id="footerUnsubscribe">'
+            '<a href="#">Unsubscribe</a>'
+            '</div>'
+            '<div>Company address footer</div>'
+        )
+        result = strip_html_quotes(html)
+        assert "Great article content here." in result
+        assert "Unsubscribe" not in result
+        assert "Company address" not in result
+
+    def test_unsubscribe_text_in_div(self):
+        html = _wrap_html(
+            '<div>Newsletter body text.</div>'
+            '<div><a href="#">Click here to unsubscribe</a></div>'
+            '<div>Footer content</div>'
+        )
+        result = strip_html_quotes(html)
+        assert "Newsletter body text." in result
+        assert "unsubscribe" not in result
+        assert "Footer content" not in result
+
+    def test_unsubscribe_in_table_cell(self):
+        html = _wrap_html(
+            '<div>Product announcement.</div>'
+            '<table><tr><td>You can <a href="#">unsubscribe</a> at any time.</td></tr></table>'
+            '<div>More footer stuff</div>'
+        )
+        result = strip_html_quotes(html)
+        assert "Product announcement." in result
+        assert "unsubscribe" not in result
+
+    def test_unsubscribe_in_paragraph(self):
+        html = _wrap_html(
+            '<div>Meeting notes from today.</div>'
+            '<p>To unsubscribe from these emails, click here.</p>'
+            '<p>Copyright 2024</p>'
+        )
+        result = strip_html_quotes(html)
+        assert "Meeting notes from today." in result
+        assert "unsubscribe" not in result
+        assert "Copyright" not in result
+
+
+# ---------------------------------------------------------------------------
+# HTML track with signature detection (no CSS markup)
+# ---------------------------------------------------------------------------
+
+class TestHTMLTrackSignatureDetection:
+    """Test that the HTML track now catches signatures lacking CSS markup."""
+
+    def test_valediction_signature_in_html(self):
+        html = _wrap_html(
+            '<div>Please review the attached.</div>'
+            '<div>Best regards,</div>'
+            '<div>John Smith</div>'
+            '<div>VP of Engineering</div>'
+            '<div>Tel: +1 555-123-4567</div>'
+        )
+        result = strip_quotes("fallback", body_html=html)
+        assert "Please review the attached." in result
+        assert "VP of Engineering" not in result
+        assert "555-123-4567" not in result
+
+    def test_standalone_name_signature_in_html(self):
+        html = _wrap_html(
+            '<div>The report is ready for review.</div>'
+            '<div>ROBIN BAUM, CPA</div>'
+            '<div>Director of Finance</div>'
+            '<div>Phone: 555-000-1111</div>'
+        )
+        result = strip_quotes("fallback", body_html=html)
+        assert "report is ready for review" in result
+        assert "ROBIN BAUM" not in result
+
+    def test_promotional_content_in_html(self):
+        html = _wrap_html(
+            '<div>See you at the conference.</div>'
+            '<div>Follow us on LinkedIn <http://linkedin.com></div>'
+            '<div>Twitter <http://twitter.com></div>'
+        )
+        result = strip_quotes("fallback", body_html=html)
+        assert "See you at the conference." in result
+        assert "LinkedIn" not in result
+
+    def test_dash_dash_signature_in_html(self):
+        html = _wrap_html(
+            '<div>Quick update on the project.</div>'
+            '<div>--</div>'
+            '<div>Jane Doe</div>'
+            '<div>jane@example.com</div>'
+        )
+        result = strip_quotes("fallback", body_html=html)
+        assert "Quick update on the project." in result
+        assert "Jane Doe" not in result
+
+    def test_unsubscribe_footer_in_html_via_strip_quotes(self):
+        html = _wrap_html(
+            '<div>Important product update.</div>'
+            '<div><a href="#">Unsubscribe</a> from this mailing list.</div>'
+        )
+        result = strip_quotes("fallback", body_html=html)
+        assert "Important product update." in result
+        assert "Unsubscribe" not in result

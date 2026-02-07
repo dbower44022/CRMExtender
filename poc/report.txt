@@ -1,0 +1,479 @@
+================================================================================
+EMAIL SIGNATURE DETECTION REPORT
+================================================================================
+
+Total emails processed: 4
+Signatures detected:    2
+  High confidence (≥85%): 2
+  Medium confidence:      0
+  Low confidence:         0
+No signature found:     2
+
+Detection methods used:
+  closing_phrase (+1 other): 2
+  none: 2
+
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+EMAIL 1: Douglas, your order is confirmed.eml
+────────────────────────────────────────────────────────────────────────────────
+From:       eBay <ebay@ebay.com>
+Subject:    Douglas, your order is confirmed
+Date:       Fri, 06 Feb 2026 09:05:11 -0700
+Confidence: 0%
+Method:     none
+
+--- BODY (signature stripped) ---
+@media screen and (min-width:600px){.hide{display:none!important;overflow:hidden!important;max-height:0!important}.show{display:block!important;max-height:none!important}.hide_mob{display:block!important;overflow:visible!important;max-height:none!important}.floatnone{float:none!important}.floatleft{float:left!important}.floatright{float:right!important}.opacity-1{opacity:1!important}.ellipsis{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis}}.blueFix span,.blueFix span:hover{border-bottom:0 none transparent!important}.blueFix a{text-decoration:none!important;white-space:nowrap;color:inherit!important;border-bottom:none!important}@media screen and (max-width:600px){.show_mob{display:block!important}.& .YahooBtn {width: 85% !important;}.column{display:block !important; width:100% !important;}.calc-width92{width:calc(100% - 92px)!important}.calc-width130{width:calc(100% - 130px)!important}.calc-width-185{width:calc(100% - 185px)!important}.calc-width{width:calc(100% - 122px)!important}.hide_mob{display:none!important;overflow:hidden!important;max-height:0!important}.hide_mob_alt{display:none!important;overflow:hidden!important;max-height:0!important}}u+.body .gwfw{width:100%!important;width:100vw!important}.column-top{display:table-header-group!important}.column-bottom{display:table-footer-group!important}body,table,td,h1,h2,h3,h4,h5,p,ul,ol,a,span{font-family:Arial,san-serif!important}@font-face{font-family:'Market Sans';mso-generic-font-family:swiss;mso-font-alt:Arial}@font-face{font-family:'Market Sans';src:url(https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-Regular-WebS.eot);src:url(https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-Regular-WebS.eot?#iefix)format('embedded-opentype'),url('https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-Regular-WebS.woff2')format('woff2'),url('https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-Regular-WebS.woff')format('woff'),url('https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-Regular-WebS.ttf')format('truetype'),url('https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-Regular-WebS.svg#MarketSans-Regular-WebS')format('svg');font-weight:normal;font-style:normal;mso-generic-font-family:swiss;mso-font-alt:'Arial'}@font-face{font-family:'Market Sans';src:url(https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-SemiBold-WebS.eot);src:url(https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-SemiBold-WebS.eot?#iefix)format('embedded-opentype'),url('https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-SemiBold-WebS.woff2')format('woff2'),url('https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-SemiBold-WebS.woff')format('woff'),url('https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-SemiBold-WebS.ttf')format('truetype'),url('https://ir.ebaystatic.com/cr/v/c1/market-sans/v1.0/MarketSans-SemiBold-WebS.svg#MarketSans-SemiBold-WebS')format('svg');font-weight:bold;font-style:normal;mso-generic-font-family:swiss;mso-font-alt:'Arial'}[style*='Market Sans']{font-family:'Market Sans',Helvetica,Arial,sans-serif!important}html,body,h1,h2,h3,h4,h5,h6,p{margin:0;padding:0}h1,h2,h3,h4,h5,h6,p,ul,ol,table{font-family:'Market Sans',Helvetica,Arial,sans-serif!important}sup{line-height:0;font-size:70%}p a{color:inherit!important;text-decoration:none!important}.footer .legal a{color:#003AA5!important;text-decoration:underline!important}p .link{text-decoration:underline!important}a:-webkit-any-link:focus{outline-offset:0!important}a:focus,.focus:focus,.focusRed:focus{outline:3px solid #000!important;margin:3px}.focus__content:focus{outline:0}.button,.button:focus{transition:.4s;animation-duration:1.3s;animation-timing-function:ease-in-out;animation-iteration-count:1}.button:hover,.button:focus{-webkit-border-radius:24px!important;border-radius:24px!important;padding:9px 24px 9px 24px!important}.button{transition:.4s}.pl6{padding-left:6px!important}.pr8{padding-right:8px!important}.border-box{box-sizing:border-box!important}@media screen and (min-width:600px){.w-auto,.col-auto,.col-auto-column{width:auto!important}.w-100pc,.col-100pc,.width-100pc-column,.width-100pc-24px-column{width:100%!important}.w124{width:124px!important}.w181{width:181px!important}.w183{width:183px!important}.w132{width:100%!important;max-width:132px!important}.w179{width:100%!important;max-width:179px!important}.w130,.col-130px{max-width:130px!important}.w568{width:568px!important}.ml0{margin-left:0!important}.mr0{margin-right:0!important}.mr8,.mx8{margin-right:8px!important}.ml8,.mx8{margin-left:8px!important}.mt5{margin-top:5px!important}.mt12{margin-top:12px!important}.col-568px,.col-1-column{width:568px!important}.col-1-gutter,.col-2-gutter{width:16px!important}.col-2-column,.col-276px{width:276px!important}.col-400px{width:400px!important}.col-206px{width:206px!important}.col-142px{width:142px!important}.col-82px{width:82px!important}.col-121px{width:121px!important}.col-128px{width:128px!important}.col-163px{width:163px!important}.col-164px{width:164px!important}.col-168px{width:168px!important}.col-178px{width:178px!important}.col-179px{width:179px!important}.col-183px{width:183px!important}.col-184px{width:184px!important}.col-198px{width:198px!important}.col-224px{width:224px!important}.col-238px{width:238px!important}.col-248px{width:248px!important}.col-96px{width:96px!important}.col-252px{width:252px!important}.col-257px{width:257px!important}.col-265px{width:265px!important}.col-268px{width:268px!important}.col-272px{width:272px!important}.col-275px{width:275px!important}.col-279px{width:279px!important}.col-295px{width:295px!important}.col-303px{width:303px!important}.col-315px{width: 315px !important}.col-328px{width:328px!important}.col-330px{width:330px!important}.col-354px{width:354px!important}.col-373px{width:373px!important}.col-369px{width:369px!important}.col-398px{width:398px!important}.col-520px{width:520px!important}.col-568px{width:568px!important}.col-400px{width:400px!important}.col-436px{width:436px!important}.col-456px{width:456px!important}.col-474px{width:474px!important}.col-383px{width:383px!important}.col-292px{width:292px!important}.col-185px{width:185px!important}.col-158px{width:158px!important}.mw-400{max-width: 400px !important}}@media screen and (min-width:600px){.w122Fix{float:left!important;width:100%!important;max-width:122px!important}.col-157px{width:157px!important}.col-138px{width:138px!important}.col-130px{width:130px!important}.col-126px{width:126px!important}.col-112px{width:112px!important}.gutter-0{width:0!important}.col-title-column{width:436px!important}.col-title-gutter{width:24px!important}.col-terms-column{width:520px!important}.col-terms-gutter{width:24px!important}.col-2alt-column{width:248px!important}.col-2alt-gutter{width:24px!important}.col-3-column{width:157px!important}.col-3-gutter{width:24px!important}.col-3-column2{width:158px!important}.col-4-column{width:112px!important}.col-4-gutter{width:24px!important}.col-4alt-column{width:142px!important}.col-4alt-gutter{width:24px!important}.w104{width:104px!important}.w242{width:242px!important}.w84{width:84px!important}.w220{width:220px!important}.w276{width:276px!important}.w200{width:200px!important}.w148{width:148px!important}.w140{width:140px!important}.width-383-column{width:383px!important}.width-383-gutter{width:0!important}.width-185-column{width:185px!important}.width-185-gutter{width:0!important}.width-488-column{width:488px!important}.width-488-gutter{width:0!important}.width-80-column{width:80px!important}.width-80-gutter{width:0!important}.width-300-column{width:300px!important}.width-300-gutter{width:0!important}.width-146-column{width:146px!important}.width-146-gutter{width:0!important}.width-130-gutter{width:16px!important}.width-130-column{width:130px!important}.width-138-column{width:138px!important}.width-138-gutter{width:0!important}.width-100pc-gutter{width:16px!important}.width-100pc-24px-gutter{width:24px!important}.width-auto-gutter{width:24px!important}.col-179px-column{width:179px!important}.gutter-15px{width:15px!important}.gutter-16px{width:16px!important}.gutter-24px{width:24px!important}.gutter-32px{width:32px!important}.floatnone{float:none!important}}@media screen and (min-width:600px){.vspace-16{line-height:16px!important}.h16,.vspace-16{height:16px!important}.vspace-32{line-height:32px!important}.h32,.vspace-32{height:32px!important}.h100{min-height:100px!important}.h258{height:258px!important}.h280{height:280px!important}.h336{height:336px!important}.h148{height:148px!important}.h348{height:348px!important}.alignleft{text-align:left!important}.aligncenter{text-align:center!important}.alignright{text-align:right!important}.p0{padding:0!important}.pl0,.px0{padding-left:0!important}.pr0,.px0{padding-right:0!important}.px16{padding-left:14px!important}.px16{padding-right:16px!important}.pr14,.px14{padding-right:14px!important}.pl14,.px14{padding-left:12px!important}.pl16{padding-left:16px!important}.pr16{padding-right:16px!important}.pl8{padding-left:8px!important}.pl24{padding-left:24px!important}.pb0{padding-bottom:0px!important}.pb6{padding-bottom:6px!important}.pb8{padding-bottom:8px!important}.pb32{padding-bottom:32px!important}.pb42{padding-bottom:42px!important}.pb18{padding-bottom:18px!important}.pb24{padding-bottom:24px!important}.pb14{padding-bottom:14px!important}.pb4,.py4 {padding-bottom:4px!important}.pt4,.py4 {padding-top:4px!important}.pt0{padding-top:0px!important}.pt8{padding-top:8px!important}.pb12,.py12{padding-bottom:12px!important;}.pt12,.py12{padding-top:12px!important;}.pt14{padding-top:14px!important}.pt16{padding-top:16px!important}.pt21{padding-top:21px!important}.pt24{padding-top:24px!important}.mt0,.my0{margin-top:0!important}.mb0,.my0{margin-bottom:0!important}.mr4,.mx4{margin-right:4px!important}.ml4,.mx4{margin-left:4px!important}.mt4,.my4{margin-top:4px!important}.mb4,.my4{margin-bottom:4px!important}.mb3,.my3{margin-bottom:3px!important}.mb8,.my8{margin-bottom:8px!important}.w122{width:122px!important;min-width:122px!important}.w122Fix{float:left!important;width:100%!important;max-width:122px!important}.mt6 {margin-top:6px!important}.mt8,.my8{margin-top:8px!important}.mt16,.my16{margin-top:16px!important}.mb16,.my16{margin-bottom:16px!important}.mt18,.my18{margin-top:18px!important}.mb18,.my18{margin-bottom:18px!important}.mt20,.my20{margin-top:20px!important}.mb20,.my20{margin-bottom:20px!important}.mt24,.my24{margin-top:24px!important}.mb24,.my24{margin-bottom:24px!important}.mt26,.my26{margin-top:26px!important}.mb26,.my26{margin-bottom:26px!important}.mt32,.my32{margin-top:32px!important}.mb32,.my32{margin-bottom:32px!important}.mr16,.mx12{margin-right:12px!important}.mr14{margin-right:14px!important}.mr16,.mx16{margin-right:16px!important}.sp8{line-height:8px!important; height:8px!important; font-size:8px!important}.ml12,.mx12{margin-left:12px!important}.ml13{margin-left: 13px!important}.ml14{margin-left:14px!important}.ml16,.mx16{margin-left:16px!important}.mr24,.mx24{margin-right:24px!important}.ml24,.mx24{margin-left:24px!important}.mr27,.mx27{margin-right:27px!important}.ml27,.mx27{margin-left:27px!important}.mr28,.mx28{margin-right:28px!important}.ml28,.mx28{margin-left:28px!important}.mx0{margin-left:0!important;margin-right:0!important}.m0{margin:0!important}.ml0{margin-left:0!important}.mb0{margin-bottom:0!important}.mb4{margin-bottom:4px!important}.mb8{margin-bottom:8px!important}.mb2{margin-bottom:2px!important}.pr24{padding-right:24px!important}.mb12{margin-bottom:12px!important}.mr22{margin-right:22px!important}.row{display:table!important}.col{display:table-cell!important;vertical-align:top!important}.br-reset{border-radius:0!important}.br-topleft,.br-top,.br-left{border-top-left-radius:16px!important}.br-topright,.br-top,.br-right{border-top-right-radius:16px!important}.br-bottomleft,.br-bottom,.br-left{border-bottom-left-radius:16px!important}.br-bottomright,.br-bottom,.br-right{border-bottom-right-radius:16px!important}.fs14{font-size:14px!important;line-height:20px!important}.fs16 {font-size: 16px!important;line-height: 24px!important}.fs46{font-size:46px!important;line-height:52px!important}.fs72{font-size:72px!important;line-height:82px!important}.fs92{font-size:92px!important;line-height:118px!important}.border-box{box-sizing:content-box!important}.content-box{box-sizing:content-box!important}.table{display:table!important}.tbody{display:table-row-group!important}.tr{display:table-row!important}.td{display:table-cell!important}.d-inline{display:inline!important}}@media screen and (min-width:600px){.Giant3{font-size:46px!important;line-height:52px!important}.Giant2{font-size:36px!important;line-height:46px!important}.Giant1{font-size:30px!important;line-height:40px!important}.spacer1px{line-height:1px!important;font-size:1px!important;height:1px!important}.Large3{font-size:28px!important;line-height:38px!important}.Large2{font-size:24px!important;line-height:32px!important}.Large1{font-size:20px!important;line-height:28px!important}.Medium{font-size:16px!important;line-height:24px!important}.Regular{font-size:14px!important;line-height:20px!important}.Small{font-size:12px!important;line-height:16px!important}}@media(prefers-color-scheme:dark){.generic,.dark-bg,.gwfw{background-color:#171717!important}.boder-N2{border-color:#393939!important}.prodLink{color: #4D93FC!important}a:focus,.focus:focus{outline:3px solid #FFF!important;margin:3px}img,.whiteText{color:#DCDCDC!important}.dark-hr{color:#393939!important;border-color:#393939!important}.dark-N1{background-color:#212121!important}.dark-191919{color:#DCDCDC!important}.dark-363636{color:#ABABAB!important}.dark-no-border{border:0!important}.dark-border-414141{border-color:#363636!important}.dark-image{display:block!important;width:auto!important;overflow:visible!important;float:none!important;max-height:auto!important;max-width:auto!important;line-height:auto!important;margin-top:0!important;visibility:inherit!important}.dark-signal-B4{border-color:#5192FF!important;color:#5192FF!important}.inline{display:inline-block!important}.light-image,img.light-image{display:none!important}.footer .legal a{color:#4D93FC!important;text-decoration:underline!important}.footer a{color:#DCDCDC!important}.footer p{color:#ABABAB!important}}[data-ogsb] .dark-image{display:block!important;width:auto!important;overflow:visible!important;float:none!important;max-height:inherit!important;max-width:inherit!important;line-height:auto!important;margin-top:0!important;visibility:inherit!important}[data-ogsb] .inline{display:inline-block!important}[data-ogsb] .light-image,[data-ogsb] img.light-image{display:none!important}[data-ogsb] .blueFix span,[data-ogsb] .blueFix span:hover{border-bottom:0 none transparent!important}[data-ogsb] .blueFix a{text-decoration:none!important;white-space:nowrap;color:inherit!important;border-bottom:none!important}.button,.button:focus,.seedButton,.seedButton:focus{transition:.4s;animation-duration:1.3s;animation-timing-function:ease-in-out;animation-iteration-count:1}.button:hover,.button:focus{-webkit-border-radius:24px!important;border-radius:24px!important;padding:10px 24px 10px 24px!important}.seedButton:hover,.seedButton:focus{-webkit-border-radius:24px!important;border-radius:24px!important;padding:9px 24px 9px 24px!important}.button,.seedButton{transition:.4s}a:link,span.MsoHyperlink{mso-style-priority:99;color:inherit;underline:inherit}a:visited,span.MsoHyperlinkFollowed{mso-style-priority:99;color:inherit;underline:inherit}ul{margin-left:25px!important}ol{margin:0!important}li{margin-left:24px!important}li.firstListItem{margin-top:0!important}li.lastListItem{margin-bottom:0!important}@media(prefers-color-scheme:light){.dark-image-hide{display:none!important}}#MessageViewBody .samsungHide{display:none!important;width:0!important;height:0!important}:root{color-scheme:light dark;supported-color-schemes:light dark}
+
+Thanks for making another purchase.
+
+&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+
+&nbsp;
+
+.preheaderMod, .preheaderMod div { color: #111820 !important; display: none; }
+.mgh-N1-IMAGE_FRAME-2023_OS_Header_Transactional_Generic .logo a:focus {outline: 3px solid #000000 !important;padding: 0px !important;}
+@media (prefers-color-scheme:dark) {
+.mgh-N1-IMAGE_FRAME-2023_OS_Header_Transactional_Generic{background:#171717!important;}
+.mgh-N1-IMAGE_FRAME-2023_OS_Header_Transactional_Generic .logo a:focus {outline: 3px solid #FFFFFF !important;padding: 0px !important;}
+}
+
+Welcome back Douglas! Thanks for another purchase.
+
+&nbsp;
+
+View order details
+
+&nbsp;
+
+.mh-N1-transactionalGeneric-2025_OD_Hero_Transactional_Generic_1 .cta:hover, .mh-N1-transactionalGeneric-2025_OD_Hero_Transactional_Generic_1 .cta:focus { background: #FFFFFF!important; color: #0968F6!important; border: 1px solid #0968F6!important}
+@media (prefers-color-scheme:dark) {
+.mh-N1-transactionalGeneric-2025_OD_Hero_Transactional_Generic_1{background:#171717!important;}
+.mh-N1-transactionalGeneric-2025_OD_Hero_Transactional_Generic_1 .sticker,.mh-N1-transactionalGeneric-2025_OD_Hero_Transactional_Generic_1 .sticker a{color:#DCDCDC!important;}
+.mh-N1-transactionalGeneric-2025_OD_Hero_Transactional_Generic_1 .cta:hover, .mh-N1-transactionalGeneric-2025_OD_Hero_Transactional_Generic_1 .cta:focus { background: #171717!important; color: #4D93FC!important; border: 1px solid #4D93FC!important}
+.mh-N1-transactionalGeneric-2025_OD_Hero_Transactional_Generic_1 .cta { background: #4D93FC!important; color: #171717!important; border: 1px solid #4D93FC!important}
+}
+
+Your order will ship to:
+
+Douglas Bower345 N Main StChagrin Falls, 44022-2721 OHUnited States
+
+&#160;
+
+Estimated delivery:
+
+Wed, Feb 11 - Thu, Feb 19
+
+@media (prefers-color-scheme:dark) {
+.mos-N1-CONTAINER-none{background:#171717!important;}
+.mos-N1-CONTAINER-none.component{background:#212121!important;}
+.mos-N1-CONTAINER-none .itemKey{color:#9C9C9C!important;}
+.mos-N1-CONTAINER-none .itemValue, .mos-N1-CONTAINER-none .itemValue a, .mos-N1-CONTAINER-none .itemValue a span{color:#DCDCDC!important;}
+}
+
+&#160;
+
+Your order details
+
+We'll let you know when your order has shipped.
+
+&#160;
+
+@media (prefers-color-scheme:dark) {
+.mt-N1-default-none, .mt-N1-default-none .dmBackground{background-color:#171717!important;}
+.mt-N1-default-none .t_title, .mt-N1-default-none .t_title a{color:#DCDCDC!important;}
+.mt-N1-default-none .t_description, .mt-N1-default-none .t_description a{color:#9C9C9C!important;}
+}
+
+VTG Costco Quacking Duck Plush Hand Puppet 13" Quacks Old McDonalds Farm Sound
+
+&#160;
+
+Price:
+
+$17.95
+
+$17.95
+
+Item ID:
+
+396266148295
+
+396266148295
+
+Order number:
+
+15-14194-89955
+
+15-14194-89955
+
+Seller:
+
+.msi-N1-ORDER_DELIVERY-none_labelValueValue_l0,.msi-N1-ORDER_DELIVERY-none_labelValueValue_l0 span{color:#191919!important;text-decoration: underline!important;}@media(prefers-color-scheme:dark){.msi-N1-ORDER_DELIVERY-none_labelValueValue_l0,.msi-N1-ORDER_DELIVERY-none_labelValueValue_l0 span{color:#DCDCDC!important;}}.linkStyledText, .linkStyledText span, span.linkStyledText { color: #0968F6!important; }
+@media(prefers-color-scheme: dark) {
+.linkStyledText, .linkStyledText span, span.linkStyledText { color: #4D93FC!important; }
+}
+flipside5mike stroh16215 Noel Ln. Lathrop, 95330 CAUnited States
+
+.msi-N1-ORDER_DELIVERY-none_labelValueValue_l0,.msi-N1-ORDER_DELIVERY-none_labelValueValue_l0 span{color:#191919!important;text-decoration: underline!important;}@media(prefers-color-scheme:dark){.msi-N1-ORDER_DELIVERY-none_labelValueValue_l0,.msi-N1-ORDER_DELIVERY-none_labelValueValue_l0 span{color:#DCDCDC!important;}}.linkStyledText, .linkStyledText span, span.linkStyledText { color: #0968F6!important; }
+@media(prefers-color-scheme: dark) {
+.linkStyledText, .linkStyledText span, span.linkStyledText { color: #4D93FC!important; }
+}
+flipside5mike stroh16215 Noel Ln. Lathrop, 95330 CAUnited States
+
+eBay Money Back Guarantee
+
+&nbsp;
+
+View order details
+
+&nbsp;
+
+.msi-N1-ORDER_DELIVERY-none .seedButton_0:hover span {
+color: #0968F6 !important;
+}
+.msi-N1-ORDER_DELIVERY-none .seedButton_0:hover {
+background-color: #FFFFFF !important;
+box-shadow: inset 0 0 0 25px #FFFFFF;
+border-color: #0968F6 !important;
+}
+@media (prefers-color-scheme:dark) {
+.msi-N1-ORDER_DELIVERY-none .img img{background:#212121!important;}
+.msi-N1-ORDER_DELIVERY-none .seedButton_0 span {
+color: #171717 !important;
+}
+.msi-N1-ORDER_DELIVERY-none .seedButton_0:hover span {
+color: #4D93FC !important;
+}
+.msi-N1-ORDER_DELIVERY-none .seedButton_0 {
+background: #4D93FC !important;
+border-color: #4D93FC !important;
+}
+.msi-N1-ORDER_DELIVERY-none .seedButton_0:hover {
+background-color: #171717 !important;
+box-shadow: inset 0 0 0 25px #171717;
+border-color: #4D93FC !important;
+}
+.msi-N1-ORDER_DELIVERY-none{background:#171717!important;}
+.msi-N1-ORDER_DELIVERY-none .title{color:#4D93FC!important;}
+.msi-N1-ORDER_DELIVERY-none .labelValueLabel{color:#9C9C9C!important;}
+.msi-N1-ORDER_DELIVERY-none .labelValueValue{color:#DCDCDC!important;}
+.msi-N1-ORDER_DELIVERY-none .description{color:#9C9C9C!important;}
+.msi-N1-ORDER_DELIVERY-none .badge{color:#DCDCDC!important;}
+}
+
+@media screen and (max-width:600px) {
+.& .YahooBtn {
+width: 85% !important;
+}
+}
+
+Order total:
+
+Subtotal
+
+$17.95
+
+Shipping
+
+$9.95
+
+Sales tax
+
+$2.23
+
+Total charged to
+
+&nbsp;
+
+$30.13
+
+@media (prefers-color-scheme:dark) {
+.moc-N1-default-none{background:#171717!important;}
+.moc-N1-default-none .inner{background:#212121!important;}
+.moc-N1-default-none .table{color:#DCDCDC!important;}
+.moc-N1-default-none .title{color:#A8A8A8!important;}
+.moc-N1-default-none .item{color:#DCDCDC!important;}
+.moc-N1-default-none .item .border-bottom{border-color:#393939!important;}
+}
+
+How useful is this email?
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+@media (prefers-color-scheme:dark) {
+.ms-N1-RATING-none {background-color:#171717!important;}
+.ms-N1-RATING-none .dark-hr {color:#393939!important;border-color:#393939!important;}
+.ms-N1-RATING-none .title {color: #DCDCDC !important;}
+}
+
+Email Reference ID: [#92307e2fb5584a89a9517a3a257fde84]
+
+Update your email preferences or learn about account protection.If you have a question, contact us.
+
+eBay I&zwnj;nc., 2&zwnj;025 H&zwnj;amilton A&zwnj;venue, S&zwnj;an J&zwnj;ose, C&zwnj;A 9&zwnj;5125, U&zwnj;nited S&zwnj;tates
+
+&copy; 1995-2026 eBay Inc. or its affiliates
+
+--- DETECTED SIGNATURE ---
+[No signature detected]
+
+────────────────────────────────────────────────────────────────────────────────
+EMAIL 2: Follow-ups from yesterday's meeting.eml
+────────────────────────────────────────────────────────────────────────────────
+From:       Janet.Padula@morganstanley.com
+Subject:    Follow-ups from yesterday's meeting 
+Date:       Thu, 08 May 2025 12:35:34 +0000
+Confidence: 95%
+Method:     closing_phrase (+1 other)
+
+--- BODY (signature stripped) ---
+Good morning,
+
+It was great meeting with you both yesterday!
+
+As discussed, we are following up with a list of take-aways from our meeting.
+
+
+  *   Here's the contact info for the Medicare/ Insurance Person:
+
+
+Kelly Walter
+
+K.W. Consulting, Inc.
+
+kwalter@kwalterconsulting.com<mailto:kwalter@kwalterconsulting.com>
+
+440-834-0684
+
+216-403-5860 (cell)
+
+
+
+  *   We discussed applying for Social Security benefits (Doug).  You can do so anytime, as the lead time to start receiving benefits is about 2-4 months.  Please note, since you are not at your Full Retirement Age (age 67), you may not have more than $23,400 in EARNED income while receiving Social Security benefits to avoid a reduction in your benefits.
+  *   Please provide the approximate balance for your home mortgage, so that we can include it in your updated Financial Plan
+  *   Please schedule an appointment with Robin to discuss tax implications of the possible liquidity event happening this calendar year.  We are happy to participate in this discussion as well
+  *   Please keep us posted on the progress of your home and landscape renovation projects and we can schedule time to meet and discuss a pay down plan for your Liquidity Access Line
+
+We are making the other edits to the plan as discussed in the meantime.
+
+--- DETECTED SIGNATURE ---
+Thank you
+
+
+
+Janet Padula, CFP(r), CDFA(r), MBA
+Senior Vice President / Financial Advisor
+Portfolio Manager
+NEO Wealth Management Group at Morgan Stanley
+31099 Chagrin Blvd., Pepper Pike, OH 44124
+NMLS ID 1589609
+CA License #4200319
+AZ License #9472145
++ 1 216 360-8606 - Direct
++ 1 216 905-0091 - Cell
++ 1 216 539-3235 - Fax
+Janet.Padula@morganstanley.com<mailto:Janet.Padula@morganstanley.com>
+[View my profile on LinkedIn]<http://www.linkedin.com/in/janetschiciano>
+
+Named to the 2025 Forbes Top Women Wealth Advisors<https://www.forbes.com/lists/top-women-advisors/> Ranking
+Source: Forbes.com (Awarded Feb 2025)  Data compiled by SHOOK Research LLC for the period 9/30/23 - 9/30/24.
+Awards Disclosures<https://www.morganstanley.com/disclosures/awards-disclosure.html>
+
+
+Named to the 2025 Forbes Best-In-State Wealth Management Teams<https://www.forbes.com/lists/wealth-management-teams-best-in-state/?sh=f5c37d876f26> Ranking
+Source: Forbes.com (Awarded Jan 2025)  Data compiled by SHOOK Research LLC based on time period from 3/31/23 - 3/31/24.
+Awards Disclosures<https://www.morganstanley.com/disclosures/awards-disclosure.html>
+
+________________________________
+
+
+If you would like to unsubscribe from marketing e-mails from Morgan Stanley Wealth Management, you may do so here: https://cloud.msmail.morganstanley.com/unsubpagesalesforce?Source=Outlook. Please note, you will still receive service e-mails from Morgan Stanley Wealth Management.
+
+You may have certain rights regarding the information that Morgan Stanley collects about you. Please see our Privacy Pledge https://www.morganstanley.com/privacy-pledge for more information about your rights.
+
+────────────────────────────────────────────────────────────────────────────────
+EMAIL 3: On the Markets_ New Year, New Tune.eml
+────────────────────────────────────────────────────────────────────────────────
+From:       "Carfagna, Peter" <peter.carfagna@morganstanley.com>
+Subject:    On the Markets: New Year, New Tune
+Date:       Thu, 05 Feb 2026 10:24:31 -0600
+Confidence: 0%
+Method:     none
+
+--- BODY (signature stripped) ---
+
+ 
+ 
+
+
+ 
+ 
+
+
+ 
+ 
+
+ 
+
+<table class="dm-image-block" data-dm-block-id="1713816879595" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center"><img src="https://image.msmail.morganstanley.com/lib/fe9413737562077971/m/1/72af0cc4-9baa-4c35-b071-9710013f523c.png" alt="" width="100%" style="display: block; padding: 0px; text-align: center; height: auto; width: 100%; border: 0px;"></td></tr></table>
+
+
+
+ Doug,
+ 
+
+ 
+
+
+
+
+
+
+<div class="dm-rich-text-block" data-dm-block-id="1590115454429"></div>
+
+
+ 
+ 
+
+ 
+ 
+
+ 
+
+Here is the latest edition of On the Markets. 
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6IjE1ZjY4ZDgyLTc5OWMtNGI0OS1iMmE3LTM0N2NjZjZhZDM0NyIsImRla1ZlcnNpb24iOjEsIml2IjoiL1Z6Qkw1VDh6SERCY2diMmorRUxkUT09IiwiY2lwaGVyVGV4dCI6IkQ0U1NwenJmREdWdDE5cUtqZmhIZGpXSjVzcjVJMWJIM0Foc3VMZUgyV3VlWEVxSHdQNTVlVUN1WWh0bEg4amsrdUYrMy83WHoyaGcvYzZ1SnByZllmK0hQTEU2L1Z6Qkw1VDh6SERCY2diMmorRUxkUT09IiwiYXV0aFRhZyI6IjE4OW9ZUDNPcmlhYTMySC9oenl4T2c9PSJ9 
+This month&rsquo;s issue  includes:
+	- &ldquo;Affordability in Focus&rdquo; Ahead of US midterm elections, policy proposals targeting affordability are multiplying. Morgan Stanley & Co. Research&rsquo;s head of US public policy strategy, Ariana Salvatore, narrows the field to five areas that the president and Congress are likely to focus on.
+	- &ldquo;The Case for a Latin American Spring&rdquo; A trifecta of changes&mdash;around geopolitics, monetary policy and elections&mdash;is creating a unique opportunity for Latin America to transform itself into an engine of growth. MS & Co. equity strategists Nikolaj Lippmann and Julia Nogueria explore a bullish scenario for the region.
+	- &ldquo;Gold Gaining as a Share of Reserves&rdquo; According to MS & Co. metals analyst Amy Gower, strong demand from central banks and stablecoin providers has helped boost gold to record highs. Much of that demand is expected to continue.
+
+
+ 
+ 
+
+ 
+ 
+
+ 
+<div class="dm-rich-text-block" data-dm-block-id="1590115589997"></div>
+
+
+
+ 
+
+ 
+ 
+
+ 
+
+<table class="dm-image-block" data-dm-block-id="1713816964595" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center"><img src="https://image.msmail.morganstanley.com/lib/fe9413737562077971/m/1/72af0cc4-9baa-4c35-b071-9710013f523c.png" alt="" width="100%" style="display: block; padding: 0px; text-align: center; height: auto; width: 100%; border: 0px;"></td></tr></table>
+
+
+
+
+
+
+
+
+
+ 
+ 
+ 
+ 
+  
+ 
+ 
+ 
+ 
+ 
+
+
+ 
+ 
+
+ 
+
+
+
+ NOTICE: Morgan Stanley is not acting as a municipal advisor and the opinions or views contained herein are not intended to be, and do not constitute, advice within the meaning of Section 975 of the Dodd-Frank Wall Street Reform and Consumer Protection Act. If you have received this communication in error, please destroy all electronic and paper copies and notify the sender immediately. Mistransmission is not intended to waive confidentiality or privilege. Morgan Stanley reserves the right, to the extent permitted under applicable law, to monitor electronic communications. This message is subject to terms available at the following link:
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6IjFlNGYzNmQzLTBmNWYtNGQ3Yi05NDIzLTM2NTc3NzMzOGY3MiIsImRla1ZlcnNpb24iOjEsIml2IjoiWDFDcUMyQmFmRG5KMjNjU0FDdnFoZz09IiwiY2lwaGVyVGV4dCI6InN1SkpWeFZGTHBqeHREbFZWVzRwOENaaFdmNlJsa1pld1A0Q1FOMndpc0dYKzJmNTdZTEtmY2JsdVY4M3R1d0ZidnhmRXhETXpsWXRhVVJOWkNxZEo2cjk0V25sWDFDcUMyQmFmRG5KMjNjU0FDdnFoZz09IiwiYXV0aFRhZyI6InpNNVdMV2xFVFdRcW5TZXEvZUZwNVE9PSJ9 
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6Ijk1MjQ3ZDBkLWRhMjgtNGU4Mi1iNTcyLWNjYjQzNTUyOWQ5YSIsImRla1ZlcnNpb24iOjEsIml2IjoiYVRyVVRKYjJpV1BYYmJvUUNVWHZwdz09IiwiY2lwaGVyVGV4dCI6IkJQeDNsbW5CQ1VaNDhnUUVweGNaTG5rZ3MrVEpaVEo5YWcrT2pvRFZodzRYK2NIbmNHNldYT25teFUyR2hCL0Y1ZTdnMEQ1Wm4yNUg5bCtkYURGVERBdGl4OHFhYVRyVVRKYjJpV1BYYmJvUUNVWHZwdz09IiwiYXV0aFRhZyI6IldaOXVSL1pmbldneFV3d0xZc2ZLbWc9PSJ9  If you cannot access these links, please notify us by reply message and we will send the contents to you. By communicating with Morgan Stanley you acknowledge that you have read, understand and consent, (where applicable), to the foregoing and the Morgan Stanley General Disclaimers.
+
+
+ 
+Please see our 
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6ImJmOTRjZmZhLWMyZjItNDRhMi04Y2NjLTUyOGJlYmUwNGE2ZSIsImRla1ZlcnNpb24iOjEsIml2IjoiZ2xpMFpFMjNGUmhSQS9GYjdMbVlYQT09IiwiY2lwaGVyVGV4dCI6IjhHbVV4SHNocUpSMnlobHY1aDloZytKL0Y5K0xER0lEdjNpYlpMeDlWTzZCZ2V2U1Z2WXVSRDkyUEJsSmhQRXJSKzhDWWRwZVVreDBVQTh6Mm43dmdtZ1psL3M1Z2xpMFpFMjNGUmhSQS9GYjdMbVlYQT09IiwiYXV0aFRhZyI6IlhsSk1kRkFQTTlwKzc0Sm9HWmY3T1E9PSJ9 
+Privacy Pledge  for details about how Morgan Stanley handles personal information. 
+
+ 
+ 
+If you would like to update your email preferences or unsubscribe from marketing emails from Morgan Stanley Wealth Management, you may do so 
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6IjU4N2FmZDA1LTM5MTEtNGYwNC1iNDAzLTBiZjhjZDJjMzk3MCIsImRla1ZlcnNpb24iOjEsIml2IjoiVFphSlZ1dUdjSUlaQjhqbHZPaHdwZz09IiwiY2lwaGVyVGV4dCI6Iko4K3loMEZYZlpGeTRPb2J2VkZ2TlVRNVU2QW5HVlBNdkxqMzJzaTZBdGFZOThZNWRDMktjcmZKNDFndm1uMEtma3pkZzVNZXlBUVhYOG0zUmsxSGdLaVlWRVZ0Y2l6dVJFMldpVmJyaG5DQ0dRZkk1YnpvY0tZPSIsImF1dGhUYWciOiJYOG0zUmsxSGdLaVlWRVZ0Y2l6dVJBPT0ifQ%3D%3D 
+here . Please note, you will still receive service emails from Morgan Stanley Wealth Management. 
+ 
+
+
+ Not all products and services may be available to persons living outside of the United States. 
+ 
+
+
+ Morgan Stanley Wealth Management 
+
+2000 Westchester Avenue, Purchase, NY 10577-2530 USA 
+
+
+ © 2026 Morgan Stanley Smith Barney LLC.  Member 
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6Ijc0Y2UwYWVmLTIyMGEtNDQ0Ny1hMWQ0LTI4MTM4NGJhM2E3NSIsImRla1ZlcnNpb24iOjEsIml2IjoiUXJydFNVanRjcG56OFAyNnBybHhJUT09IiwiY2lwaGVyVGV4dCI6InFtbmx6RjEwV3Q5YzhuLzJaRmppVXRjTnVoTmlOR0xVNWpOWGg1L2hTaVEzUkNjd0NYLzZMdXVuNDMvZXVMMnFzZW5FejVQNyt3ZUNVeDJwbG5NRHd2bDhOZHFDUXJydFNVanRjcG56OFAyNnBybHhJUT09IiwiYXV0aFRhZyI6Iisvc0hnbE1kcVpaekE4TDVmRFhhZ2c9PSJ9 
+SIPC .
+
+
+ 
+
+ CRC 4548512 02/2026
+
+--- DETECTED SIGNATURE ---
+[No signature detected]
+
+────────────────────────────────────────────────────────────────────────────────
+EMAIL 4: Third Party Solicitations Opt Out & Meeting Confirmation.eml
+────────────────────────────────────────────────────────────────────────────────
+From:       Joshua.D.Gilbert@morganstanley.com
+Subject:    Third Party Solicitations Opt Out & Meeting Confirmation 
+Date:       Mon, 26 Jan 2026 17:34:31 +0000
+Confidence: 95%
+Method:     closing_phrase (+1 other)
+
+--- BODY (signature stripped) ---
+Hello Doug & Mindy,
+Cc:  Peter,
+I am confirming your upcoming mortgage refinance application for this coming Thursday afternoon, 1/29, @ 2 PM ET using conference line 1-877-777-8895 | Passcode: 9853840.
+
+While Morgan Stanley will never sell client information, credit reporting agencies do offer a service where they sell your information to third parties such as lenders and insurance companies and the like. This means that when your credit report is pulled for a home loan application, your information may be shared with these third parties, resulting in unsolicited calls, emails, and texts.
+The good news is that you can opt out of these solicitations, and it's completely free to do so at www.OptOutPrescreen.com<http://www.OptOutPrescreen.com>
+There is an attachment on this topic and it is encouraged to take the couple minutes to opt out ahead of the application.
+
+Let me know if you have any questions.
+Thank you,
+Josh
+
+--- DETECTED SIGNATURE ---
+Any rates, terms, conditions and fees expressed in this email are indicative, not a commitment to lend and subject to change without notice.  Loans are subject to underwriting review and credit decisioning.  Other restrictions may apply.
+
+Joshua Gilbert | First Vice President
+Morgan Stanley Private Bank, N.A.
+Office:   (216) 523-3093
+200 Public Square, 26th Fl | Cleveland, OH 44114
+joshua.d.gilbert@morganstanley.com<mailto:joshua.d.gilbert@morganstanley.com>
+NMLS ID #427087
+
+Important notice to Recipients:  Do not use email to request, authorize or effect the purchase or sale of any security or commodity, to send fund transfer instructions, or to effect any other transactions.  Any such request, orders or instructions that you send to any employee of Morgan Stanley will not be accepted and will not be processed.  The sender of this email is an employee of Morgan Stanley Private Bank, National Association.  Erroneous transmission is not intended to waive confidentiality or privilege.  Morgan Stanley Private Bank, National Association reserves the right, to the extent permitted under applicable law, to monitor electronic communications.  By emailing with Morgan Stanley Private Bank, National Association you consent to the foregoing.
+
+________________________________
+
+
+To view Morgan Stanley's Client Relationship Summary and other important disclosures about our accounts and services, please visit www.morganstanley.com/disclosures/account-disclosures
+
+You may have certain rights regarding the information that Morgan Stanley collects about you. Please see our Privacy Pledge https://www.morganstanley.com/privacy-pledge for more information about your rights.
+

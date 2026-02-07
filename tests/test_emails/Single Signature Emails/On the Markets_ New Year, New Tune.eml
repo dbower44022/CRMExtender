@@ -1,0 +1,529 @@
+Delivered-To: doug@dougbower.com
+Received: by 2002:a05:6a11:d881:b0:6b9:6c47:c9cb with SMTP id od1csp545076pxc;
+        Thu, 5 Feb 2026 08:24:32 -0800 (PST)
+X-Received: by 2002:ac8:57c8:0:b0:4ee:1800:615 with SMTP id d75a77b69052e-5061c0d57f1mr88991601cf.14.1770308672274;
+        Thu, 05 Feb 2026 08:24:32 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1770308672; cv=none;
+        d=google.com; s=arc-20240605;
+        b=BFQvU7n92mKYTBPdD8FNdd81GnydsfUj3RuaCMfZyumT1mfsEh6tI1Ym2WTJBdc2it
+         gtZHHf8beVFOIUkD8ykd5NghWS3+XE550+9DE9j3zxPsV+umyir8F3QfW+cfk/uamG0G
+         hGo40pRDTJnLa0GVLwAgAff9VvfBQV/Cv+3piCQ4elZCmj/sZ5cLUFjlYgU2HJQ09fC0
+         z3I5ve2vHNsbayzVkWiAQR6kCZzNmSsZPQmOXuSgAojCb3IoHCYdWitkHy7NJOCcEnHu
+         cEZat1mQDI86tPdCaCxdImQZx2cgiOuK5AnjRFJrUS8A0Ps2MSlBXQfc2l4tcb2CEezE
+         aqhA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=message-id:reply-to:mime-version:list-help:date:subject:to:from
+         :dkim-signature:dkim-signature;
+        bh=te7zlbIDpSV6pYtsOFpI2V3ZDzsEY2PeNIdY3WXbmdk=;
+        fh=liMflTMKReOlcHfjkPLWVBlDbIC1/kSswLSHErHHzdo=;
+        b=fBfpe/eVfSOHrW/GI4KASSgbd9dtlXySbZNaL79Pc62fL+y9zgmGJ4jwLEP6dYmfbo
+         mxbjuamrVeEU0d0UDusEPK44DTTBazvDLk/vldZUZzBNuM/3PSfqWJD6Oo9YETTCd6t9
+         bp01dpeQ4DPg8zSxou1c0HzcyHbG9AiKIM6zn74KcHQQWYsf0ZBqgljMB3qx2khCx/Y0
+         sj5x9zsar0l9VF5HTkDMO2Apj21exg1ZCecQ2PP5ZGaq4w4zJK8nX7kbGi7OFSW4c5Zz
+         H5ETaEXOXvYPBCwzIHKflI1R83G1YzETn5IOxD9MRMKaEAwbzZYNkPDg9gdOt4ea8okj
+         SbiQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@morganstanley.com header.s=sfmc48 header.b="g6KWjb/d";
+       dkim=pass header.i=@s7.y.mc.salesforce.com header.s=fbldkim7 header.b=EqnsIs3I;
+       spf=pass (google.com: domain of bounce-wiedu5rnnjvunbes6ov3sk4kke.70251@bounce.msmail.morganstanley.com designates 13.111.5.24 as permitted sender) smtp.mailfrom=bounce-WIEDU5RNNJVUNBES6OV3SK4KKE.70251@bounce.msmail.morganstanley.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=morganstanley.com
+Return-Path: <bounce-WIEDU5RNNJVUNBES6OV3SK4KKE.70251@bounce.msmail.morganstanley.com>
+Received: from mta.msmail.morganstanley.com (mta.msmail.morganstanley.com. [13.111.5.24])
+        by mx.google.com with ESMTPS id 6a1803df08f44-89521cee6bbsi68821186d6.653.2026.02.05.08.24.32
+        for <doug@dougbower.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Thu, 05 Feb 2026 08:24:32 -0800 (PST)
+Received-SPF: pass (google.com: domain of bounce-wiedu5rnnjvunbes6ov3sk4kke.70251@bounce.msmail.morganstanley.com designates 13.111.5.24 as permitted sender) client-ip=13.111.5.24;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@morganstanley.com header.s=sfmc48 header.b="g6KWjb/d";
+       dkim=pass header.i=@s7.y.mc.salesforce.com header.s=fbldkim7 header.b=EqnsIs3I;
+       spf=pass (google.com: domain of bounce-wiedu5rnnjvunbes6ov3sk4kke.70251@bounce.msmail.morganstanley.com designates 13.111.5.24 as permitted sender) smtp.mailfrom=bounce-WIEDU5RNNJVUNBES6OV3SK4KKE.70251@bounce.msmail.morganstanley.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=morganstanley.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; s=sfmc48; d=morganstanley.com;
+ h=From:To:Subject:Date:List-Help:MIME-Version:Reply-To:Message-ID:Content-Type;
+ i=peter.carfagna@morganstanley.com;
+ bh=te7zlbIDpSV6pYtsOFpI2V3ZDzsEY2PeNIdY3WXbmdk=;
+ b=g6KWjb/doIGG4/uJLVO5spWim15kHIw0K9bk943ODfV4CvZpf1fzjzeUvwuO2HbogQpaJeAfP8xS
+   upCKqU66LALXzPNhtCJKWoUyRNwxa7+yRZTMVgg+DCxUT6y+S44HBhPtm7UmxaUsCgG8R+hBJ1K/
+   1i1SOFb/rq/3phJxR198wufqgnr0cbbNqP6rwAL6+/vTddgp3/TLe8cCuyvZnXz5KDxX2Shkjf4M
+   jDAtH9g/UKZLi70w9J0GrxUHmqfBOP2POxsUyOX6aPTeDVpzkJ2rLzpTzUTVWrWmgeMGfVYvCiXh
+   nPutJRJg4ZZOGWMsVzUxyyabrRGmrOFZkIXyNw==
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; s=fbldkim7; d=s7.y.mc.salesforce.com;
+ h=From:To:Subject:Date:List-Help:MIME-Version:Reply-To:Message-ID:Content-Type;
+ bh=te7zlbIDpSV6pYtsOFpI2V3ZDzsEY2PeNIdY3WXbmdk=;
+ b=EqnsIs3I6nkHmDPX1wks7WLm3hS/kWJ5fdpeChAUVnyHA/0WdNQtBAHeUtHBb1B5JvRsnFfszGxu
+   AhQxEc8P6VYSUczuuB1WeGN2PUx9wkR0qU/aR/q2Y8FDZzol5Ewg9gkokKdok1ZZZMYDDvyYsjP2
+   EgGaPAxLalYhyz559LZL1kfjdlw71hsmuhgxvQT5HUsnWm7W/xXmCiwTyNafC7KgEGeNqv5C0h6j
+   yo3ZmuXtRzAsosH6AdAO5efH8n410HFRjapn61V0CG2ADZbEHHFHTDPzh0aHp6RqsMCH1EVQrD2v
+   VdfIxTUKx3mlNSj8qPEUDw/BdU63zRxIC4SvQw==
+Received: by mta.msmail.morganstanley.com id hgj2402fmd46 for <doug@dougbower.com>; Thu, 5 Feb 2026 16:24:31 +0000 (envelope-from <bounce-WIEDU5RNNJVUNBES6OV3SK4KKE.70251@bounce.msmail.morganstanley.com>)
+From: "Carfagna, Peter" <peter.carfagna@morganstanley.com>
+To: <doug@dougbower.com>
+Subject: On the Markets: New Year, New Tune
+Date: Thu, 05 Feb 2026 10:24:31 -0600
+List-Help: <https://click.msmail.morganstanley.com/subscription_center.aspx?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtaWQiOiI3MzA2MzQ0IiwicyI6IjI5MjEyMjExIiwibGlkIjoiMjUiLCJqIjoiNzc3Njc5IiwiamIiOiIyNjAiLCJkIjoiNzAyNTEifQ.wcsjXniPK1zJgOW-ceCNjPE2Zu0ngICEQI2C5-DxXgg>
+MIME-Version: 1.0
+X-SFMC-Stack: 7
+x-job: 7306344_777679
+Reply-To: "Carfagna, Peter" <peter.carfagna@morganstanley.com>
+Message-ID: <bounce-WIEDU5RNNJVUNBES6OV3SK4KKE.70251@bounce.msmail.morganstanley.com>
+X-Return-Path: bounce-WIEDU5RNNJVUNBES6OV3SK4KKE.70251@bounce.msmail.morganstanley.com
+Content-Type: multipart/alternative;
+	boundary="dsOdZxo0OAYJ=_?:"
+
+This is a multi-part message in MIME format.
+
+--dsOdZxo0OAYJ=_?:
+Content-Type: text/plain;
+	charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+
+ 
+ 
+
+
+ 
+ 
+
+
+ 
+ 
+
+ 
+
+<table class="dm-image-block" data-dm-block-id="1713816879595" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center"><img src="https://image.msmail.morganstanley.com/lib/fe9413737562077971/m/1/72af0cc4-9baa-4c35-b071-9710013f523c.png" alt="" width="100%" style="display: block; padding: 0px; text-align: center; height: auto; width: 100%; border: 0px;"></td></tr></table>
+
+
+
+ Doug,
+ 
+
+ 
+
+
+
+
+
+
+<div class="dm-rich-text-block" data-dm-block-id="1590115454429"></div>
+
+
+ 
+ 
+
+ 
+ 
+
+ 
+
+Here is the latest edition of On the Markets. 
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6IjE1ZjY4ZDgyLTc5OWMtNGI0OS1iMmE3LTM0N2NjZjZhZDM0NyIsImRla1ZlcnNpb24iOjEsIml2IjoiL1Z6Qkw1VDh6SERCY2diMmorRUxkUT09IiwiY2lwaGVyVGV4dCI6IkQ0U1NwenJmREdWdDE5cUtqZmhIZGpXSjVzcjVJMWJIM0Foc3VMZUgyV3VlWEVxSHdQNTVlVUN1WWh0bEg4amsrdUYrMy83WHoyaGcvYzZ1SnByZllmK0hQTEU2L1Z6Qkw1VDh6SERCY2diMmorRUxkUT09IiwiYXV0aFRhZyI6IjE4OW9ZUDNPcmlhYTMySC9oenl4T2c9PSJ9 
+This month&rsquo;s issue  includes:
+	- &ldquo;Affordability in Focus&rdquo; Ahead of US midterm elections, policy proposals targeting affordability are multiplying. Morgan Stanley & Co. Research&rsquo;s head of US public policy strategy, Ariana Salvatore, narrows the field to five areas that the president and Congress are likely to focus on.
+	- &ldquo;The Case for a Latin American Spring&rdquo; A trifecta of changes&mdash;around geopolitics, monetary policy and elections&mdash;is creating a unique opportunity for Latin America to transform itself into an engine of growth. MS & Co. equity strategists Nikolaj Lippmann and Julia Nogueria explore a bullish scenario for the region.
+	- &ldquo;Gold Gaining as a Share of Reserves&rdquo; According to MS & Co. metals analyst Amy Gower, strong demand from central banks and stablecoin providers has helped boost gold to record highs. Much of that demand is expected to continue.
+
+
+ 
+ 
+
+ 
+ 
+
+ 
+<div class="dm-rich-text-block" data-dm-block-id="1590115589997"></div>
+
+
+
+ 
+
+ 
+ 
+
+ 
+
+<table class="dm-image-block" data-dm-block-id="1713816964595" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center"><img src="https://image.msmail.morganstanley.com/lib/fe9413737562077971/m/1/72af0cc4-9baa-4c35-b071-9710013f523c.png" alt="" width="100%" style="display: block; padding: 0px; text-align: center; height: auto; width: 100%; border: 0px;"></td></tr></table>
+
+
+
+
+
+
+
+
+
+ 
+ 
+ 
+ 
+  
+ 
+ 
+ 
+ 
+ 
+
+
+ 
+ 
+
+ 
+
+
+
+ NOTICE: Morgan Stanley is not acting as a municipal advisor and the opinions or views contained herein are not intended to be, and do not constitute, advice within the meaning of Section 975 of the Dodd-Frank Wall Street Reform and Consumer Protection Act. If you have received this communication in error, please destroy all electronic and paper copies and notify the sender immediately. Mistransmission is not intended to waive confidentiality or privilege. Morgan Stanley reserves the right, to the extent permitted under applicable law, to monitor electronic communications. This message is subject to terms available at the following link:
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6IjFlNGYzNmQzLTBmNWYtNGQ3Yi05NDIzLTM2NTc3NzMzOGY3MiIsImRla1ZlcnNpb24iOjEsIml2IjoiWDFDcUMyQmFmRG5KMjNjU0FDdnFoZz09IiwiY2lwaGVyVGV4dCI6InN1SkpWeFZGTHBqeHREbFZWVzRwOENaaFdmNlJsa1pld1A0Q1FOMndpc0dYKzJmNTdZTEtmY2JsdVY4M3R1d0ZidnhmRXhETXpsWXRhVVJOWkNxZEo2cjk0V25sWDFDcUMyQmFmRG5KMjNjU0FDdnFoZz09IiwiYXV0aFRhZyI6InpNNVdMV2xFVFdRcW5TZXEvZUZwNVE9PSJ9 
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6Ijk1MjQ3ZDBkLWRhMjgtNGU4Mi1iNTcyLWNjYjQzNTUyOWQ5YSIsImRla1ZlcnNpb24iOjEsIml2IjoiYVRyVVRKYjJpV1BYYmJvUUNVWHZwdz09IiwiY2lwaGVyVGV4dCI6IkJQeDNsbW5CQ1VaNDhnUUVweGNaTG5rZ3MrVEpaVEo5YWcrT2pvRFZodzRYK2NIbmNHNldYT25teFUyR2hCL0Y1ZTdnMEQ1Wm4yNUg5bCtkYURGVERBdGl4OHFhYVRyVVRKYjJpV1BYYmJvUUNVWHZwdz09IiwiYXV0aFRhZyI6IldaOXVSL1pmbldneFV3d0xZc2ZLbWc9PSJ9  If you cannot access these links, please notify us by reply message and we will send the contents to you. By communicating with Morgan Stanley you acknowledge that you have read, understand and consent, (where applicable), to the foregoing and the Morgan Stanley General Disclaimers.
+
+
+ 
+Please see our 
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6ImJmOTRjZmZhLWMyZjItNDRhMi04Y2NjLTUyOGJlYmUwNGE2ZSIsImRla1ZlcnNpb24iOjEsIml2IjoiZ2xpMFpFMjNGUmhSQS9GYjdMbVlYQT09IiwiY2lwaGVyVGV4dCI6IjhHbVV4SHNocUpSMnlobHY1aDloZytKL0Y5K0xER0lEdjNpYlpMeDlWTzZCZ2V2U1Z2WXVSRDkyUEJsSmhQRXJSKzhDWWRwZVVreDBVQTh6Mm43dmdtZ1psL3M1Z2xpMFpFMjNGUmhSQS9GYjdMbVlYQT09IiwiYXV0aFRhZyI6IlhsSk1kRkFQTTlwKzc0Sm9HWmY3T1E9PSJ9 
+Privacy Pledge  for details about how Morgan Stanley handles personal information. 
+
+ 
+ 
+If you would like to update your email preferences or unsubscribe from marketing emails from Morgan Stanley Wealth Management, you may do so 
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6IjU4N2FmZDA1LTM5MTEtNGYwNC1iNDAzLTBiZjhjZDJjMzk3MCIsImRla1ZlcnNpb24iOjEsIml2IjoiVFphSlZ1dUdjSUlaQjhqbHZPaHdwZz09IiwiY2lwaGVyVGV4dCI6Iko4K3loMEZYZlpGeTRPb2J2VkZ2TlVRNVU2QW5HVlBNdkxqMzJzaTZBdGFZOThZNWRDMktjcmZKNDFndm1uMEtma3pkZzVNZXlBUVhYOG0zUmsxSGdLaVlWRVZ0Y2l6dVJFMldpVmJyaG5DQ0dRZkk1YnpvY0tZPSIsImF1dGhUYWciOiJYOG0zUmsxSGdLaVlWRVZ0Y2l6dVJBPT0ifQ%3D%3D 
+here . Please note, you will still receive service emails from Morgan Stanley Wealth Management. 
+ 
+
+
+ Not all products and services may be available to persons living outside of the United States. 
+ 
+
+
+ Morgan Stanley Wealth Management 
+
+2000 Westchester Avenue, Purchase, NY 10577-2530 USA 
+
+
+ © 2026 Morgan Stanley Smith Barney LLC.  Member 
+https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6Ijc0Y2UwYWVmLTIyMGEtNDQ0Ny1hMWQ0LTI4MTM4NGJhM2E3NSIsImRla1ZlcnNpb24iOjEsIml2IjoiUXJydFNVanRjcG56OFAyNnBybHhJUT09IiwiY2lwaGVyVGV4dCI6InFtbmx6RjEwV3Q5YzhuLzJaRmppVXRjTnVoTmlOR0xVNWpOWGg1L2hTaVEzUkNjd0NYLzZMdXVuNDMvZXVMMnFzZW5FejVQNyt3ZUNVeDJwbG5NRHd2bDhOZHFDUXJydFNVanRjcG56OFAyNnBybHhJUT09IiwiYXV0aFRhZyI6Iisvc0hnbE1kcVpaekE4TDVmRFhhZ2c9PSJ9 
+SIPC .
+
+
+ 
+
+ CRC 4548512 02/2026
+
+ 
+
+ 
+ 
+
+
+ 
+ 
+
+ 
+
+
+
+
+
+ 
+
+
+--dsOdZxo0OAYJ=_?:
+Content-Type: text/html;
+	charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <style type="text/css">
+      ReadMsgBody{ width: 100%;}
+      .ExternalClass {width: 100%;}
+      .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div {line-height: 100%;}
+      body {-webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;margin:0 !important;}
+      p { margin: 1em 0;}
+      table td { border-collapse: collapse;}
+      img {outline:0;}
+      a img {border:none;}
+      p {margin: 1em 0;}
+      @-ms-viewport{ width: device-width;}
+    </style>
+    <style type="text/css">
+      @media only screen and (max-width: 480px) {
+        .container {width: 100% !important;}
+        .footer { width:auto !important; margin-left:0; }
+        .content-padding{ padding:4px !important; }
+        .mobile-hidden { display:none !important; }
+        .logo { display:block !important; padding:0 !important; }
+        img { max-width:100% !important; height:auto !important; max-height:auto !important;}
+        .header img{max-width:100% !important;height:auto !important; max-height:auto !important;}
+        .photo img { width:100% !important; max-width:100% !important; height:auto !important;}
+        .drop { display:block !important; width: 100% !important; float:left; clear:both;}
+        .footerlogo { display:block !important; width: 100% !important; padding-top:15px; float:left; clear:both;}
+        .nav4, .nav5, .nav6 { display: none !important; }
+        .tableBlock {width:100% !important;}
+        .responsive-td {width:100% !important; display:block !important; padding:0 !important; }
+        .fluid, .fluid-centered {
+          width: 100% !important;
+          max-width: 100% !important;
+          height: auto !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+        .fluid-centered {
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+        /* MOBILE GLOBAL STYLES - DO NOT CHANGE */
+        body { padding: 0px !important; font-size: 16px !important; line-height: 150% !important;}
+        h1 { font-size: 22px !important; line-height: normal !important;}
+        h2 { font-size: 20px !important; line-height: normal !important;}
+        h3 { font-size: 18px !important; line-height: normal !important;}
+        .buttonstyles {
+          font-family:calibri,helvetica,sans-serif !important;
+          font-size: 16px !important;
+          color: #187ABA !important;
+          padding: 10px !important;
+        }
+        /* END OF MOBILE GLOBAL STYLES - DO NOT CHANGE */
+      }
+      @media only screen and (max-width: 640px) {
+        .container { width:100% !important; }
+        .mobile-hidden { display:none !important; }
+        .logo { display:block !important; padding:0 !important; }
+        .photo img { width:100% !important; height:auto !important;}
+        .nav5, .nav6 { display: none !important;}
+        .fluid, .fluid-centered {
+          width: 100% !important;
+          max-width: 100% !important;
+          height: auto !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+        .fluid-centered {
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+      }
+    </style>
+    <!--[if mso]>       <style type="text/css">           /* Begin Outlook Font Fix */               body, table, td {                  font-family : calibri,helvetica,sans-serif;                  font-size : 14px;                  color : #000000;                  line-height : 1;               }           /* End Outlook Font Fix */       </style>     <![endif]-->
+  </head>
+    
+     <body bgcolor="#FFFFFF"  text="#000000" style="background-color : #FFFFFF; font-family:calibri,helvetica,sans-serif;  font-size : 14px; color : #000000; line-height : 1; max-width : none; padding-top : 20px;  margin : 0px; " yahoo="fix"> 
+      
+   
+
+      
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" align="left">
+      <tr>
+        <td align="left" valign="top">
+          
+        </td>
+      </tr>
+      <tr>
+        <td align="left">
+          <table cellspacing="0" cellpadding="0" border="0" width="550" class="container" align="left">
+            <tr>
+              <td>
+     <table class="tb_properties border_style"  style="background-color:#FFFFFF;font-size : 14px; font-family:calibri,helvetica,sans-serif; line-height : 1; color : #000000; " cellspacing="0" cellpadding="0" bgcolor="#ffffff" width="100%"> 
+    
+
+      
+                  <tr>
+                    <td align="left" class="header" valign="top">
+                    </td>
+       </tr>
+       <tr>
+         <td>
+       
+                    </td>
+                
+                  </tr>
+                  <tr>
+                    <td align="left" valign="top"                         style="padding-left:3px;padding-right:3px;">
+                      <table cellspacing="0" cellpadding="0" border="0" width="100%" align="left">
+                        <tr>
+                          <td class="" style="">
+                            <table cellspacing="0" cellpadding="0" border="0" width="100%">
+                              <tr>
+                                <td align="center" valign="middle" style="font-size:0;" class="">
+                                  <!--[if (gte mso 9)|(IE)]>                                   <table align="center" border="0" cellspacing="0" cellpadding="0" width="600">                                     <tr>                                       <td align="left" valign="top" width="200">                                   <![endif]-->
+ 
+                                  <!--[if (gte mso 9)|(IE)]>                                       </td>                                     </tr>                                   </table>                                   <![endif]-->
+                                </td>
+                              </tr>
+                              <tr>
+                                <td align="left" class="drop" style="">
+                                  
+                                </td>
+                              </tr>
+                              <tr>
+                                <td align="left" class="drop" style="margin-bottom:0px">
+                                  <table cellpadding="0" cellspacing="0" width="100%" role="presentation" class="stylingblock-content-wrapper" style="min-width: 100%; "><tr><td class="stylingblock-content-margin-cell" style="padding: 0px 0px 25px; "><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="background-color: transparent; min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding: 0px; " class="stylingblock-content-wrapper camarker-inner">
+
+<table class="dm-image-block" data-dm-block-id="1713816879595" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center"><img src="https://image.msmail.morganstanley.com/lib/fe9413737562077971/m/1/72af0cc4-9baa-4c35-b071-9710013f523c.png" alt="" width="100%" style="display: block; padding: 0px; text-align: center; height: auto; width: 100%; border: 0px;"></td></tr></table>
+</td></tr></table></td></tr></table><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td class="stylingblock-content-wrapper camarker-inner">
+  Doug,
+  <br>
+  
+
+
+
+
+
+
+<div class="dm-rich-text-block" data-dm-block-id="1590115454429"></div>
+
+
+ 
+  
+</td></tr></table>
+                                  
+                                </td>
+                              </tr>
+                              <tr>
+                                <td align="left" class="drop" style="margin-bottom:0px">
+                                  <div id="NBA_BODY_1">
+                                    <table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td class="stylingblock-content-wrapper camarker-inner"><br>
+Here is the latest edition of On the Markets. <a   data-linkto="https://" href="https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6ImM0Y2UwYTJhLWMxNzQtNDNjMi1iYmI5LTUzYzc1NjllZDE3ZSIsImRla1ZlcnNpb24iOjEsIml2IjoiQTdDV2NBZDZLb0dYL250R2dNSDkydz09IiwiY2lwaGVyVGV4dCI6IkVzd0dYR3piOTFDczh2aXFYWlZ4dXVRVkpJWm5DclJrdTZwUUF1ODIrc0hTYVkrc25lWjcrdFUzSXVmY3kxUWMvNk0xTHd4TUVraEJzL2IvYjBYNjlRYzJnYjBLQTdDV2NBZDZLb0dYL250R2dNSDkydz09IiwiYXV0aFRhZyI6IlRCSklRYlAyLzI5Rit2VUhOb0c5Q2c9PSJ9" style="text-decoration:none;" title="This month’s issue">This month&rsquo;s issue</a> includes:<ul>
+	<li>
+		<b>&ldquo;Affordability in Focus&rdquo; </b>Ahead of US midterm elections, policy proposals targeting affordability are multiplying. Morgan Stanley &amp; Co. Research&rsquo;s head of US public policy strategy, Ariana Salvatore, narrows the field to five areas that the president and Congress are likely to focus on.</li><li>
+		<b>&ldquo;The Case for a Latin American Spring&rdquo;</b> A trifecta of changes&mdash;around geopolitics, monetary policy and elections&mdash;is creating a unique opportunity for Latin America to transform itself into an engine of growth. MS &amp; Co. equity strategists Nikolaj Lippmann and Julia Nogueria explore a bullish scenario for the region.</li><li>
+		<b>&ldquo;Gold Gaining as a Share of Reserves&rdquo;</b> According to MS &amp; Co. metals analyst Amy Gower, strong demand from central banks and stablecoin providers has helped boost gold to record highs. Much of that demand is expected to continue.</li></ul></td></tr></table>
+
+                                    
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td align="left" class="drop" style="">
+                                  <div id="NBA_BODY_2">
+                                    
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td align="left" class="drop" style="margin-bottom:0px">
+                                  <table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td class="stylingblock-content-wrapper camarker-inner">
+<div class="dm-rich-text-block" data-dm-block-id="1590115589997"></div>
+
+
+
+  
+</td></tr></table>
+                                  
+                                </td>
+                              </tr>
+                              <tr>
+                                <td align="left" class="drop" style="">
+                                  <table cellpadding="0" cellspacing="0" width="100%" role="presentation" class="stylingblock-content-wrapper" style="min-width: 100%; "><tr><td class="stylingblock-content-margin-cell" style="padding: 25px 0px 0px; "><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="background-color: transparent; min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding: 0px; " class="stylingblock-content-wrapper camarker-inner">
+
+<table class="dm-image-block" data-dm-block-id="1713816964595" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center"><img src="https://image.msmail.morganstanley.com/lib/fe9413737562077971/m/1/72af0cc4-9baa-4c35-b071-9710013f523c.png" alt="" width="100%" style="display: block; padding: 0px; text-align: center; height: auto; width: 100%; border: 0px;"></td></tr></table>
+</td></tr></table></td></tr></table><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td class="stylingblock-content-wrapper camarker-inner">
+
+
+
+
+
+
+<span style="font-size: 10pt; font-family: Arial, sans-serif;">Thank you and please let me know if you have any questions.</span><br><span style="font-size: 10pt; font-family: Arial, sans-serif;">&nbsp;</span><br><span style="font-size: 10pt; font-family: Arial, sans-serif;">Best,</span><br><span style="font-size: 10pt; font-family: Arial, sans-serif;">&nbsp;</span><br><span style="font-size: 10pt; font-family: Arial, sans-serif;">Peter</span><br><span style="font-size: 10pt; font-family: Arial, sans-serif;">&nbsp;</span><br><strong style="font-size: 10pt; font-family: Arial, sans-serif;">Peter E. Carfagna, CFP ®, CPWA ®, MBA</strong><br><strong style="font-size: 10pt; font-family: Arial, sans-serif;">Managing Director</strong><br><span style="font-size: 10pt; font-family: Arial, sans-serif;">Family Wealth Director | Global Sports and Entertainment Director</span><br>
+<span style="font-size: 10pt; font-family: Arial, sans-serif;">Alternative Investments Director |&nbsp;Financial Planning Specialist</span><br><span style="font-size: 10pt; font-family: Arial, sans-serif;">Financial Advisor | President’s Club Member</span><br><strong style="font-size: 10pt; font-family: Arial, sans-serif;">NEO Wealth Management Group at Morgan Stanley</strong><br><span style="font-size: 9.5pt; font-family: Arial, sans-serif;">31099 Chagrin Blvd., Suite 300 | Pepper Pike, OH 44124</span><br><span style="font-size: 9.5pt; font-family: Arial, sans-serif;">Direct: +1 216 360-8604</span><br><span style="font-size: 9.5pt; font-family: Arial, sans-serif;">Cell:&nbsp;+1 216 990-3300</span><br><span style="font-size: 9.5pt; font-family: Arial, sans-serif;">Fax: +1 216 303-6911</span><br>
+<a href="mailto:Peter.Carfagna@morganstanley.com" rel="noopener noreferrer" target="_blank" style="font-size: 10pt; font-family: Arial, sans-serif;">Peter.Carfagna@morganstanley.com</a><br><a href="https://advisor.morganstanley.com/neo-wealth-management-group" rel="noopener noreferrer" target="_blank" style="font-size: 10pt;">https://advisor.morganstanley.com/neo-wealth-management-group</a><br><a href="https://meetings.morganstanleyclientserv.com/landing.html?fa=a6ce3e2b3f18d7b43ddb80f8f56b3745" rel="noopener noreferrer" target="_blank" style="font-size: 9pt; font-family: Arial, sans-serif;">Click here</a><span style="font-size: 9pt; font-family: Arial, sans-serif;"> to book time with me.</span> <br> 
+ 
+ 
+  
+ 
+ 
+ 
+ 
+ 
+
+</td></tr></table>
+                                  
+                                </td>
+                              </tr>
+                              <tr>
+                                <td align="left" class="drop" style="margin-bottom:0px">
+                                  <table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td class="stylingblock-content-wrapper camarker-inner">
+
+<table width="100%" style="background: rgb(255, 255, 255);" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+        <td width="100%" align="left" valign="top" style="background: rgb(255, 255, 255);">
+        <table width="600" class="container" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="left" style="padding: 0px 0px 25px; color: rgb(149, 149, 149); font-family: Verdana, Helvetica, Arial, sans-serif; font-size: 11px;">
+                  <br>
+                 NOTICE: Morgan Stanley is not acting as a municipal advisor and the opinions or views contained herein are not intended to be, and do not constitute, advice within the meaning of Section 975 of the Dodd-Frank Wall Street Reform and Consumer Protection Act. If you have received this communication in error, please destroy all electronic and paper copies and notify the sender immediately. Mistransmission is not intended to waive confidentiality or privilege. Morgan Stanley reserves the right, to the extent permitted under applicable law, to monitor electronic communications. This message is subject to terms available at the following link:
+<a href="https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6IjhkYjViMzBmLTBlOTAtNGNhMy1hMTlhLTY1YmYzZDI0N2U5OCIsImRla1ZlcnNpb24iOjEsIml2IjoiMUs1bnJ4RGRzYk9zVlNkdlROVGpNdz09IiwiY2lwaGVyVGV4dCI6Ikg3QkU1WHRFR21ZTHhtVTVKMGF6SU4wdHQ3eEpIcnNCT3dQeXdWL1BBU1ZhK1Z6S2Z0UHBxS25uVDc0U3BMd255RDNWOU9Kb2VjMCt4Vk1MaDZBb3phM2pQK2JrMUs1bnJ4RGRzYk9zVlNkdlROVGpNdz09IiwiYXV0aFRhZyI6ImFIbk5Qc1ZUQzRlZ0tNMnQ0ei9tNUE9PSJ9">https://www.morganstanley.com/disclaimers.
+</a>  If you cannot access these links, please notify us by reply message and we will send the contents to you. By communicating with Morgan Stanley you acknowledge that you have read, understand and consent, (where applicable), to the foregoing and the Morgan Stanley General Disclaimers.<br><br>
+                  
+Please see our <a style="font-size: 11px; font-weight: bold; text-decoration: none;" href="https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6IjM1NzYzNzI1LTYzNWMtNDM4Mi04YzcxLWY3MmExMDY1NzRmMiIsImRla1ZlcnNpb24iOjEsIml2IjoiaHVUUlhtZml4c2djVzFjak92TytIZz09IiwiY2lwaGVyVGV4dCI6ImlyRHM2Ymh1WnFyUXpUQldkTStjQlRWNElJSkNaSTdZalZvTitYdVFKL0hRVDZ1ek1BeGpwcVhZeWI1Z1lWeExuWWJVdnBsbjdGOWZyb3ZUYm1wMm00M2FSOFkyaHVUUlhtZml4c2djVzFjak92TytIZz09IiwiYXV0aFRhZyI6IloreGZYNjZMMDI1cWRwdU4ya2ZHTmc9PSJ9">Privacy Pledge</a> for details about how Morgan Stanley handles personal information.           <br><br>       
+                  
+If you would like to update your email preferences or unsubscribe from marketing emails from Morgan Stanley Wealth Management, you may do so <a style="font-size: 11px; font-weight: bold; text-decoration: none;" href="https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6ImY4MDFmODQ0LWJiYjEtNGU2ZC1iOTNkLTdkYzhlNThiNzE2OSIsImRla1ZlcnNpb24iOjEsIml2IjoiK2lPSXJ0QStBVy9IVFNob0s5Q3JvZz09IiwiY2lwaGVyVGV4dCI6ImxHdDY1c1orUk1kMjZickdQZzMwaEI3ZWVNVGt1RmNKMzZ6V0xYdXRwWVVxSUtjbTNiN3ZVb0pZVUpDSVdJMjRoZzl4TWVKOVJPaGpUSU5DTWxFS0RtZlFZSzlvUjVkc1B2b2ppSzdRUGdGdngwMG9hQ3ZRcTZJPSIsImF1dGhUYWciOiJUSU5DTWxFS0RtZlFZSzlvUjVkc1BnPT0ifQ%3D%3D" target="_blank" >here</a>. Please note, you will still receive service emails from Morgan Stanley Wealth Management.                   
+ <br><br>
+ Not all products and services may be available to persons living outside of the United States.                  
+                 <br><br>
+                  Morgan Stanley Wealth Management <br>
+2000 Westchester Avenue, Purchase, NY 10577-2530 USA <br><br>
+                  © 2026 Morgan Stanley Smith Barney LLC.&nbsp; Member <a href="https://click.msmail.morganstanley.com/?qs=eyJkZWtJZCI6ImU0ZTUxYjhiLTQ5MDEtNGI3OS05NTExLTI2ZDQ2NDQ0YTI3NCIsImRla1ZlcnNpb24iOjEsIml2IjoiNnJ2WGI2QTIwZnAxVkNScG9CWU5Cdz09IiwiY2lwaGVyVGV4dCI6ImhlSGh4cjJQMzdLUk1tdGRPM3ZiYmgvaFc2ekc0OFJDL2lhRlZGYUhJZlZjd1FvUktEU095MU5ua1NYVEZ5U1h6QTdhUHVZeXRDYnZhUGl2Qk0vR0k2K2NmckJsNnJ2WGI2QTIwZnAxVkNScG9CWU5Cdz09IiwiYXV0aFRhZyI6Ik1yUW03Mmo0cndUUHhpT3ZuSDZ3WlE9PSJ9">SIPC</a>.<br>
+                </td>
+            </tr>
+        </table>
+        </td>
+    </tr> 
+</table></td></tr></table>
+                                </td>
+                              </tr>
+                                                            <tr>
+                                <td align="left" class="drop" style="">
+                                  <table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td class="stylingblock-content-wrapper camarker-inner"><span style="color:#999999;"><span style="font-size:11px;"><span style="font-family:Verdana,Geneva,sans-serif;">CRC&nbsp;4548512 02/2026</span></span></span></td></tr></table>
+                                </td>
+                              </tr>
+                                   <tr>
+                                <td align="left" class="drop" style="">
+                                  
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td valign="top">
+          
+        </td>
+      </tr>
+
+    </table>
+            
+
+
+
+<input type="hidden" name="GreetingFlag" value=  "N"  >
+
+<input type="hidden" name="IntroFlag"    value=  "N"   >
+
+<input type="hidden" name="ConclusionFlag"  value=   "N"  >
+
+
+ 
+<img src="https://click.msmail.morganstanley.com/open.aspx?QNOEVCQZGJPEJNQQF3EV2NL5PE.70251&d=70251&bmt=0" width="1" height="1" alt="">
+
+  
+<!--
+X-Return-Path: bounce-WIEDU5RNNJVUNBES6OV3SK4KKE.70251@bounce.msmail.morganstanley.com
+-->
+</body>
+</html>
+
+--dsOdZxo0OAYJ=_?:--
+

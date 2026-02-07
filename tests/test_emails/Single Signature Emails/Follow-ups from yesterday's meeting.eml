@@ -1,0 +1,733 @@
+Delivered-To: doug@dougbower.com
+Received: by 2002:a05:6a10:169e:b0:5f1:198b:7d73 with SMTP id gp30csp386977pxb;
+        Thu, 8 May 2025 05:35:50 -0700 (PDT)
+X-Google-Smtp-Source: AGHT+IECjgJT8ykzNN4bp7+WWLR0ocbXgh5MWTNL8FkwjYfTLa9aKzsW9D7crokUhzCpGcGQ+BmB
+X-Received: by 2002:a17:907:6ea6:b0:ac7:e5c4:1187 with SMTP id a640c23a62f3a-ad1e8bc319emr542591866b.11.1746707750339;
+        Thu, 08 May 2025 05:35:50 -0700 (PDT)
+Return-Path: <Janet.Padula@morganstanley.com>
+Received: from oymtaint01.ms.com (oymtaint01.ms.com. [205.228.84.50])
+        by mx.google.com with ESMTPS id a640c23a62f3a-ad18936a0c6si956474166b.345.2025.05.08.05.35.50
+        for <doug@dougbower.com>
+        (version=TLS1_2 cipher=ECDHE-RSA-AES128-GCM-SHA256 bits=128/128);
+        Thu, 08 May 2025 05:35:50 -0700 (PDT)
+Received-SPF: pass (google.com: domain of janet.padula@morganstanley.com designates 205.228.84.50 as permitted sender) client-ip=205.228.84.50;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@morganstanley.com header.s=p20230414q4 header.b=xs4Igt4i;
+       dkim=neutral (body hash did not verify) header.i=@morganstanley.onmicrosoft.com header.s=selector2-morganstanley-onmicrosoft-com header.b=MW3ddA09;
+       arc=fail (body hash mismatch);
+       spf=pass (google.com: domain of janet.padula@morganstanley.com designates 205.228.84.50 as permitted sender) smtp.mailfrom=Janet.Padula@morganstanley.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=morganstanley.com
+Received: from pps.filterd (oymtaint01.ms.com [127.0.0.1])
+	by oymtaint01.ms.com (8.17.1.19/8.17.1.19) with ESMTP id 5487VK4L023476;
+	Thu, 8 May 2025 13:35:49 +0100
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=morganstanley.com; h=from : to : cc
+ : subject : date : message-id : content-type : mime-version;
+ s=p20230414q4; bh=ghmBoNY+ZjGLnq3awUgEHcFvtfGD5u/D9KS9nTsE8Qw=;
+ b=xs4Igt4iG4KEFwLybWLoN02raETO3bC7BveQ3eDth7bq/CdYT2g04SanqKjKmRMDJdkv
+ HDemQDB62ABj4NJ3o+Ny+vlplgs76lGr+RUfJgjd0ei/6Mh5EHjisF4+z+JvlJpX8p/r
+ gvPFRx9pc+xV2CMrhU09uKXKTV7dCcW50gLtl7pPUaE65Elb9eWdYAb4dYhjME736hco
+ 0nek75+Pa8iolNKUQtv7wlj7mcq6LvSDAFGWdmudagvY1S4SJHzfOVk3YIagWMlOIOaR
+ mZFLI42RJ+BznRfPekpEM56T7tEhTJELGkHeoZ90pkhCWqrB7AFgUy4RYteopZDY09n8 JQ== 
+Received: from dlp.ms.com (idmz28.mssip.heathrow.ms.com [10.248.11.203])
+	by oymtaint01.ms.com (PPS) with ESMTP id 46dyeqyvxx-1;
+	Thu, 08 May 2025 13:35:49 +0100
+Received: from oymtaint01.ms.com (oymtaint01.ms.com [127.0.0.1])
+	by pps.dlp (8.17.1.5/8.17.1.5) with ESMTP id 548BVBN0016133;
+	Thu, 8 May 2025 13:35:49 +0100
+Received: from rrsm4int03.ms.com (rrsm4int03.ms.com [10.114.7.188])
+	by oymtaint01.ms.com (PPS) with ESMTP id 46dyeqyvxu-1;
+	Thu, 08 May 2025 13:35:48 +0100
+Received: from HZWEX1690N08.msad.ms.com (hzwex1690n08.msad.ms.com [10.81.77.27])
+	by rrsm4int03.ms.com (Sentrion-MTA-4.5.9/Sentrion-MTA-4.5.9) with ESMTPS id 548CZmoK002698
+	(version=TLSv1.2 cipher=ECDHE-RSA-AES128-GCM-SHA256 bits=128 verify=FAIL);
+	Thu, 8 May 2025 12:35:48 GMT
+Received: from HZWEX1601N16.msad.ms.com (10.81.77.102) by
+ HZWEX1690N08.msad.ms.com (10.81.77.27) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
+ 15.1.2507.44; Thu, 8 May 2025 08:35:48 -0400
+Received: from HZWEX1606N15.msad.ms.com (10.113.10.156) by
+ HZWEX1601N16.msad.ms.com (10.81.77.102) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
+ 15.1.2507.44; Thu, 8 May 2025 08:35:47 -0400
+Received: from HZWEXEDGEZ04.msadz.ms.com (199.89.94.19) by
+ HZWEX1606N15.msad.ms.com (10.113.10.156) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
+ 15.1.2507.44 via Frontend Transport; Thu, 8 May 2025 08:35:47 -0400
+Received: from NAM11-CO1-obe.outbound.protection.outlook.com (10.100.233.43)
+ by NA-Edge.morganstanley.com (199.89.94.19) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.1.2507.44; Thu, 8 May 2025 08:35:45 -0400
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector10001; d=microsoft.com; cv=none;
+ b=AC092qO3+SBZdO0ZPOD35GXOPZ9d1yirDy/03O6vxO7La3w9Qm/cvgBjrA/f3vM6mMzHkjXsLqivDNFLTjYeKqJcZ541ErbnkO66qNgP1njrd9V0teMX57qRvcPUnKzg4HAn9N0H4mcUK3Hqi+Bq2tpiqxQQizqWemh61Gs4yEtIzQABgxXSW1+9h0wDCZWJ0sI50tNBr75+/t7Vl5kleLCYXDNlFLpx7PTlYWSiggI6XDbFv9uuz8QEqiu6Ic/pALaWX5fb2bhghFcEX73kb80H5QtfieAC8t+kChj2Q0Ugcz+Wsg7tzEfqEK/rAAAf0rSbOUDjDCuvO0X6yB507g==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector10001;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=79wQjSANBuXeb6w4j1YerF+6UV8sHydax9pOFVqBKD4=;
+ b=wBBKw5dbh9WvaoHhhMCXXq60yScjYiVhgAWlkIlqM2S53nIsLgFLmyo3uuhizKq83EzLdaGS+V9lHVlu9Gr5KrKd2Dpb+pAtATaxWRHZfOUn6JdpV8vhLA7QfKEMPgD4N11Ydjp0Hu1nRHotdhMWwvOGeLcT3xBSNz4N+LENFTm4QVY5Sly5UwGB9Zg7VcOYNVO4zEOBXj3Xi69CJ7VLEBkXCNEPmdOWSJf+/lfUFehLJJPswrGa+3R0qqTbKXHNYYmVKhvcf3K2rx5mxKVw4uXNp7FZwMCdgMnZgz318wg7IVr3aHbg1R/3st/v8Ho/Px/RFb3CKWj/Ty9F5/ZeRg==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=morganstanley.com; dmarc=pass action=none
+ header.from=morganstanley.com; dkim=pass header.d=morganstanley.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+ d=morganstanley.onmicrosoft.com; s=selector2-morganstanley-onmicrosoft-com;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=79wQjSANBuXeb6w4j1YerF+6UV8sHydax9pOFVqBKD4=;
+ b=MW3ddA09sURJYbfSftiaBUFW/ZAexzPC83pNwgbsjdrRgLNVjd3BQX0p8HOy9i1t8wS++R1pJdw3UqTbg+nPhbcSVQMIlzSQNgb/KkEJWdKBwyJ6V56slUYdD3t3NS13fl3d5QYf0AxNTtOEEBFsD21jT4O1lo78odnrvXpN/MM=
+Received: from IA1PR20MB5694.namprd20.prod.outlook.com (2603:10b6:208:426::7)
+ by DS7PR20MB6809.namprd20.prod.outlook.com (2603:10b6:8:e8::20) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.8722.21; Thu, 8 May
+ 2025 12:35:35 +0000
+Received: from IA1PR20MB5694.namprd20.prod.outlook.com
+ ([fe80::66a:672c:8deb:e06e]) by IA1PR20MB5694.namprd20.prod.outlook.com
+ ([fe80::66a:672c:8deb:e06e%4]) with mapi id 15.20.8699.026; Thu, 8 May 2025
+ 12:35:35 +0000
+From: <Janet.Padula@morganstanley.com>
+To: <doug@dougbower.com>, <mindy@mindybower.com>
+CC: <Peter.Carfagna@morganstanley.com>
+Subject: Follow-ups from yesterday's meeting 
+Thread-Topic: Follow-ups from yesterday's meeting 
+Thread-Index: AdvAFY/t64aqWGgbTNeCMvWYltPS9w==
+Date: Thu, 8 May 2025 12:35:34 +0000
+Message-ID: <IA1PR20MB5694AF644F3D98885BFA9F82828BA@IA1PR20MB5694.namprd20.prod.outlook.com>
+Accept-Language: en-US
+Content-Language: en-US
+X-MS-Has-Attach: yes
+X-MS-TNEF-Correlator: 
+msip_labels: MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_ActionId=65cddbcb-2206-4229-aa81-0407019d6909;MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_ContentBits=0;MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_Enabled=true;MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_Method=Standard;MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_Name=Confidential
+ v1;MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_SetDate=2025-05-08T12:32:02Z;MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_SiteId=e29b8111-49f8-418d-ac2a-935335a52614;
+x-mspolicyagent: version=1.0
+x-ms-gosh-correlation-id: 1ccfe053-8944-4166-a6b9-85642b067c24
+x-ms-correlation-id: 46638822901277463392
+x-ms-publictraffictype: Email
+x-ms-traffictypediagnostic: IA1PR20MB5694:EE_|DS7PR20MB6809:EE_
+x-ms-office365-filtering-correlation-id: d307d8e1-065e-418f-8277-08dd8e2cd467
+x-ms-reactions: disallow
+x-ms-exchange-senderadcheck: 1
+x-ms-exchange-antispam-relay: 0
+x-microsoft-antispam: BCL:0;ARA:13230040|376014|366016|1800799024|4053099003|13003099007|8096899003|38070700018;
+x-microsoft-antispam-message-info: =?us-ascii?Q?bPmgKCHERe67Vhe7+XC8k6VnBIzk1NAryXKpjdS39dsqbS8A6GXApfewd6/6?=
+ =?us-ascii?Q?dPRZHdtGgX0j2etO5APQ9UgdknD6ta96erXYcb3k8psCUH5HFv53Iqeums6R?=
+ =?us-ascii?Q?C9mXYTFScpZ0ziuiWs0Wd2AU7HOGsbyAYt+er02we+4OVgKKPi5Ri/lrgNGj?=
+ =?us-ascii?Q?77GWp1Ogt1/xhLRNmEFO1IZ/cRA3fr/T/trk9PUKtSOI7KyrE1s3EimPWPLl?=
+ =?us-ascii?Q?35DUtoOx1yUZcmVF0VVfjP8kXIpT0KFqvUPzbg5pTpba+xxs3FAZ2ml+lImS?=
+ =?us-ascii?Q?wmy2d/7FTX4zJ9ZpBB1+ucN7fCbUMEm/gDiI/4mmfjKu47g/UuFHvMeeKhfQ?=
+ =?us-ascii?Q?6CZZ6XmfiZvvMoMJL4wsrs+R8wHOx4PT2vOOuVjWp8EfZ3MRoyq/y5rHWG6n?=
+ =?us-ascii?Q?mx1MfrakmBqOtpztf79AdqNq1s7tsM+irGCIWje/h34pPgZ0CycAZKaXAL2w?=
+ =?us-ascii?Q?T8xkZPtrc3Cu58kWsoqnlfGAo6OoTpBwQApSjSQCTAEUT7mpJDD0pbdMa1TQ?=
+ =?us-ascii?Q?qVfJgRq9jHVZzX4bIPo7Hiccz1OC5Mnjt5Sh6tvtJ/zgatzF/B3hBBzdwvjH?=
+ =?us-ascii?Q?jPuqPF/23fypRIjmBE08qGSUYNGUbynXCThju+HRT+AUvEtTJ9BMQ3h/Ibru?=
+ =?us-ascii?Q?XfLDFuu0nLtsH6rldnooQCFcJNYppfqA8+nDW4Vy1e3yRFzJKoY4Mh3b84S0?=
+ =?us-ascii?Q?ojH3tDtS6qrqtRhTelCyXBCBhVvI49ZwJvcSY+x/QhlxJ6Ya+mI771q3fvjT?=
+ =?us-ascii?Q?DwCyxRRo0/nYOaxr/2QNMx4KMKYjRWwVFQZk/an3ErWXklf1GLpFbS94TOFq?=
+ =?us-ascii?Q?Dv3qlEGwM4X8PX4QjHttfVEwJsaKG20juwHcF7qiLcwAwAlh5DJ4aY312+sj?=
+ =?us-ascii?Q?2ThcMNfpxVGg1aKdXrXDnUxgnoTAkE5JAsgMZ5jQavzLRCHmxXPnxSdvk3Wx?=
+ =?us-ascii?Q?BZ594bSLLjfcjdFTXzNdhCA3U/+OPOe5RJXLMX4JpiEsU/lDIgdB00UC6xVy?=
+ =?us-ascii?Q?ypgNn+WTjxRHCi8txrHCvjJ2YJrMr9QELdh4bHFTwgJJDsj+kr14n6Wc2hrs?=
+ =?us-ascii?Q?uCrUn4FMpk4MwNQilOkhrVjDUmaWdAESPu73gmNtQGrqGIv3daa9qpKGa7Cv?=
+ =?us-ascii?Q?jB0mGaVH51WUP2aiX6Zqip6A1kdNuF6ac6umVtxcRQqBV8DOTppP8BqlBrHO?=
+ =?us-ascii?Q?5cXbU0BJV/RA5s+vv242yOpclvtVZoO6ay3+rL2/9LSM5UPsqVE+GcCQ+w2F?=
+ =?us-ascii?Q?bY8md8pF/TsD0LC3oLeVyb+62Tg5QyJZc4afv400PdRnUAyvTOpJXsKBMYh9?=
+ =?us-ascii?Q?F/LdV23p/VzNkidItyc96R5ksRlVMAS2YhwkbYY7koCOqNN8PfFezp0bMve6?=
+ =?us-ascii?Q?ymPnmmcaYRmutxPj9buMW1+4OG1ZMWMANaV5G9OPvF9v5ipGBJ6ZSJwPF2Ys?=
+ =?us-ascii?Q?BwR10YdJlDLPjlaUVK99V6NYcnuwOhqF?=
+x-forefront-antispam-report: CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:IA1PR20MB5694.namprd20.prod.outlook.com;PTR:;CAT:NONE;SFS:(13230040)(376014)(366016)(1800799024)(4053099003)(13003099007)(8096899003)(38070700018);DIR:OUT;SFP:1101;
+x-ms-exchange-antispam-messagedata-chunkcount: 1
+x-ms-exchange-antispam-messagedata-0: =?us-ascii?Q?8R6os9vQz5INYcTwE31aq1jCGpuIu9DZgCgZoVcChBgf7LjZk2hNwwgPqtOw?=
+ =?us-ascii?Q?M3XXmi/jv5HMymSYDxjbLbhSKQxl7/KsF/KYsUodJJD8ERuVK3ogl54WA80e?=
+ =?us-ascii?Q?NedwCeKrBn/vv2YWUuivXYv1xUGCD/w6qyp93OuyPLbzFNnpKdnMU/KoLCMb?=
+ =?us-ascii?Q?pb3/bm+v8okiilfT6FqcoZrUBccfo8CkqzaNGGzB5/NIFU+Xsoj/f+PEwg7n?=
+ =?us-ascii?Q?BHPRmq5ksI3LgDBu7s4Re7jc7WN9iP6qjZkjPUmhUu89nDodKReQ+vN1MPaD?=
+ =?us-ascii?Q?Lz3zgo8usi872hyBUE1cyk4acFYECwJLpV8PEA0Cf8D+hszE8/x5usMQXKNq?=
+ =?us-ascii?Q?XXmECGjtOtpMoiF+fw68Z6WSsulqI/pf8S1TMeFwtqU/Kih3Z0YMUg848Y6e?=
+ =?us-ascii?Q?+xWUGNksBbByaLgS7WVkyt6mP88/SOSwVGdRwMaVTXMURrIEW783gfNoic2n?=
+ =?us-ascii?Q?1XthVHZ5rEJZ/wcRU+Fw+5DqZxzBUiAPB7lisjonavV1tdxnfR60D57WSxtB?=
+ =?us-ascii?Q?Muvqj5YsbDjyqD35OoNrTHKeokIkUzU17HlK/gYug7ak0Av/yAOUlx4DMCsI?=
+ =?us-ascii?Q?Y2qXBiPuEkUdiwnieWtpeVpaOFCDf2pnAML7vgmJNu6Xmxdtf1k9i69VIZgG?=
+ =?us-ascii?Q?928uHxTryVRaeXwtVYgccKrSadHPlfrU5mg3szAILpWqDuz+x3CWGW6ziX8k?=
+ =?us-ascii?Q?qbaccgLXCIyGRS/5/kTB4xqG8S9FuiQjzfLRBmBEsNYXZBCkkyp+n7TYche7?=
+ =?us-ascii?Q?7f3C7ITfS4GpuBPavhRn0arLY/JdR0E6A0kcwauBb1k1kzgG5GwOaI1yzQor?=
+ =?us-ascii?Q?kVkYyJU0lVdeuqe1wJIYO/QS5To8UcM5K5AzMtnDMoPt58OKZpMOV6bI6lua?=
+ =?us-ascii?Q?WRabDV3lww9rbz/BVGHPA2Zkx6HHRoxs3Qs+53DQfcuputr7sSqyHaezwKK+?=
+ =?us-ascii?Q?cCMpTlRLM1uKFNQMnj5XsTRUkavJ94T+hhgHuCPabUM67MUv2Zc5GnZloe5T?=
+ =?us-ascii?Q?1FOAml49RZISKGGXYjjUlTqNjsGVmi7kVGLGejLlPsAwjBA+LJw97nophsFK?=
+ =?us-ascii?Q?X/g8CaMv1q3mCJ3OD6efS5mM+rfmQwrhUhX/iabByGJ1zBLB3TDavnq4qwZB?=
+ =?us-ascii?Q?DhkqWRnBUA0CTX2/tfo+f8Bo7cSUKj4/fEOXVDfiA7pclNVIRRDncVsyk83S?=
+ =?us-ascii?Q?Fq6v4chAAKyVvoMywsGQkGgKcYbZZKRCT+QOEwQ4wrlin0OnORN3a+CGXbIi?=
+ =?us-ascii?Q?KfeaRAQeCY9UZTVeuXNwQFJFyVQL0EJacR7q2Qwymff9JsMncqv0Hx6ouK5t?=
+ =?us-ascii?Q?kIE+NGYc81wqDBXP0N+aNAfL7FxwsvyOc/y/2n/78BsuyMiYD/bbCLw9SBpD?=
+ =?us-ascii?Q?MQUWW86O1KjC3dsuHz+dEaUolIv+xZJ6dYbhlwJ4FShiIwcGuT9e0ZjKPQFW?=
+ =?us-ascii?Q?30vPRcc7acZ3W15AuVOZ6Fot5qjUX+lPif4m3qED3FhvkuOs5zrZmINXx1tv?=
+ =?us-ascii?Q?Lg75Fv/y0G+8B0Q66qE2ZK0H8opBeOXuIPOWzUxN2bl6G9WTDNlvArvPFEyA?=
+ =?us-ascii?Q?2wp9ini2J3yD11HpNj79wPvXuXQhmozoVDgrSf2PDuljlSfaA2QrmKYtTz1i?=
+ =?us-ascii?Q?OA=3D=3D?=
+Content-Type: multipart/related;
+	boundary="_004_IA1PR20MB5694AF644F3D98885BFA9F82828BAIA1PR20MB5694namp_";
+	type="multipart/alternative"
+MIME-Version: 1.0
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-AuthSource: IA1PR20MB5694.namprd20.prod.outlook.com
+X-MS-Exchange-CrossTenant-Network-Message-Id: d307d8e1-065e-418f-8277-08dd8e2cd467
+X-MS-Exchange-CrossTenant-originalarrivaltime: 08 May 2025 12:35:34.9662
+ (UTC)
+X-MS-Exchange-CrossTenant-fromentityheader: Hosted
+X-MS-Exchange-CrossTenant-id: e29b8111-49f8-418d-ac2a-935335a52614
+X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
+X-MS-Exchange-CrossTenant-userprincipalname: PACduxymHswBUWlEkaVx9rk/V6OYg8wkOgXnopEztEWZ4aclczq2Zp9fKHi8nco6lsnZT1qtT1ly/pNCp1XPN9TKvuOkFtCNenw6EYhmHec=
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: DS7PR20MB6809
+X-OriginatorOrg: morganstanley.com
+X-Proofpoint-Virus-Version: vendor=baseguard
+ engine=ICAP:2.0.293,Aquarius:18.0.1099,Hydra:6.0.736,FMLib:17.12.80.40
+ definitions=2025-05-08_04,2025-05-07_02,2025-02-21_01
+X-CFilter-Loop: Reflected
+
+--_004_IA1PR20MB5694AF644F3D98885BFA9F82828BAIA1PR20MB5694namp_
+Content-Type: multipart/alternative;
+	boundary="_000_IA1PR20MB5694AF644F3D98885BFA9F82828BAIA1PR20MB5694namp_"
+
+--_000_IA1PR20MB5694AF644F3D98885BFA9F82828BAIA1PR20MB5694namp_
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+
+Good morning,
+
+It was great meeting with you both yesterday!
+
+As discussed, we are following up with a list of take-aways from our meetin=
+g.
+
+
+  *   Here's the contact info for the Medicare/ Insurance Person:
+
+
+Kelly Walter
+
+K.W. Consulting, Inc.
+
+kwalter@kwalterconsulting.com<mailto:kwalter@kwalterconsulting.com>
+
+440-834-0684
+
+216-403-5860 (cell)
+
+
+
+  *   We discussed applying for Social Security benefits (Doug).  You can d=
+o so anytime, as the lead time to start receiving benefits is about 2-4 mon=
+ths.  Please note, since you are not at your Full Retirement Age (age 67), =
+you may not have more than $23,400 in EARNED income while receiving Social =
+Security benefits to avoid a reduction in your benefits.
+  *   Please provide the approximate balance for your home mortgage, so tha=
+t we can include it in your updated Financial Plan
+  *   Please schedule an appointment with Robin to discuss tax implications=
+ of the possible liquidity event happening this calendar year.  We are happ=
+y to participate in this discussion as well
+  *   Please keep us posted on the progress of your home and landscape reno=
+vation projects and we can schedule time to meet and discuss a pay down pla=
+n for your Liquidity Access Line
+
+We are making the other edits to the plan as discussed in the meantime.
+
+Thank you
+
+
+
+Janet Padula, CFP(r), CDFA(r), MBA
+Senior Vice President / Financial Advisor
+Portfolio Manager
+NEO Wealth Management Group at Morgan Stanley
+31099 Chagrin Blvd., Pepper Pike, OH 44124
+NMLS ID 1589609
+CA License #4200319
+AZ License #9472145
++ 1 216 360-8606 - Direct
++ 1 216 905-0091 - Cell
++ 1 216 539-3235 - Fax
+Janet.Padula@morganstanley.com<mailto:Janet.Padula@morganstanley.com>
+[View my profile on LinkedIn]<http://www.linkedin.com/in/janetschiciano>
+
+Named to the 2025 Forbes Top Women Wealth Advisors<https://www.forbes.com/l=
+ists/top-women-advisors/> Ranking
+Source: Forbes.com (Awarded Feb 2025)  Data compiled by SHOOK Research LLC =
+for the period 9/30/23 - 9/30/24.
+Awards Disclosures<https://www.morganstanley.com/disclosures/awards-disclos=
+ure.html>
+
+
+Named to the 2025 Forbes Best-In-State Wealth Management Teams<https://www.=
+forbes.com/lists/wealth-management-teams-best-in-state/?sh=3Df5c37d876f26> =
+Ranking
+Source: Forbes.com (Awarded Jan 2025)  Data compiled by SHOOK Research LLC =
+based on time period from 3/31/23 - 3/31/24.
+Awards Disclosures<https://www.morganstanley.com/disclosures/awards-disclos=
+ure.html>
+
+________________________________
+
+
+If you would like to unsubscribe from marketing e-mails from Morgan Stanley=
+ Wealth Management, you may do so here: https://cloud.msmail.morganstanley.=
+com/unsubpagesalesforce?Source=3DOutlook. Please note, you will still recei=
+ve service e-mails from Morgan Stanley Wealth Management.
+
+You may have certain rights regarding the information that Morgan Stanley c=
+ollects about you. Please see our Privacy Pledge https://www.morganstanley.=
+com/privacy-pledge for more information about your rights.
+
+--_000_IA1PR20MB5694AF644F3D98885BFA9F82828BAIA1PR20MB5694namp_
+Content-Type: text/html; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+
+<html xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas-micr=
+osoft-com:office:office" xmlns:w=3D"urn:schemas-microsoft-com:office:word" =
+xmlns:m=3D"http://schemas.microsoft.com/office/2004/12/omml" xmlns=3D"http:=
+//www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dus-ascii"=
+>
+<meta name=3D"Generator" content=3D"Microsoft Word 15 (filtered medium)">
+<!--[if !mso]><style>v\:* {behavior:url(#default#VML);}
+o\:* {behavior:url(#default#VML);}
+w\:* {behavior:url(#default#VML);}
+.shape {behavior:url(#default#VML);}
+</style><![endif]--><style><!--
+/* Font Definitions */
+@font-face
+	{font-family:Wingdings;
+	panose-1:5 0 0 0 0 0 0 0 0 0;}
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+@font-face
+	{font-family:"Microsoft Sans Serif";
+	panose-1:2 11 6 4 2 2 2 2 2 4;}
+@font-face
+	{font-family:"Segoe UI";
+	panose-1:2 11 5 2 4 2 4 2 2 3;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0in;
+	font-size:11.0pt;
+	font-family:"Calibri",sans-serif;}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:#0563C1;
+	text-decoration:underline;}
+p.MsoPlainText, li.MsoPlainText, div.MsoPlainText
+	{mso-style-priority:99;
+	mso-style-link:"Plain Text Char";
+	margin:0in;
+	font-size:11.0pt;
+	font-family:"Calibri",sans-serif;
+	mso-ligatures:standardcontextual;}
+p.MsoListParagraph, li.MsoListParagraph, div.MsoListParagraph
+	{mso-style-priority:34;
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:0in;
+	margin-left:.5in;
+	font-size:11.0pt;
+	font-family:"Calibri",sans-serif;}
+span.EmailStyle17
+	{mso-style-type:personal-compose;
+	font-family:"Calibri",sans-serif;
+	color:windowtext;}
+span.PlainTextChar
+	{mso-style-name:"Plain Text Char";
+	mso-style-priority:99;
+	mso-style-link:"Plain Text";
+	font-family:"Calibri",sans-serif;
+	mso-ligatures:standardcontextual;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	mso-ligatures:none;}
+@page WordSection1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.0in 1.0in 1.0in;}
+div.WordSection1
+	{page:WordSection1;}
+/* List Definitions */
+@list l0
+	{mso-list-id:2039816003;
+	mso-list-type:hybrid;
+	mso-list-template-ids:1360799544 610716556 67698691 67698693 67698689 6769=
+8691 67698693 67698689 67698691 67698693;}
+@list l0:level1
+	{mso-level-start-at:216;
+	mso-level-number-format:bullet;
+	mso-level-text:-;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:"Calibri",sans-serif;
+	mso-fareast-font-family:Calibri;}
+@list l0:level2
+	{mso-level-number-format:bullet;
+	mso-level-text:o;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:"Courier New";}
+@list l0:level3
+	{mso-level-number-format:bullet;
+	mso-level-text:\F0A7;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:Wingdings;}
+@list l0:level4
+	{mso-level-number-format:bullet;
+	mso-level-text:\F0B7;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:Symbol;}
+@list l0:level5
+	{mso-level-number-format:bullet;
+	mso-level-text:o;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:"Courier New";}
+@list l0:level6
+	{mso-level-number-format:bullet;
+	mso-level-text:\F0A7;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:Wingdings;}
+@list l0:level7
+	{mso-level-number-format:bullet;
+	mso-level-text:\F0B7;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:Symbol;}
+@list l0:level8
+	{mso-level-number-format:bullet;
+	mso-level-text:o;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:"Courier New";}
+@list l0:level9
+	{mso-level-number-format:bullet;
+	mso-level-text:\F0A7;
+	mso-level-tab-stop:none;
+	mso-level-number-position:left;
+	text-indent:-.25in;
+	font-family:Wingdings;}
+ol
+	{margin-bottom:0in;}
+ul
+	{margin-bottom:0in;}
+--></style><!--[if gte mso 9]><xml>
+<o:shapedefaults v:ext=3D"edit" spidmax=3D"1026" />
+</xml><![endif]--><!--[if gte mso 9]><xml>
+<o:shapelayout v:ext=3D"edit">
+<o:idmap v:ext=3D"edit" data=3D"1" />
+</o:shapelayout></xml><![endif]-->
+</head>
+<body lang=3D"EN-US" link=3D"#0563C1" vlink=3D"#954F72" style=3D"word-wrap:=
+break-word">
+<div class=3D"WordSection1">
+<p class=3D"MsoNormal">Good morning, <o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal">It was great meeting with you both yesterday!<o:p></=
+o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal">As discussed, we are following up with a list of tak=
+e-aways from our meeting.
+<o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<ul style=3D"margin-top:0in" type=3D"disc">
+<li class=3D"MsoListParagraph" style=3D"margin-left:0in;mso-list:l0 level1 =
+lfo1">Here&#8217;s the contact info for the Medicare/ Insurance Person:<o:p=
+></o:p></li></ul>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoPlainText">Kelly Walter<o:p></o:p></p>
+<p class=3D"MsoPlainText">K.W. Consulting, Inc.<o:p></o:p></p>
+<p class=3D"MsoPlainText"><a href=3D"mailto:kwalter@kwalterconsulting.com">=
+kwalter@kwalterconsulting.com</a><o:p></o:p></p>
+<p class=3D"MsoPlainText">440-834-0684<o:p></o:p></p>
+<p class=3D"MsoPlainText">216-403-5860 (cell)<o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<ul style=3D"margin-top:0in" type=3D"disc">
+<li class=3D"MsoListParagraph" style=3D"margin-left:0in;mso-list:l0 level1 =
+lfo1">We discussed applying for Social Security benefits (Doug).&nbsp; You =
+can do so anytime, as the lead time to start receiving benefits is about 2-=
+4 months. &nbsp;Please note, since you are not
+ at your Full Retirement Age (age 67), you may not have more than $23,400 i=
+n <b>EARNED</b> income while receiving Social Security benefits to avoid a =
+reduction in your benefits.<o:p></o:p></li><li class=3D"MsoListParagraph" s=
+tyle=3D"margin-left:0in;mso-list:l0 level1 lfo1">Please provide the approxi=
+mate balance for your home mortgage, so that we can include it in your upda=
+ted Financial Plan<o:p></o:p></li><li class=3D"MsoListParagraph" style=3D"m=
+argin-left:0in;mso-list:l0 level1 lfo1">Please schedule an appointment with=
+ Robin to discuss tax implications of the possible liquidity event happenin=
+g this calendar year.&nbsp; We are happy to participate in this discussion
+ as well<o:p></o:p></li><li class=3D"MsoListParagraph" style=3D"margin-left=
+:0in;mso-list:l0 level1 lfo1">Please keep us posted on the progress of your=
+ home and landscape renovation projects and we can schedule time to meet an=
+d discuss a pay down plan for your Liquidity Access Line<o:p></o:p></li></u=
+l>
+<p class=3D"MsoNormal"><i><o:p>&nbsp;</o:p></i></p>
+<p class=3D"MsoNormal">We are making the other edits to the plan as discuss=
+ed in the meantime.<o:p></o:p></p>
+<p class=3D"MsoNormal" style=3D"margin-left:.25in"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal">Thank you <o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal"><b><i><span style=3D"font-size:14.0pt;mso-ligatures:=
+standardcontextual">Janet Padula, CFP<sup>&reg;</sup></span></i></b><b><spa=
+n style=3D"font-size:14.0pt;mso-ligatures:standardcontextual">,
+<i>CDFA&reg;</i>, <i>MBA</i></span></b><b><i><sup><span style=3D"font-size:=
+14.0pt;color:black"><o:p></o:p></span></sup></i></b></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual">Sen=
+ior Vice President / Financial Advisor</span><span style=3D"font-size:12.0p=
+t;mso-ligatures:standardcontextual"><o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual">Por=
+tfolio Manager&nbsp;
+<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><b><span style=3D"font-size:14.0pt;mso-ligatures:sta=
+ndardcontextual">NEO Wealth Management Group at Morgan Stanley<o:p></o:p></=
+span></b></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual">310=
+99 Chagrin Blvd., Pepper Pike, OH 44124<span style=3D"color:black"><o:p></o=
+:p></span></span></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual">NML=
+S ID 1589609<br>
+CA License #4200319<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual">AZ =
+License #</span><span style=3D"mso-ligatures:standardcontextual">9472145</s=
+pan><span style=3D"mso-ligatures:standardcontextual"><o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual">&#4=
+3; 1 216 360-8606 - Direct<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual">&#4=
+3;</span><span style=3D"font-size:8.0pt;font-family:&quot;Microsoft Sans Se=
+rif&quot;,sans-serif;mso-ligatures:standardcontextual">
+</span><span style=3D"mso-ligatures:standardcontextual">1 216 905-0091 - Ce=
+ll<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual">&#4=
+3; 1 216 539-3235 - Fax&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;
+<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual"><a =
+href=3D"mailto:Janet.Padula@morganstanley.com"><span style=3D"color:#33CCCC=
+">Janet.Padula@morganstanley.com</span></a><span style=3D"color:#1F497D"><o=
+:p></o:p></span></span></p>
+<p class=3D"MsoNormal" style=3D"text-autospace:none"><a href=3D"http://www.=
+linkedin.com/in/janetschiciano" target=3D"_blank"><span style=3D"color:wind=
+owtext;text-decoration:none"><img border=3D"0" width=3D"125" height=3D"26" =
+style=3D"width:1.302in;height:.2708in" id=3D"Picture_x0020_4" src=3D"cid:im=
+age001.png@01DBBFF4.26222920" alt=3D"View my profile on LinkedIn"></span></=
+a><span style=3D"font-size:12.0pt;mso-ligatures:standardcontextual">
+<o:p></o:p></span></p>
+<p class=3D"MsoNormal" style=3D"text-autospace:none"><span style=3D"font-si=
+ze:12.0pt;mso-ligatures:standardcontextual"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoNormal"><b><span style=3D"font-family:&quot;Arial&quot;,sans=
+-serif;mso-ligatures:standardcontextual">Named to the
+</span></b><b><span style=3D"font-size:10.5pt;font-family:&quot;Segoe UI&qu=
+ot;,sans-serif;color:#00B0F0;mso-ligatures:standardcontextual"><a href=3D"h=
+ttps://www.forbes.com/lists/top-women-advisors/" title=3D"https://www.forbe=
+s.com/lists/top-women-advisors/"><span style=3D"color:#00B0F0">2025
+ Forbes Top Women Wealth Advisors</span></a></span></b><span style=3D"font-=
+size:10.5pt;font-family:&quot;Segoe UI&quot;,sans-serif;color:#323130;mso-l=
+igatures:standardcontextual">
+</span><b><span style=3D"font-family:&quot;Arial&quot;,sans-serif;mso-ligat=
+ures:standardcontextual">Ranking<o:p></o:p></span></b></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:9.5pt;mso-ligatures:standar=
+dcontextual">Source: Forbes.com (Awarded Feb 2025)&nbsp; Data compiled by S=
+HOOK Research LLC for the period 9/30/23 &#8211; 9/30/24.
+<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:9.5pt;mso-ligatures:standar=
+dcontextual"><a href=3D"https://www.morganstanley.com/disclosures/awards-di=
+sclosure.html"><span style=3D"color:#0563C1">Awards Disclosures</span></a><=
+o:p></o:p></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:.5in"><u><span style=3D"font-si=
+ze:8.0pt;font-family:&quot;Arial&quot;,sans-serif;mso-ligatures:standardcon=
+textual"><o:p><span style=3D"text-decoration:none">&nbsp;</span></o:p></spa=
+n></u></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual"><o:=
+p>&nbsp;</o:p></span></p>
+<p class=3D"MsoNormal"><b><span style=3D"font-family:&quot;Arial&quot;,sans=
+-serif;mso-ligatures:standardcontextual">Named to the 2025
+</span></b><b><span style=3D"color:#00B0F0;mso-ligatures:standardcontextual=
+"><a href=3D"https://www.forbes.com/lists/wealth-management-teams-best-in-s=
+tate/?sh=3Df5c37d876f26"><span style=3D"font-family:&quot;Arial&quot;,sans-=
+serif;color:#00B0F0">Forbes Best-In-State Wealth Management
+ Teams</span></a></span></b><b><span style=3D"font-family:&quot;Arial&quot;=
+,sans-serif;mso-ligatures:standardcontextual"> Ranking<o:p></o:p></span></b=
+></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:9.5pt;mso-ligatures:standar=
+dcontextual">Source: Forbes.com (Awarded Jan 2025)&nbsp; Data compiled by S=
+HOOK Research LLC based on time period from 3/31/23 &#8211; 3/31/24.<o:p></=
+o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual"><a =
+href=3D"https://www.morganstanley.com/disclosures/awards-disclosure.html"><=
+span style=3D"font-size:9.5pt;color:#0563C1">Awards Disclosures</span></a><=
+/span><u><span style=3D"font-size:9.5pt;color:#0563C1;mso-ligatures:standar=
+dcontextual"><o:p></o:p></span></u></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+<hr size=3D"1" width=3D"100%" align=3D"center">
+<br>
+<p style=3D"font-size:10pt; font-family: 'Arial'; color:gray">If you would =
+like to unsubscribe from marketing e-mails from Morgan Stanley Wealth Manag=
+ement, you may do so here: https://cloud.msmail.morganstanley.com/unsubpage=
+salesforce?Source=3DOutlook. Please
+ note, you will still receive service e-mails from Morgan Stanley Wealth Ma=
+nagement.<br>
+<br>
+You may have certain rights regarding the information that Morgan Stanley c=
+ollects about you. Please see our Privacy Pledge https://www.morganstanley.=
+com/privacy-pledge for more information about your rights.</p>
+</body>
+</html>
+
+--_000_IA1PR20MB5694AF644F3D98885BFA9F82828BAIA1PR20MB5694namp_--
+
+--_004_IA1PR20MB5694AF644F3D98885BFA9F82828BAIA1PR20MB5694namp_
+Content-Type: image/png; name="image001.png"
+Content-Description: image001.png
+Content-Disposition: inline; filename="image001.png"; size=7363;
+	creation-date="Thu, 08 May 2025 12:35:34 GMT";
+	modification-date="Thu, 08 May 2025 12:35:34 GMT"
+Content-ID: <image001.png@01DBBFF4.26222920>
+Content-Transfer-Encoding: base64
+
+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
+AABJRU5ErkJggg==
+
+--_004_IA1PR20MB5694AF644F3D98885BFA9F82828BAIA1PR20MB5694namp_--

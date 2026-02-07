@@ -1,0 +1,714 @@
+Delivered-To: doug@dougbower.com
+Received: by 2002:a05:6a10:7c84:b0:694:afed:5b09 with SMTP id ap4csp421303pxc;
+        Fri, 12 Dec 2025 10:46:03 -0800 (PST)
+X-Forwarded-Encrypted: i=3; AJvYcCWQSZtdUOjyyylYn7OsoAvrn07Fx2+LarilsReubluTWFTIcm+W3zh9LukyxkvPOv9LRRFw@dougbower.com
+X-Google-Smtp-Source: AGHT+IGEp5jwSgEH0mMK6gHbDKWil3Pfffv7e5hIG+84mqG73VvoFj5suUZWDSI8BdOke9KpE1RM
+X-Received: by 2002:a05:6402:4312:b0:646:66f:86e9 with SMTP id 4fb4d7f45d1cf-6499b1ca129mr2802560a12.19.1765565162802;
+        Fri, 12 Dec 2025 10:46:02 -0800 (PST)
+ARC-Seal: i=2; a=rsa-sha256; t=1765565162; cv=fail;
+        d=google.com; s=arc-20240605;
+        b=FPopbVj3uz1WlSiUmpS8AhvMpyT81iviU8J1FLikevXk4v/3mPrmdDtbcHGgBTUVLU
+         H0ysoGPu1tsfyl8LawlnZydBzu69m/CB2lInj1onbqtcC3PedI7vUOIi2K/Bq/3ltIOf
+         zF+89zc0upX9B4POVqpTR47cTO9eqaxtCfIVLkAV2tw8xIXSxgBEr3kRlzdXERZsNLtk
+         b9Rd81sNBieMJrNtWpyeaXKHWmypeu+AvCmXjGD9jQaIkVO/z3P2j+hdFmmr4PUAf6eV
+         NLeq6vSOom/m7jtX1sj9a33IZAyNt93Bk4kVGPfO/KuwJsU9QRR644urv+0KKy5soRTB
+         bBBQ==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=mime-version:msip_labels:content-language:accept-language
+         :in-reply-to:references:message-id:date:thread-index:thread-topic
+         :subject:cc:to:from:dkim-signature:dkim-signature;
+        bh=33GfRjY8i0IXgzTWmyH4l48TZ4sInnOFl0JhBtWg0ME=;
+        fh=KZi5xTcOJYsqGfh9OQyw7xHkEZOw6jqF0fvGXcmpHsk=;
+        b=SRRkBi2b1sDx9/EZ+zHQWgE/qv4L76v6TbuFzrG6q9HDgAQqCTm7RiycPN9Ab3pgJ/
+         wyswRFw0NAZZNrjip18t2sDJ1rtpiYTEGkyDtMZFRgVHwzDSQOA53wejPvwqHpAkJpK7
+         WyBHelwgNRUGbXKgl8YdjfBhBA5cU8pHKvBnQ0WdNOTkLcJrxRkNuwYzn/nzRsEstUd/
+         eXwrhl5epLlpwKCoeMKI9qagSGGNzgEJK4CBq6N3mvu/TLd/43W31NBq3BCp/schkY+/
+         MTFR5NZgGKzq+cYhBBhd8nni+ETmiDOcP1qssYFZw3J/G3eTuzWKY9Znl4JlyNvYWF1o
+         FWrw==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@morganstanley.com header.s=p20230414q4 header.b=gatNxLEU;
+       dkim=neutral (body hash did not verify) header.i=@morganstanley.onmicrosoft.com header.s=selector2-morganstanley-onmicrosoft-com header.b=ooNbWr7h;
+       arc=fail (body hash mismatch);
+       spf=pass (google.com: domain of sherma.harris@morganstanley.com designates 205.228.84.50 as permitted sender) smtp.mailfrom=Sherma.Harris@morganstanley.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=morganstanley.com
+Return-Path: <Sherma.Harris@morganstanley.com>
+Received: from oymtaint01.ms.com (oymtaint01.ms.com. [205.228.84.50])
+        by mx.google.com with ESMTPS id 4fb4d7f45d1cf-649924ea726si4535749a12.221.2025.12.12.10.46.02
+        for <doug@dougbower.com>
+        (version=TLS1_2 cipher=ECDHE-RSA-AES128-GCM-SHA256 bits=128/128);
+        Fri, 12 Dec 2025 10:46:02 -0800 (PST)
+Received-SPF: pass (google.com: domain of sherma.harris@morganstanley.com designates 205.228.84.50 as permitted sender) client-ip=205.228.84.50;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@morganstanley.com header.s=p20230414q4 header.b=gatNxLEU;
+       dkim=neutral (body hash did not verify) header.i=@morganstanley.onmicrosoft.com header.s=selector2-morganstanley-onmicrosoft-com header.b=ooNbWr7h;
+       arc=fail (body hash mismatch);
+       spf=pass (google.com: domain of sherma.harris@morganstanley.com designates 205.228.84.50 as permitted sender) smtp.mailfrom=Sherma.Harris@morganstanley.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=morganstanley.com
+Received: from pps.filterd (oymtaint01.ms.com [127.0.0.1])
+	by oymtaint01.ms.com (8.17.1.19/8.17.1.19) with ESMTP id 5BCCfNW2045249;
+	Fri, 12 Dec 2025 18:46:01 GMT
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=morganstanley.com; h=from : to : cc
+ : subject : date : message-id : references : in-reply-to : content-type :
+ mime-version; s=p20230414q4;
+ bh=33GfRjY8i0IXgzTWmyH4l48TZ4sInnOFl0JhBtWg0ME=;
+ b=gatNxLEUdRfSYjEAh3lRdwPB1ilihA9mdvuoqQdFhw9jYyKwsbpoul2JZbWNtglbEfMk
+ sAf0byfM0DYcxsdFKEFFe0yPst2boc9wOagV8PbVzFCgze/inWyTxssI+T5Yp1cCFums
+ SjYo8NpnKqAy9MCidlfDf5Ceef14zLswYZJPwM1Gxr6FhsMf8zaV7DRwFFvLckfUNzq+
+ O6EJVGKilzBsH7qhuuHXJ2o6U/sJ+ilt+k+nYeic5d27ZmNdjreql/2oW6khJP4/rt3j
+ eDrHPW61b16/9rNjeF7AaioBSRe0Jv7mGlv6FbKokXwc/u0HSkvjqw/4Tm82ARgA08rx Dg== 
+Received: from dlp.ms.com (idmz29.mssip.heathrow.ms.com [10.248.11.204])
+	by oymtaint01.ms.com (PPS) with ESMTP id 4aw1p0p18m-1;
+	Fri, 12 Dec 2025 18:46:01 +0000
+Received: from oymtaint01.ms.com (oymtaint01.ms.com [127.0.0.1])
+	by pps.dlp (8.17.1.5/8.17.1.5) with ESMTP id 5BCEjK9J022343;
+	Fri, 12 Dec 2025 18:46:01 GMT
+Received: from rrsm4int03.ms.com (rrsm4int03.ms.com [10.114.7.188])
+	by oymtaint01.ms.com (PPS) with ESMTP id 4aw1p0p18j-1;
+	Fri, 12 Dec 2025 18:46:01 +0000
+Received: from HZWEX1901N11.msad.ms.com (hzwex1901n11.msad.ms.com [10.3.38.12])
+	by rrsm4int03.ms.com (Sentrion-MTA-4.5.9/Sentrion-MTA-4.5.9) with ESMTPS id 5BCIk0Yj039081
+	(version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=OK);
+	Fri, 12 Dec 2025 18:46:00 GMT
+Received: from HZWEX1902N13.msad.ms.com (10.3.38.22) by
+ HZWEX1901N11.msad.ms.com (10.3.38.12) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.2.2562.29; Fri, 12 Dec 2025 13:46:00 -0500
+Received: from HZWEX1901N15.msad.ms.com (10.3.38.16) by
+ HZWEX1902N13.msad.ms.com (10.3.38.22) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.2.2562.29; Fri, 12 Dec 2025 13:46:00 -0500
+Received: from HZWEXEDGEZ08.msadz.ms.com (199.89.94.65) by
+ HZWEX1901N15.msad.ms.com (10.3.38.16) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.2.2562.29 via Frontend Transport; Fri, 12 Dec 2025 13:46:00 -0500
+Received: from BYAPR08CU003.outbound.protection.outlook.com (10.100.233.43) by
+ NA-Edge.morganstanley.com (199.89.94.65) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.2.2562.29; Fri, 12 Dec 2025 13:46:00 -0500
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector10001; d=microsoft.com; cv=none;
+ b=AJtYZS74a7rbQpQzSU0hHcbRFicTMTulkX258ws3Ir7ORvPdhP/EYnKceSC8anzAMDuLTd54dDP474jYzeY3DjrZbOyGxQU+Y+Jax7vsU3R+jC4UCa53aC/ykg9mYofsK3iufYADLSKKv/FFbha9Efw1HWFqT3P8/Z5lQZvXqRneTmibzO7rgnj1rhTGaE2CxGlMXoiZUnUz7Pm6H8iP+qMcSpT0fpBGNik78EION42xjS9De6tMv1BojhmRY0bbwVrDYoxRPp0jPBq2g2sFcJ1jfwdo6EWTNUQ1RYoAlNrn7ArQ9ZUVBDhdI7GbO4ZtM+veTkZpGylIGDRA/8GKvg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector10001;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=Kn/yeP4cozTF/N/LuEIePO3ZEJ7LnUB47cTGuhLn06U=;
+ b=m3+8xWT+UnHYHAY9EYtTMPCx+9gF6EQCNjwC7tcrQbZfTryrLYghESd0omcKZ6fM7fwrMHPhTR6+lX8atrdFFWujB5DnP16NkVzah/DAEQpZzjDPvFztgT69kf3kyMBBIDEQABVbWOErFtb9QhiS0MuFyGl8j448dkR8MyMXfNZw+JKput6nc5N/S3aDLuD6NzJ9pBk8UCkVThSEIVpm5J/9SKmElUSpxLdTA3sDlBfUVJmeoz6cAf3MG6CYfv3sXB3UXvtb6MPgJB9IM+t41Lm8fZhcVsGhWFzn79odZPOzwexg91GgRWh6fV3raPuCvHnAIs41IKS14HLUL9qfoA==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=morganstanley.com; dmarc=pass action=none
+ header.from=morganstanley.com; dkim=pass header.d=morganstanley.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+ d=morganstanley.onmicrosoft.com; s=selector2-morganstanley-onmicrosoft-com;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=Kn/yeP4cozTF/N/LuEIePO3ZEJ7LnUB47cTGuhLn06U=;
+ b=ooNbWr7hQQUba8litLt/89RlZPGKZq6SjXo7hHIteVt7jSP7U2FFfCMe2q/nhS1Yh9m/5Rb7OjTflJZ1ds6ZqJ2j8og6NiXJBcU60SiCHSoY6IPRL9LYW4kt41LhV2bfOvWSsnU2nzKLNpaQkmRvqJaAc0fEp9NcRHr2yO52aYQ=
+Received: from IA0PR20MB5634.namprd20.prod.outlook.com (2603:10b6:208:43e::9)
+ by MW4PR20MB5591.namprd20.prod.outlook.com (2603:10b6:303:22b::22) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9412.10; Fri, 12 Dec
+ 2025 18:45:57 +0000
+Received: from IA0PR20MB5634.namprd20.prod.outlook.com
+ ([fe80::9906:535d:5dcf:6b5c]) by IA0PR20MB5634.namprd20.prod.outlook.com
+ ([fe80::9906:535d:5dcf:6b5c%6]) with mapi id 15.20.9412.005; Fri, 12 Dec 2025
+ 18:45:57 +0000
+From: <Sherma.Harris@morganstanley.com>
+To: <Peter.Carfagna@morganstanley.com>, <doug@dougbower.com>
+CC: <rbaum@zinnerco.com>, <mindy@mindybower.com>
+Subject: RE: [EXTERNAL] Can we meet next week?
+Thread-Topic: [EXTERNAL] Can we meet next week?
+Thread-Index: AQHca5SmGuj4iM4ry0G1rF8xfdi/HbUeVjtbgAAA/LA=
+Date: Fri, 12 Dec 2025 18:45:56 +0000
+Message-ID: <IA0PR20MB5634380D4D2A33DD109789CBE8AEA@IA0PR20MB5634.namprd20.prod.outlook.com>
+References: <CABjnsew_1s_i-2iD19RBQLtFGmyx6O2uVDqOjmsGp+VD4SMojg@mail.gmail.com>
+ <PH8PR20MB53398F592A7617F337F73DE592AEA@PH8PR20MB5339.namprd20.prod.outlook.com>
+In-Reply-To: <PH8PR20MB53398F592A7617F337F73DE592AEA@PH8PR20MB5339.namprd20.prod.outlook.com>
+Accept-Language: en-US
+Content-Language: en-US
+X-MS-Has-Attach: 
+X-MS-TNEF-Correlator: 
+msip_labels: MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_ContentBits=0;MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_Enabled=True;MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_Method=Standard;MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_Name=Confidential
+ v1;MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_SetDate=2025-12-12T18:39:49.2089518Z;MSIP_Label_07f119e6-c6cd-44b0-a5ee-ac1aff68c56e_SiteId=e29b8111-49f8-418d-ac2a-935335a52614;
+x-ms-gosh-correlation-id: 9adc5111-5bac-4da1-acf3-4f15edd52c8b
+x-mspolicyagent: version=1.0
+x-ms-correlation-id: 77639011439496924539
+x-ms-publictraffictype: Email
+x-ms-traffictypediagnostic: IA0PR20MB5634:EE_|MW4PR20MB5591:EE_
+x-ms-office365-filtering-correlation-id: 7902e20a-3be9-4d75-5e42-08de39aeafd1
+x-ms-reactions: disallow
+x-ms-exchange-senderadcheck: 1
+x-ms-exchange-antispam-relay: 0
+x-microsoft-antispam: BCL:0;ARA:13230040|1800799024|366016|376014|7053199007|38070700021|13003099007|8096899003;
+x-microsoft-antispam-message-info: =?us-ascii?Q?EfI5haI/Rvu9k7LY0fFxL1/LlqLF7fF8lILwHxiE/NE5cnkfwqVBEm35wkaS?=
+ =?us-ascii?Q?sqBnK5lid2Z6xO/gw/Sc8mIHy0W9TMkj5QSVj6CcD4VGPcKD/GsRhIIxeMTY?=
+ =?us-ascii?Q?gnIuPRuxRwuzFWifFMbgcUZMedCY1iBzEvZu1WNmkFYSHmgf0TMylNdG4lTT?=
+ =?us-ascii?Q?l15TAVRkzVqRLDBN1ZssZf8xXJJteiMittgVUDmfgFzMhQUcZCcydLZl7e2x?=
+ =?us-ascii?Q?EUIrPAvwMGAO8PzNmc9sTmMOAptOsgAhWks9okzbpeW+syaEUrzNvGmnTrNu?=
+ =?us-ascii?Q?CPpVNyK5V9LvMq3LpwQ6OxxV7O2/P1GTQ/qcx2AEuk1xUylL7cZWjKkkBYWm?=
+ =?us-ascii?Q?/kNZYB5rIYnRPj0d/7OdrZK9e3xw93Zy/fil/rCxwXAx8XVVEpkItncblZJe?=
+ =?us-ascii?Q?q/A6tsXb4unjhdwVEKPjJfGvqxpKvWUw9O3f1WVnAmHbv2dh7fOIGgdqLvjP?=
+ =?us-ascii?Q?CNx2TFSBYzSikL0TAdGxk0XhUjVtpLCvHt1Bbv3gfqRCMA/O9HSkLQM0VI3d?=
+ =?us-ascii?Q?+xaBNr3zRrpQKkoKDDS6TC4SaOsYMujVctIb6WIfiESfidsJuTtFQY9TIp9+?=
+ =?us-ascii?Q?veN93B8YQc+DOyu8VHmWXSEekuigp5lvLhklDf/UCZRmq8WrKi16NfEmJ4LM?=
+ =?us-ascii?Q?+C0xLdbRuP0BqdSQH6sNX0FmW2XAClCbgpSGKnNa7EWbTS6Y+1tvE0OU2Inr?=
+ =?us-ascii?Q?kuKELGUxQV0E+kroM/gzllPZejPZD/4HIewd8se5VsdOcsyHOipXGwvRmvHz?=
+ =?us-ascii?Q?0cEyCIYOgmV9wGoF5k4oFIyyg60sVN/ICsFLqva1oYXuHGew6GGk5oJGxooB?=
+ =?us-ascii?Q?rCozFMHth32jLCCLeM9gnG5ni2d6xD04XxBtneF0BMhEBvBpZmBHIm2MimYm?=
+ =?us-ascii?Q?dDd2QWI6SwznbqcsDKbIXE+0RY12CBkKeziBqidRUA3rAU37bIqIBy065lyA?=
+ =?us-ascii?Q?FaFWwzKjEV1oCtTS2svHj4A1TVA/I6/XpCAXxiGoiXhGCtsSxJ4FzKwTKDhg?=
+ =?us-ascii?Q?bz6ngABrfgs+f4n0s2an/txEdLRQ6OAuSaleXPzhGckuVKh0bF1XoKFGvw7T?=
+ =?us-ascii?Q?cZeAMScwszoJxvsw8xmswTJE5wfmF4WccOhIChKMXFXF8S4Es/CecM1LO3k/?=
+ =?us-ascii?Q?raUhT7wOztryLu5CZYzOcnv5oqarZGv4gJ3N8TfAaWjPouNLPaS/HbhiTpUS?=
+ =?us-ascii?Q?sMzhDyHdAl0nBjvUMSOsUUBwdavVVldW6e6r5dnPmK0GC8E7uogbOJN233tA?=
+ =?us-ascii?Q?aEvnWkaYH29+mtufBDJE9EGC8dFVU4OR+SLuDykKUNNv4vjfobd0hEttu2J2?=
+ =?us-ascii?Q?TDLrejFnN1GDSbuCwVWnOC1pZ9DrBPX0wj17FFoxf/gi9gWmVdYbCQaurnUh?=
+ =?us-ascii?Q?4xOLFj7A1eqDeb4YSvSORoQ3Q2ZCUzgNSmdwDboyOWxiRvvrnEUl+LPcqqYh?=
+ =?us-ascii?Q?agOSWahPI6cck4dtMZWgxiDFUIWFSTOVAzVyLTOXZuQQ8h5s2BzZOg=3D=3D?=
+x-forefront-antispam-report: CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:IA0PR20MB5634.namprd20.prod.outlook.com;PTR:;CAT:NONE;SFS:(13230040)(1800799024)(366016)(376014)(7053199007)(38070700021)(13003099007)(8096899003);DIR:OUT;SFP:1101;
+x-ms-exchange-antispam-messagedata-chunkcount: 1
+x-ms-exchange-antispam-messagedata-0: =?us-ascii?Q?iCokkJVSLDwmWIB/yvuPdC3PejlRjaPl/x7w3SK+blgNqCNDT3A6bcaGPUjX?=
+ =?us-ascii?Q?rxYX1NoDnEkUBFRorYtCjs8LklP3nhPxNoVeuMTV9bY6GJc2OThS9EWUe2Qz?=
+ =?us-ascii?Q?mTVPsLJcH0ZvTn8cNkpI/R+hys4O7W/xJOoSjpk92sGca85h3m2xs+5lSRTY?=
+ =?us-ascii?Q?kdhmvE6FC36JrBiq4XQEZqbgkoRtcmvX68L7eahrEeIU2zIwonfqAqrAwU9x?=
+ =?us-ascii?Q?gnggrvMs2J3TAMDr7Jf8F0QhGJIF0+0cFFjPP25AAKxgEp3odlCtAyItcVB1?=
+ =?us-ascii?Q?CLHaUkQ22DAzIjkQdHcA+Ks0suj0Mp4AdOSC8eVr/73/9OV6gxk5EZo0Qikk?=
+ =?us-ascii?Q?OJyJ2vBALQzAD1SwT8ToMCaXU75cqdkfax4ZNtUv84uNroMcVqU4BRDpeNyz?=
+ =?us-ascii?Q?HaFTI0J3Cg5aPnmjNzLFhHHdVEivCatFKyo8W47YvIMcYxhMx/nkdWhD9mYe?=
+ =?us-ascii?Q?yJr+pPcqlSBbiEks914g/7/oG9IKy7zlaNdPJvZVtB+7LT0+bnuhTkygoz/G?=
+ =?us-ascii?Q?aH9uD16/PPt/q75XYfZjGP+T69mQ+TkV5gtV+MrRWH5JMX0BrEAOJaPj/+fN?=
+ =?us-ascii?Q?V13E4wkOutNW+GYrf9kyiRLLIwO+QdAx4BKuhlCHzY0SHOgOXPD2z/eZUPAa?=
+ =?us-ascii?Q?npDv1g8q9J5+bqTfMSWIc56Vu56OIziEmwFZ08t5il0bbBaLMnzlfuJA43SR?=
+ =?us-ascii?Q?sJrWJMccsb6grrthHDBz7StD9qclQrUhnyRypdUrkR8jnDjGOVUhEHnWhvh8?=
+ =?us-ascii?Q?ZlW0LeG89U5UXifSHxQ2/yUK57/RtwvviiAA1X76/DYFVAsRF9kHjChA+EmV?=
+ =?us-ascii?Q?mi4c32zLvqr5z05LjOL2lE+OAWkCRVigWUwDTYy//3asNchGSDXeoGkTqBJa?=
+ =?us-ascii?Q?ozj2Dwne7cgeYO33gbOz8+QR2W720avzwTl+KEX7taZF99NgP9D05q/1BiSm?=
+ =?us-ascii?Q?oLAyPPGxSYDxxXv9yDcz6iJa1ITRytW5NFiILP0mnFWnJlpOW8607dG26Vwv?=
+ =?us-ascii?Q?7rT5JCf/q4SFGjjVfeUZUkNNQlkI86cInTnfO97mVKFYCnI0UJ71UWbedCGm?=
+ =?us-ascii?Q?PzqwQQ6Xk8N5YGuOBZ6hFQ2KRzW+bbGDxJ4jxEgbxk2rBM1Q3CnZqNbK7byB?=
+ =?us-ascii?Q?xF02jknCNoa5fXDysNskNWA/C0Q7FH+UeHfkG2mNQUOAG9cpvcjI6kAoBq2O?=
+ =?us-ascii?Q?QKTO4oI6uLJa6pWJrBVW8J3uDbHH+8h9NxHUX85MRrBlx/FysB9mL3VhuIjM?=
+ =?us-ascii?Q?VLrKAquvDs4fML4vTaP98kkUAqYZzXQ8R5pQxXhEXuIipJlYRwJsO5jGW0E2?=
+ =?us-ascii?Q?js9/3mOOipF5FDy+QFv9mf75eTft0hYxlXtv6ZpAHYHGtNqjJBCWtiMP1/rY?=
+ =?us-ascii?Q?dNQ9wQsz4kU2Lldz0AhepvehYSrEK0/Hr8CKfkI3GK6g81XdAz9U853uLMQ6?=
+ =?us-ascii?Q?CEkExyrxVeKw33+GcqVjwG/6XtQW2lUlI5B54vqJ0tnQxDozt1RaWfpiHG8r?=
+ =?us-ascii?Q?EkxUTH+rkmaN0GTLpnhUoMMP9vX/Qie3SiP1hwYPnuFw6R0XE4yZ3/HngNay?=
+ =?us-ascii?Q?twjvf+gMd41IeT9XZfzROs7fWl25qwSAKuGT5XaMC0fxBxJDzKFgsZzAOCr3?=
+ =?us-ascii?Q?rw=3D=3D?=
+Content-Type: multipart/alternative;
+	boundary="_000_IA0PR20MB5634380D4D2A33DD109789CBE8AEAIA0PR20MB5634namp_"
+MIME-Version: 1.0
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-AuthSource: IA0PR20MB5634.namprd20.prod.outlook.com
+X-MS-Exchange-CrossTenant-Network-Message-Id: 7902e20a-3be9-4d75-5e42-08de39aeafd1
+X-MS-Exchange-CrossTenant-originalarrivaltime: 12 Dec 2025 18:45:56.9485
+ (UTC)
+X-MS-Exchange-CrossTenant-fromentityheader: Hosted
+X-MS-Exchange-CrossTenant-id: e29b8111-49f8-418d-ac2a-935335a52614
+X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
+X-MS-Exchange-CrossTenant-userprincipalname: 2JlXPmexipMQ8CHw1sMCwym80sskqIhDhWeYj8xydXAyGH+qIf+76+66F6I5pHSLcBQm3bHsus/+FZ76hbRJVZrxwFsn4zofEFYgl/awg78=
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: MW4PR20MB5591
+X-OriginatorOrg: morganstanley.com
+X-Proofpoint-Virus-Version: vendor=baseguard
+ engine=ICAP:2.0.293,Aquarius:18.0.1121,Hydra:6.1.9,FMLib:17.12.100.49
+ definitions=2025-12-12_05,2025-12-11_01,2025-10-01_01
+X-CFilter-Loop: Reflected
+
+--_000_IA0PR20MB5634380D4D2A33DD109789CBE8AEAIA0PR20MB5634namp_
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+
+Hello Doug,
+
+Please see availability below:
+
+12/18 @ 11:30am
+12/23  @ 1:00pm, 2:00pm, 2:30pm
+
+Let us know what works best for your schedule
+
+Warm regards,
+
+Sherma Harris
+Client Service Associate
+NEO Wealth Management Group at Morgan Stanley
+31099 Chagrin Blvd | Pepper Pike, OH  44124
+Phone: +1 216-292-9083
+Sherma.Harris@morganstanley.com<mailto:Sherma.Harris@morganstanley.com>
+
+
+Named to the 2025 Forbes Best-In-State Wealth Management Teams<https://www.=
+forbes.com/lists/wealth-management-teams-best-in-state/?sh=3Df5c37d876f26> =
+Ranking
+Forbes America's Best-In-State Wealth Management Teams
+Source: Forbes.com (Awarded Jan 2025)  Data compiled by SHOOK Research LLC =
+based on time period from 3/31/23 - 3/31/24.
+Awards Disclosures<https://www.morganstanley.com/disclosures/awards-disclos=
+ure.html>
+
+
+
+From: Carfagna, Peter (Wealth Management Field) <Peter.Carfagna@morganstanl=
+ey.com>
+Sent: Friday, December 12, 2025 1:41 PM
+To: Doug Bower <doug@dougbower.com>
+Cc: Robin Baum <rbaum@zinnerco.com>; Douglas Bower <mindy@mindybower.com>; =
+Harris, Sherma (Wealth Management Field) <Sherma.Harris@morganstanley.com>
+Subject: Re: [EXTERNAL] Can we meet next week?
+
+Doug,
+Understood and yes, we can meet next week accordingly.
+Adding my colleague Sherma Harris to assist with coordinating a time.
+
+
+Thank you and please let me know if you have any questions.
+
+
+
+Best,
+
+
+
+Peter
+
+
+
+Peter E. Carfagna, CFP (r), CPWA (r), MBA
+
+Managing Director
+
+Family Wealth Director | Global Sports and Entertainment Director
+
+Alternative Investments Director |  Financial Planning Specialist
+
+Financial Advisor | President's Club Member
+
+NEO Wealth Management Group at Morgan Stanley
+
+31099 Chagrin Blvd., Suite 300 | Pepper Pike, OH 44124
+
+Direct: +1 216 360-8604
+
+Cell:  +1 216 990-3300
+
+Fax: +1 216 303-6911
+
+Peter.Carfagna@morganstanley.com<mailto:Peter.Carfagna@morganstanley.com>
+
+https://advisor.morganstanley.com/neo-wealth-management-group
+
+Click here<https://meetings.morganstanleyclientserv.com/landing.html?fa=3Da=
+6ce3e2b3f18d7b43ddb80f8f56b3745> to book time with me.
+
+
+
+NMLS #1321604
+
+As discussed.
+
+For specific tax or legal guidance please consult your CPA or attorney.
+
+
+
+Named to the 2025 Forbes Best-In-State Wealth Management Teams<https://www.=
+forbes.com/lists/wealth-management-teams-best-in-state/?sh=3Df5c37d876f26> =
+Ranking
+
+Forbes America's Best-In-State Wealth Management Teams
+
+Source: Forbes.com (Awarded Jan 2025)  Data compiled by SHOOK Research LLC =
+based on time period from 3/31/23 - 3/31/24.
+
+Awards Disclosures<https://www.morganstanley.com/disclosures/awards-disclos=
+ure.html>
+
+
+
+Named to the 2025 Forbes Best-In-State Wealth Advisors<https://www.forbes.c=
+om/best-in-state-wealth-advisors/> ranking
+
+Source: Forbes.com (Awarded April 2025)   Data compiled by SHOOK Research L=
+LC based on time period from
+
+6/30/23-6/30/24.
+
+Award Disclosures<https://www.morganstanley.com/disclosures/awards-disclosu=
+re/>
+
+________________________________
+From: Doug Bower <doug@dougbower.com>
+Sent: Friday, December 12, 2025 1:24:43 PM
+To: Carfagna, Peter (Wealth Management Field) <Peter.Carfagna@morganstanley=
+.com>
+Cc: Robin Baum <rbaum@zinnerco.com>; Douglas Bower <mindy@mindybower.com>
+Subject: [EXTERNAL] Can we meet next week?
+
+Peter,
+We met with Robin last week, and there are some tax advantages to taking st=
+eps this year to reduce the leverage in our portfolio.  We would like to me=
+et with you next week so that we can define a plan for executing the transa=
+ctions in 2025, and do a little bit of planning for 2026.
+
+Do you have time next week?
+
+Regards,
+
+Doug
+
+________________________________
+
+
+If you would like to unsubscribe from marketing e-mails from Morgan Stanley=
+ Wealth Management, you may do so here: https://cloud.msmail.morganstanley.=
+com/unsubpagesalesforce?Source=3DOutlook. Please note, you will still recei=
+ve service e-mails from Morgan Stanley Wealth Management.
+
+You may have certain rights regarding the information that Morgan Stanley c=
+ollects about you. Please see our Privacy Pledge https://www.morganstanley.=
+com/privacy-pledge for more information about your rights.
+
+--_000_IA0PR20MB5634380D4D2A33DD109789CBE8AEAIA0PR20MB5634namp_
+Content-Type: text/html; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+
+<html xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas-micr=
+osoft-com:office:office" xmlns:w=3D"urn:schemas-microsoft-com:office:word" =
+xmlns:m=3D"http://schemas.microsoft.com/office/2004/12/omml" xmlns=3D"http:=
+//www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dus-ascii"=
+>
+<meta name=3D"Generator" content=3D"Microsoft Word 15 (filtered medium)">
+<!--[if !mso]><style>v\:* {behavior:url(#default#VML);}
+o\:* {behavior:url(#default#VML);}
+w\:* {behavior:url(#default#VML);}
+.shape {behavior:url(#default#VML);}
+</style><![endif]--><style><!--
+/* Font Definitions */
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+@font-face
+	{font-family:Aptos;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0in;
+	font-size:12.0pt;
+	font-family:"Aptos",sans-serif;}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:blue;
+	text-decoration:underline;}
+span.EmailStyle19
+	{mso-style-type:personal-reply;
+	font-family:"Aptos",sans-serif;
+	color:windowtext;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	font-size:10.0pt;
+	mso-ligatures:none;}
+@page WordSection1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.0in 1.0in 1.0in;}
+div.WordSection1
+	{page:WordSection1;}
+--></style><!--[if gte mso 9]><xml>
+<o:shapedefaults v:ext=3D"edit" spidmax=3D"1026" />
+</xml><![endif]--><!--[if gte mso 9]><xml>
+<o:shapelayout v:ext=3D"edit">
+<o:idmap v:ext=3D"edit" data=3D"1" />
+</o:shapelayout></xml><![endif]-->
+</head>
+<body lang=3D"EN-US" link=3D"blue" vlink=3D"purple" style=3D"word-wrap:brea=
+k-word">
+<div class=3D"WordSection1">
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt">Hello Doug,<o:p></o=
+:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt"><o:p>&nbsp;</o:p></=
+span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt">Please see availabi=
+lity below:<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt"><o:p>&nbsp;</o:p></=
+span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt">12/18 @ 11:30am<o:p=
+></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt">12/23&nbsp; @ 1:00p=
+m, 2:00pm, 2:30pm<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt"><o:p>&nbsp;</o:p></=
+span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt">Let us know what wo=
+rks best for your schedule<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt"><o:p>&nbsp;</o:p></=
+span></p>
+<div>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-ligatures:standa=
+rdcontextual">Warm regards,<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-ligatures:standa=
+rdcontextual"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ar=
+ial&quot;,sans-serif;mso-ligatures:standardcontextual">Sherma Harris&nbsp;&=
+nbsp;&nbsp;<br>
+<b>Client Service Associate <o:p></o:p></b></span></p>
+<p class=3D"MsoNormal"><b><span style=3D"font-size:11.0pt;font-family:&quot=
+;Arial&quot;,sans-serif;mso-ligatures:standardcontextual">NEO Wealth Manage=
+ment Group at Morgan Stanley<br>
+</span></b><span style=3D"font-size:11.0pt;font-family:&quot;Arial&quot;,sa=
+ns-serif;mso-ligatures:standardcontextual">31099 Chagrin Blvd | Pepper Pike=
+, OH&nbsp;&nbsp;44124&nbsp;&nbsp;&nbsp;<br>
+Phone: &#43;1 216-292-9083&nbsp;&nbsp;<br>
+<a href=3D"mailto:Sherma.Harris@morganstanley.com">Sherma.Harris@morganstan=
+ley.com</a>&nbsp;&nbsp;&nbsp;<span style=3D"color:#1F497D"><o:p></o:p></spa=
+n></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-ligatures:standa=
+rdcontextual"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-ligatures:standa=
+rdcontextual"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoNormal"><b><span style=3D"font-size:11.0pt;font-family:&quot=
+;Arial&quot;,sans-serif;mso-ligatures:standardcontextual">Named to the 2025
+</span></b><b><span style=3D"font-size:11.0pt;mso-ligatures:standardcontext=
+ual"><a href=3D"https://www.forbes.com/lists/wealth-management-teams-best-i=
+n-state/?sh=3Df5c37d876f26"><span style=3D"font-family:&quot;Arial&quot;,sa=
+ns-serif;color:#33CCCC">Forbes Best-In-State Wealth
+ Management Teams</span></a></span></b><b><span style=3D"font-size:11.0pt;f=
+ont-family:&quot;Arial&quot;,sans-serif;mso-ligatures:standardcontextual"> =
+Ranking<o:p></o:p></span></b></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:9.5pt;mso-ligatures:standar=
+dcontextual">Forbes America&#8217;s Best-In-State Wealth Management Teams</=
+span><span style=3D"font-size:9.5pt;font-family:&quot;Calibri&quot;,sans-se=
+rif;mso-ligatures:standardcontextual"><o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:9.5pt;mso-ligatures:standar=
+dcontextual">Source: Forbes.com (Awarded Jan 2025)&nbsp; Data compiled by S=
+HOOK Research LLC based on time period from 3/31/23 &#8211; 3/31/24.<o:p></=
+o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-ligatures:standa=
+rdcontextual"><a href=3D"https://www.morganstanley.com/disclosures/awards-d=
+isclosure.html"><span style=3D"font-size:9.5pt;color:#339933">Awards Disclo=
+sures</span></a></span><u><span style=3D"font-size:9.5pt;color:#0563C1;mso-=
+ligatures:standardcontextual"><o:p></o:p></span></u></p>
+<p class=3D"MsoNormal"><span style=3D"mso-ligatures:standardcontextual"><o:=
+p>&nbsp;</o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;mso-ligatures:standa=
+rdcontextual"><o:p>&nbsp;</o:p></span></p>
+</div>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt"><o:p>&nbsp;</o:p></=
+span></p>
+<div>
+<div style=3D"border:none;border-top:solid #E1E1E1 1.0pt;padding:3.0pt 0in =
+0in 0in">
+<p class=3D"MsoNormal"><b><span style=3D"font-size:11.0pt;font-family:&quot=
+;Calibri&quot;,sans-serif">From:</span></b><span style=3D"font-size:11.0pt;=
+font-family:&quot;Calibri&quot;,sans-serif"> Carfagna, Peter (Wealth Manage=
+ment Field) &lt;Peter.Carfagna@morganstanley.com&gt;
+<br>
+<b>Sent:</b> Friday, December 12, 2025 1:41 PM<br>
+<b>To:</b> Doug Bower &lt;doug@dougbower.com&gt;<br>
+<b>Cc:</b> Robin Baum &lt;rbaum@zinnerco.com&gt;; Douglas Bower &lt;mindy@m=
+indybower.com&gt;; Harris, Sherma (Wealth Management Field) &lt;Sherma.Harr=
+is@morganstanley.com&gt;<br>
+<b>Subject:</b> Re: [EXTERNAL] Can we meet next week?<o:p></o:p></span></p>
+</div>
+</div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<div>
+<p class=3D"MsoNormal"><span style=3D"color:black">Doug,<o:p></o:p></span><=
+/p>
+</div>
+<div>
+<p class=3D"MsoNormal"><span style=3D"color:black">Understood and yes, we c=
+an meet next week accordingly.<o:p></o:p></span></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><span style=3D"color:black">Adding my colleague Sher=
+ma Harris to assist with coordinating a time.<o:p></o:p></span></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><span style=3D"color:black"><o:p>&nbsp;</o:p></span>=
+</p>
+</div>
+<div id=3D"ms-outlook-mobile-signature">
+<p style=3D"margin:0in"><span style=3D"font-size:10.0pt;font-family:&quot;A=
+rial&quot;,sans-serif;color:black">Thank you and please let me know if you =
+have any questions.</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:10.0pt;font-family:&quot;A=
+rial&quot;,sans-serif;color:black">&nbsp;</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:10.0pt;font-family:&quot;A=
+rial&quot;,sans-serif;color:black">Best,</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:10.0pt;font-family:&quot;A=
+rial&quot;,sans-serif;color:black">&nbsp;</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:10.0pt;font-family:&quot;A=
+rial&quot;,sans-serif;color:black">Peter</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:10.0pt;font-family:&quot;A=
+rial&quot;,sans-serif;color:black">&nbsp;</span><o:p></o:p></p>
+<p style=3D"margin:0in"><b><span style=3D"font-size:10.0pt;font-family:&quo=
+t;Arial&quot;,sans-serif;color:black">Peter E. Carfagna, CFP &reg;, CPWA &r=
+eg;, MBA</span></b><o:p></o:p></p>
+<p style=3D"margin:0in"><b><span style=3D"font-size:10.0pt;font-family:&quo=
+t;Arial&quot;,sans-serif;color:black">Managing Director</span></b><o:p></o:=
+p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:10.0pt;font-family:&quot;A=
+rial&quot;,sans-serif;color:black">Family Wealth Director | Global Sports a=
+nd Entertainment Director</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:10.0pt;font-family:&quot;A=
+rial&quot;,sans-serif;color:black">Alternative Investments Director |&nbsp;=
+ Financial Planning Specialist</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:10.0pt;font-family:&quot;A=
+rial&quot;,sans-serif;color:black">Financial Advisor | President&#8217;s Cl=
+ub Member</span><o:p></o:p></p>
+<p style=3D"margin:0in"><b><span style=3D"font-size:10.0pt;font-family:&quo=
+t;Arial&quot;,sans-serif;color:#212121">NEO Wealth Management Group at Morg=
+an Stanley</span></b><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.5pt;font-family:&quot;Ar=
+ial&quot;,sans-serif">31099 Chagrin Blvd., Suite 300 | Pepper Pike, OH 4412=
+4</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.5pt;font-family:&quot;Ar=
+ial&quot;,sans-serif;color:black">Direct:
+</span><span style=3D"font-size:9.5pt;font-family:&quot;Arial&quot;,sans-se=
+rif">&#43;1 216 360-8604</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.5pt;font-family:&quot;Ar=
+ial&quot;,sans-serif;color:black">Cell: &nbsp;</span><span style=3D"font-si=
+ze:9.5pt;font-family:&quot;Arial&quot;,sans-serif">&#43;1 216 990-3300</spa=
+n><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.5pt;font-family:&quot;Ar=
+ial&quot;,sans-serif;color:black">Fax:
+</span><span style=3D"font-size:9.5pt;font-family:&quot;Arial&quot;,sans-se=
+rif">&#43;1 216 303-6911</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:10.0pt;font-family:&quot;A=
+rial&quot;,sans-serif;color:#4472C4"><a href=3D"mailto:Peter.Carfagna@morga=
+nstanley.com">Peter.Carfagna@morganstanley.com</a></span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:10.0pt;font-family:&quot;C=
+alibri&quot;,sans-serif;color:#4472C4"><a href=3D"https://advisor.morgansta=
+nley.com/neo-wealth-management-group">https://advisor.morganstanley.com/neo=
+-wealth-management-group</a></span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.0pt;font-family:&quot;Ar=
+ial&quot;,sans-serif;color:#4472C4"><a href=3D"https://meetings.morganstanl=
+eyclientserv.com/landing.html?fa=3Da6ce3e2b3f18d7b43ddb80f8f56b3745">Click =
+here</a></span><span style=3D"font-size:9.0pt;font-family:&quot;Arial&quot;=
+,sans-serif;color:black">&nbsp;to
+ book time with me.</span><o:p></o:p></p>
+<p style=3D"margin:0in"><o:p>&nbsp;</o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:8.0pt;font-family:&quot;Ar=
+ial&quot;,sans-serif;color:black">NMLS #1321604</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:8.0pt;font-family:&quot;Ar=
+ial&quot;,sans-serif;color:black">As discussed.</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:8.0pt;font-family:&quot;Ar=
+ial&quot;,sans-serif;color:black">For specific tax or legal guidance please=
+ consult your CPA or attorney.</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:11.0pt;font-family:&quot;C=
+alibri&quot;,sans-serif;color:#212121">&nbsp;</span><o:p></o:p></p>
+<p style=3D"margin:0in"><b><span style=3D"font-size:9.5pt;font-family:&quot=
+;Arial&quot;,sans-serif;color:#212121">Named to the 2025
+</span></b><b><span style=3D"font-size:9.5pt;font-family:&quot;Arial&quot;,=
+sans-serif;color:#4472C4"><a href=3D"https://www.forbes.com/lists/wealth-ma=
+nagement-teams-best-in-state/?sh=3Df5c37d876f26">Forbes Best-In-State Wealt=
+h Management Teams</a></span></b><b><span style=3D"font-size:9.5pt;font-fam=
+ily:&quot;Arial&quot;,sans-serif;color:#212121">&nbsp;Ranking</span></b><o:=
+p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.5pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#212121">Forbes America&#8217;s Best-In-State =
+Wealth Management Teams</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.5pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#212121">Source:
+</span><span style=3D"font-size:9.5pt;font-family:&quot;Calibri&quot;,sans-=
+serif;color:#0078D4">Forbes.com</span><span style=3D"font-size:9.5pt;font-f=
+amily:&quot;Calibri&quot;,sans-serif;color:#212121">&nbsp;(Awarded Jan 2025=
+)&nbsp; Data compiled by SHOOK Research LLC based on time period from
+ 3/31/23 &#8211; 3/31/24.</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.5pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#0563C1"><a href=3D"https://www.morganstanley.=
+com/disclosures/awards-disclosure.html">Awards Disclosures</a></span><o:p><=
+/o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.5pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#212121">&nbsp;</span><o:p></o:p></p>
+<p style=3D"margin:0in"><b><span style=3D"font-size:9.5pt;font-family:&quot=
+;Arial&quot;,sans-serif;color:#212121">Named to the 2025
+</span></b><b><span style=3D"font-size:9.5pt;font-family:&quot;Arial&quot;,=
+sans-serif;color:#0563C1"><a href=3D"https://www.forbes.com/best-in-state-w=
+ealth-advisors/">Forbes Best-In-State Wealth Advisors</a></span></b><b><spa=
+n style=3D"font-size:9.5pt;font-family:&quot;Arial&quot;,sans-serif;color:#=
+212121">&nbsp;ranking</span></b><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.5pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#212121">Source:
+</span><span style=3D"font-size:9.5pt;font-family:&quot;Calibri&quot;,sans-=
+serif;color:#0078D4">Forbes.com</span><span style=3D"font-size:9.5pt;font-f=
+amily:&quot;Calibri&quot;,sans-serif;color:#212121">&nbsp;(Awarded April 20=
+25)&nbsp;&nbsp; Data compiled by SHOOK Research LLC based on time period
+ from&nbsp;</span><o:p></o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.5pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#212121">6/30/23-6/30/24. &nbsp;</span><o:p></=
+o:p></p>
+<p style=3D"margin:0in"><span style=3D"font-size:9.5pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:#0070C0"><a href=3D"https://www.morganstanley.=
+com/disclosures/awards-disclosure/">Award Disclosures</a></span><o:p></o:p>=
+</p>
+<div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+</div>
+<div class=3D"MsoNormal" align=3D"center" style=3D"text-align:center">
+<hr size=3D"2" width=3D"98%" align=3D"center">
+</div>
+<div id=3D"divRplyFwdMsg">
+<p class=3D"MsoNormal"><b><span style=3D"font-size:11.0pt;font-family:&quot=
+;Calibri&quot;,sans-serif;color:black">From:</span></b><span style=3D"font-=
+size:11.0pt;font-family:&quot;Calibri&quot;,sans-serif;color:black"> Doug B=
+ower &lt;doug@dougbower.com&gt;<br>
+<b>Sent:</b> Friday, December 12, 2025 1:24:43 PM<br>
+<b>To:</b> Carfagna, Peter (Wealth Management Field) &lt;Peter.Carfagna@mor=
+ganstanley.com&gt;<br>
+<b>Cc:</b> Robin Baum &lt;rbaum@zinnerco.com&gt;; Douglas Bower &lt;mindy@m=
+indybower.com&gt;<br>
+<b>Subject:</b> [EXTERNAL] Can we meet next week?</span> <o:p></o:p></p>
+<div>
+<p class=3D"MsoNormal">&nbsp;<o:p></o:p></p>
+</div>
+</div>
+<div>
+<div>
+<p class=3D"MsoNormal">Peter, <o:p></o:p></p>
+<div>
+<p class=3D"MsoNormal">We met with Robin last week, and there are some tax =
+advantages to taking steps this year to reduce the leverage in our portfoli=
+o.&nbsp; We would like to meet with you next week so that we can define a p=
+lan for executing the transactions in 2025,
+ and do a little bit of planning for 2026.<o:p></o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal">Do you have time next week?<o:p></o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal">Regards,<o:p></o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal">Doug<o:p></o:p></p>
+</div>
+<div>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+</div>
+</div>
+</div>
+<hr size=3D"1" width=3D"100%" align=3D"center">
+<br>
+<p style=3D"font-size:10pt; font-family: 'Arial'; color:gray">If you would =
+like to unsubscribe from marketing e-mails from Morgan Stanley Wealth Manag=
+ement, you may do so here: https://cloud.msmail.morganstanley.com/unsubpage=
+salesforce?Source=3DOutlook. Please
+ note, you will still receive service e-mails from Morgan Stanley Wealth Ma=
+nagement.<br>
+<br>
+You may have certain rights regarding the information that Morgan Stanley c=
+ollects about you. Please see our Privacy Pledge https://www.morganstanley.=
+com/privacy-pledge for more information about your rights.</p>
+</body>
+</html>
+
+--_000_IA0PR20MB5634380D4D2A33DD109789CBE8AEAIA0PR20MB5634namp_--

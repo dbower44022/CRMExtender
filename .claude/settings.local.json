@@ -30,7 +30,17 @@
       "WebFetch(domain:termly.io)",
       "WebFetch(domain:exclaimer.com)",
       "WebFetch(domain:medium.com)",
-      "Bash(python -m pytest:*)"
+      "Bash(python -m pytest:*)",
+      "Bash(sqlite3:*)",
+      "Bash(.venv/bin/pytest:*)",
+      "Bash(grep:*)",
+      "WebFetch(domain:pypi.org)",
+      "WebFetch(domain:community.latenode.com)",
+      "Bash(ls:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

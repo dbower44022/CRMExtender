@@ -324,6 +324,39 @@ def _strip_dash_dash_signature(body: str) -> str:
     return body
 
 
+def _strip_underscore_signature(body: str) -> str:
+    """Remove signature blocks preceded by a short underscore separator.
+
+    Matches lines like ``____`` (2–9 underscores on their own line).
+    Does NOT overlap with the Outlook separator (10+ underscores).
+
+    Uses a higher threshold than ``_strip_dash_dash_signature`` because
+    short underscores are a more reliable signature signal than ``--``.
+    """
+    match = re.search(r"^_{2,9}\s*$", body, re.MULTILINE)
+    if not match:
+        return body
+
+    after = body[match.end():].strip()
+    if not after:
+        return body[:match.start()].rstrip()
+
+    lines_after = after.split('\n')
+    is_short = len(after) < 1500 and len(lines_after) <= 25
+
+    if not is_short:
+        return body
+
+    has_sig_markers = _SIGNATURE_CONTENT.search(after)
+    first_line = lines_after[0].strip()
+    has_name = bool(_NAME_LINE.match(first_line) or _CAPS_NAME_LINE.match(first_line))
+
+    if has_sig_markers or has_name:
+        return body[:match.start()].rstrip()
+
+    return body
+
+
 def _strip_standalone_signature(body: str) -> str:
     """Remove signature blocks that don't follow a standard valediction.
 
@@ -453,8 +486,10 @@ def strip_quotes(body: str, body_html: str | None = None) -> str:
                 if match:
                     text = text[:match.start()].rstrip()
 
-                # Dash-dash signature separators
+                # Dash-dash and underscore signature separators
                 text = _strip_dash_dash_signature(text)
+                text = _strip_underscore_signature(text)
+                text = _strip_dash_dash_signature(text)  # clean up trailing --
 
                 # Signature/promotional detection (catches sigs without CSS markup)
                 text = _strip_signature_block(text)
@@ -520,8 +555,10 @@ def strip_quotes(body: str, body_html: str | None = None) -> str:
     # Step 5.3: Remove signature blocks after valedictions
     body = _strip_signature_block(body)
 
-    # Step 5.35: Remove -- signature separators
+    # Step 5.35: Remove -- and ____ signature separators
     body = _strip_dash_dash_signature(body)
+    body = _strip_underscore_signature(body)
+    body = _strip_dash_dash_signature(body)  # clean up trailing --
 
     # Step 5.4: Remove standalone signatures (without valedictions)
     body = _strip_standalone_signature(body)

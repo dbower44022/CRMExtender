@@ -448,3 +448,73 @@ class TestHTMLTrackSignatureDetection:
         result = strip_quotes("fallback", body_html=html)
         assert "Important product update." in result
         assert "Unsubscribe" not in result
+
+    def test_underscore_signature_in_html(self):
+        html = _wrap_html(
+            '<div>Please update the reports.</div>'
+            '<div>____</div>'
+            '<div>Sharon Rose</div>'
+            '<div>SCORE Cleveland Co-Chair</div>'
+            '<div>Email:sharon@example.org</div>'
+        )
+        result = strip_quotes("fallback", body_html=html)
+        assert "Please update the reports." in result
+        assert "Sharon Rose" not in result
+        assert "Co-Chair" not in result
+
+
+# ---------------------------------------------------------------------------
+# HTML track resilience: body inside signature div
+# ---------------------------------------------------------------------------
+
+class TestHTMLBodyInsideSignature:
+    """Test that body content inside a gmail_signature div is preserved."""
+
+    def test_body_inside_gmail_signature(self):
+        """When entire body is inside gmail_signature, don't strip it."""
+        html = _wrap_html(
+            '<div dir="ltr">'
+            '<div class="gmail_signature" data-smartmail="gmail_signature">'
+            '<div>Hi Everyone,</div>'
+            '<div>The meeting is on Wednesday at 10:00</div>'
+            '<div>Looking forward to seeing you then,</div>'
+            '<div>Sharon</div>'
+            '<div>____</div>'
+            '<div>Sharon Rose</div>'
+            '<div>SCORE Cleveland Co-Chair</div>'
+            '<div>Email:sharon@example.org</div>'
+            '</div>'
+            '</div>'
+        )
+        result = strip_quotes("fallback", body_html=html)
+        assert "meeting is on Wednesday" in result
+        assert "Co-Chair" not in result
+
+    def test_normal_signature_still_removed(self):
+        """Normal case: body is NOT inside signature div — still stripped."""
+        html = _wrap_html(
+            '<div>Please see the attached report.</div>'
+            '<div class="gmail_signature">'
+            '<div>John Smith</div>'
+            '<div>VP of Engineering</div>'
+            '<div>Tel: 555-123-4567</div>'
+            '</div>'
+        )
+        result = strip_html_quotes(html)
+        assert "Please see the attached report." in result
+        assert "VP of Engineering" not in result
+
+    def test_body_inside_smartmail_signature(self):
+        """data-smartmail=gmail_signature wrapping body content."""
+        html = _wrap_html(
+            '<div data-smartmail="gmail_signature">'
+            '<div>Quick update on the project status.</div>'
+            '<div>____</div>'
+            '<div>Jane Doe</div>'
+            '<div>Director</div>'
+            '<div>jane@example.com</div>'
+            '</div>'
+        )
+        result = strip_quotes("fallback", body_html=html)
+        assert "Quick update on the project status." in result
+        assert "Director" not in result

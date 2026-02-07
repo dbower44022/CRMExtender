@@ -121,10 +121,29 @@ def strip_html_quotes(html: str) -> str:
     # Step 2: Parse with BeautifulSoup and remove structural elements
     soup = BeautifulSoup(html, "lxml")
 
-    # Remove all known quote/signature elements
-    for selector in _ALL_REMOVE_SELECTORS:
+    # Remove quoted content (always safe)
+    for selector in _QUOTE_SELECTORS:
         for el in soup.select(selector):
             el.decompose()
+
+    # Remove signature elements — but some clients (notably Gmail) wrap
+    # the entire message body inside a signature div.  When that happens,
+    # removing signatures empties the result.  Detect that and re-parse
+    # without signature removal so that text-level cleanup can handle it.
+    sig_elements = []
+    for selector in _SIGNATURE_SELECTORS:
+        sig_elements.extend(soup.select(selector))
+
+    if sig_elements:
+        for el in sig_elements:
+            el.decompose()
+        if not soup.get_text(strip=True):
+            # Signature removal emptied the result — re-parse without it
+            log.debug("Signature removal emptied result, re-parsing without it")
+            soup = BeautifulSoup(html, "lxml")
+            for selector in _QUOTE_SELECTORS:
+                for el in soup.select(selector):
+                    el.decompose()
 
     # Remove cutoff markers and everything after them (siblings)
     for selector in _CUTOFF_SELECTORS:

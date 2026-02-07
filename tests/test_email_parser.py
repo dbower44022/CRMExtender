@@ -578,3 +578,59 @@ Company Address
         result = strip_quotes(body)
         assert "Important update." in result
         assert "UNSUBSCRIBE" not in result
+
+
+class TestUnderscoreSignature:
+    """Tests for ____ signature separator stripping."""
+
+    def test_four_underscores_with_name(self):
+        body = "Please review the document.\n\n____\nSharon Rose"
+        result = strip_quotes(body)
+        assert "Please review the document." in result
+        assert "Sharon Rose" not in result
+
+    def test_underscores_with_full_signature(self):
+        body = """Can we meet tomorrow?
+
+____
+
+Sharon Rose
+SCORE Cleveland Co-Chair
+Email:sharon.rose@scorevolunteer.org
+See our Cleveland upcoming workshop schedule at https://www.score.org/cleveland"""
+        result = strip_quotes(body)
+        assert "Can we meet tomorrow?" in result
+        assert "SCORE Cleveland" not in result
+        assert "scorevolunteer.org" not in result
+
+    def test_underscores_with_contact_info(self):
+        body = "Sounds good.\n\n___\nJane Doe\njane@example.com\nTel: 555-1234"
+        result = strip_quotes(body)
+        assert "Sounds good." in result
+        assert "jane@example.com" not in result
+
+    def test_underscores_preserves_long_non_signature(self):
+        """____ followed by long content without sig markers should be kept."""
+        long_text = "\n".join([f"Paragraph {i} of real content." for i in range(30)])
+        body = f"Intro.\n\n____\n{long_text}"
+        result = strip_quotes(body)
+        assert "real content" in result
+
+    def test_dash_dash_then_underscores(self):
+        """-- followed by ____ should strip both separators and the signature."""
+        body = """Have a wonderful holiday.
+
+Best, Sharon
+
+--
+
+____
+
+Sharon Rose
+SCORE Cleveland Co-Chair
+Email:sharon.rose@scorevolunteer.org"""
+        result = strip_quotes(body)
+        assert "Have a wonderful holiday." in result
+        assert "Sharon Rose" not in result
+        assert "SCORE Cleveland" not in result
+        assert "--" not in result

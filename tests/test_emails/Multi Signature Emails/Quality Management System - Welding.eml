@@ -1,0 +1,185 @@
+Delivered-To: doug@dougbower.com
+Received: by 2002:a05:6a11:e39a:b0:6b9:6c47:c9cb with SMTP id dw26csp1663722pxc;
+        Wed, 4 Feb 2026 03:39:18 -0800 (PST)
+X-Received: by 2002:a05:690c:4d02:b0:794:ffc8:659 with SMTP id 00721157ae682-794ffc81dd0mr20732377b3.12.1770205158503;
+        Wed, 04 Feb 2026 03:39:18 -0800 (PST)
+ARC-Seal: i=2; a=rsa-sha256; t=1770205158; cv=pass;
+        d=google.com; s=arc-20240605;
+        b=etCH57etD5C3lXGZGKvFyKjmYtnZopsBZiwE/c9IbyI+3yeb+LTr/Ikd/LBR6angQj
+         cCIotDsEOn2DbbtiEnIswpqRy25ltfr933r7aFqhRfZ+ptTC1Cu7hUAyWtyMGpTgMoJb
+         237syWf3DHUi7gj9AngtfZUXWtFqIPft+jNTJJDAzbhrgqDiiWBe2yzEg1fUdHdmx27f
+         Pe6CSv4minpGkCgNgMqcWMe8xuWMgU9IwLjowl292jcSScmreFCvy/2k7H3Gqz7GOU60
+         vSwoWE+EOLhmQ4zSi7exUWtOQuTmS8XphOvEEau7FEqQFfPnslGV4GQ+s60YaF9FUUhM
+         WX2g==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :dkim-signature;
+        bh=hNFjZr9CR5gvhAmFCMlhsyWO299ISsCC5+EcVZ0ZpHI=;
+        fh=kOAA2iNoZB4hQXtNiGepGrGKWX237xOnYQz349tgDqQ=;
+        b=i1We1KO7EhpYymbJWbOlXhZqPFkSZgoD/cSKVDuNjClHmO+0fD3s6bA3WWIdwkH8Fi
+         HC5FMl2QwMbmlGUffnm4K77UhsKpizT00y+kH7pOSHV0tyi3iEnihdTFejbivZhHQPby
+         eCRFyeGyuiaJ2JytyLEBHt+TuDsBygYpQMApN1uT7B8G4KFWf7yb93JFa04Il3/QYujx
+         ttQLDwfJ3lND9zHsOOOYs4KX3vHM1QPeBN30y1eWlomFu/+fUs4c20628WezZkK164io
+         /RkuPwYddt9u/taB1+vRiNhyjTcRMm3kz95v7MwHIKr8DrwTiD4GjQkBX89kRE42Hs0S
+         1Z2Q==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b=k1mlR4Do;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of paulcharlesmcmillan@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=paulcharlesmcmillan@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=neutral header.i=@dougbower.com
+Return-Path: <paulcharlesmcmillan@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 00721157ae682-794fefd050esor12975687b3.9.2026.02.04.03.39.18
+        for <doug@dougbower.com>
+        (Google Transport Security);
+        Wed, 04 Feb 2026 03:39:18 -0800 (PST)
+Received-SPF: pass (google.com: domain of paulcharlesmcmillan@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b=k1mlR4Do;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of paulcharlesmcmillan@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=paulcharlesmcmillan@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=neutral header.i=@dougbower.com
+ARC-Seal: i=1; a=rsa-sha256; t=1770205158; cv=none;
+        d=google.com; s=arc-20240605;
+        b=K1WSYzR2thrQ4kR8i91t8oNzpNDXHHJrgMpYRvKRTzUc/0dBzhXW9Sw9tmaFI4/4ph
+         hGot4rkZoqza8yTkGcrP9P/xm8GDsBOm4cVGB+w7x2439vGPJN5FM8++PqwiSEis6HNq
+         ufWtoByj57IYuBVkvyH1u1qrNCCchkDJAEcBp3yfKmu3ajipfiFH4L4uboZGozjJTiLy
+         Bh6iTuujP5PuP6orhHvibx3Wv5EKEDqTIRF6G7E592OFBVQU6UEExJn1A0cPYEdrhyaX
+         tZzT4V73GUXK1tR6Afkux7Zf7hoOJRF9+3cPZMrNH/2Xo7ZXuf6OxVM/jDmSoKSFWqOr
+         5ujg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :dkim-signature;
+        bh=hNFjZr9CR5gvhAmFCMlhsyWO299ISsCC5+EcVZ0ZpHI=;
+        fh=kOAA2iNoZB4hQXtNiGepGrGKWX237xOnYQz349tgDqQ=;
+        b=WJSagN1E/BuziqHY56acv4dA3DYVNc8NL8y2UsJEmhTr1jpFvdZWuA2Ij6GsyzDgf7
+         gti/MwBRJh4AWFNL6aEmq7GSLNWdtFRJFir1ZXFoM5WuSv9u8l87aOR+MUmfnx4i+LFF
+         h/AqJfnovEKKmBysxxOZqaBRk/BegPwMNkSEzF0fBB5GP5kK6n/tg7Qk0AABWmYQZdy/
+         l3i7jvwJNAMRWv3I2q2hXz1iWUUQUuKngVzC5i7TP+09NiRqqwbtl8EI7nNonQyAVpmO
+         3tYpPw/VkDrCZWGX/Y5m5olaCRfAdHJIUsmEl1wnpWxv7WgCN/VdL6yN6YRFCtK9tN1l
+         oz6w==;
+        darn=dougbower.com
+ARC-Authentication-Results: i=1; mx.google.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1770205158; x=1770809958; darn=dougbower.com;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :from:to:cc:subject:date:message-id:reply-to;
+        bh=hNFjZr9CR5gvhAmFCMlhsyWO299ISsCC5+EcVZ0ZpHI=;
+        b=k1mlR4Doa0Kkp4RazUGB7s3ZJuL2EWRBnjESTc75PwSi/xAipYskdpOIfib6ech2hc
+         zu2JarWCSm7kyRgTPRDqCVRBlnkJHKIW2nrbYS9TWgbicCaUX5rAOcn7VEwbXYAjQLC8
+         9tDoxln4jlsMSR6g04jNdZ40VTl2zOAh3v0JOH0cW3uXcCV5Sks8D21OvNPEg95Qsple
+         EgDs4Y7BLrELhq7B0vWLDmo+i5EVrvBSZGjtTsHWrOYSIonJo4fHwgbr337lQlA6e8r8
+         bHMW7a3tPVX3XAMgButDt3iIt8a/yL3F7WpSxnz4aM9Ku8P50huoFdac15YDXDCFgWjF
+         zCxQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1770205158; x=1770809958;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :x-gm-gg:x-gm-message-state:from:to:cc:subject:date:message-id
+         :reply-to;
+        bh=hNFjZr9CR5gvhAmFCMlhsyWO299ISsCC5+EcVZ0ZpHI=;
+        b=i7qklMyVbZbL7NuQTzwDVfOby2I3c+BCbs8hUuYVws7cQfU7zSxz9cDsyVUgWWmluj
+         PyAiVQvxPTdZkkdCBtT30E3zgQr7IvVHrxj4bEUJe+cHCYSvkOqnkS3NFDClkrw1s3+I
+         T2PXsLv4R0xOkggWlDdk4d+kGZXi4IahhXyUYor8hrfc6jxwMyezPMIman7w9BNAtWVO
+         IwhJCjhE73SqjSzsJJsIlv06EVeFIwN6T76r+PaWUwDhI9LOb0cqGH6Od9d33qiCO8SW
+         hfnss7UWn+PMp99c08F+hqWH86HAe77mACmsGGcLSQRjhRUZVFWsMaHR9oAOA0uZbqjG
+         BGfw==
+X-Gm-Message-State: AOJu0YzriPHqPrfzNHdjYQ41a/tB7T1LEkSpVklimyRqV480sVBCBgdf
+	4UDCB791//Kog15du0HA1RpV8XNt/YOylUTwW0cF3dOLoTJ5+AbqH9uv/Mth2cnomJTL+gV9e36
+	GyfrFPQss5RVXfgrjM+p5lMn42H3vgh5PDw==
+X-Gm-Gg: AZuq6aIISCQ+MLxTHfndhNkZhdB0YhLkA0BmgTFKFi9yAEal/l8kyHgnTZ+tObnNjaS
+	5maWu25m5yys2MMO9IAYZZRGVMr5LWRinNpXqnGFKCM1npK5A3Kgmv45B+ymnkffRjJCYuPhOjF
+	iCjF7QVFnxMfIeLb0bXIbGCVrdCwoRwWUT3sJ8M0iCkQF5FxBTgTJPwtK+nT5Ah4UKwSpfjCuDK
+	KDMEv4N6fwTStlg3s2WqjYzhlslJ5b0ToDnQi1mwenjSvPMlzM0JDw+3f6yPb17mowBn8D4MNya
+	JdtUl1+z6WjaM8+9ffB+gbxGyGswalNanK2VUtlO
+X-Received: by 2002:a53:b68c:0:b0:649:cd05:c515 with SMTP id
+ 956f58d0204a3-649db49b32fmr1687871d50.45.1770205157643; Wed, 04 Feb 2026
+ 03:39:17 -0800 (PST)
+MIME-Version: 1.0
+References: <CAOuVm7veWdfFwyKUE7qG_YVHxvhgS5iQbQfKOTrsBNC_anVAww@mail.gmail.com>
+ <CABjnsexye3NLEavEFPpGYLPZnMOi2aaeFH=vU9ABBhhcU6S3YQ@mail.gmail.com>
+In-Reply-To: <CABjnsexye3NLEavEFPpGYLPZnMOi2aaeFH=vU9ABBhhcU6S3YQ@mail.gmail.com>
+From: Paul McMillan <paulcharlesmcmillan@gmail.com>
+Date: Wed, 4 Feb 2026 06:39:06 -0500
+X-Gm-Features: AZwV_QgAp28vZC6p7BQQe1PfCKAaBWAv_1OJWCji_EJfGnzkSLZFrtdClPoeWKw
+Message-ID: <CAOuVm7tNBx2s=zsebCPkXsHKNwNJUe96U0Wsi1rEroj_U7atjA@mail.gmail.com>
+Subject: Re: Quality Management System - Welding
+To: Doug Bower <doug@dougbower.com>
+Content-Type: multipart/alternative; boundary="00000000000099d94c0649fe0122"
+
+--00000000000099d94c0649fe0122
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+We will be in Hawaii next week. Course creation is going good. The content
+is fairly good. I might use the tool to expand the stuff i already have.
+
+On Wed, Feb 4, 2026, 12:40=E2=80=AFAM Doug Bower <doug@dougbower.com> wrote=
+:
+
+> I have been using it a ton lately.  More impressed with what it can do,
+> and how well it understands what I want.
+>
+> I think it would be a great tool for building course content and referenc=
+e
+> materials.  How is your course content coming along?
+>
+> I am out all this week, but will stop up next week.
+>
+> Regards,
+>
+> Doug
+>
+> On Tue, Feb 3, 2026 at 11:49=E2=80=AFPM Paul McMillan <
+> paulcharlesmcmillan@gmail.com> wrote:
+>
+>> Had Claude AI create a Quality Management System - Welding
+>>
+>> Fairly close but it is using outdate info, the code specific info is
+>> usign older codes and needs to be updated. Generally, ive been fairly
+>> impressed with Claude. It requires going over the info by hand and
+>> expanding, improving, and editing, but it is a great time saver simply b=
+y
+>> building the framework.
+>>
+>> Ive also been making other files with Claude, will take awhile to format
+>> and edit them all.
+>>
+>
+
+--00000000000099d94c0649fe0122
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"auto">We will be in Hawaii next week. Course creation is going =
+good. The content is fairly good. I might use the tool to expand the stuff =
+i already have.</div><br><div class=3D"gmail_quote gmail_quote_container"><=
+div dir=3D"ltr" class=3D"gmail_attr">On Wed, Feb 4, 2026, 12:40=E2=80=AFAM =
+Doug Bower &lt;<a href=3D"mailto:doug@dougbower.com">doug@dougbower.com</a>=
+&gt; wrote:<br></div><blockquote class=3D"gmail_quote" style=3D"margin:0 0 =
+0 .8ex;border-left:1px #ccc solid;padding-left:1ex"><div dir=3D"ltr">I have=
+ been using it a ton lately.=C2=A0 More impressed with what it can do, and =
+how well it understands what I want.<div><br></div><div>I think it would be=
+ a great tool for building course content and reference materials.=C2=A0 Ho=
+w is your course content=C2=A0coming along?</div><div><br></div><div>I am o=
+ut all this week, but will stop up next week.=C2=A0=C2=A0</div><div><br></d=
+iv><div>Regards,</div><div><br></div><div>Doug</div></div><br><div class=3D=
+"gmail_quote"><div dir=3D"ltr" class=3D"gmail_attr">On Tue, Feb 3, 2026 at =
+11:49=E2=80=AFPM Paul McMillan &lt;<a href=3D"mailto:paulcharlesmcmillan@gm=
+ail.com" target=3D"_blank" rel=3D"noreferrer">paulcharlesmcmillan@gmail.com=
+</a>&gt; wrote:<br></div><blockquote class=3D"gmail_quote" style=3D"margin:=
+0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">=
+<div dir=3D"ltr">Had Claude AI create a Quality Management System - Welding=
+<div><br></div><div>Fairly close but it is using outdate info, the code spe=
+cific info is usign older codes and needs to be updated. Generally, ive bee=
+n fairly impressed with Claude. It requires going over the info by hand and=
+ expanding, improving, and editing, but it is a great time saver simply by =
+building the framework.</div><div><br></div><div>Ive also been making other=
+ files with Claude, will take awhile to format and edit them all.</div></di=
+v>
+</blockquote></div>
+</blockquote></div>
+
+--00000000000099d94c0649fe0122--

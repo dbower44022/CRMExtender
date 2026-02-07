@@ -1,0 +1,347 @@
+Delivered-To: doug@dougbower.com
+Received: by 2002:a05:6a11:d006:b0:6b9:6c47:c9cb with SMTP id nt6csp875196pxc;
+        Sat, 7 Feb 2026 09:34:24 -0800 (PST)
+X-Received: by 2002:a05:620a:45a6:b0:8c5:37ad:160e with SMTP id af79cd13be357-8caf2193cb2mr861176385a.89.1770485664264;
+        Sat, 07 Feb 2026 09:34:24 -0800 (PST)
+ARC-Seal: i=2; a=rsa-sha256; t=1770485664; cv=pass;
+        d=google.com; s=arc-20240605;
+        b=Qf0jQ5IpTu5lGwIdepNNf13v7oseHVj6f6joNr2U5KPjPyXX3o6JgsOCxURRJ86Tep
+         HF56uJcYtmJ83PfHqX5mwGWMLgcv//DSZNwen6c/0GSm/r2aan8g1XFkn03vaVjp9Sc6
+         How+tZjdDC+5UCNCGht2phEclEX3GWs3u3D1LDUunbRHFx1juToBsE9v0+ija8MPzcvO
+         JnJUgTLTjLuYn6IE1wPxZhI8n1TMS2Opmhofj8ydLFW7bZiPrqY7sosDRMj76WUOQa3/
+         Gq71DPFj4QEGYxXQ6NaH+1NkOaDUnHFQAeVkHb9tq0rm8zCn4jDDLwPKNilq25sHKmzb
+         PvMg==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=mime-version:content-language:accept-language:message-id:date
+         :thread-index:thread-topic:subject:cc:to:from:dkim-signature;
+        bh=+KzsQgLj3FGwgU/A0/7kaC+aNytcsjSKRKznTu4BpmY=;
+        fh=sGaoszrKnuRDSIKqhLnXfpcWw0IQ+C0kzd7XWx8il9E=;
+        b=bX2R02qsZKkH5uQhH4IDmfSsFoXHal45rO+GRZovVQ7v2YN8gzhbeTLqrQhdengG5p
+         W/MZ+Oz86O6oNEM+pdw8TTbULx0rCFI8ye8cYJqebZVt3GVuo7lHGEHDQJpytxLWKXaT
+         kbFkQ6w1s0Px/92urK3ExiVSXsKZFC+vVkC9avqmsGiKbEgCMbrjoP3taGUcEjrNIJmW
+         32/xfPgQW+5BK7dDBsaaFIGZc+5uj1A12ehhAGY2QlpCe2XvYgQnyLxYhQ3lwxl2IVqZ
+         2Du/Irp7fjKK75WgNJhIPiGZmFu7RgCtuhJsecKPhKVPgoo++neTWMd3lrrTQnQwWBEH
+         sAhQ==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@kdglegal.onmicrosoft.com header.s=selector2-kdglegal-onmicrosoft-com header.b="Xya/KgNy";
+       arc=pass (i=1 spf=pass spfdomain=kdglegal.com dkim=pass dkdomain=kdglegal.com dmarc=pass fromdomain=kdglegal.com);
+       spf=pass (google.com: domain of fnagorney@kdglegal.com designates 209.222.82.102 as permitted sender) smtp.mailfrom=fnagorney@kdglegal.com
+Return-Path: <fnagorney@kdglegal.com>
+Received: from outbound-ip168b.ess.barracuda.com (outbound-ip168b.ess.barracuda.com. [209.222.82.102])
+        by mx.google.com with ESMTPS id af79cd13be357-8cafa4b6c24si579214385a.351.2026.02.07.09.34.23
+        for <doug@dougbower.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Sat, 07 Feb 2026 09:34:24 -0800 (PST)
+Received-SPF: pass (google.com: domain of fnagorney@kdglegal.com designates 209.222.82.102 as permitted sender) client-ip=209.222.82.102;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@kdglegal.onmicrosoft.com header.s=selector2-kdglegal-onmicrosoft-com header.b="Xya/KgNy";
+       arc=pass (i=1 spf=pass spfdomain=kdglegal.com dkim=pass dkdomain=kdglegal.com dmarc=pass fromdomain=kdglegal.com);
+       spf=pass (google.com: domain of fnagorney@kdglegal.com designates 209.222.82.102 as permitted sender) smtp.mailfrom=fnagorney@kdglegal.com
+Received: from MW6PR02CU001.outbound.protection.outlook.com (mail-westus2azon11022078.outbound.protection.outlook.com [52.101.48.78]) by mx-outbound-ea18-75.us-east-2b.ess.aws.cudaops.com (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NO); Sat, 07 Feb 2026 17:34:22 +0000
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector10001; d=microsoft.com; cv=none;
+ b=SrBgQsdLvFt34eiLH9Wfg89bUdDW/SzKGaS/SRZzR14UTuQMkd/styGRhnT+OoXO01tH2tdEh0KnWnUHUVontKj+zhRGcKkH9ZAhpCcu9FCPaMg8BZcnKS10BAGJEMIW/PKHfWweJKD27nziL3dLffWpIBlpyy3V95ZP7TQBL0s0II6Z+D5qg6xNfpsT+9Koeb48bWujhziAB7FhUe5hnvmjDOVqE7q1ySN2NeiFBJefbr6NXFqPuOs0ZI8XX7a/z4iBYPTHAe6LCMkknriZZM9Y+jTO+5DbIbJXlbfQHiM0vPadZSU6zXEIarAxzUK07u1Ce9ucv4KsfV+MIH+rlw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector10001;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=+KzsQgLj3FGwgU/A0/7kaC+aNytcsjSKRKznTu4BpmY=;
+ b=DnA6bWxMpxGPEOYJi8MHcN7ACoNnpA5RWEj4UmH2pI3RqjDdXhhq07x2AjpIzZu0UkfVrphlgQeOpvlwsJUmc2unrXfZ6ro3hlywPxuhZ5tiU2vSOCKNV7s2s542ui1zla9QedEPvy58eEiYM9HON1nJsRtG1yRyxyakNF7SZuCORnV13C3KhYJDj3NOmEJXrKK1KOKz+t6A3y6ON0++0MxhVO6EbM4A2OynZCPuIml8BYlAdFDLbRAqr5xIzncGP14yse2hhuCoo/YLtzsd8ub+cBFbPNC5GWjUR5Zmm+K8IvhiuTBqqdIFXoB9DLHKTGT9yrzVtrcmGa60vWS2vg==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=kdglegal.com; dmarc=pass action=none header.from=kdglegal.com;
+ dkim=pass header.d=kdglegal.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+ d=kdglegal.onmicrosoft.com; s=selector2-kdglegal-onmicrosoft-com;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=+KzsQgLj3FGwgU/A0/7kaC+aNytcsjSKRKznTu4BpmY=;
+ b=Xya/KgNy7O7ifYgl67euRPo9vW5kc3DyZ8/G2KTwC++snlQUOuIxZwc8aYPBiyzi9QekTKFIscz9KhtP+c8OPoZer5/ndRMBYf1Oc4xCRadu+vvl705ooNGMwpgkTUlVWvpFzaIbld3wUNcReut6JxMhD+h724kWcqV2bdU/11w=
+Received: from SJ4PPF4D9C233E7.namprd15.prod.outlook.com
+ (2603:10b6:a0f:fc02::896) by SA1PR15MB4354.namprd15.prod.outlook.com
+ (2603:10b6:806:1ad::14) with Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9542.9; Sat, 7 Feb
+ 2026 17:34:19 +0000
+Received: from SJ4PPF4D9C233E7.namprd15.prod.outlook.com
+ ([fe80::8a17:c933:6e0a:b488]) by SJ4PPF4D9C233E7.namprd15.prod.outlook.com
+ ([fe80::8a17:c933:6e0a:b488%5]) with mapi id 15.20.9587.013; Sat, 7 Feb 2026
+ 17:34:19 +0000
+From: Frank Nagorney <fnagorney@kdglegal.com>
+To: racine downey <downey.racine@gmail.com>
+CC: "doug@dougbower.com" <doug@dougbower.com>
+Subject: status update
+Thread-Topic: status update
+Thread-Index: AdyYV9ZO8Y/YyHphRQa1juuv/dHOFg==
+Date: Sat, 7 Feb 2026 17:34:19 +0000
+Message-ID:
+ <SJ4PPF4D9C233E75902600CDD3D6D6A4FC7DF67A@SJ4PPF4D9C233E7.namprd15.prod.outlook.com>
+Accept-Language: en-US
+Content-Language: en-US
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+authentication-results: dkim=none (message not signed)
+ header.d=none;dmarc=none action=none header.from=kdglegal.com;
+x-ms-publictraffictype: Email
+x-ms-traffictypediagnostic: SJ4PPF4D9C233E7:EE_|SA1PR15MB4354:EE_
+x-ms-office365-filtering-correlation-id: 81cb4fe2-f9fa-4d68-27f1-08de666f2005
+x-ms-exchange-senderadcheck: 1
+x-ms-exchange-antispam-relay: 0
+x-microsoft-antispam:
+ BCL:0;ARA:13230040|366016|376014|1800799024|13003099007|8096899003|38070700021;
+x-microsoft-antispam-message-info:
+ =?us-ascii?Q?LYqBT8yeRjShqkj4GvxOCw5b2yfzJDI6qjvXhXhbv9l1lMf7H9Gi/ftsfgJn?=
+ =?us-ascii?Q?KHLbAN5aJN/w3PMC+/FVDfDvQLFbIte+0e8JrzLVmSDOHSBd/JtRfMPfSXzL?=
+ =?us-ascii?Q?5UkR1lfG1GDYlT9mxFhatb09fvjpLgPqOnf0LF5erI1W896pGrDbrRz/UZL1?=
+ =?us-ascii?Q?q2QCSXiD8Tmhexy6xwhvZ8P/nUGPBFQ1kE6oQDmnb/F9S9mxSaFD4mqyKoox?=
+ =?us-ascii?Q?WTwJggAsBIm8Kw1T5ecSvUykQCqxcv0KNoi7acGP/cHbm1voCaxJ/jbBCfat?=
+ =?us-ascii?Q?VitgDT6d8J3m36IDQs1ZBF6Xw7jYyEb12ogP63Y835yZnKqA+fg1TQb4bAP+?=
+ =?us-ascii?Q?VsMVwd9rHKID5dvQg8yQg8ruVFThNyG5fHx1jWbdC866AfgvOU6bE2ItR8ul?=
+ =?us-ascii?Q?bWpl7+tRd83IVgtYO/U1ApFcEYACG5ZkA3Ry2lXPd/rCGFYNAHvaQ31q1+01?=
+ =?us-ascii?Q?WhB2Ih9BWFOPj/PI9kj1iB0rGSLWPXvVUQeEaj9L8qBaw2Xd/DEY725bYVeD?=
+ =?us-ascii?Q?erIOgcX2bmspYFgct0IY2OMG0AvNuHC1uj8HkutJD9SG8+Vk40QIXaXJ/QQE?=
+ =?us-ascii?Q?mrW9gtH6WTHUlh9nnuaewDCYxKYG8uRbZaak2wE/3BPABGAy0SceEP+ML9eu?=
+ =?us-ascii?Q?NvI/uASVr1lfnmgOSbIoCYy+nmfgxnad3uFt/a2u95f+IyQIVi+yt+FouMEJ?=
+ =?us-ascii?Q?aLck1jBjrXyTV+eCDEP4xNJQCPQ7WB90ger07cPl+S3OIMafdL5FhnWOE6fJ?=
+ =?us-ascii?Q?Bc4URz4P9UVUv9/Wt3x3aufxJS0mAd7hmLvLLs7/2ZOnHavg2RPdGfDFElWc?=
+ =?us-ascii?Q?d9hPidAmD+XtClv+zEWWNheCOYnjdiA/1r4CkTjYDI8yV+I+RXNfplA/tlQS?=
+ =?us-ascii?Q?eHfYhak1Y1CpTgJUbNmE6boE0cP2Hnb9uXt02ZpqBdmsl0B/HpoqAC9hJNFq?=
+ =?us-ascii?Q?Ijv7wfImB+hDymllC/576o/kGaEv3Vagw3U7+5nvzB16UbnTqGB55PAiY6KS?=
+ =?us-ascii?Q?hz6rJX1li5np51pvZ9CDtqU1NVHgQ3BmmS37SQoYtmE3mXRswiLGv9r+MmQq?=
+ =?us-ascii?Q?QaPdEj6JJ5Uy1dR+jbrZ++wARECQOnbfrCfnb61oT3cPUd4nbJAGaFQc+T+t?=
+ =?us-ascii?Q?pL2ZzrT5b2e9Ik8Orn78dn2ELxcQFSI2GxcAkRuMiH2fr5uRKZUP7qE+ZtY5?=
+ =?us-ascii?Q?PUSPO8+7r7gRvv/JBAdHdVnT+Y5RXyRSOcPpHMWdKFBeww0+Dn4jCvjaIKF3?=
+ =?us-ascii?Q?GYaxe6xpPWjI94qJksCvEsCAYSHYExwrEzSMqTITdEGnmx6/dcVqNHp1wVRq?=
+ =?us-ascii?Q?gNZFBOonJZDZhxhLXIKZW1/AatJEV+Q3+eylQI3uOcIFXs/QESG7W5F/qz88?=
+ =?us-ascii?Q?acFV3t/isgNgMuo4FVqkY0Nq05poUlG4TDyJaXkAH8DQJwSjd/l0G0Pg1U/A?=
+ =?us-ascii?Q?xxOG58nLQ/G3eVOjnfuAA1WDDMAjGnIjSnIS1ps8kwd/sXRyvnY4e8lME4tp?=
+ =?us-ascii?Q?RNvj47k++HT0qqgGQXc1Pt5l97NjQPcfdBdyGjWCUoXATdHzXya90stghuE5?=
+ =?us-ascii?Q?2hO43e7Ss6Y04BIMnDU=3D?=
+x-forefront-antispam-report:
+ CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:SJ4PPF4D9C233E7.namprd15.prod.outlook.com;PTR:;CAT:NONE;SFS:(13230040)(366016)(376014)(1800799024)(13003099007)(8096899003)(38070700021);DIR:OUT;SFP:1102;
+x-ms-exchange-antispam-messagedata-chunkcount: 1
+x-ms-exchange-antispam-messagedata-0:
+ =?us-ascii?Q?dg6K1uijeqosH3cHK6fpeoECW9RghW+6QfA5eURMKkX/Xz1kGOPpENc4E7iC?=
+ =?us-ascii?Q?lMwZYwd23pmKwVT8j6nBCmbZGxP6NdWxiZFP2GlQsyg6UmoJuTdmP1Wb6kck?=
+ =?us-ascii?Q?ppuLcuUyjyZKuFjv+rY0Bii8JLQBI/bTtrv3L+9Lkq5dGR5EZ8nyrhUYdWyX?=
+ =?us-ascii?Q?K9GRhQsStaCWZ/YLLkF8C0q3LrMRMkMe7qGjl33WF/dqBZPHLSA4nXAwfigN?=
+ =?us-ascii?Q?vQUF5081QFSLrpajFDV9BRNyaWmkEADWOs8OiBW4jKSGyiNZLpbFz/s7yTSb?=
+ =?us-ascii?Q?+whc+fZacBxJaLSr9/19ZEZ7AxHhGihSuc8wE3j99PVA/0rInSyCA3ewx4/Y?=
+ =?us-ascii?Q?TrGou1D4SnvDmbqpehD2Vg8or2Q38u1trEPv9dAVyJufM8WZQGdFKYMSTUGR?=
+ =?us-ascii?Q?QhHKbSAxCzFUq3T/TNLXW2IbfBeH7BqBrE1qMkfVUjb9Fu7oD+qMZrSot2HR?=
+ =?us-ascii?Q?4w1x3ofKeIr4JDdrgkQ6fs0YSMRqjV1uRiVbQ+zs5fVs97wWyJ8+5JU1UjHe?=
+ =?us-ascii?Q?HM2YqHVhjrLADtasxJRB5BKhKXk0+fjcgaylRvFq1zsxBCgL2vAkvnRzsTdU?=
+ =?us-ascii?Q?IPCh/8ruVI2ofpNnRKOnRVXx95wbYcv63IJooCVZhEygso3Z5sIhL9nKw+GT?=
+ =?us-ascii?Q?HgpfO/v4BHoE5r9TJLYn/phFEkjN+Uw0K+KYhphsHpwBBUb6/qDXOygFXsa0?=
+ =?us-ascii?Q?we5NB1hkagm6NJcwg1oCISGTxzlYokFAljf4kfUdixdOJmfxbMDTJLamYK+q?=
+ =?us-ascii?Q?73njlYVgFuDnLk+gUHGZS0AeYDk/BtmNhVTKpY/H+dC8WpiJqc37uYv4NpC+?=
+ =?us-ascii?Q?AihIlERN5GNVEKZS6+gWTJNjvonrv+rmySW80gN9ywgF5FbOSVZbWf/BZK20?=
+ =?us-ascii?Q?mHXKmBfxvL9X7QAA2k+xSMFb8COM3bsuc14iaP0OHLNlwPSetP+1rrW9YAxn?=
+ =?us-ascii?Q?sPuDgyeFiQvj3bPB1JzFnssnMzm6RqKnXdam4c0XG9MManny/Jc0+zpE5fCO?=
+ =?us-ascii?Q?eVWGlchkbvkQIOHmS4Rl3HAPXs/dNs7D7aalJ82YjOif6YCccw4k06iCYrL+?=
+ =?us-ascii?Q?gwFlUn1ebMjXnEglcyfWlKvAuoUtHtUhcy4AbADMzOXYq+jjKZy0l24uzEIr?=
+ =?us-ascii?Q?NUVEEIU4W4auJ4yz6TKQuYynGa+B47v4zBcPohw07L3V8aPD4rIXoHJyve0i?=
+ =?us-ascii?Q?NV8tmq0ZwiAKErnU9NeUTVENnK4QpfmlxkwEqLvNIlKo42nPLNITi2RoZpcA?=
+ =?us-ascii?Q?1XUcjJf2p/YR5mholZ61TRpDVJ9zSeA77nIxq1GmZqkfSmNwP4kLEEpne3ak?=
+ =?us-ascii?Q?nO3WUYh4qBQQcVloQr8iE6h6vuJXZRM4UENKdPR3pb725QkXy9S2rSwIZjHt?=
+ =?us-ascii?Q?LAc85ypx0VxDgOcAXNbzek7bddGaQPXYbMxN3/6LzdOcYJLUHrLeEa7qmnLA?=
+ =?us-ascii?Q?IlUcHn7E96trzbKK1vV9CdYkDe/ugJcuGSzm69E8O7Pm8ltALP4LP2WElFeN?=
+ =?us-ascii?Q?wWirD4b2fv5tzmXfyxq03Qapw15XldxrCSw7cLA3JsxsDoz/29csv+4eHUkH?=
+ =?us-ascii?Q?zhxZnGE0+eg04fyI7F8AIn3hXLuPD04iZWKr0sWgtbsHwO2PwF6DmnwSBMZX?=
+ =?us-ascii?Q?LMjQxFCOB8DeyD5T/VBbr6lqWZEFZv3aE8QRGezLi67J2uUJeL+k9c+tQIF4?=
+ =?us-ascii?Q?BFpWIX0f7Urzc0jRaJaprqX1K3sTsvRvmrhpjsp3dX+cf83tNtt5dQEtZAXu?=
+ =?us-ascii?Q?1tJ+TC5UaA=3D=3D?=
+Content-Type: multipart/alternative;
+	boundary="_000_SJ4PPF4D9C233E75902600CDD3D6D6A4FC7DF67ASJ4PPF4D9C233E7_"
+MIME-Version: 1.0
+X-OriginatorOrg: kdglegal.com
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-AuthSource: SJ4PPF4D9C233E7.namprd15.prod.outlook.com
+X-MS-Exchange-CrossTenant-Network-Message-Id: 81cb4fe2-f9fa-4d68-27f1-08de666f2005
+X-MS-Exchange-CrossTenant-originalarrivaltime: 07 Feb 2026 17:34:19.7616
+ (UTC)
+X-MS-Exchange-CrossTenant-fromentityheader: Hosted
+X-MS-Exchange-CrossTenant-id: d277fedf-8dc8-41d9-bcef-ce2980a9eb1f
+X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
+X-MS-Exchange-CrossTenant-userprincipalname: tm5vRMHHYyZdtu20tTLWTE3D6sis30/WL/6Qv005PYxxKuBC/6M7dC03eof+JqKDOAFjICBJnQt/6Wpz6EYDog==
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: SA1PR15MB4354
+X-BESS-ID: 1770485661-104683-12339-24988-1
+X-BESS-VER: 2019.3_20260203.1731
+X-BESS-Apparent-Source-IP: 52.101.48.78
+X-BESS-Parts: H4sIAAAAAAACAzXLMQ6DMAyF4bt4ZrDjYCdcpepgYyIWxNAMlSru3gywPP160v
+	f6wfbtsEAfO8H5gYVYZdQ+TjckTJkTZw+2uWlBI+II8RwqcE2P3/txe+FUb78KCrn5il
+	p5plo2yq2RMpqVFAbX+w/1mSGbgQAAAA==
+X-BESS-Outbound-Spam-Score: 0.00
+X-BESS-Outbound-Spam-Report: Code version 3.2, rules version 3.2.2.270971 [from 
+	cloudscan9-235.us-east-2a.ess.aws.cudaops.com]
+	Rule breakdown below
+	 pts rule name              description
+	---- ---------------------- --------------------------------
+	0.00 HTML_MESSAGE           BODY: HTML included in message 
+	0.00 BSF_BESS_OUTBOUND      META: BESS Outbound 
+X-BESS-Outbound-Spam-Status: SCORE=0.00 using account:ESS139717 scores of KILL_LEVEL=7.0 tests=HTML_MESSAGE, BSF_BESS_OUTBOUND
+X-BESS-BRTS-Status:1
+
+--_000_SJ4PPF4D9C233E75902600CDD3D6D6A4FC7DF67ASJ4PPF4D9C233E7_
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+
+Hi Racine:   Any update on the Software Development Agreement?   Doug asked=
+ how you are doing and is willing to help.
+
+Frank P. Nagorney
+Attorney
+
+Kaufman, Drozdowski & Grendell, LLC
+29525 Chagrin Blvd, Suite 250
+Pepper Pike, Ohio 44122
+440.462.6500 - office general
+440-462-4811 - office direct
+216-905-1455 - mobile
+833-216-0463 - fax
+fnagorney@kdglegal.com<mailto:fnagorney@kdglegal.com>
+www.kdglegal.com<http://www.kdglegal.com/>
+
+CONFIDENTIALITY NOTICE
+The individual sending this e-mail and Kaufman, Drozdowski & Grendell, LLC =
+intend this email to be used exclusively by the individual or entity to whi=
+ch it is intended to be addressed. This e-mail, including attachments, is c=
+overed by the Electronic Communications Privacy Act, 18 U.S.C. 2510-2521, m=
+ay include confidential, proprietary, and legally privileged information, a=
+nd may be used only by the person or entity to which it is addressed. If th=
+e reader of this e-mail is not the intended recipient or his or her authori=
+zed agent, the reader is hereby notified that any use, dissemination, distr=
+ibution, printing, or copying of this e-mail is strictly prohibited. If you=
+ have received this e-mail in error, please notify the sender by replying t=
+o this message and delete this e-mail immediately. In the absence of an exp=
+ress statement to the contrary, nothing in this e-mail constitutes an elect=
+ronic signature.
+
+
+--_000_SJ4PPF4D9C233E75902600CDD3D6D6A4FC7DF67ASJ4PPF4D9C233E7_
+Content-Type: text/html; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+
+<html xmlns:o=3D"urn:schemas-microsoft-com:office:office" xmlns:w=3D"urn:sc=
+hemas-microsoft-com:office:word" xmlns:m=3D"http://schemas.microsoft.com/of=
+fice/2004/12/omml" xmlns=3D"http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dus-ascii"=
+>
+<meta name=3D"Generator" content=3D"Microsoft Word 15 (filtered medium)">
+<style><!--
+/* Font Definitions */
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+@font-face
+	{font-family:Aptos;}
+@font-face
+	{font-family:inherit;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0in;
+	font-size:12.0pt;
+	font-family:"Aptos",sans-serif;
+	mso-ligatures:standardcontextual;}
+span.EmailStyle17
+	{mso-style-type:personal-compose;
+	font-family:"Aptos",sans-serif;
+	color:windowtext;}
+.MsoChpDefault
+	{mso-style-type:export-only;}
+@page WordSection1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.0in 1.0in 1.0in;}
+div.WordSection1
+	{page:WordSection1;}
+--></style>
+</head>
+<body lang=3D"EN-US" link=3D"#467886" vlink=3D"#96607D" style=3D"word-wrap:=
+break-word">
+<div class=3D"WordSection1">
+<p class=3D"MsoNormal">Hi Racine:&nbsp;&nbsp; Any update on the Software De=
+velopment Agreement?&nbsp;&nbsp; Doug asked how you are doing and is willin=
+g to help.<o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal" style=3D"background:white"><b><span style=3D"font-fa=
+mily:inherit;color:#242424;border:none windowtext 1.0pt;padding:0in">Frank =
+P. Nagorney</span></b><span style=3D"font-size:11.0pt;font-family:&quot;Cal=
+ibri&quot;,sans-serif;color:#242424"><o:p></o:p></span></p>
+<p class=3D"MsoNormal" style=3D"background:white"><span style=3D"font-size:=
+11.0pt;font-family:&quot;Calibri&quot;,sans-serif;color:#242424;border:none=
+ windowtext 1.0pt;padding:0in">Attorney</span><span style=3D"font-size:11.0=
+pt;font-family:&quot;Calibri&quot;,sans-serif;color:#242424"><o:p></o:p></s=
+pan></p>
+<p class=3D"MsoNormal" style=3D"background:white"><span style=3D"font-size:=
+11.0pt;font-family:&quot;Calibri&quot;,sans-serif;color:#242424;border:none=
+ windowtext 1.0pt;padding:0in">&nbsp;</span><o:p></o:p></p>
+<p class=3D"MsoNormal"><b><span style=3D"font-family:&quot;Calibri&quot;,sa=
+ns-serif;font-variant:small-caps;color:#C00000;mso-ligatures:none">Kaufman,=
+ Drozdowski &amp; Grendell, LLC</span></b><span style=3D"font-family:&quot;=
+Calibri&quot;,sans-serif;color:#C00000;mso-ligatures:none"><o:p></o:p></spa=
+n></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:black;mso-ligatures:none">29525 Chagrin Blvd, =
+Suite 250</span><span style=3D"font-size:11.0pt;font-family:&quot;Calibri&q=
+uot;,sans-serif;mso-ligatures:none"><o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:black;mso-ligatures:none">Pepper Pike, Ohio 44=
+122</span><span style=3D"font-size:11.0pt;font-family:&quot;Calibri&quot;,s=
+ans-serif;mso-ligatures:none"><o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:black;mso-ligatures:none">440.462.6500 - offic=
+e general<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:black;mso-ligatures:none">440-462-4811 &#8211;=
+ office direct<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:black;mso-ligatures:none">216-905-1455 - mobil=
+e</span><span style=3D"font-size:11.0pt;font-family:&quot;Calibri&quot;,san=
+s-serif;mso-ligatures:none"><o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;color:black;mso-ligatures:none">833-216-0463 - fax</=
+span><span style=3D"font-size:11.0pt;font-family:&quot;Calibri&quot;,sans-s=
+erif;mso-ligatures:none"><o:p></o:p></span></p>
+<p class=3D"MsoNormal"><u><span style=3D"font-size:11.0pt;font-family:&quot=
+;Calibri&quot;,sans-serif;color:#0563C1;mso-ligatures:none"><a href=3D"mail=
+to:fnagorney@kdglegal.com"><span style=3D"color:#467886">fnagorney@kdglegal=
+.com</span></a></span></u><span style=3D"font-size:11.0pt;font-family:&quot=
+;Calibri&quot;,sans-serif;mso-ligatures:none"><o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;mso-ligatures:none"><a href=3D"http://www.kdglegal.c=
+om/"><span style=3D"color:#0563C1">www.kdglegal.com</span></a><o:p></o:p></=
+span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11.0pt;font-family:&quot;Ca=
+libri&quot;,sans-serif;mso-ligatures:none"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoNormal" style=3D"background:white"><b><u><span style=3D"font=
+-size:10.0pt;font-family:&quot;Calibri&quot;,sans-serif;color:black;mso-lig=
+atures:none">CONFIDENTIALITY NOTICE</span></u></b><span style=3D"font-famil=
+y:&quot;Times New Roman&quot;,serif;mso-ligatures:none"><o:p></o:p></span><=
+/p>
+<p class=3D"MsoNormal" style=3D"margin-bottom:5.0pt;background:white"><span=
+ style=3D"font-size:10.0pt;font-family:&quot;Calibri&quot;,sans-serif;color=
+:black;mso-ligatures:none">The individual sending this e-mail and&nbsp;Kauf=
+man, Drozdowski &amp; Grendell, LLC intend this email to
+ be used exclusively by the individual or entity to which it is intended to=
+ be addressed. This e-mail, including attachments, is covered by the Electr=
+onic Communications Privacy Act, 18 U.S.C. 2510-2521, may include confident=
+ial, proprietary, and legally privileged
+ information, and may be used only by the person or entity to which it is a=
+ddressed. If the reader of this e-mail is not the intended recipient or his=
+ or her authorized agent, the reader is hereby notified that any use, disse=
+mination, distribution, printing,
+ or copying of this e-mail is strictly prohibited. If you have received thi=
+s e-mail in error, please notify the sender by replying to this message and=
+ delete this e-mail immediately. In the absence of an express statement to =
+the contrary, nothing in this e-mail
+ constitutes an electronic signature.</span><span style=3D"font-size:11.0pt=
+;font-family:&quot;Calibri&quot;,sans-serif;color:black;mso-ligatures:none"=
+>
+</span><span style=3D"font-size:11.0pt;font-family:&quot;Calibri&quot;,sans=
+-serif;mso-ligatures:none"><o:p></o:p></span></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+</body>
+</html>
+
+--_000_SJ4PPF4D9C233E75902600CDD3D6D6A4FC7DF67ASJ4PPF4D9C233E7_--

@@ -1,0 +1,2229 @@
+Delivered-To: doug@dougbower.com
+Received: by 2002:a05:6a11:5b8f:b0:694:afed:5b09 with SMTP id sr15csp1484320pxb;
+        Wed, 21 Jan 2026 10:45:54 -0800 (PST)
+X-Received: by 2002:a53:c04f:0:20b0:644:7a72:a506 with SMTP id 956f58d0204a3-64916526192mr10764369d50.94.1769021154406;
+        Wed, 21 Jan 2026 10:45:54 -0800 (PST)
+ARC-Seal: i=2; a=rsa-sha256; t=1769021154; cv=pass;
+        d=google.com; s=arc-20240605;
+        b=OnwIar8TZAttwNf8OyytvfzVV7Noy6QYHtq/A3CbDA6Sh+EQub1W+tRT3MXZTkIYhO
+         8LJfbZBoHOKaSy8+1iBLdpoRh5B7A415b7iZM++izv5WUZtAE2hMlDAA4JMCwITHovxK
+         M8ez6cnQbvf+LQMC/zBZ4nThyV3k5Q8nJWRZApwO1+afrl0iSxti9Y5Zihf9xdBd2vKo
+         a1oa1mR5Y5yMjlctQl9W7hF3pbwesFvY1Pae1S3C1+AK5KjmHne14bqSIHPZXyXyqUw9
+         I4mItNSZk3fjJi1CuvBZVD/Yc1j/EewgSMqb+67Kc0F19Cc44sHzn9B8MJeJ7kBW4Qfv
+         6OEw==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:dkim-signature;
+        bh=BVY7do6+NAohmW831o2PKLWfiFoatWxu3KV8AUf5zCc=;
+        fh=bustVruL7R1VozCjkhPvbv65za2UbcAXGiYTmIyOQKA=;
+        b=FfEC0eZ9B5m1ZYNXLifBV6QrGm4kGvpaeRniU9wtMXkCjewXRev/y98PaTix+3xQ2s
+         bj2VkXSIby5vqjlWA1aGqlRE/dGqkWm4HBi2z5k0WxUxuHIhpVWv0bswXJTPl5pVN7Zo
+         eQgJ9fDLI5hc8Mcr1xyukyK7/4oG5crnVqxddLPdlVLeh6ZyKYEnd7syDTPBl29uYobU
+         h86ZId+AxN2gYt1x3ClEPNLjADc8GfL+Ki+qKD5SFT/eQB5pZW2XBL4HZW3invYzi7Qe
+         160rsGQMRnJXUhMQtPXmQrEZI7jESSX4b+ftn8IAwX6jJThkkIrSPNN4X4th1RhUkm6X
+         61NQ==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b="UT33/Xq6";
+       arc=pass (i=1);
+       spf=pass (google.com: domain of downey.racine@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=downey.racine@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=neutral header.i=@dougbower.com
+Return-Path: <downey.racine@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 956f58d0204a3-6493e3e54desor2355490d50.14.2026.01.21.10.45.54
+        for <doug@dougbower.com>
+        (Google Transport Security);
+        Wed, 21 Jan 2026 10:45:54 -0800 (PST)
+Received-SPF: pass (google.com: domain of downey.racine@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b="UT33/Xq6";
+       arc=pass (i=1);
+       spf=pass (google.com: domain of downey.racine@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=downey.racine@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=neutral header.i=@dougbower.com
+ARC-Seal: i=1; a=rsa-sha256; t=1769021153; cv=none;
+        d=google.com; s=arc-20240605;
+        b=Uh82Szz84Ero+S9u/3Yx890jRvG6jdxK7OGMkYzQImpopb+wra/mKR1K5D2WewrEMr
+         /WaDLDsOX9AVGI3/FNWfskRMJqlt9cfuumaWMMs3aT74iwoR1qN+kcDkwPeYoEOboCdo
+         P9AuAoTdyGXajMDhgdyQBnHzsOdureIbVt7LL52g+tPUGXO/qdX+aPnXUvWVQGl1L6B6
+         Ihv534uW0WY58d5udxlRJqMcKMNdMBsZmwfq02gtwkNHBJLAIpxdbbW1XA1c7Om2zrB2
+         1mX+16bForrt+veKwndiOaeTzbLIP23msSwqq6dgCSjFVLfAi/z2x61m+ee/ay/uL8zj
+         5Hbg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:dkim-signature;
+        bh=BVY7do6+NAohmW831o2PKLWfiFoatWxu3KV8AUf5zCc=;
+        fh=bustVruL7R1VozCjkhPvbv65za2UbcAXGiYTmIyOQKA=;
+        b=InlFl7V+WxoW4eq7wrL/7g2fF/08IkwY66ur55IyKrHQzQVcPQuOBEK4GI86js1ht1
+         8GkThgaNFvaZNRNN9q1pfKg8GrKxjGqmgT1zQWnbPUsV5gWQH/DJ2jnS5TybJT6cP6Ju
+         A82OfdI8Ibo4ntr/CDT+e4coY/q3QTp7WlPwRprbYGm+b48fDmvWm9E/D6cv7zGnOBIV
+         aFbnwIjVEimMl510IPkEIlRQMPp5IqIKsu0E/aHpTETPaaMLnhyLtrkaxBlp8C21jy3M
+         Ieo9+zI+NueVB9uwjUPtOxvAv2evJtp/tEDZcEm1Htrvf5FwDwheVjs7BPn5xy8rRVEE
+         TOIQ==;
+        darn=dougbower.com
+ARC-Authentication-Results: i=1; mx.google.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1769021153; x=1769625953; darn=dougbower.com;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:from:to:cc:subject:date:message-id:reply-to;
+        bh=BVY7do6+NAohmW831o2PKLWfiFoatWxu3KV8AUf5zCc=;
+        b=UT33/Xq6HdBTxUbZ8aAMpqOD0UJHietgQJyC9bNzLKk8dAl8ua4KZlSdwl7iAlYnMQ
+         7lrL8ZN9oqJoor+GmCfD79I3g/DcTcquIWbecuJ2Iqtac/bLYFT0b5T64uVQE70cVRgg
+         p+mDBmu9GzAwax2gijS6Le9AQFioST7fKqFQfIpjihTaKjqew+GWYmWYUgQytTTkxlvp
+         GD51lzlj6uhzOKwOuHSIwGuMUSpJzdrKmaoVcxYpO+bvKC39OjIwUwNRLei+81IiSAdi
+         YMaQ/oma7DNrug7L3EivqduqYnHgH5zMyZrBYaIcyG2kuVdFWHhdusj9lCpNXBlq3gAE
+         hB6g==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1769021153; x=1769625953;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:x-gm-gg:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=BVY7do6+NAohmW831o2PKLWfiFoatWxu3KV8AUf5zCc=;
+        b=KUZiXzNIgfcHrWuVhyac7M/sOHiZRSLdCBzMVG6kLtCInmTZB8U1ZNGuq39OTfX36b
+         dcPyuQiGySM6RaK6a0TYOMDuL7YpwFNDZnaRPdKwvmpShKrrUKvoH1fc9GMY8wb/+9f7
+         5YGYq/+hb2lY0XpPy98wNr5a//dI+2UtQup9BM2JLOxKxda18viESouIF8ZJUZmr1FZr
+         UgpOnHqJGl3yrEqmJDKjTZ9d3yBG14ZszmRydZjZnkDGAWHNXjjJruBw7o9hiQjd5Std
+         qtNXjfWU1OxaPjR44aKiNsywGYfnxG5cBwP6mH7f5rsAAKZghMl1M/4Cyat9VNa9mRFn
+         lc9w==
+X-Gm-Message-State: AOJu0Yxy5m4ufyU4ax5wo6WwyLJaGS4GLQ5tdQ6382kAkYfE4mdjTmhB
+	OLoua7lKHP3XVLPRs4iDTD9ZNFY3BqF9UDMqAiI2TsMdc5T4fo2cL07HpT/fVa6SziDw9LgmiTT
+	njv5PZcr7GA3P+wRZY68JRuKN30euhdI5U3Dg
+X-Gm-Gg: AZuq6aKfHJyFBAePAoOfoY5Dl6rIYog9DL2Zc+UtH7wNqdb3z28ZRI5rP4MMp2k97lX
+	y1qQs/HHSQ6jcpHkUgvfLm7VSQ72sUfXICCjykyHdQ2n7qchYfEmJhRW6Ng+r235vPmKYForEjT
+	6CknhMpJDwyareex76GIzjG5EJfqCJMhSOh1yksmOe/zWwhqOq9mYy81fz9bFrWMmXPskelYEsi
+	QN+6MV/p8bZKrurdOHcLpU5nPEgcicJo62h6nnQHGQIA2271SHqXa4aIIW7frNxe0UYA5AxKuCA
+	ACohPXehYA9iA+NcSnpn7+8Evpc=
+X-Received: by 2002:a05:690e:5cb:b0:640:e5e1:192f with SMTP id
+ 956f58d0204a3-649164a0c38mr11450107d50.33.1769021153342; Wed, 21 Jan 2026
+ 10:45:53 -0800 (PST)
+MIME-Version: 1.0
+References: <SJ4PPF4D9C233E76940ED6CF1EF70C8D97EDF96A@SJ4PPF4D9C233E7.namprd15.prod.outlook.com>
+ <CABjnsex+TAm+ZhcWu483_E5oZTF=MssPGda1q0Om3xUys4J6zQ@mail.gmail.com>
+In-Reply-To: <CABjnsex+TAm+ZhcWu483_E5oZTF=MssPGda1q0Om3xUys4J6zQ@mail.gmail.com>
+From: racine downey <downey.racine@gmail.com>
+Date: Wed, 21 Jan 2026 13:45:41 -0500
+X-Gm-Features: AZwV_Qjh__5iP3gYsaK0sq8h-eOTQBvSiB_aTkPHUOJoAv65Kuwg9zKZ94ST32Q
+Message-ID: <CAKKOanFWcrz0wGLUBi77Ydn9wY9Q2A=yAWWQipB2BOz1UsS-dQ@mail.gmail.com>
+Subject: Re: Tomorrow for dinner
+To: Doug Bower <doug@dougbower.com>
+Cc: Frank Nagorney <fnagorney@kdglegal.com>
+Content-Type: multipart/mixed; boundary="00000000000072ab250648ea55b2"
+
+--00000000000072ab250648ea55b2
+Content-Type: multipart/alternative; boundary="00000000000072ab230648ea55b0"
+
+--00000000000072ab230648ea55b0
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Hi Doug! And thank you so much for advising me. I have what the developers
+call a "Wireframe" and it is very wordy and lengthy (at least 150 pages). I
+haven't completely read it all and I wished there were more graphics. I
+have it saved to a jump drive at home and I can send it to you tonight when
+I get back. But it does detail what the website is supposed to do. Is that
+what you were referring to?
+
+On Wed, Jan 21, 2026, 1:29=E2=80=AFPM Doug Bower <doug@dougbower.com> wrote=
+:
+
+> Racine,
+> This is more of a development contract.  Do you have a Product Requiremen=
+t
+> Document (PRD) that defines exactly what the application will do?  I see =
+a
+> number of development requirements but not a detailed set of requirements=
+.
+>
+> Let me know...
+>
+> Doug
+>
+>
+> On Wed, Jan 21, 2026 at 10:34=E2=80=AFAM Frank Nagorney <fnagorney@kdgleg=
+al.com>
+> wrote:
+>
+>> See you tomorrow at 5pm for dinner.
+>>
+>>
+>>
+>> Doug, as a prelude, below are sections from the proposed contract that
+>> Racine is considering regarding project scope and support.   I thought t=
+his
+>> would be useful for you to look at prior to getting together.  The
+>> developer timetable is up to 40 weeks to complete the project.  The
+>> developer is E-Multitech Solution Pvt. Ltd., from Nepal.   Racine=E2=80=
+=99s company
+>> is Karixa LLC.
+>>
+>>
+>>
+>> All the best.
+>>
+>>
+>>
+>>
+>>
+>> TERMS FROM SOFTWARE DEVELOPMENT AGREEMENT
+>>
+>> *1.  **Scope of Work*
+>>
+>>
+>>
+>> Developer shall design, develop, integrate, test, document, deploy, and
+>> maintain all modules included in *Schedule 1 *and *Schedule 2 *, coverin=
+g
+>> but not limited to:
+>>
+>> =C2=B7       Agency Dashboard
+>>
+>> =C2=B7       EVV Mobile Application
+>>
+>> =C2=B7       Multi-Tenant Super Admin Portal
+>>
+>> =C2=B7       Scheduling Engine
+>>
+>> =C2=B7       Authorization Engine
+>>
+>> =C2=B7       Caregiver & Client Management
+>>
+>> =C2=B7       ADL, Incident, Medication
+>>
+>> =C2=B7       Reporting & Analytics
+>>
+>> =C2=B7       AI-Powered Help & Training Center
+>>
+>> =C2=B7       Virtual Receptionist (proof of concept) for automated call
+>> handling, inquiry routing, and call logging
+>>
+>> =C2=B7       AI Automation
+>>
+>> =C2=B7       Cloud infrastructure, DevOps, CI/CD, security hardening, st=
+aging &
+>> production environments
+>>
+>> =C2=B7       Development of application program interface (=E2=80=9CAPI=
+=E2=80=9D) for the
+>> Platform with third party customers to facilitate the connection and
+>> communication between Client customers and the Platform
+>>
+>> =C2=B7       Time keeping, billing and collections
+>>
+>> =C2=B7       Such other work as is identified from time to time that is
+>> necessary to achieve Project goals in a timely manner
+>>
+>> *Testing Scope Reference*
+>>
+>>
+>>
+>> Developer will perform testing activities as outlined in *Schedule T =E2=
+=80=93
+>> Testing Scope*, including unit testing, integration testing, basic
+>> functional testing, UAT support, post-deployment issue resolution, and
+>> API, including debugging.
+>>
+>> *Change Requests*
+>>
+>>
+>>
+>> Any item *not explicitly listed *in Schedule 1 or Schedule 2 is
+>> considered
+>>
+>> *out-of-scope*. Such items require a *formal Change Request *with new pr=
+icing,
+>> new timelines, and a signed approval before work begins.
+>>
+>> Developer shall not be obligated to begin any additional work without a =
+fully
+>> approved Change Request.
+>>
+>>
+>>
+>>
+>> *2.  **Deliverables & Milestones*
+>>
+>>
+>>
+>> Developer shall follow a structured milestone plan including:
+>>
+>> 1.     Architecture, Technical Design & UX Approval
+>>
+>> 2.     Backend & Database Foundation
+>>
+>> 3.     Multi-Tenant Super Admin Portal
+>>
+>> 4.     EVV App: Alpha =E2=86=92 Beta: Alpha =E2=86=92 Beta
+>>
+>> 5.     Agency Dashboard Modules
+>>
+>> 6.     Scheduling & Authorization Systems
+>>
+>> 7.     Reporting, Analytics & Compliance
+>>
+>> 8.     AI Modules & Predictive Automation
+>>
+>> 9.     UAT, Training, Security Review
+>>
+>> 10.  API
+>>
+>> 11.  Production Deployment & Go-Live Certification
+>>
+>> 12.  Time keeping, billing and collections module
+>>
+>>
+>>
+>> Each milestone includes engineering output, QA testing, documentation, a=
+nd
+>> staging deployment.
+>>
+>> *Client Review*
+>>
+>>
+>>
+>> Client shall review each milestone within *10 business days*. Failure to=
+ respond
+>> constitutes *provisional acceptance*.
+>>
+>>
+>>
+>> *3.  **Annual Maintenance Contract & Support (=E2=80=9CAMC=E2=80=9D)*
+>>
+>>
+>>
+>> Developer shall provide Maintenance & Support including:
+>>
+>> =C2=B7       Bug fixes & patches
+>>
+>> =C2=B7       Performance optimization
+>>
+>> =C2=B7       Security updates
+>>
+>> =C2=B7       Environment monitoring
+>>
+>> =C2=B7       Technical assistance and training to staff and Client custo=
+mers
+>>
+>> =C2=B7       Source code and software, and well as Project updates as
+>> necessary to maintain and operate the Platform
+>>
+>>
+>>
+>> *9.     **Delivery Timeline*
+>>
+>>
+>>
+>> =C2=B7       Schedule 1 Base Scope: *32 working weeks (Excluding first t=
+wo
+>> weeks for set up of project kick off)*
+>>
+>> Schedule 2 Expanded SRS: approximate *20=E2=80=9325% additional effort T=
+otal
+>> estimated/approximate timeline: 38=E2=80=9340 working weeks*
+>>
+>>
+>>
+>>
+>>
+>> *10.  **Schedules Summary*
+>>
+>>
+>>
+>> This Agreement includes the following Schedules:
+>>
+>> =C2=B7       *Schedule 1 =E2=80=93 Base Scope*
+>>
+>> =C2=B7       *Schedule 2 =E2=80=93 Expanded SRS Scope*
+>>
+>> =C2=B7       *Schedule 3 =E2=80=93 AI Usage Plan*
+>>
+>>
+>>
+>>
+>>
+>>
+>>
+>> =C2=B7       *Schedule A =E2=80=93 Pricing & Milestones*
+>>
+>> =C2=B7       *Schedule C =E2=80=93 Support SLA*
+>>
+>>
+>>
+>>
+>> *Schedules*
+>>
+>> *Schedule 1 =E2=80=93 Base Scope Summary*
+>>
+>>
+>>
+>> =C2=B7       Multi-Tenant Super Admin Portal(partial)
+>>
+>> =C2=B7       Agency Dashboard
+>>
+>> =C2=B7       EVV Mobile Application
+>>
+>> =C2=B7       Scheduling Engine
+>>
+>> =C2=B7       Authorization Engine
+>>
+>> =C2=B7       Caregiver & Client Management
+>>
+>> =C2=B7       ADL, Incident, Medication
+>>
+>> =C2=B7       Reporting & Analytics
+>>
+>> =C2=B7       Cloud Infrastructure, DevOps, CI/CD, Security Hardening
+>>
+>> =C2=B7       Time keeping, billing and collection module
+>>
+>> *Schedule 2 =E2=80=93 Expanded SRS Scope*
+>>
+>>
+>>
+>> =C2=B7       Enhanced documentation modules
+>>
+>> =C2=B7       Expanded reporting
+>>
+>> =C2=B7       Advanced compliance checks
+>>
+>> =C2=B7       Additional caregiver and client features
+>>
+>> =C2=B7       System scalability and optimization requirements
+>>
+>> =C2=B7       Multi-Tenant Super Admin Portal (full)
+>>
+>> =C2=B7       AI powered agency training & Help Module
+>>
+>>
+>>
+>>
+>>
+>>
+>>
+>> *Schedule 3 =E2=80=93 AI Usage Plan*
+>>
+>>
+>>
+>> AI-related components of the Platform are innovation-based and will
+>> evolve over time as AI technology develops. The features listed in this
+>> Schedule represent the currently planned capabilities; any additional AI
+>> enhancements or new innovations discovered during the project may requir=
+e
+>> separate approval and incremental scope.
+>>
+>> The Platform will incorporate AI capabilities in various functional
+>> modules to support automation and operational efficiency. AI will be use=
+d
+>> in the following sections of the Platform:
+>>
+>> 1.     *Caregiver Management (Agency Dashboard)*
+>>
+>> o    AI skill-to-client matching engine to recommend suitable
+>> caregiver=E2=80=93client pairings based on skills, proximity, availabili=
+ty, and
+>> care needs.
+>>
+>> 2.     *Scheduling Module (Agency Dashboard)*
+>>
+>> o    AI-driven shift optimization to recommend staffing patterns and
+>> reduce scheduling conflicts.
+>>
+>> o    Geo-based caregiver assignment AI for best-fit matching considering
+>> distance and availability as needed.
+>>
+>> 3.     *Client Records =E2=80=BA Documentation*
+>>
+>> o    Intelligent OCR for extracting structured data from uploaded
+>> documents and improving documentation efficiency.
+>>
+>> 4.     *EVV Mobile Application*
+>>
+>> o    Voice-to-notes and AI assistant for caregiver notes.
+>>
+>> 5.     *Virtual Receptionist / Communication Suite*
+>>
+>> o    AI-powered communication assistant using natural language
+>> processing for automated handling of inbound calls, inquiry routing, and
+>> 24/7 virtual support (proof-of-concept).
+>>
+>>
+>>
+>> *Schedule T =E2=80=93 Testing Scope Developer Testing Responsibilities*
+>>
+>> The Developer will perform the following testing activities as part of t=
+he
+>> development scope:
+>>
+>> 1.     Unit testing of all modules
+>>
+>> 2.     Integration testing between components
+>>
+>> 3.     Basic functional testing against requirements
+>>
+>> 4.     Database interaction validation
+>>
+>> 5.     API endpoint response verification
+>>
+>> 6.     Error-handling testing
+>>
+>> 7.     Cross-browser compatibility checks
+>>
+>>
+>>
+>>
+>>
+>>
+>>
+>> 8.     Mobile responsiveness testing
+>>
+>> 9.     Basic form validation testing
+>>
+>> 10.  Navigation and workflow testing
+>>
+>> 11.  User role and permission testing
+>>
+>> 12.  Support during Client-led UAT cycles
+>>
+>> 13.  Bug fixing based on UAT feedback
+>>
+>> 14.  Post-deployment critical issue resolution
+>>
+>> 15.  Documentation of test scenarios (not exhaustive test cases)
+>>
+>> *Advisory Note (For Client Awareness)*
+>>
+>>
+>>
+>> The Developer's testing focuses on functional correctness and baseline
+>> quality. For production environments handling sensitive data, regulatory
+>> compliance, or enterprise workload validation, independent third-party
+>> testing is industry-standard and is the Client=E2=80=99s responsibility =
+to procure.
+>>
+>> *Testing Exclusions (Not Included in This Agreement)*
+>>
+>>
+>>
+>> The following items are explicitly excluded and require a separate
+>> engagement:
+>>
+>> =C2=B7       Independent third-party security / penetration testing
+>>
+>> =C2=B7       Performance, load, and stress testing
+>>
+>> =C2=B7       Industry compliance validation (HIPAA, PCI-DSS, SOC2, etc.)
+>>
+>> =C2=B7       Automated regression test suite development
+>>
+>> =C2=B7       Accessibility compliance audit (WCAG, ADA)
+>>
+>> =C2=B7       Code security audit by specialized external firms
+>>
+>> *Testing Timeline*
+>>
+>>
+>>
+>> The following approximate & assumption timeline represents the Developer=
+=E2=80=99s
+>> standard testing flow for each milestone and overall project delivery:
+>>
+>> =C2=B7       *Unit Testing: *Conducted continuously during development f=
+or each
+>> component before integration.
+>>
+>>
+>>
+>>
+>>
+>>
+>>
+>> =C2=B7       *Integration Testing: *Performed at the completion of relev=
+ant modules,
+>> typically within *3=E2=80=935 business days *after module integration.
+>>
+>> =C2=B7       *Functional Testing: *Completed during milestone QA cycles,=
+ typically
+>> within *5=E2=80=937 business days *per milestone.
+>>
+>> =C2=B7       *UAT Support: *Developer provides UAT support during Client
+>> testing windows; UAT cycles typically last *10=E2=80=9315 business days =
+*
+>> depending on milestone complexity.
+>>
+>> =C2=B7       *Bug Fixing: *Critical issues are addressed within *48 hour=
+s*, high-priority
+>> issues within *3=E2=80=935 business days*, and general issues within sta=
+ndard
+>> iteration cycles.
+>>
+>> =C2=B7       *Post-Deployment Testing: *Performed within the first *15 d=
+ays
+>> after Go-Live *to monitor critical defects and system stability.
+>>
+>>
+>>
+>>
+>>
+>> *Frank P. Nagorney*
+>>
+>> Attorney
+>>
+>>
+>>
+>> *Kaufman, Drozdowski & Grendell, LLC*
+>>
+>> 29525 Chagrin Blvd, Suite 250
+>> <https://www.google.com/maps/search/29525+Chagrin+Blvd,+Suite+250+%0D%0A=
++Pepper+Pike,+Ohio+44122?entry=3Dgmail&source=3Dg>
+>>
+>> Pepper Pike, Ohio 44122
+>> <https://www.google.com/maps/search/29525+Chagrin+Blvd,+Suite+250+%0D%0A=
++Pepper+Pike,+Ohio+44122?entry=3Dgmail&source=3Dg>
+>>
+>> 440.462.6500 - office general
+>>
+>> <https://www.google.com/maps/search/29525+Chagrin+Blvd,+Suite+250+%0D%0A=
++Pepper+Pike,+Ohio+44122?entry=3Dgmail&source=3Dg>
+>>
+>> 440-462-4811 =E2=80=93 office direct
+>>
+>> 216-905-1455 - mobile
+>>
+>> 833-216-0463 - fax
+>>
+>> *fnagorney@kdglegal.com <fnagorney@kdglegal.com>*
+>>
+>> www.kdglegal.com
+>>
+>>
+>>
+>> *CONFIDENTIALITY NOTICE*
+>>
+>> The individual sending this e-mail and Kaufman, Drozdowski & Grendell,
+>> LLC intend this email to be used exclusively by the individual or entity=
+ to
+>> which it is intended to be addressed. This e-mail, including attachments=
+,
+>> is covered by the Electronic Communications Privacy Act, 18 U.S.C.
+>> 2510-2521, may include confidential, proprietary, and legally privileged
+>> information, and may be used only by the person or entity to which it is
+>> addressed. If the reader of this e-mail is not the intended recipient or
+>> his or her authorized agent, the reader is hereby notified that any use,
+>> dissemination, distribution, printing, or copying of this e-mail is
+>> strictly prohibited. If you have received this e-mail in error, please
+>> notify the sender by replying to this message and delete this e-mail
+>> immediately. In the absence of an express statement to the contrary,
+>> nothing in this e-mail constitutes an electronic signature.
+>>
+>>
+>>
+>
+
+--00000000000072ab230648ea55b0
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><div dir=3D"auto">Hi=C2=A0Doug! And thank you so much for =
+advising me. I have what the developers call a &quot;Wireframe&quot; and it=
+=C2=A0is very wordy and lengthy (at least 150 pages). I haven&#39;t complet=
+ely read it all and I wished there were more graphics. I have it saved to a=
+ jump drive at home and I can send it to you tonight when I get back. But i=
+t does detail what the website is supposed to do. Is that what you were ref=
+erring to?</div></div><br><div class=3D"gmail_quote"><div dir=3D"ltr" class=
+=3D"gmail_attr">On Wed, Jan 21, 2026, 1:29=E2=80=AFPM Doug Bower &lt;<a hre=
+f=3D"mailto:doug@dougbower.com" target=3D"_blank">doug@dougbower.com</a>&gt=
+; wrote:<br></div><blockquote class=3D"gmail_quote" style=3D"margin:0px 0px=
+ 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex"><div di=
+r=3D"ltr">Racine,<div>This is more of a development contract.=C2=A0 Do you =
+have a Product Requirement Document (PRD) that defines exactly what the app=
+lication will do?=C2=A0 I see a number of development requirements but not =
+a detailed set of requirements.</div><div><br></div><div>Let me know...</di=
+v><div><br></div><div>Doug</div><div><br></div></div><br><div class=3D"gmai=
+l_quote"><div dir=3D"ltr" class=3D"gmail_attr">On Wed, Jan 21, 2026 at 10:3=
+4=E2=80=AFAM Frank Nagorney &lt;<a href=3D"mailto:fnagorney@kdglegal.com" r=
+el=3D"noreferrer" target=3D"_blank">fnagorney@kdglegal.com</a>&gt; wrote:<b=
+r></div><blockquote class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex=
+;border-left:1px solid rgb(204,204,204);padding-left:1ex"><div>
+
+
+
+
+
+<div lang=3D"EN-US">
+<div>
+<p class=3D"MsoNormal">See you tomorrow at 5pm for dinner.<u></u><u></u></p=
+>
+<p class=3D"MsoNormal"><u></u>=C2=A0<u></u></p>
+<p class=3D"MsoNormal">Doug, as a prelude, below are sections from the prop=
+osed contract that Racine is considering regarding project scope and suppor=
+t.=C2=A0=C2=A0 I thought this would be useful for you to look at prior to g=
+etting together.=C2=A0 The developer timetable is
+ up to 40 weeks to complete the project.=C2=A0 The developer is E-Multitech=
+ Solution Pvt. Ltd., from Nepal.=C2=A0=C2=A0 Racine=E2=80=99s company is Ka=
+rixa LLC.<u></u><u></u></p>
+<p class=3D"MsoNormal"><u></u>=C2=A0<u></u></p>
+<p class=3D"MsoNormal">All the best.<u></u><u></u></p>
+<p class=3D"MsoNormal"><u></u>=C2=A0<u></u></p>
+<p class=3D"MsoNormal"><u></u>=C2=A0<u></u></p>
+<p class=3D"MsoNormal">TERMS FROM SOFTWARE DEVELOPMENT AGREEMENT<u></u><u><=
+/u></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:12.35pt;margin=
+-bottom:0.0001pt">
+<u></u><b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sa=
+ns-serif;color:rgb(54,95,145)"><span>1.<span style=3D"font:7pt &quot;Times =
+New Roman&quot;">=C2=A0
+</span></span></span></b><u></u><b><span style=3D"font-size:11pt;font-famil=
+y:&quot;Segoe UI&quot;,sans-serif;color:rgb(54,95,145)">Scope<span style=3D=
+"letter-spacing:-0.1pt">
+</span>of<span style=3D"letter-spacing:-0.1pt"> </span><span style=3D"lette=
+r-spacing:-0.2pt">Work<u></u><u></u></span></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.45pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-right:16.2pt">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">Developer shall=
+ design, develop, integrate, test, document, deploy, and maintain all<span =
+style=3D"letter-spacing:-0.25pt">
+</span>modules<span style=3D"letter-spacing:-0.15pt"> </span>included<span =
+style=3D"letter-spacing:-0.15pt">
+</span>in<span style=3D"letter-spacing:-0.1pt"> </span><b>Schedule<span sty=
+le=3D"letter-spacing:-0.15pt">
+</span>1<span style=3D"letter-spacing:2pt"> </span></b>and<span style=3D"le=
+tter-spacing:-0.2pt">
+</span><b>Schedule<span style=3D"letter-spacing:-0.15pt"> </span>2<span sty=
+le=3D"letter-spacing:-0.05pt">
+</span></b>,<span style=3D"letter-spacing:-0.15pt"> </span>covering<span st=
+yle=3D"letter-spacing:-0.2pt">
+</span>but<span style=3D"letter-spacing:-0.15pt"> </span>not<span style=3D"=
+letter-spacing:-0.15pt">
+</span>limited<span style=3D"letter-spacing:-0.15pt"> </span>to:<u></u><u><=
+/u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:0.5in;margin-b=
+ottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Agency<span style=3D"letter-spacing:-0.1pt"> Dashboard<u></u><=
+u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">EVV<span style=3D"letter-spacing:-0.2pt">
+</span>Mobile<span style=3D"letter-spacing:-0.15pt"> </span><span style=3D"=
+letter-spacing:-0.1pt">Application<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Multi-Tenant<span style=3D"letter-spacing:-0.3pt">
+</span>Super<span style=3D"letter-spacing:-0.25pt"> </span>Admin<span style=
+=3D"letter-spacing:-0.2pt">
+</span><span style=3D"letter-spacing:-0.1pt">Portal<u></u><u></u></span></s=
+pan></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Scheduling<span style=3D"letter-spacing:-0.2pt">
+</span><span style=3D"letter-spacing:-0.1pt">Engine<u></u><u></u></span></s=
+pan></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Authorization<span style=3D"letter-spacing:-0.1pt"> Engine<u><=
+/u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:0.5in;margin-b=
+ottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Caregiver<span style=3D"letter-spacing:-0.2pt">
+</span>&amp;<span style=3D"letter-spacing:-0.2pt"> </span>Client<span style=
+=3D"letter-spacing:-0.05pt">
+</span><span style=3D"letter-spacing:-0.1pt">Management<u></u><u></u></span=
+></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">ADL,<span style=3D"letter-spacing:-0.2pt">
+</span>Incident,<span style=3D"letter-spacing:-0.05pt"> </span><span style=
+=3D"letter-spacing:-0.1pt">Medication<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Reporting<span style=3D"letter-spacing:-0.05pt">
+</span>&amp;<span style=3D"letter-spacing:-0.1pt"> Analytics<u></u><u></u><=
+/span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">AI-Powered<span style=3D"letter-spacing:-0.1pt">
+</span>Help<span style=3D"letter-spacing:-0.05pt"> </span>&amp;<span style=
+=3D"letter-spacing:-0.1pt">
+</span>Training <span style=3D"letter-spacing:-0.1pt">Center<u></u><u></u><=
+/span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:19.65pt;margin-left:0.5in;marg=
+in-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Virtual<span style=3D"letter-spacing:-0.25pt">
+</span>Receptionist<span style=3D"letter-spacing:-0.15pt"> </span>(proof<sp=
+an style=3D"letter-spacing:-0.25pt">
+</span>of<span style=3D"letter-spacing:-0.25pt"> </span>concept)<span style=
+=3D"letter-spacing:-0.25pt">
+</span>for<span style=3D"letter-spacing:-0.2pt"> </span>automated<span styl=
+e=3D"letter-spacing:-0.25pt">
+</span>call<span style=3D"letter-spacing:-0.25pt"> </span>handling,<span st=
+yle=3D"letter-spacing:-0.15pt">
+</span>inquiry routing, and call logging<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">AI<span style=3D"letter-spacing:-0.05pt">
+</span><span style=3D"letter-spacing:-0.1pt">Automation<u></u><u></u></span=
+></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:62.55pt;margin-left:0.5in;marg=
+in-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Cloud<span style=3D"letter-spacing:-0.3pt">
+</span>infrastructure,<span style=3D"letter-spacing:-0.3pt"> </span>DevOps,=
+<span style=3D"letter-spacing:-0.35pt">
+</span>CI/CD,<span style=3D"letter-spacing:-0.35pt"> </span>security<span s=
+tyle=3D"letter-spacing:-0.2pt">
+</span>hardening,<span style=3D"letter-spacing:-0.3pt"> </span>staging<span=
+ style=3D"letter-spacing:-0.35pt">
+</span>&amp; production environments<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:62.55pt;margin-left:0.5in;marg=
+in-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Development of application program interface (=E2=80=9CAPI=E2=
+=80=9D) for the Platform with third party customers to facilitate the conne=
+ction and communication between Client
+ customers and the Platform <u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:62.55pt;margin-left:0.5in;marg=
+in-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Time keeping, billing and collections<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:62.55pt;margin-left:0.5in;marg=
+in-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Such other work as is identified from time to time that is nec=
+essary to achieve Project goals in a timely manner
+<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-top:13.9pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f;color:rgb(79,129,188)">Testing<span style=3D"letter-spacing:-0.3pt">
+</span>Scope<span style=3D"letter-spacing:-0.1pt"> Reference<u></u><u></u><=
+/span></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.6pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-right:36.6pt;margin-left:0in;margin-=
+bottom:0.0001pt">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">Developer will =
+perform testing activities as outlined in
+<b>Schedule T =E2=80=93 Testing Scope</b>,<span style=3D"letter-spacing:-0.=
+2pt"> </span>including<span style=3D"letter-spacing:-0.2pt">
+</span>unit<span style=3D"letter-spacing:-0.3pt"> </span>testing,<span styl=
+e=3D"letter-spacing:-0.25pt">
+</span>integration<span style=3D"letter-spacing:-0.25pt"> </span>testing,<s=
+pan style=3D"letter-spacing:-0.25pt">
+</span>basic<span style=3D"letter-spacing:-0.3pt"> </span>functional<span s=
+tyle=3D"letter-spacing:-0.3pt">
+</span>testing,<span style=3D"letter-spacing:-0.25pt"> </span>UAT support, =
+post-deployment issue resolution, and API, including debugging.<u></u><u></=
+u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-top:14pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f;color:rgb(79,129,188)">Change<span style=3D"letter-spacing:-0.25pt">
+</span><span style=3D"letter-spacing:-0.1pt">Requests<u></u><u></u></span><=
+/span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.6pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal"><span style=3D"font-family:&quot;Segoe UI&quot;,sans=
+-serif">Any<span style=3D"letter-spacing:-0.3pt">
+</span>item<span style=3D"letter-spacing:-0.1pt"> </span><b>not<span style=
+=3D"letter-spacing:-0.05pt">
+</span>explicitly listed<span style=3D"letter-spacing:-0.1pt"> </span></b>i=
+n<span style=3D"letter-spacing:-0.05pt">
+</span>Schedule<span style=3D"letter-spacing:-0.2pt"> </span>1<span style=
+=3D"letter-spacing:0.05pt">
+</span>or<span style=3D"letter-spacing:-0.05pt"> </span>Schedule<span style=
+=3D"letter-spacing:-0.2pt">
+</span>2<span style=3D"letter-spacing:-0.05pt"> </span>is<span style=3D"let=
+ter-spacing:-0.05pt">
+</span><span style=3D"letter-spacing:-0.1pt">considered<u></u><u></u></span=
+></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:16.2pt">
+<b><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">out-of-scope=
+</span></b><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">.<sp=
+an style=3D"letter-spacing:-0.2pt">
+</span>Such<span style=3D"letter-spacing:-0.25pt"> </span>items<span style=
+=3D"letter-spacing:-0.35pt">
+</span>require<span style=3D"letter-spacing:-0.3pt"> </span>a<span style=3D=
+"letter-spacing:-0.05pt">
+</span><b>formal<span style=3D"letter-spacing:-0.25pt"> </span>Change<span =
+style=3D"letter-spacing:-0.2pt">
+</span>Request<span style=3D"letter-spacing:-0.1pt"> </span></b>with<span s=
+tyle=3D"letter-spacing:-0.25pt">
+</span>new<span style=3D"letter-spacing:-0.3pt"> </span>pricing, new timeli=
+nes, and a signed approval before work begins.<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-top:13.9pt">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">Developer<span =
+style=3D"letter-spacing:-0.2pt">
+</span>shall<span style=3D"letter-spacing:-0.25pt"> </span>not<span style=
+=3D"letter-spacing:-0.15pt">
+</span>be<span style=3D"letter-spacing:-0.15pt"> </span>obligated<span styl=
+e=3D"letter-spacing:-0.25pt">
+</span>to<span style=3D"letter-spacing:-0.15pt"> </span>begin<span style=3D=
+"letter-spacing:-0.15pt">
+</span>any<span style=3D"letter-spacing:-0.25pt"> </span>additional<span st=
+yle=3D"letter-spacing:-0.25pt">
+</span>work<span style=3D"letter-spacing:-0.15pt"> </span>without a<span st=
+yle=3D"letter-spacing:-0.2pt">
+</span>fully approved Change Request.<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-top:10.05pt">
+<u></u><span>
+</span></p><table cellpadding=3D"0" cellspacing=3D"0" align=3D"left">
+<tbody>
+<tr>
+<td width=3D"195" height=3D"0"></td>
+</tr>
+<tr>
+<td></td>
+<td><img width=3D"577" height=3D"3" style=3D"width: 6.0138in; height: 0.027=
+7in;" src=3D"cid:ii_19be1d01b7a5b16b21"></td>
+</tr>
+</tbody>
+</table>
+<u></u><br clear=3D"ALL">
+<span style=3D"font-size:10pt;font-family:&quot;Segoe UI&quot;,sans-serif">=
+<u></u><u></u></span><p></p>
+<p class=3D"MsoNormal" style=3D"margin-top:14.15pt">
+<span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-serif">=
+<u></u>=C2=A0<u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:12.35pt">
+<u></u><b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sa=
+ns-serif;color:rgb(54,95,145)"><span>2.<span style=3D"font:7pt &quot;Times =
+New Roman&quot;">=C2=A0
+</span></span></span></b><u></u><b><span style=3D"font-size:11pt;font-famil=
+y:&quot;Segoe UI&quot;,sans-serif;color:rgb(54,95,145)">Deliverables<span s=
+tyle=3D"letter-spacing:-0.2pt">
+</span>&amp;<span style=3D"letter-spacing:-0.15pt"> </span><span style=3D"l=
+etter-spacing:-0.1pt">Milestones<u></u><u></u></span></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.45pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal"><span style=3D"font-family:&quot;Segoe UI&quot;,sans=
+-serif">Developer<span style=3D"letter-spacing:-0.2pt">
+</span>shall<span style=3D"letter-spacing:-0.15pt"> </span>follow<span styl=
+e=3D"letter-spacing:-0.15pt">
+</span>a<span style=3D"letter-spacing:-0.2pt"> </span>structured<span style=
+=3D"letter-spacing:-0.2pt">
+</span>milestone<span style=3D"letter-spacing:-0.15pt"> </span>plan<span st=
+yle=3D"letter-spacing:-0.1pt"> including:<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:35.95pt;margin=
+-bottom:0.0001pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>1.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Architecture,<span style=3D"letter-spacing:-0.1pt">
+</span>Technical<span style=3D"letter-spacing:-0.2pt"> </span>Design<span s=
+tyle=3D"letter-spacing:-0.1pt">
+</span>&amp;<span style=3D"letter-spacing:-0.2pt"> </span>UX<span style=3D"=
+letter-spacing:-0.1pt"> Approval<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>2.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Backend<span style=3D"letter-spacing:-0.15pt">
+</span>&amp;<span style=3D"letter-spacing:-0.1pt"> </span>Database<span sty=
+le=3D"letter-spacing:-0.15pt">
+</span><span style=3D"letter-spacing:-0.1pt">Foundation<u></u><u></u></span=
+></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:35.95pt;margin=
+-bottom:0.0001pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>3.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Multi-Tenant<span style=3D"letter-spacing:-0.3pt">
+</span>Super<span style=3D"letter-spacing:-0.25pt"> </span>Admin<span style=
+=3D"letter-spacing:-0.2pt">
+</span><span style=3D"letter-spacing:-0.1pt">Portal<u></u><u></u></span></s=
+pan></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>4.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">EVV<span style=3D"letter-spacing:-0.15pt">
+</span>App: Alpha<span style=3D"letter-spacing:-0.1pt"> </span>=E2=86=92<sp=
+an style=3D"letter-spacing:-0.1pt">
+</span>Beta:<span style=3D"letter-spacing:-0.1pt"> </span>Alpha<span style=
+=3D"letter-spacing:-0.05pt">
+</span>=E2=86=92<span style=3D"letter-spacing:-0.1pt"> </span><span style=
+=3D"letter-spacing:-0.2pt">Beta<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>5.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Agency<span style=3D"letter-spacing:-0.2pt">
+</span>Dashboard<span style=3D"letter-spacing:-0.05pt"> </span><span style=
+=3D"letter-spacing:-0.1pt">Modules<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>6.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Scheduling<span style=3D"letter-spacing:-0.15pt">
+</span>&amp;<span style=3D"letter-spacing:-0.15pt"> </span>Authorization<sp=
+an style=3D"letter-spacing:-0.1pt"> Systems<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>7.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Reporting,<span style=3D"letter-spacing:-0.2pt">
+</span>Analytics<span style=3D"letter-spacing:-0.15pt"> </span>&amp; <span =
+style=3D"letter-spacing:-0.1pt">
+Compliance<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>8.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">AI<span style=3D"letter-spacing:-0.2pt">
+</span>Modules<span style=3D"letter-spacing:-0.2pt"> </span>&amp;<span styl=
+e=3D"letter-spacing:-0.15pt">
+</span>Predictive<span style=3D"letter-spacing:-0.2pt"> </span><span style=
+=3D"letter-spacing:-0.1pt">Automation<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>9.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">UAT,<span style=3D"letter-spacing:-0.1pt">
+</span>Training,<span style=3D"letter-spacing:-0.1pt"> </span>Security<span=
+ style=3D"letter-spacing:-0.2pt">
+</span><span style=3D"letter-spacing:-0.1pt">Review<u></u><u></u></span></s=
+pan></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>10=
+.<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif;letter-spacing:-0.1pt">API<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.9pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>11=
+.<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Production<span style=3D"letter-spacing:-0.15pt">
+</span>Deployment<span style=3D"letter-spacing:-0.1pt"> </span>&amp;<span s=
+tyle=3D"letter-spacing:-0.15pt">
+</span>Go-Live<span style=3D"letter-spacing:-0.15pt"> </span><span style=3D=
+"letter-spacing:-0.1pt">Certification<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.9pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>12=
+.<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif;letter-spacing:-0.1pt">Time keeping, billing and collections mo=
+dule<u></u><u></u></span></p>
+<p class=3D"MsoNormal">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif;letter-spacing:-=
+0.1pt"><u></u>=C2=A0<u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:36.6pt">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">Each<span style=
+=3D"letter-spacing:-0.25pt">
+</span>milestone<span style=3D"letter-spacing:-0.3pt"> </span>includes<span=
+ style=3D"letter-spacing:-0.3pt">
+</span>engineering<span style=3D"letter-spacing:-0.2pt"> </span>output,<spa=
+n style=3D"letter-spacing:-0.35pt">
+</span>QA<span style=3D"letter-spacing:-0.2pt"> </span>testing,<span style=
+=3D"letter-spacing:-0.25pt">
+</span>documentation,<span style=3D"letter-spacing:-0.2pt"> </span>and stag=
+ing deployment.<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-top:13.9pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f;color:rgb(79,129,188)">Client<span style=3D"letter-spacing:-0.05pt">
+</span><span style=3D"letter-spacing:-0.1pt">Review<u></u><u></u></span></s=
+pan></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.6pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:0.05pt">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">Client<span sty=
+le=3D"letter-spacing:-0.2pt">
+</span>shall<span style=3D"letter-spacing:-0.25pt"> </span>review<span styl=
+e=3D"letter-spacing:-0.2pt">
+</span>each<span style=3D"letter-spacing:-0.25pt"> </span>milestone<span st=
+yle=3D"letter-spacing:-0.25pt">
+</span>within<span style=3D"letter-spacing:-0.1pt"> </span><b>10<span style=
+=3D"letter-spacing:-0.15pt">
+</span>business<span style=3D"letter-spacing:-0.2pt"> </span>days</b>.<span=
+ style=3D"letter-spacing:-0.2pt">
+</span>Failure<span style=3D"letter-spacing:-0.25pt"> </span>to<span style=
+=3D"letter-spacing:-0.2pt">
+</span>respond constitutes <b>provisional acceptance</b>.<u></u><u></u></sp=
+an></p>
+<p class=3D"MsoNormal"><u></u>=C2=A0<u></u></p>
+<p class=3D"MsoNormal" style=3D"margin-left:12.35pt">
+<u></u><b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sa=
+ns-serif;color:rgb(54,95,145)"><span>3.<span style=3D"font:7pt &quot;Times =
+New Roman&quot;">=C2=A0
+</span></span></span></b><u></u><b><span style=3D"font-size:11pt;font-famil=
+y:&quot;Segoe UI&quot;,sans-serif;color:rgb(54,95,145)">Annual Maintenance =
+Contract &amp;<span style=3D"letter-spacing:-0.2pt">
+</span>Support<span style=3D"letter-spacing:-0.15pt"> </span>(=E2=80=9CAMC=
+=E2=80=9D)<span style=3D"letter-spacing:-0.1pt"><u></u><u></u></span></span=
+></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.6pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal"><span style=3D"font-family:&quot;Segoe UI&quot;,sans=
+-serif">Developer<span style=3D"letter-spacing:-0.15pt">
+</span>shall<span style=3D"letter-spacing:-0.15pt"> </span>provide<span sty=
+le=3D"letter-spacing:-0.1pt">
+</span>Maintenance<span style=3D"letter-spacing:-0.2pt"> </span>&amp;<span =
+style=3D"letter-spacing:-0.15pt">
+</span>Support<span style=3D"letter-spacing:-0.1pt"> including:<u></u><u></=
+u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:0.5in;margin-b=
+ottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Bug<span style=3D"letter-spacing:-0.1pt">
+</span>fixes<span style=3D"letter-spacing:-0.05pt"> </span>&amp;<span style=
+=3D"letter-spacing:-0.1pt"> patches<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Performance<span style=3D"letter-spacing:-0.15pt">
+</span><span style=3D"letter-spacing:-0.1pt">optimization<u></u><u></u></sp=
+an></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Security<span style=3D"letter-spacing:-0.2pt">
+</span><span style=3D"letter-spacing:-0.1pt">updates<u></u><u></u></span></=
+span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Environment<span style=3D"letter-spacing:-0.15pt">
+</span><span style=3D"letter-spacing:-0.1pt">monitoring<u></u><u></u></span=
+></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Technical<span style=3D"letter-spacing:-0.25pt">
+</span>assistance and training<span style=3D"letter-spacing:-0.1pt"> </span=
+>to<span style=3D"letter-spacing:-0.1pt"> staff and Client customers<u></u>=
+<u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif;letter-spacing:-0.1pt">Source code and software, and well as Pr=
+oject updates as necessary to maintain and operate the Platform<u></u><u></=
+u></span></p>
+<p class=3D"MsoNormal"><u></u>=C2=A0<u></u></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:18.7pt;margin-=
+bottom:0.0001pt">
+<u></u><b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sa=
+ns-serif;color:rgb(54,95,145)"><span>9.<span style=3D"font:7pt &quot;Times =
+New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0
+</span></span></span></b><u></u><b><span style=3D"font-size:11pt;font-famil=
+y:&quot;Segoe UI&quot;,sans-serif;color:rgb(54,95,145)">Delivery<span style=
+=3D"letter-spacing:-0.2pt">
+</span><span style=3D"letter-spacing:-0.1pt">Timeline<u></u><u></u></span><=
+/span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.55pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-right:33.95pt;margin-left:0.5in;marg=
+in-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Schedule<span style=3D"letter-spacing:-0.35pt">
+</span>1<span style=3D"letter-spacing:-0.2pt"> </span>Base<span style=3D"le=
+tter-spacing:-0.3pt">
+</span>Scope:<span style=3D"letter-spacing:-0.15pt"> </span><b>32<span styl=
+e=3D"letter-spacing:-0.25pt">
+</span>working<span style=3D"letter-spacing:-0.15pt"> </span>weeks<span sty=
+le=3D"letter-spacing:-0.15pt">
+</span>(Excluding<span style=3D"letter-spacing:-0.2pt"> </span>first<span s=
+tyle=3D"letter-spacing:-0.15pt">
+</span>two<span style=3D"letter-spacing:-0.1pt"> </span>weeks for set up of=
+ project kick off)<u></u><u></u></b></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11pt;font-family:&quot;Sego=
+e UI&quot;,sans-serif">Schedule<span style=3D"letter-spacing:-0.4pt">
+</span>2<span style=3D"letter-spacing:-0.25pt"> </span>Expanded<span style=
+=3D"letter-spacing:-0.35pt">
+</span>SRS:<span style=3D"letter-spacing:-0.25pt"> </span>approximate<span =
+style=3D"letter-spacing:-0.3pt">
+</span><b>20=E2=80=9325%<span style=3D"letter-spacing:-0.2pt"> </span>addit=
+ional<span style=3D"letter-spacing:-0.3pt">
+</span>effort Total estimated/approximate timeline: 38=E2=80=9340 working w=
+eeks</b></span><u></u><u></u></p>
+<p class=3D"MsoNormal"><u></u>=C2=A0<u></u></p>
+<p class=3D"MsoNormal" style=3D"margin-top:14.05pt">
+<span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-serif">=
+<u></u>=C2=A0<u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:18.7pt">
+<a name=3D"m_8225869843177981547_m_2272171887740453900_m_817405126067664214=
+4__Hlk217464275" rel=3D"noreferrer"><u></u><b><span style=3D"font-size:11pt=
+;font-family:&quot;Segoe UI&quot;,sans-serif;color:rgb(54,95,145)"><span>10=
+.<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0
+</span></span></span></b><u></u><b><span style=3D"font-size:11pt;font-famil=
+y:&quot;Segoe UI&quot;,sans-serif;color:rgb(54,95,145)">Schedules<span styl=
+e=3D"letter-spacing:-0.4pt">
+</span><span style=3D"letter-spacing:-0.1pt">Summary<u></u><u></u></span></=
+span></b></a></p>
+<span></span>
+<p class=3D"MsoNormal" style=3D"margin-top:1.6pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal"><span style=3D"font-family:&quot;Segoe UI&quot;,sans=
+-serif">This<span style=3D"letter-spacing:-0.3pt">
+</span>Agreement<span style=3D"letter-spacing:-0.15pt"> </span>includes<spa=
+n style=3D"letter-spacing:-0.2pt">
+</span>the<span style=3D"letter-spacing:-0.15pt"> </span>following<span sty=
+le=3D"letter-spacing:-0.15pt">
+</span><span style=3D"letter-spacing:-0.1pt">Schedules:<u></u><u></u></span=
+></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:0.5in;margin-b=
+ottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Schedule<span style=3D"letter-spacing:-0.2pt">
+</span>1 =E2=80=93 Base<span style=3D"letter-spacing:-0.05pt"> </span><span=
+ style=3D"letter-spacing:-0.1pt">Scope<u></u><u></u></span></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Schedule<span style=3D"letter-spacing:-0.15pt">
+</span>2<span style=3D"letter-spacing:-0.05pt"> </span>=E2=80=93<span style=
+=3D"letter-spacing:-0.1pt">
+</span>Expanded<span style=3D"letter-spacing:-0.15pt"> </span>SRS<span styl=
+e=3D"letter-spacing:-0.1pt"> Scope<u></u><u></u></span></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Schedule<span style=3D"letter-spacing:-0.15pt">
+</span>3 =E2=80=93<span style=3D"letter-spacing:-0.1pt"> </span>AI<span sty=
+le=3D"letter-spacing:-0.05pt">
+</span>Usage<span style=3D"letter-spacing:-0.1pt"> </span><span style=3D"le=
+tter-spacing:-0.2pt">Plan<u></u><u></u></span></span></b></p>
+</div>
+<b><span style=3D"font-size:12pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f;letter-spacing:-0.2pt"><br clear=3D"all" style=3D"break-before:page">
+</span></b>
+<div>
+<p class=3D"MsoNormal"><b><span style=3D"font-family:&quot;Segoe UI&quot;,s=
+ans-serif"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal"><b><span style=3D"font-family:&quot;Segoe UI&quot;,s=
+ans-serif"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:7pt">
+<b><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><u></u>=C2=
+=A0<u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Schedule<span style=3D"letter-spacing:-0.15pt">
+</span>A<span style=3D"letter-spacing:-0.15pt"> </span>=E2=80=93<span style=
+=3D"letter-spacing:-0.05pt">
+</span>Pricing<span style=3D"letter-spacing:-0.15pt"> </span>&amp;<span sty=
+le=3D"letter-spacing:-0.1pt"> Milestones<u></u><u></u></span></span></b></p=
+>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Schedule<span style=3D"letter-spacing:-0.15pt">
+</span>C<span style=3D"letter-spacing:-0.15pt"> </span>=E2=80=93<span style=
+=3D"letter-spacing:-0.1pt">
+</span>Support <span style=3D"letter-spacing:-0.25pt">SLA<u></u><u></u></sp=
+an></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:9.95pt">
+<u></u><span>
+</span></p><table cellpadding=3D"0" cellspacing=3D"0" align=3D"left">
+<tbody>
+<tr>
+<td width=3D"195" height=3D"0"></td>
+</tr>
+<tr>
+<td></td>
+<td><img width=3D"577" height=3D"3" style=3D"width: 6.0138in; height: 0.027=
+7in;" src=3D"cid:ii_19be1d01b7a5b16b21"></td>
+</tr>
+</tbody>
+</table>
+<u></u><br clear=3D"ALL">
+<b><span style=3D"font-size:10pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u><u></u></span></b><p></p>
+<p class=3D"MsoNormal" style=3D"margin-top:14.2pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f;color:rgb(54,95,145);letter-spacing:-0.1pt">Schedules<u></u><u></u></span=
+></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:12.25pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f;color:rgb(79,129,188)">Schedule<span style=3D"letter-spacing:-0.2pt">
+</span>1<span style=3D"letter-spacing:-0.2pt"> </span>=E2=80=93<span style=
+=3D"letter-spacing:-0.15pt">
+</span>Base<span style=3D"letter-spacing:-0.3pt"> </span>Scope<span style=
+=3D"letter-spacing:-0.1pt"> Summary<u></u><u></u></span></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.45pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Multi-Tenant<span style=3D"letter-spacing:-0.2pt">
+</span>Super<span style=3D"letter-spacing:-0.15pt"> </span>Admin<span style=
+=3D"letter-spacing:-0.2pt">
+</span><span style=3D"letter-spacing:-0.1pt">Portal(partial)<u></u><u></u><=
+/span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Agency<span style=3D"letter-spacing:-0.1pt"> Dashboard<u></u><=
+u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">EVV<span style=3D"letter-spacing:-0.2pt">
+</span>Mobile<span style=3D"letter-spacing:-0.15pt"> </span><span style=3D"=
+letter-spacing:-0.1pt">Application<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Scheduling<span style=3D"letter-spacing:-0.2pt">
+</span><span style=3D"letter-spacing:-0.1pt">Engine<u></u><u></u></span></s=
+pan></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Authorization<span style=3D"letter-spacing:-0.1pt"> Engine<u><=
+/u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Caregiver<span style=3D"letter-spacing:-0.1pt">
+</span>&amp;<span style=3D"letter-spacing:-0.2pt"> </span>Client<span style=
+=3D"letter-spacing:-0.05pt">
+</span><span style=3D"letter-spacing:-0.1pt">Management<u></u><u></u></span=
+></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">ADL,<span style=3D"letter-spacing:-0.2pt">
+</span>Incident,<span style=3D"letter-spacing:-0.05pt"> </span><span style=
+=3D"letter-spacing:-0.1pt">Medication<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Reporting<span style=3D"letter-spacing:-0.05pt">
+</span>&amp;<span style=3D"letter-spacing:-0.1pt"> Analytics<u></u><u></u><=
+/span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Cloud<span style=3D"letter-spacing:-0.2pt">
+</span>Infrastructure,<span style=3D"letter-spacing:-0.15pt"> </span>DevOps=
+,<span style=3D"letter-spacing:-0.15pt">
+</span>CI/CD,<span style=3D"letter-spacing:-0.2pt"> </span>Security<span st=
+yle=3D"letter-spacing:-0.15pt">
+</span><span style=3D"letter-spacing:-0.1pt">Hardening<u></u><u></u></span>=
+</span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif;letter-spacing:-0.1pt">Time keeping, billing and collection mod=
+ule<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-top:14.05pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f;color:rgb(79,129,188)">Schedule<span style=3D"letter-spacing:-0.2pt">
+</span>2<span style=3D"letter-spacing:-0.15pt"> </span>=E2=80=93<span style=
+=3D"letter-spacing:-0.2pt">
+</span>Expanded<span style=3D"letter-spacing:-0.3pt"> </span>SRS<span style=
+=3D"letter-spacing:-0.25pt">
+</span><span style=3D"letter-spacing:-0.2pt">Scope<u></u><u></u></span></sp=
+an></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.45pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Enhanced<span style=3D"letter-spacing:-0.25pt">
+</span>documentation<span style=3D"letter-spacing:-0.25pt"> </span><span st=
+yle=3D"letter-spacing:-0.1pt">modules<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Expanded<span style=3D"letter-spacing:-0.1pt"> reporting<u></u=
+><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Advanced<span style=3D"letter-spacing:-0.25pt">
+</span>compliance<span style=3D"letter-spacing:-0.15pt"> </span><span style=
+=3D"letter-spacing:-0.1pt">checks<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:0.5in;margin-b=
+ottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Additional<span style=3D"letter-spacing:-0.3pt">
+</span>caregiver<span style=3D"letter-spacing:-0.2pt"> </span>and<span styl=
+e=3D"letter-spacing:-0.2pt">
+</span>client<span style=3D"letter-spacing:-0.15pt"> </span><span style=3D"=
+letter-spacing:-0.1pt">features<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">System<span style=3D"letter-spacing:-0.25pt">
+</span>scalability<span style=3D"letter-spacing:-0.25pt"> </span>and<span s=
+tyle=3D"letter-spacing:-0.2pt">
+</span>optimization<span style=3D"letter-spacing:-0.2pt"> </span><span styl=
+e=3D"letter-spacing:-0.1pt">requirements<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Multi-Tenant<span style=3D"letter-spacing:-0.15pt">
+</span>Super<span style=3D"letter-spacing:-0.15pt"> </span>Admin<span style=
+=3D"letter-spacing:-0.2pt">
+</span>Portal<span style=3D"letter-spacing:-0.15pt"> </span><span style=3D"=
+letter-spacing:-0.1pt">(full)<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">AI<span style=3D"letter-spacing:-0.15pt">
+</span>powered<span style=3D"letter-spacing:-0.05pt"> </span>agency<span st=
+yle=3D"letter-spacing:-0.1pt">
+</span>training<span style=3D"letter-spacing:-0.1pt"> </span>&amp;<span sty=
+le=3D"letter-spacing:-0.1pt">
+</span>Help<span style=3D"letter-spacing:-0.05pt"> </span><span style=3D"le=
+tter-spacing:-0.1pt">Module<u></u><u></u></span></span></p>
+</div>
+<span style=3D"font-size:12pt;font-family:&quot;Segoe UI&quot;,sans-serif;l=
+etter-spacing:-0.1pt"><br clear=3D"all" style=3D"break-before:page">
+</span>
+<div>
+<p class=3D"MsoNormal"><span style=3D"font-size:11pt;font-family:&quot;Sego=
+e UI&quot;,sans-serif"><u></u>=C2=A0<u></u></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11pt;font-family:&quot;Sego=
+e UI&quot;,sans-serif"><u></u>=C2=A0<u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-top:11pt">
+<span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-serif">=
+<u></u>=C2=A0<u></u></span></p>
+<p class=3D"MsoNormal"><b><span style=3D"font-size:11pt;font-family:&quot;S=
+egoe UI&quot;,sans-serif;color:rgb(79,129,188)">Schedule<span style=3D"lett=
+er-spacing:-0.2pt">
+</span>3<span style=3D"letter-spacing:-0.15pt"> </span>=E2=80=93<span style=
+=3D"letter-spacing:-0.15pt">
+</span>AI<span style=3D"letter-spacing:-0.2pt"> </span>Usage<span style=3D"=
+letter-spacing:-0.2pt"> Plan<u></u><u></u></span></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.45pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-right:19.7pt">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">AI-related<span=
+ style=3D"letter-spacing:-0.15pt">
+</span>components<span style=3D"letter-spacing:-0.2pt"> </span>of<span styl=
+e=3D"letter-spacing:-0.2pt">
+</span>the<span style=3D"letter-spacing:-0.2pt"> </span>Platform<span style=
+=3D"letter-spacing:-0.2pt">
+</span>are<span style=3D"letter-spacing:-0.1pt"> </span>innovation-based<sp=
+an style=3D"letter-spacing:-0.1pt">
+</span>and<span style=3D"letter-spacing:-0.15pt"> </span>will<span style=3D=
+"letter-spacing:-0.1pt">
+</span>evolve<span style=3D"letter-spacing:-0.2pt"> </span>over time<span s=
+tyle=3D"letter-spacing:-0.3pt">
+</span>as<span style=3D"letter-spacing:-0.15pt"> </span>AI<span style=3D"le=
+tter-spacing:-0.2pt">
+</span>technology<span style=3D"letter-spacing:-0.25pt"> </span>develops.<s=
+pan style=3D"letter-spacing:-0.15pt">
+</span>The<span style=3D"letter-spacing:-0.15pt"> </span>features<span styl=
+e=3D"letter-spacing:-0.2pt">
+</span>listed<span style=3D"letter-spacing:-0.1pt"> </span>in<span style=3D=
+"letter-spacing:-0.15pt">
+</span>this<span style=3D"letter-spacing:-0.3pt"> </span>Schedule<span styl=
+e=3D"letter-spacing:-0.15pt">
+</span>represent<span style=3D"letter-spacing:-0.15pt"> </span>the currentl=
+y planned capabilities; any additional AI enhancements or new innovations d=
+iscovered during the project may require separate approval and incremental =
+scope.<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:36.6pt;margin-left:0in;margin-=
+bottom:0.0001pt">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">The Platform wi=
+ll incorporate AI capabilities in various functional modules to support<spa=
+n style=3D"letter-spacing:-0.25pt">
+</span>automation<span style=3D"letter-spacing:-0.25pt"> </span>and<span st=
+yle=3D"letter-spacing:-0.2pt">
+</span>operational<span style=3D"letter-spacing:-0.3pt"> </span>efficiency.=
+<span style=3D"letter-spacing:-0.2pt">
+</span>AI<span style=3D"letter-spacing:-0.25pt"> </span>will<span style=3D"=
+letter-spacing:-0.3pt">
+</span>be<span style=3D"letter-spacing:-0.2pt"> </span>used<span style=3D"l=
+etter-spacing:-0.15pt">
+</span>in<span style=3D"letter-spacing:-0.2pt"> </span>the<span style=3D"le=
+tter-spacing:-0.3pt">
+</span>following sections of the Platform</span><span style=3D"font-size:11=
+pt;font-family:&quot;Segoe UI&quot;,sans-serif">:<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:35.95pt;margin=
+-bottom:0.0001pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>1.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Caregiver<span style=3D"letter-spacing:-0.25pt">
+</span>Management<span style=3D"letter-spacing:-0.2pt"> </span>(Agency<span=
+ style=3D"letter-spacing:-0.15pt">
+</span><span style=3D"letter-spacing:-0.1pt">Dashboard)<u></u><u></u></span=
+></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-right:18.4pt;margin-left:1in;margin-=
+bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:&quot;Courier New&quot;"><=
+span>o<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">AI<span style=3D"letter-spacing:-0.25pt">
+</span>skill-to-client<span style=3D"letter-spacing:-0.2pt"> </span>matchin=
+g<span style=3D"letter-spacing:-0.2pt">
+</span>engine<span style=3D"letter-spacing:-0.3pt"> </span>to<span style=3D=
+"letter-spacing:-0.2pt">
+</span>recommend<span style=3D"letter-spacing:-0.2pt"> </span>suitable<span=
+ style=3D"letter-spacing:-0.3pt">
+</span>caregiver=E2=80=93client<span style=3D"letter-spacing:-0.25pt"> </sp=
+an>pairings<span style=3D"letter-spacing:-0.35pt">
+</span>based<span style=3D"letter-spacing:-0.2pt"> </span>on<span style=3D"=
+letter-spacing:-0.3pt">
+</span>skills,<span style=3D"letter-spacing:-0.25pt"> </span>proximity,<spa=
+n style=3D"letter-spacing:-0.3pt">
+</span>availability,<span style=3D"letter-spacing:-0.25pt"> </span>and<span=
+ style=3D"letter-spacing:-0.25pt">
+</span>care<span style=3D"letter-spacing:-0.35pt"> </span>needs.<u></u><u><=
+/u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>2.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Scheduling<span style=3D"letter-spacing:-0.25pt">
+</span>Module<span style=3D"letter-spacing:-0.25pt"> </span>(Agency<span st=
+yle=3D"letter-spacing:-0.15pt">
+</span><span style=3D"letter-spacing:-0.1pt">Dashboard)<u></u><u></u></span=
+></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-right:39pt;margin-left:1in;margin-bo=
+ttom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:&quot;Courier New&quot;"><=
+span>o<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">AI-driven<span style=3D"letter-spacing:-0.35pt">
+</span>shift<span style=3D"letter-spacing:-0.3pt"> </span>optimization<span=
+ style=3D"letter-spacing:-0.3pt">
+</span>to<span style=3D"letter-spacing:-0.3pt"> </span>recommend<span style=
+=3D"letter-spacing:-0.3pt">
+</span>staffing<span style=3D"letter-spacing:-0.35pt"> </span>patterns<span=
+ style=3D"letter-spacing:-0.4pt">
+</span>and reduce scheduling conflicts.<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:77.85pt;margin-left:1in;margin=
+-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:&quot;Courier New&quot;"><=
+span>o<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Geo-based<span style=3D"letter-spacing:-0.3pt">
+</span>caregiver<span style=3D"letter-spacing:-0.4pt"> </span>assignment<sp=
+an style=3D"letter-spacing:-0.3pt">
+</span>AI<span style=3D"letter-spacing:-0.3pt"> </span>for<span style=3D"le=
+tter-spacing:-0.35pt">
+</span>best-fit<span style=3D"letter-spacing:-0.4pt"> </span>matching consi=
+dering distance and availability as needed.<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>3.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Client<span style=3D"letter-spacing:-0.1pt">
+</span>Records<span style=3D"letter-spacing:-0.05pt"> </span>=E2=80=BA<span=
+ style=3D"letter-spacing:-0.1pt"> Documentation<u></u><u></u></span></span>=
+</b></p>
+<p class=3D"MsoNormal" style=3D"margin-right:57.5pt;margin-left:1in;margin-=
+bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:&quot;Courier New&quot;"><=
+span>o<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Intelligent<span style=3D"letter-spacing:-0.3pt">
+</span>OCR<span style=3D"letter-spacing:-0.3pt"> </span>for<span style=3D"l=
+etter-spacing:-0.3pt">
+</span>extracting<span style=3D"letter-spacing:-0.3pt"> </span>structured<s=
+pan style=3D"letter-spacing:-0.3pt">
+</span>data<span style=3D"letter-spacing:-0.3pt"> </span>from<span style=3D=
+"letter-spacing:-0.35pt">
+</span>uploaded documents and improving documentation efficiency.<u></u><u>=
+</u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>4.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">EVV<span style=3D"letter-spacing:-0.15pt">
+</span>Mobile<span style=3D"letter-spacing:-0.1pt"> Application<u></u><u></=
+u></span></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-left:71.95pt">
+<u></u><span style=3D"font-size:10pt;font-family:&quot;Courier New&quot;"><=
+span>o<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Voice-to-notes<span style=3D"letter-spacing:-0.4pt">
+</span>and<span style=3D"letter-spacing:-0.1pt"> </span>AI<span style=3D"le=
+tter-spacing:-0.25pt">
+</span>assistant<span style=3D"letter-spacing:-0.1pt"> </span>for<span styl=
+e=3D"letter-spacing:-0.1pt">
+</span>caregiver<span style=3D"letter-spacing:-0.05pt"> </span><span style=
+=3D"letter-spacing:-0.1pt">notes.<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>5.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Virtual<span style=3D"letter-spacing:-0.35pt">
+</span>Receptionist<span style=3D"letter-spacing:-0.3pt"> </span>/<span sty=
+le=3D"letter-spacing:-0.2pt">
+</span>Communication<span style=3D"letter-spacing:-0.3pt"> </span><span sty=
+le=3D"letter-spacing:-0.2pt">Suite<u></u><u></u></span></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-right:57pt;margin-left:1in;margin-bo=
+ttom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:&quot;Courier New&quot;"><=
+span>o<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">AI-powered<span style=3D"letter-spacing:-0.4pt">
+</span>communication<span style=3D"letter-spacing:-0.4pt"> </span>assistant=
+<span style=3D"letter-spacing:-0.35pt">
+</span>using<span style=3D"letter-spacing:-0.35pt"> </span>natural<span sty=
+le=3D"letter-spacing:-0.45pt">
+</span>language processing for automated handling of inbound calls, inquiry=
+ routing, and 24/7 virtual support (proof-of-concept).<u></u><u></u></span>=
+</p>
+</div>
+<span style=3D"font-size:12pt;font-family:&quot;Segoe UI&quot;,sans-serif">=
+<br clear=3D"all" style=3D"break-before:page">
+</span>
+<div>
+<p class=3D"MsoNormal"><u></u>=C2=A0<u></u></p>
+<p class=3D"MsoNormal" style=3D"margin-right:265.35pt;margin-left:0in;margi=
+n-bottom:0.0001pt;line-height:182%">
+<b><span style=3D"font-size:11pt;line-height:182%;font-family:&quot;Segoe U=
+I&quot;,sans-serif;color:rgb(79,129,188)">Schedule T =E2=80=93 Testing Scop=
+e Developer<span style=3D"letter-spacing:-0.8pt">
+</span>Testing<span style=3D"letter-spacing:-0.75pt"> </span>Responsibiliti=
+es<u></u><u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-right:36.6pt;margin-left:0in;margin-=
+bottom:0.0001pt">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">The<span style=
+=3D"letter-spacing:-0.25pt">
+</span>Developer<span style=3D"letter-spacing:-0.15pt"> </span>will<span st=
+yle=3D"letter-spacing:-0.15pt">
+</span>perform<span style=3D"letter-spacing:-0.2pt"> </span>the<span style=
+=3D"letter-spacing:-0.25pt">
+</span>following<span style=3D"letter-spacing:-0.2pt"> </span>testing<span =
+style=3D"letter-spacing:-0.15pt">
+</span>activities<span style=3D"letter-spacing:-0.25pt"> </span>as<span sty=
+le=3D"letter-spacing:-0.25pt">
+</span>part<span style=3D"letter-spacing:-0.2pt"> </span>of<span style=3D"l=
+etter-spacing:-0.15pt">
+</span>the development scope:<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:35.95pt;margin=
+-bottom:0.0001pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>1.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Unit<span style=3D"letter-spacing:-0.2pt">
+</span>testing<span style=3D"letter-spacing:-0.05pt"> </span>of<span style=
+=3D"letter-spacing:-0.2pt">
+</span>all<span style=3D"letter-spacing:-0.05pt"> </span><span style=3D"let=
+ter-spacing:-0.1pt">modules<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>2.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Integration<span style=3D"letter-spacing:-0.25pt">
+</span>testing<span style=3D"letter-spacing:-0.15pt"> </span>between<span s=
+tyle=3D"letter-spacing:-0.2pt">
+</span><span style=3D"letter-spacing:-0.1pt">components<u></u><u></u></span=
+></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>3.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Basic<span style=3D"letter-spacing:-0.15pt">
+</span>functional<span style=3D"letter-spacing:-0.25pt"> </span>testing<spa=
+n style=3D"letter-spacing:-0.15pt">
+</span>against<span style=3D"letter-spacing:-0.2pt"> </span><span style=3D"=
+letter-spacing:-0.1pt">requirements<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>4.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Database<span style=3D"letter-spacing:-0.25pt">
+</span>interaction<span style=3D"letter-spacing:-0.2pt"> </span><span style=
+=3D"letter-spacing:-0.1pt">validation<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>5.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">API<span style=3D"letter-spacing:-0.2pt">
+</span>endpoint<span style=3D"letter-spacing:-0.15pt"> </span>response<span=
+ style=3D"letter-spacing:-0.2pt">
+</span><span style=3D"letter-spacing:-0.1pt">verification<u></u><u></u></sp=
+an></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>6.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Error-handling<span style=3D"letter-spacing:-0.15pt">
+</span><span style=3D"letter-spacing:-0.1pt">testing<u></u><u></u></span></=
+span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>7.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Cross-browser<span style=3D"letter-spacing:-0.35pt">
+</span>compatibility<span style=3D"letter-spacing:-0.4pt"> </span><span sty=
+le=3D"letter-spacing:-0.1pt">checks<u></u><u></u></span></span></p>
+</div>
+<span style=3D"font-size:12pt;font-family:&quot;Segoe UI&quot;,sans-serif;l=
+etter-spacing:-0.1pt"><br clear=3D"all" style=3D"break-before:page">
+</span>
+<div>
+<p class=3D"MsoNormal"><span style=3D"font-family:&quot;Segoe UI&quot;,sans=
+-serif"><u></u>=C2=A0<u></u></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-family:&quot;Segoe UI&quot;,sans=
+-serif"><u></u>=C2=A0<u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-top:7pt">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><u></u>=C2=A0<u=
+></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>8.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Mobile<span style=3D"letter-spacing:-0.35pt">
+</span>responsiveness<span style=3D"letter-spacing:-0.2pt"> </span><span st=
+yle=3D"letter-spacing:-0.1pt">testing<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.95pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>9.=
+<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=
+=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Basic<span style=3D"letter-spacing:-0.1pt">
+</span>form<span style=3D"letter-spacing:-0.1pt"> </span>validation<span st=
+yle=3D"letter-spacing:-0.05pt">
+</span><span style=3D"letter-spacing:-0.1pt">testing<u></u><u></u></span></=
+span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.9pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>10=
+.<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Navigation<span style=3D"letter-spacing:-0.15pt">
+</span>and<span style=3D"letter-spacing:-0.05pt"> </span>workflow<span styl=
+e=3D"letter-spacing:-0.15pt">
+</span><span style=3D"letter-spacing:-0.1pt">testing<u></u><u></u></span></=
+span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.9pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>11=
+.<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">User<span style=3D"letter-spacing:-0.25pt">
+</span>role<span style=3D"letter-spacing:-0.2pt"> </span>and<span style=3D"=
+letter-spacing:-0.1pt">
+</span>permission<span style=3D"letter-spacing:-0.15pt"> </span><span style=
+=3D"letter-spacing:-0.1pt">testing<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.9pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>12=
+.<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Support<span style=3D"letter-spacing:-0.15pt">
+</span>during<span style=3D"letter-spacing:-0.1pt"> </span>Client-led<span =
+style=3D"letter-spacing:-0.05pt">
+</span>UAT<span style=3D"letter-spacing:-0.15pt"> </span><span style=3D"let=
+ter-spacing:-0.1pt">cycles<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:35.9pt;margin-=
+bottom:0.0001pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>13=
+.<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Bug<span style=3D"letter-spacing:-0.05pt">
+</span>fixing<span style=3D"letter-spacing:-0.1pt"> </span>based<span style=
+=3D"letter-spacing:-0.05pt">
+</span>on<span style=3D"letter-spacing:-0.05pt"> </span>UAT<span style=3D"l=
+etter-spacing:-0.1pt"> feedback<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.9pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>14=
+.<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Post-deployment<span style=3D"letter-spacing:-0.3pt">
+</span>critical<span style=3D"letter-spacing:-0.35pt"> </span>issue<span st=
+yle=3D"letter-spacing:-0.3pt">
+</span><span style=3D"letter-spacing:-0.1pt">resolution<u></u><u></u></span=
+></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:35.9pt">
+<u></u><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><span>15=
+.<span style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Documentation<span style=3D"letter-spacing:-0.2pt">
+</span>of<span style=3D"letter-spacing:-0.2pt"> </span>test<span style=3D"l=
+etter-spacing:-0.15pt">
+</span>scenarios<span style=3D"letter-spacing:-0.2pt"> </span>(not<span sty=
+le=3D"letter-spacing:-0.15pt">
+</span>exhaustive<span style=3D"letter-spacing:-0.2pt"> </span>test<span st=
+yle=3D"letter-spacing:-0.05pt">
+</span><span style=3D"letter-spacing:-0.1pt">cases)<u></u><u></u></span></s=
+pan></p>
+<p class=3D"MsoNormal" style=3D"margin-top:13.9pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f;color:rgb(79,129,188)">Advisory<span style=3D"letter-spacing:-0.2pt">
+</span>Note<span style=3D"letter-spacing:-0.15pt"> </span>(For<span style=
+=3D"letter-spacing:-0.2pt">
+</span>Client<span style=3D"letter-spacing:-0.15pt"> </span><span style=3D"=
+letter-spacing:-0.1pt">Awareness)<u></u><u></u></span></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.55pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-right:19.7pt">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">The Developer&#=
+39;s testing focuses on functional correctness and baseline quality. For<sp=
+an style=3D"letter-spacing:-0.25pt">
+</span>production<span style=3D"letter-spacing:-0.3pt"> </span>environments=
+<span style=3D"letter-spacing:-0.3pt">
+</span>handling<span style=3D"letter-spacing:-0.25pt"> </span>sensitive<spa=
+n style=3D"letter-spacing:-0.3pt">
+</span>data,<span style=3D"letter-spacing:-0.3pt"> </span>regulatory<span s=
+tyle=3D"letter-spacing:-0.3pt">
+</span>compliance,<span style=3D"letter-spacing:-0.25pt"> </span>or enterpr=
+ise workload validation, independent third-party testing is industry-standa=
+rd and is the Client=E2=80=99s responsibility to procure.<u></u><u></u></sp=
+an></p>
+<p class=3D"MsoNormal" style=3D"margin-top:14.1pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f;color:rgb(79,129,188)">Testing<span style=3D"letter-spacing:-0.3pt">
+</span>Exclusions<span style=3D"letter-spacing:-0.3pt"> </span>(Not<span st=
+yle=3D"letter-spacing:-0.3pt">
+</span>Included<span style=3D"letter-spacing:-0.25pt"> </span>in<span style=
+=3D"letter-spacing:-0.25pt">
+</span>This<span style=3D"letter-spacing:-0.3pt"> </span><span style=3D"let=
+ter-spacing:-0.1pt">Agreement)<u></u><u></u></span></span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.55pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal"><span style=3D"font-family:&quot;Segoe UI&quot;,sans=
+-serif">The<span style=3D"letter-spacing:-0.25pt">
+</span>following<span style=3D"letter-spacing:-0.1pt"> </span>items<span st=
+yle=3D"letter-spacing:-0.2pt">
+</span>are<span style=3D"letter-spacing:-0.15pt"> </span>explicitly<span st=
+yle=3D"letter-spacing:-0.05pt">
+</span>excluded<span style=3D"letter-spacing:-0.15pt"> </span>and<span styl=
+e=3D"letter-spacing:-0.05pt">
+</span>require<span style=3D"letter-spacing:-0.15pt"> </span>a<span style=
+=3D"letter-spacing:-0.1pt">
+</span>separate<span style=3D"letter-spacing:-0.1pt"> engagement:<u></u><u>=
+</u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:0in;margin-left:0.5in;margin-b=
+ottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Independent<span style=3D"letter-spacing:-0.2pt">
+</span>third-party<span style=3D"letter-spacing:-0.15pt"> </span>security<s=
+pan style=3D"letter-spacing:-0.2pt">
+</span>/<span style=3D"letter-spacing:-0.1pt"> </span>penetration<span styl=
+e=3D"letter-spacing:-0.1pt"> testing<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Performance,<span style=3D"letter-spacing:-0.1pt">
+</span>load,<span style=3D"letter-spacing:-0.05pt"> </span>and<span style=
+=3D"letter-spacing:-0.2pt">
+</span>stress<span style=3D"letter-spacing:-0.15pt"> </span><span style=3D"=
+letter-spacing:-0.1pt">testing<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Industry<span style=3D"letter-spacing:-0.2pt">
+</span>compliance<span style=3D"letter-spacing:-0.2pt"> </span>validation<s=
+pan style=3D"letter-spacing:-0.05pt">
+</span>(HIPAA,<span style=3D"letter-spacing:-0.05pt"> </span>PCI-DSS,<span =
+style=3D"letter-spacing:-0.1pt">
+</span>SOC2,<span style=3D"letter-spacing:-0.05pt"> </span><span style=3D"l=
+etter-spacing:-0.1pt">etc.)<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Automated<span style=3D"letter-spacing:-0.3pt">
+</span>regression<span style=3D"letter-spacing:-0.2pt"> </span>test<span st=
+yle=3D"letter-spacing:-0.2pt">
+</span>suite<span style=3D"letter-spacing:-0.15pt"> </span><span style=3D"l=
+etter-spacing:-0.1pt">development<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Accessibility<span style=3D"letter-spacing:-0.15pt">
+</span>compliance<span style=3D"letter-spacing:-0.3pt"> </span>audit<span s=
+tyle=3D"letter-spacing:-0.2pt">
+</span>(WCAG,<span style=3D"letter-spacing:-0.1pt"> </span><span style=3D"l=
+etter-spacing:-0.2pt">ADA)<u></u><u></u></span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-left:0.5in">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><span style=3D"font-family:&quot;Segoe UI&quot;=
+,sans-serif">Code<span style=3D"letter-spacing:-0.25pt">
+</span>security<span style=3D"letter-spacing:-0.25pt"> </span>audit<span st=
+yle=3D"letter-spacing:-0.15pt">
+</span>by<span style=3D"letter-spacing:-0.05pt"> </span>specialized<span st=
+yle=3D"letter-spacing:-0.1pt">
+</span>external<span style=3D"letter-spacing:-0.1pt"> firms<u></u><u></u></=
+span></span></p>
+<p class=3D"MsoNormal" style=3D"margin-top:14.05pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f;color:rgb(79,129,188)">Testing<span style=3D"letter-spacing:-0.15pt">
+</span><span style=3D"letter-spacing:-0.1pt">Timeline<u></u><u></u></span><=
+/span></b></p>
+<p class=3D"MsoNormal" style=3D"margin-top:1.55pt">
+<b><span style=3D"font-size:11pt;font-family:&quot;Segoe UI&quot;,sans-seri=
+f"><u></u>=C2=A0<u></u></span></b></p>
+<p class=3D"MsoNormal"><span style=3D"font-family:&quot;Segoe UI&quot;,sans=
+-serif">The<span style=3D"letter-spacing:-0.3pt">
+</span>following<span style=3D"letter-spacing:-0.2pt"> </span>approximate<s=
+pan style=3D"letter-spacing:-0.25pt">
+</span>&amp;<span style=3D"letter-spacing:-0.3pt"> </span>assumption<span s=
+tyle=3D"letter-spacing:-0.2pt">
+</span>timeline<span style=3D"letter-spacing:-0.3pt"> </span>represents<spa=
+n style=3D"letter-spacing:-0.3pt">
+</span>the<span style=3D"letter-spacing:-0.2pt"> </span>Developer=E2=80=99s=
+ standard testing flow for each milestone and overall project delivery:<u><=
+/u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:52.3pt;margin-left:0.5in;margi=
+n-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Unit<span style=3D"letter-spacing:-0.3pt">
+</span>Testing:<span style=3D"letter-spacing:-0.25pt"> </span></span></b><s=
+pan style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">Conducted<span st=
+yle=3D"letter-spacing:-0.3pt">
+</span>continuously<span style=3D"letter-spacing:-0.45pt"> </span>during<sp=
+an style=3D"letter-spacing:-0.3pt">
+</span>development<span style=3D"letter-spacing:-0.3pt"> </span>for<span st=
+yle=3D"letter-spacing:-0.3pt">
+</span>each component before integration.<u></u><u></u></span></p>
+</div>
+<span style=3D"font-size:12pt;font-family:&quot;Segoe UI&quot;,sans-serif">=
+<br clear=3D"all" style=3D"break-before:page">
+</span>
+<div>
+<p class=3D"MsoNormal"><span style=3D"font-family:&quot;Segoe UI&quot;,sans=
+-serif"><u></u>=C2=A0<u></u></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-family:&quot;Segoe UI&quot;,sans=
+-serif"><u></u>=C2=A0<u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-top:7pt">
+<span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif"><u></u>=C2=A0<u=
+></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:35.05pt;margin-left:0.5in;marg=
+in-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Integration<span style=3D"letter-spacing:-0.3pt">
+</span>Testing:<span style=3D"letter-spacing:-0.25pt"> </span></span></b><s=
+pan style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">Performed<span st=
+yle=3D"letter-spacing:-0.35pt">
+</span>at<span style=3D"letter-spacing:-0.25pt"> </span>the<span style=3D"l=
+etter-spacing:-0.35pt">
+</span>completion<span style=3D"letter-spacing:-0.3pt"> </span>of<span styl=
+e=3D"letter-spacing:-0.35pt">
+</span>relevant<span style=3D"letter-spacing:-0.25pt"> </span>modules, typi=
+cally within
+<b>3=E2=80=935 business days </b>after module integration.<u></u><u></u></s=
+pan></p>
+<p class=3D"MsoNormal" style=3D"margin-right:48.4pt;margin-left:0.5in;margi=
+n-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Functional<span style=3D"letter-spacing:-0.35pt">
+</span>Testing:<span style=3D"letter-spacing:-0.2pt"> </span></span></b><sp=
+an style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">Completed<span sty=
+le=3D"letter-spacing:-0.35pt">
+</span>during<span style=3D"letter-spacing:-0.3pt"> </span>milestone<span s=
+tyle=3D"letter-spacing:-0.35pt">
+</span>QA<span style=3D"letter-spacing:-0.3pt"> </span>cycles,<span style=
+=3D"letter-spacing:-0.3pt">
+</span>typically within <b>5=E2=80=937 business days </b>per milestone.<u><=
+/u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:42.5pt;margin-left:0.5in;margi=
+n-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">UAT Support:
+</span></b><span style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">Deve=
+loper provides UAT support during Client testing windows;<span style=3D"let=
+ter-spacing:-0.2pt">
+</span>UAT<span style=3D"letter-spacing:-0.3pt"> </span>cycles<span style=
+=3D"letter-spacing:-0.3pt">
+</span>typically<span style=3D"letter-spacing:-0.1pt"> </span>last<span sty=
+le=3D"letter-spacing:-0.25pt">
+</span><b>10=E2=80=9315<span style=3D"letter-spacing:-0.1pt"> </span>busine=
+ss<span style=3D"letter-spacing:-0.2pt">
+</span>days<span style=3D"letter-spacing:-0.25pt"> </span></b>depending<spa=
+n style=3D"letter-spacing:-0.2pt">
+</span>on milestone complexity.<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:39.2pt;margin-left:0.5in;margi=
+n-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Bug<span style=3D"letter-spacing:-0.2pt">
+</span>Fixing:<span style=3D"letter-spacing:-0.25pt"> </span></span></b><sp=
+an style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">Critical<span styl=
+e=3D"letter-spacing:-0.2pt">
+</span>issues<span style=3D"letter-spacing:-0.3pt"> </span>are<span style=
+=3D"letter-spacing:-0.3pt">
+</span>addressed<span style=3D"letter-spacing:-0.15pt"> </span>within<span =
+style=3D"letter-spacing:-0.15pt">
+</span><b>48<span style=3D"letter-spacing:-0.15pt"> </span>hours</b>,<span =
+style=3D"letter-spacing:-0.2pt">
+</span>high-priority issues within <b>3=E2=80=935 business days</b>, and ge=
+neral issues within standard iteration cycles.<u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-right:52.05pt;margin-left:0.5in;marg=
+in-bottom:0.0001pt">
+<u></u><span style=3D"font-size:10pt;font-family:Symbol"><span>=C2=B7<span =
+style=3D"font:7pt &quot;Times New Roman&quot;">=C2=A0=C2=A0=C2=A0=C2=A0=C2=
+=A0=C2=A0
+</span></span></span><u></u><b><span style=3D"font-family:&quot;Segoe UI&qu=
+ot;,sans-serif">Post-Deployment<span style=3D"letter-spacing:-0.2pt">
+</span>Testing:<span style=3D"letter-spacing:-0.2pt"> </span></span></b><sp=
+an style=3D"font-family:&quot;Segoe UI&quot;,sans-serif">Performed<span sty=
+le=3D"letter-spacing:-0.3pt">
+</span>within<span style=3D"letter-spacing:-0.15pt"> </span>the<span style=
+=3D"letter-spacing:-0.3pt">
+</span>first<span style=3D"letter-spacing:-0.15pt"> </span><b>15<span style=
+=3D"letter-spacing:-0.15pt">
+</span>days<span style=3D"letter-spacing:-0.3pt"> </span>after Go-Live </b>=
+to monitor critical defects and system stability.<u></u><u></u></span></p>
+<p class=3D"MsoNormal"><u></u>=C2=A0<u></u></p>
+<p class=3D"MsoNormal"><u></u>=C2=A0<u></u></p>
+<p class=3D"MsoNormal" style=3D"background:white"><b><span style=3D"font-fa=
+mily:inherit;color:rgb(36,36,36);border:1pt none windowtext;padding:0in">Fr=
+ank P. Nagorney</span></b><span style=3D"font-size:11pt;font-family:Calibri=
+,sans-serif;color:rgb(36,36,36)"><u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"background:white"><span style=3D"font-size:=
+11pt;font-family:Calibri,sans-serif;color:rgb(36,36,36);border:1pt none win=
+dowtext;padding:0in">Attorney</span><span style=3D"font-size:11pt;font-fami=
+ly:Calibri,sans-serif;color:rgb(36,36,36)"><u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"background:white"><span style=3D"font-size:=
+11pt;font-family:Calibri,sans-serif;color:rgb(36,36,36);border:1pt none win=
+dowtext;padding:0in">=C2=A0</span><u></u><u></u></p>
+<p class=3D"MsoNormal"><b><span style=3D"font-family:Calibri,sans-serif;fon=
+t-variant:small-caps;color:rgb(192,0,0)">Kaufman, Drozdowski &amp; Grendell=
+, LLC</span></b><span style=3D"font-family:Calibri,sans-serif;color:rgb(192=
+,0,0)"><u></u><u></u></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11pt;font-family:Calibri,sa=
+ns-serif;color:black"><a href=3D"https://www.google.com/maps/search/29525+C=
+hagrin+Blvd,+Suite+250+%0D%0A+Pepper+Pike,+Ohio+44122?entry=3Dgmail&amp;sou=
+rce=3Dg" target=3D"_blank">29525 Chagrin Blvd, Suite 250</a></span><span st=
+yle=3D"font-size:11pt;font-family:Calibri,sans-serif"><u></u><u></u></span>=
+</p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11pt;font-family:Calibri,sa=
+ns-serif;color:black"><a href=3D"https://www.google.com/maps/search/29525+C=
+hagrin+Blvd,+Suite+250+%0D%0A+Pepper+Pike,+Ohio+44122?entry=3Dgmail&amp;sou=
+rce=3Dg" target=3D"_blank">Pepper Pike, Ohio 44122</a></span><span style=3D=
+"font-size:11pt;font-family:Calibri,sans-serif"><u></u><u></u></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11pt;font-family:Calibri,sa=
+ns-serif;color:black">440.462.6500 - office general<u></u><u></u></span></p=
+><a href=3D"https://www.google.com/maps/search/29525+Chagrin+Blvd,+Suite+25=
+0+%0D%0A+Pepper+Pike,+Ohio+44122?entry=3Dgmail&amp;source=3Dg" target=3D"_b=
+lank">
+</a><p class=3D"MsoNormal"><span style=3D"font-size:11pt;font-family:Calibr=
+i,sans-serif;color:black">440-462-4811 =E2=80=93 office direct<u></u><u></u=
+></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11pt;font-family:Calibri,sa=
+ns-serif;color:black">216-905-1455 - mobile</span><span style=3D"font-size:=
+11pt;font-family:Calibri,sans-serif"><u></u><u></u></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11pt;font-family:Calibri,sa=
+ns-serif;color:black">833-216-0463 - fax</span><span style=3D"font-size:11p=
+t;font-family:Calibri,sans-serif"><u></u><u></u></span></p>
+<p class=3D"MsoNormal"><u><span style=3D"font-size:11pt;font-family:Calibri=
+,sans-serif;color:rgb(5,99,193)"><a href=3D"mailto:fnagorney@kdglegal.com" =
+rel=3D"noreferrer" target=3D"_blank"><span style=3D"color:rgb(70,120,134)">=
+fnagorney@kdglegal.com</span></a></span></u><span style=3D"font-size:11pt;f=
+ont-family:Calibri,sans-serif"><u></u><u></u></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11pt;font-family:Calibri,sa=
+ns-serif"><a href=3D"http://www.kdglegal.com/" rel=3D"noreferrer" target=3D=
+"_blank"><span style=3D"color:rgb(5,99,193)">www.kdglegal.com</span></a><u>=
+</u><u></u></span></p>
+<p class=3D"MsoNormal"><span style=3D"font-size:11pt;font-family:Calibri,sa=
+ns-serif"><u></u>=C2=A0<u></u></span></p>
+<p class=3D"MsoNormal" style=3D"background:white"><b><u><span style=3D"font=
+-size:10pt;font-family:Calibri,sans-serif;color:black">CONFIDENTIALITY NOTI=
+CE</span></u></b><span style=3D"font-family:&quot;Times New Roman&quot;,ser=
+if"><u></u><u></u></span></p>
+<p class=3D"MsoNormal" style=3D"margin-bottom:5pt;background:white"><span s=
+tyle=3D"font-size:10pt;font-family:Calibri,sans-serif;color:black">The indi=
+vidual sending this e-mail and=C2=A0Kaufman, Drozdowski &amp; Grendell, LLC=
+ intend this email to
+ be used exclusively by the individual or entity to which it is intended to=
+ be addressed. This e-mail, including attachments, is covered by the Electr=
+onic Communications Privacy Act, 18 U.S.C. 2510-2521, may include confident=
+ial, proprietary, and legally privileged
+ information, and may be used only by the person or entity to which it is a=
+ddressed. If the reader of this e-mail is not the intended recipient or his=
+ or her authorized agent, the reader is hereby notified that any use, disse=
+mination, distribution, printing,
+ or copying of this e-mail is strictly prohibited. If you have received thi=
+s e-mail in error, please notify the sender by replying to this message and=
+ delete this e-mail immediately. In the absence of an express statement to =
+the contrary, nothing in this e-mail
+ constitutes an electronic signature.</span><span style=3D"font-size:11pt;f=
+ont-family:Calibri,sans-serif;color:black">
+</span><span style=3D"font-size:11pt;font-family:Calibri,sans-serif"><u></u=
+><u></u></span></p>
+<p class=3D"MsoNormal"><u></u>=C2=A0<u></u></p>
+</div>
+</div>
+
+</div></blockquote></div>
+</blockquote></div>
+
+--00000000000072ab230648ea55b0--
+--00000000000072ab250648ea55b2
+Content-Type: image/png; name="image002.png"
+Content-Disposition: attachment; filename="image002.png"
+Content-Transfer-Encoding: base64
+Content-ID: <ii_19be1d01b7a5b16b21>
+X-Attachment-Id: ii_19be1d01b7a5b16b21
+
+iVBORw0KGgoAAAANSUhEUgAAAkEAAAADBAMAAABmJcbQAAAAAXNSR0IArs4c6QAAAARnQU1BAACx
+jwv8YQUAAAAVUExURZ+fn+Li4uLi4tXV1eLi4uHh4QAAAMlqduUAAAAHdFJOU//suei/mwD0f5Lf
+AAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAG0lEQVQ4y2MYBfiBAMMowA8UGExcRgEe4JoAALetTQJv
+sCczAAAAAElFTkSuQmCC
+--00000000000072ab250648ea55b2--

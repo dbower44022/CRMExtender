@@ -1,0 +1,411 @@
+Delivered-To: doug@dougbower.com
+Received: by 2002:a05:6a11:5b8f:b0:694:afed:5b09 with SMTP id sr15csp2079148pxb;
+        Fri, 16 Jan 2026 21:22:16 -0800 (PST)
+X-Forwarded-Encrypted: i=2; AJvYcCUpL/Gn+gus4tKBtKaPpz9ARVsZ6+FZKjIrdLsOZJ/54NUZ3yVeWzkQJJGlxaA5HCC7G5Ce@dougbower.com
+X-Received: by 2002:a05:6808:30a2:b0:450:c602:751d with SMTP id 5614622812f47-45c9d708e10mr2579795b6e.21.1768627335814;
+        Fri, 16 Jan 2026 21:22:15 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1768627335; cv=none;
+        d=google.com; s=arc-20240605;
+        b=T66C0COS11+S6ntSNY68/cJbJTw7KSPwV/IHUMBqQKLAqyTp6XyiseiawTzh8Op7JK
+         F8TyCGl0EkToKXA4qFvQ5bRi7E+t/MJ9j9VpePv9386gmKG8BfT346NKqQuKIv3HEfTR
+         kf9BQMj6sK5FLrWlMI8FGtsITkiItCuZDyECZBNtftzKBW/oXYJpNg2mNqgTyE5sKjBe
+         +12lVggR24tC0fgydHZDiQoyrAlwvow6j+alxN+wPrR3/HNRsJordI4rKMO+/UXdtc27
+         PoC13zOUBRuxI8ZAWKN0TlNaA3b9UWRbroE7NPDJQrzr5nGAHkZiXMuISRO7CHLXKZA6
+         dcPQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:date:from:mime-version:dkim-signature;
+        bh=yeT7aqC/FfnClT1OhNkg3mJ4c4xU/uqREktgvw/Hgkc=;
+        fh=SyFBofADom0zk3WKCF4VZFLI6xTDBjjzHh7LKA57cKM=;
+        b=Esck9GwsBvE6meDici6Vagw9alHdoL1BwTXJY8Y9ZEAffWFLQWyuPpavXpWHUIIdO/
+         xHhjeUZFKpdpBHc1jGW81Pvsyooebp+2L3/Z74dCoX5sytHIRYyuv1L1PQflmEyJwVrh
+         oB8sM8NViEC3qLnvpOX+CFZ2kJt38wLRe+H2yOH0rl6AoGRiZqcbXzRUKbjmQlKsFJoq
+         V8twWfaIkdrd4l12O5ZfFFsgGkhSqwpOiF9fmW1fIHsRej2iPGsKDnH5jgh1ESzcnwdo
+         aTSbNFK39l4aUce3Roq3TL8DBKsw3Zc2HVl05aKlgxslSuac6IA3BgUUXAnktWhOUkV8
+         MxDQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b=G+15ZRHy;
+       spf=pass (google.com: domain of thomas.w.humphrey@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=thomas.w.humphrey@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=neutral header.i=@dougbower.com
+Return-Path: <thomas.w.humphrey@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 586e51a60fabf-404544c309bsor883312fac.1.2026.01.16.21.22.15
+        for <doug@dougbower.com>
+        (Google Transport Security);
+        Fri, 16 Jan 2026 21:22:15 -0800 (PST)
+Received-SPF: pass (google.com: domain of thomas.w.humphrey@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b=G+15ZRHy;
+       spf=pass (google.com: domain of thomas.w.humphrey@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=thomas.w.humphrey@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=neutral header.i=@dougbower.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1768627335; x=1769232135; darn=dougbower.com;
+        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject
+         :date:message-id:reply-to;
+        bh=yeT7aqC/FfnClT1OhNkg3mJ4c4xU/uqREktgvw/Hgkc=;
+        b=G+15ZRHyemagVoD2IzK4pSmcxo+lfz9wlowRRQdlM+5ltO4ztnVuds9wJxXCJAGvd7
+         DD0/FGRQ0FnYbcOxd81wtwnyeEuGKMi2oxp46YF8CemN91sbiRt5RNQrc1rqFjSDqwCV
+         76+jLahotjRd5Xem3O7xSqM2o7YYkLDvFLC6X+J47GiYEKsruX6SFn1f32dWUgw1aRoV
+         JdWDAuUQK5UQRwT1mAkw3kGcE5yJ5/7Uk3pWYc+JN2aCy8Ga/Uw+whmCTSNCrIp/+ZN4
+         5XsvhBVx6ubXptGlwJT4dEqwP/Mrr95nRIMlpQiGUE2d/N380Kmgv23KqHHfX2uRBQhb
+         7yHg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1768627335; x=1769232135;
+        h=to:subject:message-id:date:from:mime-version:x-gm-gg
+         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
+        bh=yeT7aqC/FfnClT1OhNkg3mJ4c4xU/uqREktgvw/Hgkc=;
+        b=IHmUdb7nt+dZzj0FU0KJjilSe+vwJuGuZ64tzafsK2K8I3Uxit2y5FBX4YSSRMUuM8
+         h6KoNUFBEfzot4dNWj+N+W/cgEg/F9wShwHCQOKkV22teU/qbhoGzejbBAuft6fu7mup
+         NrcxXc/lKRUwaP9z1Ue1Oz3E/nbV4ub9yU9bGHkoKP1vMZ59uzAHGxChQrbmC0QtP5G/
+         v/gbSsvk9W5jkQPkZyIqngU+L4X6FofEQ9N6Q/IIWJbgRyzmEHYWpw3QrmROsgXK70yw
+         kRpT1UXg7KQawfCJAe+OOJ4xl4AZ7kuMROUev2YTWl7G1Si+D8XAb4t1QZHe5syM1k4V
+         zv5A==
+X-Forwarded-Encrypted: i=1; AJvYcCUIvPHUFtmwOFSHw8bGt9a+jphCrA3tFFhmolz2Fppy7JXtkKUxzn6le3x1YQCZT4FuAHqH@dougbower.com
+X-Gm-Message-State: AOJu0YyYke5nO8MTTzsdpjhZKarjjxcz6KEu5eJtpmUd3haY+6Fwwtxf
+	qyn4TUnxA2E5/vEjdJl+t+QdP5bVpo7J92Niss6GllMOrXw1RU7bWYKsf7tqPkDq3wpCY7A/blq
+	Ts1lX2zqrnrSdMjp1IslgaOIgQO+/+R4=
+X-Gm-Gg: AY/fxX4diwSUflOMqoyXHrKpl21XpBnE+nHvcEuIoV0yiLjBLXAYOScvJSC5H0eU9lS
+	w3lTLn7hnTAzOH5c86k/aZKmNYE8LfVpLuyikTOBKFNijEn2NTzQkz+POgZyXgnH8enOpNTUcOe
+	At1/vJLIZMw5WfJlEWLYHeXWTDDzsswVjrB6Mmr6BEMiDw7YrckcbkN2PjfQZQj9fNqwrvUj3cD
+	sXDs0JEMrcVO8/C2AO3ScigqyqOkSu8UztrwKYXSWrha2HS6/Ov4xHzgnTAKnuMrsSyXFE+5aMT
+	fmoYg6TqGFRGNHiCSFcsqf6aEjzPUQ==
+X-Received: by 2002:a05:6820:448e:b0:661:114c:850b with SMTP id
+ 006d021491bc7-661189a2752mr1588112eaf.81.1768627335052; Fri, 16 Jan 2026
+ 21:22:15 -0800 (PST)
+MIME-Version: 1.0
+From: Thomas Humphrey <thomas.w.humphrey@gmail.com>
+Date: Fri, 16 Jan 2026 21:25:49 -0600
+X-Gm-Features: AZwV_QgtUMmkRDK30oBB1ea037CbkdIDc6NWi1OPaS9IfG2uxncW9t5r7UwkzmI
+Message-ID: <CAO2_Y1UceRCgefaSUpgFSYnKXBGTSRqG9eN4EBhP5A1_X+Liuw@mail.gmail.com>
+Subject: =?UTF-8?Q?Invitation_to_Join_the_Tartan_10_=E2=80=9CIndependence=E2=80=9D_?=
+	=?UTF-8?Q?Racing_Team?=
+To: axeshinjaxson90@yahoo.com, gmheslop@yahoo.com, Roobp@yahoo.com, 
+	Wes Blazer <blazerwes@yahoo.com>, Anne Humphrey <a.humphrey4264@gmail.com>, 
+	Steven Zimmers <steven@zimmersonline.com>, skowens@gmail.com, chriswelch1980@gmail.com, 
+	Lawrence Griffith <lgriffith@dgtl-factory.com>, brobertssailing@gmail.com, doug@dougbower.com
+Content-Type: multipart/alternative; boundary="0000000000000bc1e806488ea4a3"
+
+--0000000000000bc1e806488ea4a3
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Dear Friends and Fellow Sailors,
+
+I hope this finds you well as we head into the new year=E2=80=94I=E2=80=99m=
+ already excited
+about what could be an outstanding 2026 sailing season on the Great Lakes!
+
+I=E2=80=99m reaching out because each recipient on this email has expressed
+interest in racing with me on my Tartan 10 *Independence*.
+
+As a lifelong Tartan 10 sailor and class participant, I know firsthand how
+rewarding this one-design fleet can be. The Tartan Ten (T-10) is a
+comfortable, balanced, highly maneuverable 33-foot (10 meter) racer with
+relatively heavy construction and ballasting.  The comfortable, open layout
+and maneuverability is perfect for close quarters buoy racing: controlled
+rules on modifications and sails keep the focus on skill and teamwork, not
+equipment budgets. The T-10 was the first successful =E2=80=9Coffshore one =
+design=E2=80=9D
+racing boat on the Lakes. Although the boats went out of production 40
+years ago we still see strong turnouts (25-30+ boats at Nationals) and
+tight, fun competition.
+
+For more on the class, check out the official T-10 Class Association
+website: https://ttenclass.com/
+
+A bit about my particular T-10, *Independence*: The boat is hull 352, one
+of the last made (in 1984).  The boat is fast, with several upgrades
+completed and one more scheduled this winter.
+
+If we lock in a committed team, I=E2=80=99ll invest in new sails to maximiz=
+e our
+speed potential.
+
+To get a real feel for the boat, the sailing action, and what our racing
+looks like, check out my YouTube channel Independence Video:
+https://youtube.com/@independencevideo9836.
+
+Many of these videos were taken with a 360-degree camera mounted on the
+stern pulpit=E2=80=94YouTube lets you interactively move the view around to=
+ focus
+on points of interest (like crew work, trim, or the competition), or watch
+with a VR/3D headset for a true immersive experience vitually on the water.
+
+A philosophical point - I find the greatest value in racing when it remains
+a true Corinthian sport=E2=80=94participation driven by the love of sailing=
+, skill
+development, and camaraderie, rather than thinking of sailing as a
+financial competition, ego-trip, or a professional exploit. For that
+reason, I=E2=80=99ve never hired professional crew and intend to keep it th=
+at way.
+I have no objection to the presence of the professionally crewed boats=E2=
+=80=94they
+set an inspiring high standard and push everyone to improve=E2=80=94but my =
+goal is
+to put forth a strong amateur effort with a dedicated group of friends and
+passionate sailors.
+
+To get the most out of the season=E2=80=94and to race safely and competitiv=
+ely,
+particularly in the windier conditions that bring out the best of a T-10
+and which I love the most (15+ MPH winds)=E2=80=94the best way to campaign =
+is with
+the same core crew at every major event. Consistent teamwork allows us to
+rehearse maneuvers, build instinctive communication, and develop the
+seamless crew work that turns good boats into winning ones (and keeps
+everything safe when things get sporty).
+
+With that in mind, what I want to determine is whether we can arrange a
+consistent crew for a Summer 2026 campaign.
+
+Here are the key events I=E2=80=99m targeting (racing dates listed; I would=
+ plan a
+dedicated practice/tune-up day prior for boat setup, crew drills, and team
+bonding):
+
+   - Bayview One Design Regatta =E2=80=93 Detroit, MI (Bayview Yacht Club):=
+ May
+   29-31, 2026 (practice day May 28) Official site: https://www.byc.com/
+   (event details/updates posted here as available)
+   - Chicago Sailing World Regatta =E2=80=93 Chicago, IL (Chicago Yacht Clu=
+b): June
+   5-7, 2026 (practice day June 4) Official series page:
+   https://www.sailingworld.com/regatta-series-chicago Hosted by Chicago
+   Yacht Club: https://www.chicagoyachtclub.org/
+   - Cleveland Race Week One Design =E2=80=93 Edgewater Yacht Club, Clevela=
+nd, OH:
+   June 19-21, 2026 (practice/tune-up day June 18; this is the buoy/one-des=
+ign
+   racing weekend we=E2=80=99re targeting within the larger CRW event) Offi=
+cial CRW
+   site: https://www.clevelandraceweek.com/ Hosted by Edgewater Yacht Club:
+   https://www.eycweb.com/
+   - Tartan 10 North American Championship =E2=80=93 Vermilion, OH: August =
+10-14,
+   2026 (practice day August 9) Details via T-10 Class Association:
+   https://ttenclass.com/ (NAC regulations, updates, and host info posted
+   here)
+
+These are high-caliber regattas with excellent competition=E2=80=94often 5-=
+10
+pro-crewed boats alongside strong Corinthian teams like ours.
+
+*To be clear, our goal is to perform at the highest level we=E2=80=99re cap=
+able of
+as amateurs*, through preparation, consistency, and execution. If we do
+that we can be proud of ourselves.
+
+A few safety points:
+
+   - Safety is our top priority. *Independence* carries all mandatory and
+   recommended safety equipment (life jackets, harnesses, jacklines, VHF-AV=
+I,
+   EPIRB, flares, etc.).
+   - Safety improves dramatically with a stable, familiar crew=E2=80=94rehe=
+arsed
+   roles, predictable movements, and built-in trust reduce risks, especiall=
+y
+   in stronger winds where the real fun (and speed) happens.
+   - As mentioned, the boat and I thrive on racing in stronger breeze (15+
+   MPH) and I want us positioned to push hard when conditions allow=E2=80=
+=94but that
+   requires flawless, seamless crew work.
+
+To achieve this, we=E2=80=99ll need to invest time in practices and cohesio=
+n. I=E2=80=99ll
+bring experienced T-10 sailors, but the competitive edge comes from a
+consistent team.
+
+That beings me to the commitment question: I=E2=80=99m specifically looking=
+ for
+people who can commit to all or nearly all of the four major events
+identified above (plus their associated practice days) as the foundation of
+our campaign.
+
+This consistency is key to building the chemistry that makes everything
+click=E2=80=94safety, fun, and results.
+
+If your schedule allows full participation, that=E2=80=99s ideal and what I=
+=E2=80=99m
+prioritizing. If full commitment isn=E2=80=99t possible but you=E2=80=99re =
+interested in
+multiple events or helping with practices, let me know=E2=80=94we can discu=
+ss.
+
+One class rule reminder: Sanctioned events such as the four I have listed
+allow a maximum crew weight limit of 1,275 lbs (total for all crew). There
+is a weigh-in at the North American regatta. To stay legal and optimize
+setup, I=E2=80=99ll need accurate current weights from everyone.
+
+If you=E2=80=99re able to commit to the full slate (or have questions about=
+ partial
+involvement), please reply soon with:
+=E2=80=A2 Your availability/confirmation for the dates
+=E2=80=A2 Experience and preferred roles (if any)
+=E2=80=A2 Current approximate weight
+=E2=80=A2 Any other thoughts
+
+I=E2=80=99m eager to build this team and make 2026 memorable=E2=80=94let=E2=
+=80=99s go racing!
+
+Best regards,
+Tom Humphrey
+
+--0000000000000bc1e806488ea4a3
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div><div><div><div><div style=3D"font-size:inherit" dir=3D"auto">Dear Frie=
+nds and Fellow Sailors,</div><div style=3D"font-size:inherit" dir=3D"auto">=
+<br style=3D"font-size:inherit">I hope this finds you well as we head into =
+the new year=E2=80=94I=E2=80=99m already excited about what could be an out=
+standing 2026 sailing season on the Great Lakes!</div><div style=3D"font-si=
+ze:inherit" dir=3D"auto"><div style=3D"font-size:inherit" dir=3D"auto"><br =
+style=3D"font-size:inherit"><span style=3D"font-size:inherit;font-style:nor=
+mal;font-weight:400;letter-spacing:normal;text-indent:0px;text-transform:no=
+ne;white-space:normal;word-spacing:0px;text-decoration:none;float:none;disp=
+lay:inline!important;background-color:rgba(0,0,0,0);border-color:rgb(0,0,0)=
+;color:rgb(0,0,0)">I=E2=80=99m reaching out because each recipient on this =
+email has=C2=A0expressed interest in racing with me on my Tartan 10 </span>=
+<span style=3D"font-size:inherit;font-weight:400;letter-spacing:normal;text=
+-indent:0px;text-transform:none;white-space:normal;word-spacing:0px;text-de=
+coration:none;float:none;display:inline!important;background-color:rgba(0,0=
+,0,0);border-color:rgb(0,0,0);color:rgb(0,0,0)"><i>Independence</i>.</span>=
+</div><br style=3D"font-size:inherit">As a lifelong Tartan 10 sailor and cl=
+ass participant, I know firsthand how rewarding this one-design fleet can b=
+e. The Tartan Ten (T-10) is a comfortable, balanced, highly maneuverable 33=
+-foot (10 meter) racer with relatively heavy construction and ballasting.=
+=C2=A0 The comfortable, open layout and maneuverability is perfect for clos=
+e quarters buoy racing: controlled rules on modifications and sails keep th=
+e focus on skill and teamwork, not equipment budgets. The T-10 was the firs=
+t successful =E2=80=9Coffshore one design=E2=80=9D racing boat on the Lakes=
+.=C2=A0Although the boats went out of production 40 years ago we still see =
+strong turnouts (25-30+ boats at Nationals) and tight, fun competition.</di=
+v><div style=3D"font-size:inherit" dir=3D"auto"><br style=3D"font-size:inhe=
+rit">For more on the class, check out the official T-10 Class Association w=
+ebsite: <a href=3D"https://ttenclass.com/" target=3D"_blank">https://ttencl=
+ass.com/</a></div><div style=3D"font-size:inherit" dir=3D"auto"><span style=
+=3D"font-size:inherit"><br></span></div><div style=3D"font-size:inherit" di=
+r=3D"auto"><span style=3D"font-size:inherit">A bit about my particular T-10=
+,=C2=A0</span><i style=3D"font-size:inherit">Independence</i><span style=3D=
+"font-size:inherit">: The boat is hull 352, one of the last made (in 1984).=
+=C2=A0 The boat is fast, </span><span style=3D"font-size:inherit">with seve=
+ral upgrades completed and one more scheduled this winter.</span><br style=
+=3D"font-size:inherit"></div><div style=3D"font-size:inherit" dir=3D"auto">=
+<br></div><div style=3D"font-size:inherit" dir=3D"auto">If we lock in a com=
+mitted team, I=E2=80=99ll invest in new sails to maximize our speed potenti=
+al.</div><div style=3D"font-size:inherit" dir=3D"auto"><br></div><div style=
+=3D"font-size:inherit" dir=3D"auto">To get a real feel for the boat, the sa=
+iling action, and what our racing looks like, check out my YouTube channel =
+Independence Video: <a href=3D"https://youtube.com/@independencevideo9836" =
+target=3D"_blank">https://youtube.com/@independencevideo9836</a>.=C2=A0</di=
+v><div style=3D"font-size:inherit" dir=3D"auto"><br></div><div style=3D"fon=
+t-size:inherit" dir=3D"auto">Many of these videos were taken with a 360-deg=
+ree camera mounted on the stern pulpit=E2=80=94YouTube lets you interactive=
+ly move the view around to focus on points of interest (like crew work, tri=
+m, or the competition), or watch with a VR/3D headset for a true immersive =
+experience vitually on the water.</div><div style=3D"font-size:inherit" dir=
+=3D"auto"><br style=3D"font-size:inherit">A philosophical point - I find th=
+e greatest value in racing when it remains a true Corinthian sport=E2=80=94=
+participation driven by the love of sailing, skill development, and camarad=
+erie, rather than thinking of sailing as a financial competition, ego-trip,=
+ or a professional exploit. For that reason, I=E2=80=99ve never hired profe=
+ssional crew and intend to keep it that way. I have no objection to the pre=
+sence of the professionally crewed boats=E2=80=94they set an inspiring high=
+ standard and push everyone to improve=E2=80=94but my goal is to put forth =
+a strong amateur effort with a dedicated group of friends and passionate sa=
+ilors.</div><div style=3D"font-size:inherit" dir=3D"auto"><br style=3D"font=
+-size:inherit">To get the most out of the season=E2=80=94and to race safely=
+ and competitively, particularly in the windier conditions that bring out t=
+he best of a T-10 and which I love the most (15+ MPH winds)=E2=80=94the bes=
+t way to campaign is with the same core crew at every major event. Consiste=
+nt teamwork allows us to rehearse maneuvers, build instinctive communicatio=
+n, and develop the seamless crew work that turns good boats into winning on=
+es (and keeps everything safe when things get sporty).</div><div style=3D"f=
+ont-size:inherit" dir=3D"auto"><br style=3D"font-size:inherit">With that in=
+ mind, what I want to determine is whether we can arrange a consistent crew=
+ for a Summer 2026 campaign.</div><div style=3D"font-size:inherit" dir=3D"a=
+uto"><br></div><div style=3D"font-size:inherit" dir=3D"auto">Here are the k=
+ey events I=E2=80=99m targeting (racing dates listed; I would plan a dedica=
+ted practice/tune-up day prior for boat setup, crew drills, and team bondin=
+g):</div><div style=3D"font-size:inherit" dir=3D"auto"><ul dir=3D"auto"><li=
+><span style=3D"font-size:inherit">Bayview One Design Regatta =E2=80=93 Det=
+roit, MI (Bayview Yacht Club): May 29-31, 2026 (practice day May 28)=E2=80=
+=A8 Official site: <a href=3D"https://www.byc.com/" target=3D"_blank">https=
+://www.byc.com/</a> (event details/updates posted here as available)</span>=
+<br></li><li><span style=3D"font-size:inherit">Chicago Sailing World Regatt=
+a =E2=80=93 Chicago, IL (Chicago Yacht Club): June 5-7, 2026 (practice day =
+June 4)=E2=80=A8 Official series page: <a href=3D"https://www.sailingworld.=
+com/regatta-series-chicago" target=3D"_blank">https://www.sailingworld.com/=
+regatta-series-chicago</a>=E2=80=A8 Hosted by Chicago Yacht Club: <a href=
+=3D"https://www.chicagoyachtclub.org/" target=3D"_blank">https://www.chicag=
+oyachtclub.org/</a></span><br></li><li><span style=3D"font-size:inherit">Cl=
+eveland Race Week One Design =E2=80=93 Edgewater Yacht Club, Cleveland, OH:=
+ June 19-21, 2026 (practice/tune-up day June 18; this is the buoy/one-desig=
+n racing weekend we=E2=80=99re targeting within the larger CRW event)=E2=80=
+=A8 Official CRW site: <a href=3D"https://www.clevelandraceweek.com/" targe=
+t=3D"_blank">https://www.clevelandraceweek.com/</a>=E2=80=A8Hosted by Edgew=
+ater Yacht Club: <a href=3D"https://www.eycweb.com/" target=3D"_blank">http=
+s://www.eycweb.com/</a></span><br></li><li><span style=3D"font-size:inherit=
+">Tartan 10 North American Championship =E2=80=93 Vermilion, OH: August 10-=
+14, 2026 (practice day August 9)=E2=80=A8Details via T-10 Class Association=
+: <a href=3D"https://ttenclass.com/" target=3D"_blank">https://ttenclass.co=
+m/</a> (NAC regulations, updates, and host info posted here)</span></li></u=
+l></div><div style=3D"font-size:inherit" dir=3D"auto">These are high-calibe=
+r regattas with excellent competition=E2=80=94often 5-10 pro-crewed boats a=
+longside strong Corinthian teams like ours.=C2=A0</div><div style=3D"font-s=
+ize:inherit" dir=3D"auto"><br></div><div style=3D"font-size:inherit" dir=3D=
+"auto"><u>To be clear, our goal is to perform at the highest level we=E2=80=
+=99re capable of as amateurs</u>, through preparation, consistency, and exe=
+cution. If we do that we can be proud of ourselves.</div><div style=3D"font=
+-size:inherit" dir=3D"auto"><br style=3D"font-size:inherit">A few safety po=
+ints:<br style=3D"font-size:inherit"><ul dir=3D"auto"><li><span style=3D"fo=
+nt-size:inherit">Safety is our top priority. <i>Independence</i> carries al=
+l mandatory and recommended safety equipment (life jackets, harnesses, jack=
+lines, VHF-AVI, EPIRB, flares, etc.).</span><br></li><li><span style=3D"fon=
+t-size:inherit">Safety improves dramatically with a stable, familiar crew=
+=E2=80=94rehearsed roles, predictable movements, and built-in trust reduce =
+risks, especially in stronger winds where the real fun (and speed) happens.=
+</span><br></li><li><span style=3D"font-size:inherit">As mentioned, the boa=
+t and I thrive on racing in stronger breeze (15+ MPH) and I want us positio=
+ned to push hard when conditions allow=E2=80=94but that requires flawless, =
+seamless crew work.</span><br></li></ul>To achieve this, we=E2=80=99ll need=
+ to invest time in practices and cohesion. I=E2=80=99ll bring experienced T=
+-10 sailors, but the competitive edge comes from a consistent team.</div><d=
+iv style=3D"font-size:inherit" dir=3D"auto"><br style=3D"font-size:inherit"=
+>That beings me to the=C2=A0commitment question: I=E2=80=99m specifically l=
+ooking for people who can commit to all or nearly all of the=C2=A0four majo=
+r events identified above (plus their associated practice days) as the foun=
+dation of our campaign.=C2=A0</div><div style=3D"font-size:inherit" dir=3D"=
+auto"><br></div><div style=3D"font-size:inherit" dir=3D"auto">This consiste=
+ncy is key to building the chemistry that makes everything click=E2=80=94sa=
+fety, fun, and results.=C2=A0</div><div style=3D"font-size:inherit" dir=3D"=
+auto"><br></div><div style=3D"font-size:inherit" dir=3D"auto">If your sched=
+ule allows full participation, that=E2=80=99s ideal and what I=E2=80=99m pr=
+ioritizing. If full commitment isn=E2=80=99t possible but you=E2=80=99re in=
+terested in multiple events or helping with practices, let me know=E2=80=94=
+we can discuss.</div><div style=3D"font-size:inherit" dir=3D"auto"><br></di=
+v><div style=3D"font-size:inherit" dir=3D"auto">One class rule reminder: Sa=
+nctioned events such as the four I have listed allow=C2=A0a maximum crew we=
+ight limit of 1,275 lbs (total for all crew). There is a weigh-in at the No=
+rth American regatta.=C2=A0To stay legal and optimize setup, I=E2=80=99ll n=
+eed accurate current weights from everyone.<br style=3D"font-size:inherit">=
+<br></div><div style=3D"font-size:inherit" dir=3D"auto">If you=E2=80=99re a=
+ble to commit to the full slate (or have questions about partial involvemen=
+t), please reply soon with:<br style=3D"font-size:inherit">=E2=80=A2  Your =
+availability/confirmation for the dates<br style=3D"font-size:inherit">=E2=
+=80=A2 Experience and preferred roles (if any)<br style=3D"font-size:inheri=
+t">=E2=80=A2  Current approximate weight<br style=3D"font-size:inherit">=E2=
+=80=A2  Any other thoughts</div><div style=3D"font-size:inherit" dir=3D"aut=
+o"><br style=3D"font-size:inherit">I=E2=80=99m eager to build this team and=
+ make 2026 memorable=E2=80=94let=E2=80=99s go racing!</div><div style=3D"fo=
+nt-size:inherit" dir=3D"auto"><br style=3D"font-size:inherit">Best regards,=
+<br style=3D"font-size:inherit">Tom Humphrey</div>
+</div>
+</div>
+</div>
+</div>
+
+--0000000000000bc1e806488ea4a3--

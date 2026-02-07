@@ -156,6 +156,33 @@ message and builds conversation records.
 to fetch only messages added or deleted since the last sync.  This is
 fast and avoids re-downloading everything.
 
+### Stage 3a -- Email Body Cleanup
+
+Before triage, each email body is stripped of quoted replies, forwarded
+blocks, signatures, and boilerplate.  This uses a dual-track architecture:
+
+1. **HTML track** (preferred) -- when an HTML body is available,
+   structural elements (Gmail quote divs, Outlook separators, signature
+   containers) are removed at the DOM level using BeautifulSoup and
+   quotequail, then text-level cleanup handles anything that leaked
+   through.
+2. **Plain-text track** (fallback) -- when HTML is absent or the HTML
+   track fails, a regex-based pipeline handles quote detection,
+   forwarded headers, Outlook separators, and attribution lines.
+
+Both tracks share a common set of text-level cleanups:
+
+- Mobile/app signatures ("Sent from my iPhone", etc.)
+- Separator-based signatures (`--` and `____` patterns)
+- Valediction-based signatures (Best regards + name/contact block)
+- Standalone signatures (name/title/phone without a valediction)
+- Promotional content (social links, vCards, awards)
+- Newsletter unsubscribe footers
+- Confidentiality and environmental notices
+- Hard-wrapped line rejoining
+
+For full algorithmic detail, see `docs/email_stripping.md`.
+
 ### Stage 4 -- Processing (Triage + Summarization)
 
 Conversations that have not yet been processed go through two steps:
@@ -235,13 +262,17 @@ CRMExtender/
     conversation_builder.py       # Groups emails into conversations
     database.py                   # SQLite connection and schema
     display.py                    # Rich terminal output
-    email_parser.py               # Quote stripping and parsing
+    email_parser.py               # Quote/signature stripping (plain-text track)
+    html_email_parser.py          # HTML-aware quote/signature stripping
     gmail_client.py               # Gmail API client
     models.py                     # Core dataclasses
     rate_limiter.py               # Token-bucket rate limiter
     summarizer.py                 # Claude AI summarization
     sync.py                       # Sync orchestration
     triage.py                     # Heuristic junk filtering
+    audit_parser.py               # Audit tool: compare old vs new parsing
+    migrate_strip_boilerplate.py  # Migration: re-strip stored emails
+    migrate_refetch_emails.py     # Migration: re-fetch emails from Gmail
   .env                            # Environment variables (you create)
   .env.example                    # Template for .env
 ```
@@ -330,6 +361,52 @@ your existing setup migrates automatically:
    point to the new path.
 3. The old `credentials/token.json` is left in place (not deleted).
 4. No manual steps are required.
+
+---
+
+## Maintenance Tools
+
+### Audit Parser
+
+Compares the current parsing pipeline against stored email bodies to
+identify improvements or regressions without modifying data.
+
+```bash
+python3 -m poc.audit_parser
+```
+
+Reports:
+- Total emails processed
+- Number and percentage where the new pipeline produces different output
+- Average character reduction percentage
+- Count of emails where the new pipeline produces an empty result
+
+Use `--show-diffs N` to display side-by-side differences for the first
+N changed emails (useful for spot-checking).
+
+### Migration: Re-strip Boilerplate
+
+After updating the parsing pipeline, re-processes all stored email
+bodies through the new pipeline and updates the database in place.
+
+```bash
+python3 -m poc.migrate_strip_boilerplate
+```
+
+This is safe to run multiple times -- it always re-processes from the
+original `body_text` and `body_html` fields stored at sync time.
+**Back up the database before running** (copy `data/crm_extender.db`).
+
+### Migration: Re-fetch Emails
+
+Re-downloads email bodies from Gmail for all stored emails.  Useful if
+the original sync missed HTML bodies or if the Gmail API format changed.
+
+```bash
+python3 -m poc.migrate_refetch_emails
+```
+
+Requires valid OAuth tokens for the relevant accounts.
 
 ---
 

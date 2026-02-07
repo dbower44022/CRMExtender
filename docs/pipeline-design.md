@@ -213,12 +213,84 @@ For each thread (a `list[ParsedEmail]`):
 The resulting conversations are sorted newest-first (by the date of the
 last email in each thread).
 
-#### Quote Stripping (`poc/email_parser.py`)
+#### Quote Stripping (`poc/email_parser.py` + `poc/html_email_parser.py`)
 
-**Function**: `strip_quotes(body) -> str`
+**Function**: `strip_quotes(body, body_html=None) -> str`
 
-A six-step pipeline that removes quoted replies, forwarded blocks, and
-mobile signatures:
+A dual-track pipeline that removes quoted replies, forwarded blocks,
+signatures, and boilerplate.  When an HTML body is available the HTML
+track runs first; if it produces an empty result or fails, the
+plain-text track handles it.
+
+##### HTML Track (preferred)
+
+Activated when `body_html` is non-empty.  Uses two phases:
+
+**Phase 1 -- HTML structural removal** (`strip_html_quotes()` in
+`html_email_parser.py`):
+
+1. **quotequail** -- the quotequail library parses the HTML and
+   identifies quoted vs. authored regions.  Only the first authored
+   block is kept.
+2. **CSS-selector removal** -- BeautifulSoup removes elements matching
+   known quote containers (`div.gmail_quote`, `div.yahoo_quoted`,
+   `blockquote[type=cite]`, etc.) and signature containers
+   (`div.gmail_signature`, `[data-smartmail=gmail_signature]`,
+   `div#Signature`).
+3. **Signature resilience check** -- if removing signature elements
+   empties the result (Gmail sometimes wraps the entire body inside a
+   `gmail_signature` div), the HTML is re-parsed with quote removal
+   only, preserving the body content.
+4. **Cutoff markers** -- Outlook `div#appendonsend` and
+   `div#divRplyFwdMsg` elements plus all their following siblings are
+   removed.
+5. **Outlook border separators** -- elements with inline
+   `border-top: solid #E1E1E1` style are detected and everything from
+   that element onward is removed.
+6. **Unsubscribe footers** -- elements with IDs matching
+   `footerUnsubscribe*` and elements containing "unsubscribe" text are
+   removed along with all following siblings.
+7. **Text extraction** -- `soup.get_text(separator="\n", strip=True)`.
+
+**Phase 2 -- Text-level cleanup** (back in `email_parser.py`):
+
+1. **Mobile signatures** -- regex strips "Sent from my iPhone",
+   "Get Outlook for iOS", "Sent from Yahoo Mail", notification-only
+   address lines, etc.
+2. **Confidentiality notices** -- regex detects "This message contains
+   confidential information" and truncates.
+3. **Environmental messages** -- regex detects "Please consider the
+   environment before printing" and truncates.
+4. **Separator-based signature stripping** -- three-pass chain:
+   - `_strip_dash_dash_signature()` -- finds `^--\s*$` and truncates
+     when remaining content is <500 chars / ≤10 lines and contains
+     signature markers or a name line.
+   - `_strip_underscore_signature()` -- finds `^_{2,9}$` and truncates
+     when remaining content is <1500 chars / ≤25 lines and contains
+     signature markers.
+   - `_strip_dash_dash_signature()` again -- cleanup pass to catch `--`
+     exposed after underscore stripping.
+5. **Valediction-based signature detection** -- `_strip_signature_block()`
+   finds valedictions (Best regards, Thanks, etc.) followed by name and
+   contact lines, truncating the signature block.
+6. **Standalone signature detection** -- `_strip_standalone_signature()`
+   finds trailing blocks of name/title/phone/email lines without a
+   valediction prefix.
+7. **Promotional content** -- `_strip_promotional_content()` removes
+   trailing social-media links, vCards, awards, and marketing taglines.
+8. **Unsubscribe footers** -- text-level fallback finds lines containing
+   "unsubscribe" and truncates from that point.
+9. **Line unwrapping** -- rejoins hard-wrapped lines (common in
+   plain-text conversions of HTML emails).
+10. **Whitespace cleanup** -- collapses three-or-more consecutive
+    newlines into two.
+
+If the HTML track produces an empty result after all cleanup, the
+pipeline falls through to the plain-text track.
+
+##### Plain-Text Track (fallback)
+
+Used when `body_html` is absent or the HTML track fails:
 
 1. **mail-parser-reply** -- the `EmailReplyParser` library detects
    standard quoted-reply blocks.  If it fails (malformed input), the
@@ -230,10 +302,20 @@ mobile signatures:
    is truncated.
 4. **"On ... wrote:"** -- regex matches the `On <date> <person> wrote:`
    attribution line and truncates after it.
-5. **Mobile signatures** -- regex strips lines like "Sent from my
-   iPhone", "Get Outlook for iOS", "Sent from Yahoo Mail", etc.
-6. **Whitespace cleanup** -- collapses three-or-more consecutive
-   newlines into two.
+5. **Mobile signatures** -- same regex as HTML track.
+6. **Notification signatures** -- "This email was sent from a
+   notification-only address" variants.
+7. **Separator-based signatures** -- same three-pass `--`/`____`/`--`
+   chain as the HTML track.
+8. **Valediction, standalone, promotional detection** -- same functions
+   as the HTML track.
+9. **Confidentiality and environmental notices** -- same as HTML track.
+10. **Unsubscribe footers** -- same text-level removal.
+11. **Line unwrapping and whitespace cleanup** -- same as HTML track.
+
+See `docs/email_stripping.md` for exhaustive algorithmic detail on every
+detection heuristic, including thresholds, regex patterns, and
+false-positive prevention strategies.
 
 ### 3c. Match Contacts (`poc/contact_matcher.py`)
 
@@ -457,6 +539,9 @@ From `pyproject.toml` (Python >= 3.10):
 | `rich`                     | >= 13.7   | Terminal display              |
 | `mail-parser-reply`        | >= 0.1.2  | Email quote detection        |
 | `python-dotenv`            | >= 1.0    | `.env` file loading          |
+| `quotequail`               | >= 0.3    | HTML quote region detection  |
+| `beautifulsoup4`           | >= 4.12   | HTML DOM parsing/manipulation|
+| `lxml`                     | >= 5.0    | HTML parser backend for BS4  |
 
 ---
 
@@ -470,6 +555,7 @@ __main__
   |-- contact_matcher   (build_contact_index, match_contacts)
   |-- conversation_builder (build_conversations)
   |     \-- email_parser   (strip_quotes)
+  |           \-- html_email_parser (strip_html_quotes)
   |-- triage            (triage_conversations)
   |-- summarizer        (summarize_all)
   |-- display           (display_triage_stats, display_results)
@@ -490,6 +576,10 @@ models                  (used by every module)
 | Contact fetch failure        | `__main__.py`         | Logs warning, continues with empty contacts |
 | Gmail thread fetch failure   | `gmail_client.py`     | Logs warning per thread, skips to next      |
 | Message parse failure        | `gmail_client.py`     | Logs warning per message, skips it          |
+| HTML track failure           | `email_parser.py`     | Falls back to plain-text pipeline           |
+| HTML track empty result      | `email_parser.py`     | Falls back to plain-text pipeline           |
+| Signature removal empties HTML| `html_email_parser.py`| Re-parses without signature removal         |
+| `quotequail` failure         | `html_email_parser.py`| Continues with raw HTML structural removal  |
 | `mail-parser-reply` failure  | `email_parser.py`     | Falls back to regex-only quote stripping    |
 | Claude API error             | `summarizer.py`       | Returns summary with `error` field set      |
 | Claude JSON parse error      | `summarizer.py`       | Returns summary with `error` field set      |

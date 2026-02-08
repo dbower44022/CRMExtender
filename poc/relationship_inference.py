@@ -80,40 +80,122 @@ def _recency_factor(last_interaction: str | None) -> float:
     return 1.0 - 0.9 * (days_ago - 30) / (365 - 30)
 
 
+def _build_canonical_map(conn) -> dict[str, str]:
+    """Build a mapping from contact_id → canonical_id for same-name groups.
+
+    Contacts sharing the same name are grouped together.  The canonical ID
+    is the one that appears most often in conversation_participants (i.e.
+    the most-used email address for that person).
+    """
+    rows = conn.execute(
+        """\
+        SELECT c.id, c.name, COALESCE(p.cnt, 0) AS participant_count
+        FROM contacts c
+        LEFT JOIN (
+            SELECT contact_id, COUNT(*) AS cnt
+            FROM conversation_participants
+            WHERE contact_id IS NOT NULL
+            GROUP BY contact_id
+        ) p ON p.contact_id = c.id
+        WHERE c.name IS NOT NULL AND c.name != ''
+        ORDER BY c.name, participant_count DESC
+        """
+    ).fetchall()
+
+    # Group by lowered name; first row per group is the canonical (most used)
+    name_to_canonical: dict[str, str] = {}
+    canonical: dict[str, str] = {}
+    for row in rows:
+        key = row["name"].strip().lower()
+        if key not in name_to_canonical:
+            name_to_canonical[key] = row["id"]
+        canonical[row["id"]] = name_to_canonical[key]
+
+    return canonical
+
+
 def infer_relationships() -> int:
     """Mine conversation participants for co-occurrence and upsert relationships.
+
+    Contacts with the same name are merged into a single canonical identity
+    so that the same real person using multiple email addresses does not
+    produce duplicate or self-referencing relationship pairs.
 
     Returns the number of relationships upserted.
     """
     with get_connection() as conn:
+        canonical = _build_canonical_map(conn)
+
         rows = conn.execute(_CO_OCCURRENCE_SQL).fetchall()
 
         if not rows:
             log.info("No co-occurring contact pairs found.")
             return 0
 
+        # Aggregate co-occurrence data after mapping to canonical IDs
+        merged: dict[tuple[str, str], dict] = {}
+        for row in rows:
+            cid_a = canonical.get(row["contact_a"], row["contact_a"])
+            cid_b = canonical.get(row["contact_b"], row["contact_b"])
+
+            # Skip self-relationships (same person, different emails)
+            if cid_a == cid_b:
+                continue
+
+            # Normalize ordering
+            if cid_a > cid_b:
+                cid_a, cid_b = cid_b, cid_a
+
+            key = (cid_a, cid_b)
+            if key not in merged:
+                merged[key] = {
+                    "shared_conversations": 0,
+                    "shared_messages": 0,
+                    "last_interaction": None,
+                    "first_interaction": None,
+                }
+
+            entry = merged[key]
+            entry["shared_conversations"] += row["shared_conversations"]
+            entry["shared_messages"] += row["shared_messages"]
+
+            last = row["last_interaction"]
+            if last and (entry["last_interaction"] is None or last > entry["last_interaction"]):
+                entry["last_interaction"] = last
+
+            first = row["first_interaction"]
+            if first and (entry["first_interaction"] is None or first < entry["first_interaction"]):
+                entry["first_interaction"] = first
+
+        if not merged:
+            log.info("No relationships after deduplication.")
+            return 0
+
         # Determine max values for normalization
-        max_convos = max(r["shared_conversations"] for r in rows)
-        max_msgs = max(r["shared_messages"] for r in rows)
+        max_convos = max(e["shared_conversations"] for e in merged.values())
+        max_msgs = max(e["shared_messages"] for e in merged.values())
+
+        # Clear old relationships before full rewrite
+        conn.execute("DELETE FROM relationships")
 
         count = 0
-        for row in rows:
+        for (cid_a, cid_b), entry in merged.items():
             strength = _compute_strength(
-                row["shared_conversations"],
-                row["shared_messages"],
-                row["last_interaction"],
+                entry["shared_conversations"],
+                entry["shared_messages"],
+                entry["last_interaction"],
                 max_conversations=max(max_convos, 2),
                 max_messages=max(max_msgs, 2),
             )
 
             rel = Relationship(
-                from_contact_id=row["contact_a"],
-                to_contact_id=row["contact_b"],
+                from_contact_id=cid_a,
+                to_contact_id=cid_b,
                 strength=strength,
-                shared_conversations=row["shared_conversations"],
-                shared_messages=row["shared_messages"],
-                last_interaction=row["last_interaction"],
-                first_interaction=row["first_interaction"],
+                shared_conversations=entry["shared_conversations"],
+                shared_messages=entry["shared_messages"],
+                last_interaction=entry["last_interaction"],
+                first_interaction=entry["first_interaction"],
             )
 
             _upsert_relationship(conn, rel)
@@ -161,17 +243,27 @@ def load_relationships(
     contact_id: str | None = None,
     min_strength: float = 0.0,
 ) -> list[Relationship]:
-    """Load relationships from the database, optionally filtered."""
-    clauses = []
-    params: list = []
+    """Load relationships from the database, optionally filtered.
 
-    if contact_id:
-        clauses.append("(from_entity_id = ? OR to_entity_id = ?)")
-        params.extend([contact_id, contact_id])
-
-    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-
+    When contact_id is given, the filter matches relationships where
+    the canonical ID for that contact appears on either side.
+    """
     with get_connection() as conn:
+        # Resolve contact_id to its canonical ID
+        lookup_id = contact_id
+        if contact_id:
+            canonical = _build_canonical_map(conn)
+            lookup_id = canonical.get(contact_id, contact_id)
+
+        clauses = []
+        params: list = []
+
+        if lookup_id:
+            clauses.append("(from_entity_id = ? OR to_entity_id = ?)")
+            params.extend([lookup_id, lookup_id])
+
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
         rows = conn.execute(
             f"SELECT * FROM relationships {where} ORDER BY updated_at DESC",
             params,

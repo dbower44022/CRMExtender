@@ -22,21 +22,8 @@ from rich.logging import RichHandler
 from rich.table import Table
 
 from . import config
-from .auth import add_account_interactive, get_credentials_for_account
 from .database import get_connection, init_db
 from .display import display_relationships, display_results, display_triage_stats
-from .gmail_client import get_user_email
-from .rate_limiter import RateLimiter
-from .sync import (
-    get_account,
-    get_all_accounts,
-    incremental_sync,
-    initial_sync,
-    load_conversations_for_display,
-    process_conversations,
-    register_account,
-    sync_contacts,
-)
 
 console = Console()
 
@@ -47,6 +34,18 @@ console = Console()
 
 def cmd_run(args: argparse.Namespace) -> None:
     """Run sync + process for all registered accounts."""
+    from .auth import get_credentials_for_account
+    from .gmail_client import get_user_email
+    from .rate_limiter import RateLimiter
+    from .sync import (
+        get_all_accounts,
+        incremental_sync,
+        initial_sync,
+        load_conversations_for_display,
+        process_conversations,
+        sync_contacts,
+    )
+
     log = logging.getLogger(__name__)
 
     # Init DB
@@ -167,6 +166,10 @@ def cmd_run(args: argparse.Namespace) -> None:
 
 def cmd_add_account(args: argparse.Namespace) -> None:
     """Add a new Gmail account interactively."""
+    from .auth import add_account_interactive
+    from .rate_limiter import RateLimiter
+    from .sync import initial_sync, register_account, sync_contacts
+
     log = logging.getLogger(__name__)
 
     console.print("\n[bold]Initializing database...[/bold]")
@@ -228,6 +231,8 @@ def cmd_add_account(args: argparse.Namespace) -> None:
 
 def cmd_list_accounts(args: argparse.Namespace) -> None:
     """List all registered accounts."""
+    from .sync import get_all_accounts
+
     init_db()
     accounts = get_all_accounts()
 

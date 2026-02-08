@@ -1,11 +1,13 @@
 """CLI entry point — pipeline orchestration with multi-account support.
 
 Usage:
-    python -m poc                       # default: run all accounts
-    python -m poc run                   # explicit: run all accounts
-    python -m poc add-account           # add a new Gmail account
-    python -m poc list-accounts         # list registered accounts
-    python -m poc remove-account EMAIL  # remove an account
+    python -m poc                            # default: run all accounts
+    python -m poc run                        # explicit: run all accounts
+    python -m poc add-account                # add a new Gmail account
+    python -m poc list-accounts              # list registered accounts
+    python -m poc remove-account EMAIL       # remove an account
+    python -m poc infer-relationships        # infer contact relationships
+    python -m poc show-relationships         # display inferred relationships
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ from rich.table import Table
 from . import config
 from .auth import add_account_interactive, get_credentials_for_account
 from .database import get_connection, init_db
-from .display import display_results, display_triage_stats
+from .display import display_relationships, display_results, display_triage_stats
 from .gmail_client import get_user_email
 from .rate_limiter import RateLimiter
 from .sync import (
@@ -304,6 +306,70 @@ def cmd_remove_account(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Subcommand: infer-relationships
+# ---------------------------------------------------------------------------
+
+def cmd_infer_relationships(args: argparse.Namespace) -> None:
+    """Run the relationship inference pipeline."""
+    from .relationship_inference import infer_relationships
+
+    console.print("\n[bold]Initializing database...[/bold]")
+    init_db()
+
+    console.print("[bold]Inferring relationships from conversation co-occurrence...[/bold]")
+    count = infer_relationships()
+    console.print(f"\n[bold green]{count} relationship(s) upserted.[/bold green]")
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: show-relationships
+# ---------------------------------------------------------------------------
+
+def cmd_show_relationships(args: argparse.Namespace) -> None:
+    """Display inferred relationships."""
+    from .relationship_inference import load_relationships
+
+    init_db()
+
+    # Resolve --contact email to a contact_id
+    contact_id = None
+    if args.contact:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT id FROM contacts WHERE email = ?",
+                (args.contact.lower(),),
+            ).fetchone()
+        if not row:
+            console.print(f"\n[red]Contact not found:[/red] {args.contact}")
+            sys.exit(1)
+        contact_id = row["id"]
+
+    relationships = load_relationships(
+        contact_id=contact_id,
+        min_strength=args.min_strength,
+    )
+
+    # Build contact name lookup for display
+    contact_ids = set()
+    for rel in relationships:
+        contact_ids.add(rel.from_contact_id)
+        contact_ids.add(rel.to_contact_id)
+
+    contact_names: dict[str, str] = {}
+    if contact_ids:
+        placeholders = ",".join("?" for _ in contact_ids)
+        with get_connection() as conn:
+            rows = conn.execute(
+                f"SELECT id, name, email FROM contacts WHERE id IN ({placeholders})",
+                list(contact_ids),
+            ).fetchall()
+        for row in rows:
+            contact_names[row["id"]] = row["name"] or row["email"]
+
+    display_relationships(relationships, contact_names)
+
+
+# ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
 
@@ -327,6 +393,17 @@ def build_parser() -> argparse.ArgumentParser:
     rm = sub.add_parser("remove-account", help="Remove an account")
     rm.add_argument("email", help="Email address of the account to remove")
 
+    # infer-relationships
+    sub.add_parser("infer-relationships", help="Infer contact relationships from conversations")
+
+    # show-relationships
+    sr = sub.add_parser("show-relationships", help="Display inferred relationships")
+    sr.add_argument("--contact", help="Filter by contact email address")
+    sr.add_argument(
+        "--min-strength", type=float, default=0.0,
+        help="Minimum strength threshold (0.0–1.0)",
+    )
+
     return parser
 
 
@@ -346,6 +423,8 @@ def main() -> None:
         "add-account": cmd_add_account,
         "list-accounts": cmd_list_accounts,
         "remove-account": cmd_remove_account,
+        "infer-relationships": cmd_infer_relationships,
+        "show-relationships": cmd_show_relationships,
     }
 
     # Default to "run" when no subcommand given

@@ -288,5 +288,57 @@ class ConversationSummary:
         )
 
 
+@dataclass
+class Relationship:
+    """An inferred relationship between two contacts."""
+
+    from_contact_id: str
+    to_contact_id: str
+    relationship_type: str = "KNOWS"
+    strength: float = 0.0
+    shared_conversations: int = 0
+    shared_messages: int = 0
+    last_interaction: str | None = None
+    first_interaction: str | None = None
+
+    def to_row(self, *, relationship_id: str | None = None) -> dict:
+        """Serialize to a dict suitable for INSERT into relationships table."""
+        now = _now_iso()
+        properties = json.dumps({
+            "strength": self.strength,
+            "shared_conversations": self.shared_conversations,
+            "shared_messages": self.shared_messages,
+            "last_interaction": self.last_interaction,
+            "first_interaction": self.first_interaction,
+        })
+        return {
+            "id": relationship_id or str(uuid.uuid4()),
+            "from_entity_type": "contact",
+            "from_entity_id": self.from_contact_id,
+            "to_entity_type": "contact",
+            "to_entity_id": self.to_contact_id,
+            "relationship_type": self.relationship_type,
+            "properties": properties,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> Relationship:
+        """Construct from a sqlite3.Row or dict."""
+        r = dict(row)
+        props = json.loads(r.get("properties") or "{}")
+        return cls(
+            from_contact_id=r["from_entity_id"],
+            to_contact_id=r["to_entity_id"],
+            relationship_type=r.get("relationship_type", "KNOWS"),
+            strength=props.get("strength", 0.0),
+            shared_conversations=props.get("shared_conversations", 0),
+            shared_messages=props.get("shared_messages", 0),
+            last_interaction=props.get("last_interaction"),
+            first_interaction=props.get("first_interaction"),
+        )
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()

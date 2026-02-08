@@ -14,6 +14,7 @@ from .models import (
     FilterReason,
     KnownContact,
     ParsedEmail,
+    Relationship,
     TriageResult,
 )
 
@@ -215,4 +216,60 @@ def _display_conversation(
         padding=(1, 2),
     )
     console.print(panel)
+    console.print()
+
+
+def display_relationships(
+    relationships: list[Relationship],
+    contact_names: dict[str, str],
+) -> None:
+    """Display inferred relationships in a Rich table.
+
+    :param relationships: sorted list of Relationship objects
+    :param contact_names: mapping of contact_id -> display name
+    """
+    if not relationships:
+        console.print("\n[yellow]No relationships found.[/yellow]")
+        return
+
+    console.print()
+    console.rule("[bold]Inferred Relationships[/bold]")
+    console.print()
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Contact A")
+    table.add_column("Contact B")
+    table.add_column("Strength", justify="right")
+    table.add_column("Shared Convos", justify="right")
+    table.add_column("Shared Msgs", justify="right")
+    table.add_column("Last Interaction")
+
+    for rel in relationships:
+        name_a = contact_names.get(rel.from_contact_id, rel.from_contact_id[:8])
+        name_b = contact_names.get(rel.to_contact_id, rel.to_contact_id[:8])
+
+        # Color strength: green >= 0.6, yellow >= 0.3, dim otherwise
+        s = rel.strength
+        if s >= 0.6:
+            strength_str = f"[green]{s:.2f}[/green]"
+        elif s >= 0.3:
+            strength_str = f"[yellow]{s:.2f}[/yellow]"
+        else:
+            strength_str = f"[dim]{s:.2f}[/dim]"
+
+        last = rel.last_interaction or ""
+        if last:
+            last = last[:10]  # date portion only
+
+        table.add_row(
+            name_a,
+            name_b,
+            strength_str,
+            str(rel.shared_conversations),
+            str(rel.shared_messages),
+            last,
+        )
+
+    console.print(table)
+    console.print(f"\n[dim]{len(relationships)} relationship(s) displayed.[/dim]")
     console.print()

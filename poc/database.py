@@ -120,6 +120,20 @@ CREATE TABLE IF NOT EXISTS conversation_topics (
     PRIMARY KEY (conversation_id, topic_id)
 );
 
+-- Inferred relationships between contacts
+CREATE TABLE IF NOT EXISTS relationships (
+    id                TEXT PRIMARY KEY,
+    from_entity_type  TEXT NOT NULL DEFAULT 'contact',
+    from_entity_id    TEXT NOT NULL,
+    to_entity_type    TEXT NOT NULL DEFAULT 'contact',
+    to_entity_id      TEXT NOT NULL,
+    relationship_type TEXT NOT NULL DEFAULT 'KNOWS',
+    properties        TEXT,
+    created_at        TEXT NOT NULL,
+    updated_at        TEXT NOT NULL,
+    UNIQUE(from_entity_id, to_entity_id, relationship_type)
+);
+
 -- Sync audit log
 CREATE TABLE IF NOT EXISTS sync_log (
     id                    TEXT PRIMARY KEY,
@@ -156,6 +170,9 @@ CREATE INDEX IF NOT EXISTS idx_participants_contact ON conversation_participants
 CREATE INDEX IF NOT EXISTS idx_participants_email   ON conversation_participants(email_address);
 
 CREATE INDEX IF NOT EXISTS idx_sync_log_account ON sync_log(account_id);
+
+CREATE INDEX IF NOT EXISTS idx_relationships_from ON relationships(from_entity_id);
+CREATE INDEX IF NOT EXISTS idx_relationships_to   ON relationships(to_entity_id);
 """
 
 

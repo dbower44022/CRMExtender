@@ -33,9 +33,9 @@ def tmp_db(tmp_path, monkeypatch):
 def _insert_account(conn, account_id="acct-1"):
     now = datetime.now(timezone.utc).isoformat()
     conn.execute(
-        "INSERT OR IGNORE INTO email_accounts "
-        "(id, provider, email_address, created_at, updated_at) "
-        "VALUES (?, 'gmail', 'test@example.com', ?, ?)",
+        "INSERT OR IGNORE INTO provider_accounts "
+        "(id, provider, account_type, email_address, created_at, updated_at) "
+        "VALUES (?, 'gmail', 'email', 'test@example.com', ?, ?)",
         (account_id, now, now),
     )
 
@@ -43,9 +43,15 @@ def _insert_account(conn, account_id="acct-1"):
 def _insert_contact(conn, contact_id, email, name=None):
     now = datetime.now(timezone.utc).isoformat()
     conn.execute(
-        "INSERT OR IGNORE INTO contacts (id, email, name, source, created_at, updated_at) "
-        "VALUES (?, ?, ?, 'test', ?, ?)",
-        (contact_id, email.lower(), name or email, now, now),
+        "INSERT OR IGNORE INTO contacts (id, name, source, status, created_at, updated_at) "
+        "VALUES (?, ?, 'test', 'active', ?, ?)",
+        (contact_id, name or email, now, now),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO contact_identifiers "
+        "(id, contact_id, type, value, is_primary, status, source, verified, created_at, updated_at) "
+        "VALUES (?, ?, 'email', ?, 1, 'active', 'test', 1, ?, ?)",
+        (f"ci-{contact_id}", contact_id, email.lower(), now, now),
     )
 
 
@@ -53,9 +59,9 @@ def _insert_conversation(conn, conv_id, account_id="acct-1"):
     now = datetime.now(timezone.utc).isoformat()
     conn.execute(
         "INSERT OR IGNORE INTO conversations "
-        "(id, account_id, subject, created_at, updated_at) "
-        "VALUES (?, ?, 'Test subject', ?, ?)",
-        (conv_id, account_id, now, now),
+        "(id, title, dismissed, created_at, updated_at) "
+        "VALUES (?, 'Test subject', 0, ?, ?)",
+        (conv_id, now, now),
     )
 
 
@@ -64,7 +70,7 @@ def _insert_participant(conn, conv_id, email, contact_id, message_count=1,
     now = datetime.now(timezone.utc).isoformat()
     conn.execute(
         "INSERT OR IGNORE INTO conversation_participants "
-        "(conversation_id, email_address, contact_id, message_count, "
+        "(conversation_id, address, contact_id, communication_count, "
         " first_seen_at, last_seen_at) "
         "VALUES (?, ?, ?, ?, ?, ?)",
         (conv_id, email, contact_id, message_count,
@@ -260,7 +266,7 @@ class TestInferRelationships:
             # Participant with NULL contact_id
             conn.execute(
                 "INSERT INTO conversation_participants "
-                "(conversation_id, email_address, contact_id, message_count) "
+                "(conversation_id, address, contact_id, communication_count) "
                 "VALUES ('conv-1', 'unknown@example.com', NULL, 1)",
             )
 

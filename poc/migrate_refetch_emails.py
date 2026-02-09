@@ -34,10 +34,10 @@ def migrate():
     with get_connection() as conn:
         cursor = conn.cursor()
 
-        # Get all emails with their Gmail message IDs
+        # Get all communications with their Gmail message IDs
         cursor.execute("""
             SELECT id, provider_message_id, subject
-            FROM emails
+            FROM communications
             WHERE provider_message_id IS NOT NULL
         """)
         emails = cursor.fetchall()
@@ -77,7 +77,7 @@ def migrate():
                 )
 
                 cursor.execute(
-                    "UPDATE emails SET body_text = ? WHERE id = ?",
+                    "UPDATE communications SET content = ? WHERE id = ?",
                     (new_body, db_id)
                 )
                 updated += 1

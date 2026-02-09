@@ -22,32 +22,60 @@ class KnownContact:
     email: str
     name: str
     resource_name: str = ""
+    company: str = ""
+    status: str = "active"
 
     @property
     def display(self) -> str:
         return self.name if self.name else self.email
 
-    def to_row(self, *, contact_id: str | None = None) -> dict:
-        """Serialize to a dict suitable for INSERT into contacts table."""
+    def to_row(self, *, contact_id: str | None = None) -> tuple[dict, dict]:
+        """Serialize to (contact_dict, identifier_dict) for INSERT.
+
+        Returns a tuple of two dicts: one for the contacts table and one for
+        the contact_identifiers table.
+        """
         now = _now_iso()
-        return {
-            "id": contact_id or str(uuid.uuid4()),
-            "email": self.email.lower(),
+        cid = contact_id or str(uuid.uuid4())
+        contact = {
+            "id": cid,
             "name": self.name,
+            "company": self.company,
             "source": "google_contacts",
-            "source_id": self.resource_name,
+            "status": self.status,
             "created_at": now,
             "updated_at": now,
         }
+        identifier = {
+            "id": str(uuid.uuid4()),
+            "contact_id": cid,
+            "type": "email",
+            "value": self.email.lower(),
+            "label": None,
+            "is_primary": 1,
+            "status": "active",
+            "source": "google_contacts",
+            "verified": 1,
+            "created_at": now,
+            "updated_at": now,
+        }
+        return contact, identifier
 
     @classmethod
-    def from_row(cls, row) -> KnownContact:
-        """Construct from a sqlite3.Row or dict."""
+    def from_row(cls, row, *, email: str | None = None) -> KnownContact:
+        """Construct from a sqlite3.Row or dict.
+
+        If the row is a JOIN with contact_identifiers, the email comes from
+        the 'value' column. Otherwise pass it explicitly via the email kwarg.
+        """
         r = dict(row)
+        resolved_email = email or r.get("value") or r.get("email") or ""
         return cls(
-            email=r["email"],
+            email=resolved_email,
             name=r.get("name") or "",
-            resource_name=r.get("source_id") or "",
+            resource_name=r.get("resource_name") or "",
+            company=r.get("company") or "",
+            status=r.get("status") or "active",
         )
 
 
@@ -76,40 +104,43 @@ class ParsedEmail:
         self,
         *,
         account_id: str,
-        conversation_id: str | None = None,
-        email_id: str | None = None,
+        communication_id: str | None = None,
         account_email: str = "",
     ) -> dict:
-        """Serialize to a dict suitable for INSERT into emails table."""
+        """Serialize to a dict suitable for INSERT into communications table."""
+        now = _now_iso()
         direction = "outbound" if self.sender_email.lower() == account_email.lower() else "inbound"
         return {
-            "id": email_id or str(uuid.uuid4()),
+            "id": communication_id or str(uuid.uuid4()),
             "account_id": account_id,
-            "conversation_id": conversation_id,
-            "provider_message_id": self.message_id,
-            "subject": self.subject,
+            "channel": "email",
+            "timestamp": self.date.isoformat() if self.date else now,
+            "content": self.body_plain,
+            "direction": direction,
+            "source": "auto_sync",
             "sender_address": self.sender_email,
             "sender_name": self.sender or None,
-            "date": self.date.isoformat() if self.date else None,
-            "body_text": self.body_plain,
+            "subject": self.subject,
             "body_html": self.body_html,
             "snippet": self.snippet,
+            "provider_message_id": self.message_id,
+            "provider_thread_id": self.thread_id,
             "header_message_id": None,
             "header_references": None,
             "header_in_reply_to": None,
-            "direction": direction,
             "is_read": 0,
-            "has_attachments": 0,
-            "created_at": _now_iso(),
+            "is_current": 1,
+            "created_at": now,
+            "updated_at": now,
         }
 
-    def recipient_rows(self, email_id: str) -> list[dict]:
-        """Return rows for the email_recipients table."""
+    def recipient_rows(self, communication_id: str) -> list[dict]:
+        """Return rows for the communication_participants table."""
         rows: list[dict] = []
         for addr in self.recipients:
-            rows.append({"email_id": email_id, "address": addr.lower(), "name": None, "role": "to"})
+            rows.append({"communication_id": communication_id, "address": addr.lower(), "name": None, "role": "to"})
         for addr in self.cc:
-            rows.append({"email_id": email_id, "address": addr.lower(), "name": None, "role": "cc"})
+            rows.append({"communication_id": communication_id, "address": addr.lower(), "name": None, "role": "cc"})
         return rows
 
     @classmethod
@@ -127,22 +158,23 @@ class ParsedEmail:
                     cc_addrs.append(rec["address"])
 
         date_val = None
-        if r.get("date"):
+        raw_date = r.get("timestamp") or r.get("date")
+        if raw_date:
             try:
-                date_val = datetime.fromisoformat(r["date"])
+                date_val = datetime.fromisoformat(raw_date)
             except (ValueError, TypeError):
                 pass
 
         return cls(
             message_id=r["provider_message_id"],
-            thread_id="",  # thread_id lives on conversation, not email row
+            thread_id=r.get("provider_thread_id") or "",
             subject=r.get("subject") or "",
             sender=r.get("sender_name") or r["sender_address"],
             sender_email=r["sender_address"],
             recipients=to_addrs,
             cc=cc_addrs,
             date=date_val,
-            body_plain=r.get("body_text") or "",
+            body_plain=r.get("content") or r.get("body_text") or "",
             body_html=r.get("body_html") or "",
             snippet=r.get("snippet") or "",
         )
@@ -150,14 +182,19 @@ class ParsedEmail:
 
 @dataclass
 class Conversation:
-    """A group of emails sharing the same Gmail threadId."""
+    """A group of communications sharing the same thread/conversation."""
 
     thread_id: str
-    subject: str
+    title: str
     emails: list[ParsedEmail] = field(default_factory=list)
     participants: list[str] = field(default_factory=list)
     matched_contacts: dict[str, KnownContact] = field(default_factory=dict)
     account_email: str = ""  # which account this belongs to (display-time only)
+
+    @property
+    def subject(self) -> str:
+        """Backward-compatible alias for title."""
+        return self.title
 
     @property
     def message_count(self) -> int:
@@ -173,7 +210,6 @@ class Conversation:
     def to_row(
         self,
         *,
-        account_id: str,
         conversation_id: str | None = None,
     ) -> dict:
         """Serialize to a dict suitable for INSERT into conversations table."""
@@ -181,19 +217,20 @@ class Conversation:
         now = _now_iso()
         return {
             "id": conversation_id or str(uuid.uuid4()),
-            "account_id": account_id,
-            "provider_thread_id": self.thread_id,
-            "subject": self.subject,
+            "topic_id": None,
+            "title": self.title,
             "status": "active",
-            "message_count": self.message_count,
-            "first_message_at": first_dt.isoformat() if first_dt else None,
-            "last_message_at": last_dt.isoformat() if last_dt else None,
+            "communication_count": self.message_count,
+            "participant_count": len(self.participants),
+            "first_activity_at": first_dt.isoformat() if first_dt else None,
+            "last_activity_at": last_dt.isoformat() if last_dt else None,
             "ai_summary": None,
             "ai_status": None,
             "ai_action_items": None,
             "ai_topics": None,
             "ai_summarized_at": None,
             "triage_result": None,
+            "dismissed": 0,
             "created_at": now,
             "updated_at": now,
         }
@@ -203,8 +240,8 @@ class Conversation:
         """Construct from a sqlite3.Row or dict."""
         r = dict(row)
         return cls(
-            thread_id=r.get("provider_thread_id") or r["id"],
-            subject=r.get("subject") or "",
+            thread_id=r["id"],
+            title=r.get("title") or r.get("subject") or "",
             emails=emails or [],
             participants=[],
         )
@@ -280,7 +317,7 @@ class ConversationSummary:
         except ValueError:
             status = ConversationStatus.UNCERTAIN
         return cls(
-            thread_id=r.get("provider_thread_id") or r["id"],
+            thread_id=r["id"],
             status=status,
             summary=r.get("ai_summary") or "",
             action_items=json.loads(r["ai_action_items"]) if r.get("ai_action_items") else [],

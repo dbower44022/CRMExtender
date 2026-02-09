@@ -17,14 +17,14 @@ def migrate():
     with get_connection() as conn:
         cursor = conn.cursor()
 
-        # Get all emails with body text (include body_html for HTML-aware parsing)
-        cursor.execute("SELECT id, body_text, body_html FROM emails WHERE body_text IS NOT NULL")
-        emails = cursor.fetchall()
+        # Get all communications with body text (include body_html for HTML-aware parsing)
+        cursor.execute("SELECT id, content, body_html FROM communications WHERE content IS NOT NULL")
+        communications = cursor.fetchall()
 
-        print(f"Processing {len(emails)} emails...")
+        print(f"Processing {len(communications)} communications...")
 
         updated = 0
-        for email_id, body, body_html in emails:
+        for email_id, body, body_html in communications:
             if not body:
                 continue
 
@@ -33,18 +33,18 @@ def migrate():
             # Only update if content changed
             if stripped != body:
                 cursor.execute(
-                    "UPDATE emails SET body_text = ? WHERE id = ?",
+                    "UPDATE communications SET content = ? WHERE id = ?",
                     (stripped, email_id)
                 )
                 updated += 1
 
-                # Show progress for changed emails
+                # Show progress for changed communications
                 reduction = len(body) - len(stripped)
                 print(f"  Updated {email_id[:8]}... (removed {reduction} chars)")
 
         conn.commit()
 
-    print(f"\nDone! Updated {updated} of {len(emails)} emails.")
+    print(f"\nDone! Updated {updated} of {len(communications)} communications.")
 
 
 if __name__ == "__main__":

@@ -190,7 +190,7 @@ def cmd_add_account(args: argparse.Namespace) -> None:
     # Check if already registered
     with get_connection() as conn:
         existing = conn.execute(
-            "SELECT id FROM email_accounts WHERE email_address = ?", (email,)
+            "SELECT id FROM provider_accounts WHERE email_address = ?", (email,)
         ).fetchone()
 
     if existing:
@@ -249,10 +249,13 @@ def cmd_list_accounts(args: argparse.Namespace) -> None:
     table.add_column("Conversations", justify="right")
 
     for account in accounts:
-        # Count conversations for this account
+        # Count conversations for this account (via communications join)
         with get_connection() as conn:
             count = conn.execute(
-                "SELECT COUNT(*) as cnt FROM conversations WHERE account_id = ?",
+                """SELECT COUNT(DISTINCT cc.conversation_id) as cnt
+                   FROM conversation_communications cc
+                   JOIN communications comm ON comm.id = cc.communication_id
+                   WHERE comm.account_id = ?""",
                 (account["id"],),
             ).fetchone()["cnt"]
 
@@ -285,7 +288,7 @@ def cmd_remove_account(args: argparse.Namespace) -> None:
 
     with get_connection() as conn:
         row = conn.execute(
-            "SELECT id, auth_token_path FROM email_accounts WHERE email_address = ?",
+            "SELECT id, auth_token_path FROM provider_accounts WHERE email_address = ?",
             (email,),
         ).fetchone()
 
@@ -296,9 +299,9 @@ def cmd_remove_account(args: argparse.Namespace) -> None:
     account_id = row["id"]
     token_file = row["auth_token_path"]
 
-    # CASCADE delete removes conversations, emails, participants, topics, sync_log
+    # SET NULL on communications preserves them; CASCADE removes sync_log
     with get_connection() as conn:
-        conn.execute("DELETE FROM email_accounts WHERE id = ?", (account_id,))
+        conn.execute("DELETE FROM provider_accounts WHERE id = ?", (account_id,))
 
     # Delete token file from disk
     if token_file:
@@ -336,18 +339,18 @@ def cmd_show_relationships(args: argparse.Namespace) -> None:
 
     init_db()
 
-    # Resolve --contact email to a contact_id
+    # Resolve --contact email to a contact_id via contact_identifiers
     contact_id = None
     if args.contact:
         with get_connection() as conn:
             row = conn.execute(
-                "SELECT id FROM contacts WHERE email = ?",
+                "SELECT contact_id FROM contact_identifiers WHERE type = 'email' AND value = ?",
                 (args.contact.lower(),),
             ).fetchone()
         if not row:
             console.print(f"\n[red]Contact not found:[/red] {args.contact}")
             sys.exit(1)
-        contact_id = row["id"]
+        contact_id = row["contact_id"]
 
     relationships = load_relationships(
         contact_id=contact_id,
@@ -365,11 +368,14 @@ def cmd_show_relationships(args: argparse.Namespace) -> None:
         placeholders = ",".join("?" for _ in contact_ids)
         with get_connection() as conn:
             rows = conn.execute(
-                f"SELECT id, name, email FROM contacts WHERE id IN ({placeholders})",
+                f"""SELECT c.id, c.name, ci.value AS email
+                    FROM contacts c
+                    LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
+                    WHERE c.id IN ({placeholders})""",
                 list(contact_ids),
             ).fetchall()
         for row in rows:
-            contact_names[row["id"]] = row["name"] or row["email"]
+            contact_names[row["id"]] = row["name"] or row["email"] or row["id"][:8]
 
     display_relationships(relationships, contact_names)
 

@@ -60,7 +60,7 @@ def register_account(
 
     with get_connection() as conn:
         row = conn.execute(
-            "SELECT id FROM email_accounts WHERE provider = ? AND email_address = ?",
+            "SELECT id FROM provider_accounts WHERE provider = ? AND email_address = ?",
             (provider, user_email),
         ).fetchone()
 
@@ -70,10 +70,10 @@ def register_account(
 
         account_id = str(uuid.uuid4())
         conn.execute(
-            """INSERT INTO email_accounts
-               (id, provider, email_address, display_name, auth_token_path,
-                backfill_query, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO provider_accounts
+               (id, provider, account_type, email_address, display_name,
+                auth_token_path, backfill_query, created_at, updated_at)
+               VALUES (?, ?, 'email', ?, ?, ?, ?, ?, ?)""",
             (
                 account_id, provider, user_email, None, token_path,
                 backfill_query or config.GMAIL_QUERY, now, now,
@@ -87,17 +87,17 @@ def get_account(account_id: str) -> dict | None:
     """Load an account row as a dict."""
     with get_connection() as conn:
         row = conn.execute(
-            "SELECT * FROM email_accounts WHERE id = ?",
+            "SELECT * FROM provider_accounts WHERE id = ?",
             (account_id,),
         ).fetchone()
         return dict(row) if row else None
 
 
 def get_all_accounts() -> list[dict]:
-    """Return all registered email accounts."""
+    """Return all registered provider accounts."""
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT * FROM email_accounts ORDER BY created_at"
+            "SELECT * FROM provider_accounts ORDER BY created_at"
         ).fetchall()
         return [dict(r) for r in rows]
 
@@ -110,7 +110,7 @@ def sync_contacts(
     creds: Credentials,
     rate_limiter: RateLimiter | None = None,
 ) -> int:
-    """Fetch contacts from Google People API and UPSERT into contacts table.
+    """Fetch contacts from Google People API and UPSERT into contacts + contact_identifiers.
 
     Returns the number of contacts stored.
     """
@@ -120,18 +120,34 @@ def sync_contacts(
 
     with get_connection() as conn:
         for kc in contacts:
-            conn.execute(
-                """INSERT INTO contacts (id, email, name, source, source_id, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)
-                   ON CONFLICT(email) DO UPDATE SET
-                       name = excluded.name,
-                       source_id = excluded.source_id,
-                       updated_at = excluded.updated_at""",
-                (
-                    str(uuid.uuid4()), kc.email.lower(), kc.name,
-                    "google_contacts", kc.resource_name, now, now,
-                ),
-            )
+            email_lower = kc.email.lower()
+
+            # Check if identifier already exists
+            existing = conn.execute(
+                "SELECT ci.contact_id FROM contact_identifiers ci WHERE ci.type = 'email' AND ci.value = ?",
+                (email_lower,),
+            ).fetchone()
+
+            if existing:
+                # Update existing contact
+                conn.execute(
+                    "UPDATE contacts SET name = ?, updated_at = ? WHERE id = ?",
+                    (kc.name, now, existing["contact_id"]),
+                )
+            else:
+                # Insert new contact + identifier
+                contact_id = str(uuid.uuid4())
+                conn.execute(
+                    """INSERT INTO contacts (id, name, source, status, created_at, updated_at)
+                       VALUES (?, ?, 'google_contacts', 'active', ?, ?)""",
+                    (contact_id, kc.name, now, now),
+                )
+                conn.execute(
+                    """INSERT INTO contact_identifiers
+                       (id, contact_id, type, value, is_primary, status, source, verified, created_at, updated_at)
+                       VALUES (?, ?, 'email', ?, 1, 'active', 'google_contacts', 1, ?, ?)""",
+                    (str(uuid.uuid4()), contact_id, email_lower, now, now),
+                )
             count += 1
 
     log.info("Synced %d contacts to database", count)
@@ -141,17 +157,29 @@ def sync_contacts(
 def load_contact_index() -> dict[str, KnownContact]:
     """Load contacts from DB and return a contact_index (email -> KnownContact)."""
     with get_connection() as conn:
-        rows = conn.execute("SELECT * FROM contacts").fetchall()
+        rows = conn.execute(
+            """SELECT c.*, ci.value AS email
+               FROM contacts c
+               JOIN contact_identifiers ci ON ci.contact_id = c.id
+               WHERE ci.type = 'email'"""
+        ).fetchall()
 
     index: dict[str, KnownContact] = {}
     for row in rows:
-        kc = KnownContact.from_row(row)
-        index[kc.email.lower()] = kc
+        r = dict(row)
+        email = r["email"].lower()
+        kc = KnownContact(
+            email=email,
+            name=r.get("name") or "",
+            company=r.get("company") or "",
+            status=r.get("status") or "active",
+        )
+        index[email] = kc
     return index
 
 
 # ---------------------------------------------------------------------------
-# Conversation + email persistence
+# Conversation + communication persistence
 # ---------------------------------------------------------------------------
 
 def _store_thread(
@@ -161,7 +189,7 @@ def _store_thread(
     thread_emails: list[ParsedEmail],
     contact_index: dict[str, KnownContact],
 ) -> tuple[bool, bool]:
-    """Store a single thread's conversation and emails.
+    """Store a single thread's conversation and communications.
 
     Returns (conversation_created, conversation_updated).
     """
@@ -175,9 +203,14 @@ def _store_thread(
     for em in thread_emails:
         em.body_plain = strip_quotes(em.body_plain, em.body_html or None)
 
-    # Check if conversation already exists
+    # Check if conversation already exists via communications + conversation_communications
     existing = conn.execute(
-        "SELECT id, message_count FROM conversations WHERE account_id = ? AND provider_thread_id = ?",
+        """SELECT cc.conversation_id, conv.communication_count
+           FROM communications c
+           JOIN conversation_communications cc ON cc.communication_id = c.id
+           JOIN conversations conv ON conv.id = cc.conversation_id
+           WHERE c.account_id = ? AND c.provider_thread_id = ?
+           LIMIT 1""",
         (account_id, thread_id),
     ).fetchone()
 
@@ -188,47 +221,48 @@ def _store_thread(
     now = _now_iso()
 
     if existing:
-        conv_id = existing["id"]
+        conv_id = existing["conversation_id"]
         conversation_created = False
     else:
         conv_id = str(uuid.uuid4())
         conn.execute(
             """INSERT INTO conversations
-               (id, account_id, provider_thread_id, subject, status,
-                message_count, first_message_at, last_message_at,
+               (id, title, status, communication_count, participant_count,
+                first_activity_at, last_activity_at, dismissed,
                 created_at, updated_at)
-               VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)""",
-            (conv_id, account_id, thread_id, subject,
+               VALUES (?, ?, 'active', ?, 0, ?, ?, 0, ?, ?)""",
+            (conv_id, subject,
              len(thread_emails), first_dt, last_dt, now, now),
         )
         conversation_created = True
 
-    # Insert emails (skip duplicates)
-    new_email_count = 0
+    # Insert communications (skip duplicates)
+    new_comm_count = 0
     for em in thread_emails:
-        email_id = str(uuid.uuid4())
+        comm_id = str(uuid.uuid4())
         row = em.to_row(
             account_id=account_id,
-            conversation_id=conv_id,
-            email_id=email_id,
+            communication_id=comm_id,
             account_email=account_email,
         )
         try:
             conn.execute(
-                """INSERT OR IGNORE INTO emails
-                   (id, account_id, conversation_id, provider_message_id, subject,
-                    sender_address, sender_name, date, body_text, body_html, snippet,
+                """INSERT OR IGNORE INTO communications
+                   (id, account_id, channel, timestamp, content, direction, source,
+                    sender_address, sender_name, subject, body_html, snippet,
+                    provider_message_id, provider_thread_id,
                     header_message_id, header_references, header_in_reply_to,
-                    direction, is_read, has_attachments, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    is_read, is_current, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    row["id"], row["account_id"], row["conversation_id"],
-                    row["provider_message_id"], row["subject"],
-                    row["sender_address"], row["sender_name"], row["date"],
-                    row["body_text"], row["body_html"], row["snippet"],
+                    row["id"], row["account_id"], row["channel"],
+                    row["timestamp"], row["content"], row["direction"],
+                    row["source"], row["sender_address"], row["sender_name"],
+                    row["subject"], row["body_html"], row["snippet"],
+                    row["provider_message_id"], row["provider_thread_id"],
                     row["header_message_id"], row["header_references"],
-                    row["header_in_reply_to"], row["direction"],
-                    row["is_read"], row["has_attachments"], row["created_at"],
+                    row["header_in_reply_to"], row["is_read"],
+                    row["is_current"], row["created_at"], row["updated_at"],
                 ),
             )
         except Exception:
@@ -237,36 +271,49 @@ def _store_thread(
 
         # Check if this was actually inserted (not ignored due to UNIQUE)
         if conn.execute(
-            "SELECT 1 FROM emails WHERE id = ?", (email_id,)
+            "SELECT 1 FROM communications WHERE id = ?", (comm_id,)
         ).fetchone():
-            new_email_count += 1
+            new_comm_count += 1
+
+            # Insert into conversation_communications join table
+            conn.execute(
+                """INSERT OR IGNORE INTO conversation_communications
+                   (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at)
+                   VALUES (?, ?, 'sync', 1.0, 1, ?)""",
+                (conv_id, comm_id, now),
+            )
+
             # Insert recipients
-            for rec_row in em.recipient_rows(email_id):
+            for rec_row in em.recipient_rows(comm_id):
                 conn.execute(
-                    """INSERT OR IGNORE INTO email_recipients
-                       (email_id, address, name, role)
+                    """INSERT OR IGNORE INTO communication_participants
+                       (communication_id, address, name, role)
                        VALUES (?, ?, ?, ?)""",
-                    (rec_row["email_id"], rec_row["address"],
+                    (rec_row["communication_id"], rec_row["address"],
                      rec_row["name"], rec_row["role"]),
                 )
 
     conversation_updated = False
-    if existing and new_email_count > 0:
-        # Update conversation counts and timestamps
+    if existing and new_comm_count > 0:
+        # Update conversation counts and timestamps via join
         actual_count = conn.execute(
-            "SELECT COUNT(*) as cnt FROM emails WHERE conversation_id = ?",
+            """SELECT COUNT(*) as cnt FROM conversation_communications
+               WHERE conversation_id = ?""",
             (conv_id,),
         ).fetchone()["cnt"]
 
-        # Recalculate date range from stored emails
+        # Recalculate date range from stored communications
         date_row = conn.execute(
-            "SELECT MIN(date) as first_dt, MAX(date) as last_dt FROM emails WHERE conversation_id = ?",
+            """SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
+               FROM communications c
+               JOIN conversation_communications cc ON cc.communication_id = c.id
+               WHERE cc.conversation_id = ?""",
             (conv_id,),
         ).fetchone()
 
         conn.execute(
             """UPDATE conversations
-               SET message_count = ?, first_message_at = ?, last_message_at = ?,
+               SET communication_count = ?, first_activity_at = ?, last_activity_at = ?,
                    ai_summarized_at = NULL, updated_at = ?
                WHERE id = ?""",
             (actual_count, date_row["first_dt"], date_row["last_dt"], now, conv_id),
@@ -280,37 +327,52 @@ def _store_thread(
             all_participants[p] = None
 
     for addr in all_participants:
-        # Look up contact_id
+        # Look up contact_id via contact_identifiers
         contact_row = conn.execute(
-            "SELECT id FROM contacts WHERE email = ?",
+            "SELECT contact_id FROM contact_identifiers WHERE type = 'email' AND value = ?",
             (addr.lower(),),
         ).fetchone()
-        contact_id = contact_row["id"] if contact_row else None
+        contact_id = contact_row["contact_id"] if contact_row else None
 
         # Count messages from this participant in the conversation
         msg_count = conn.execute(
-            "SELECT COUNT(*) as cnt FROM emails WHERE conversation_id = ? AND sender_address = ?",
+            """SELECT COUNT(*) as cnt FROM communications c
+               JOIN conversation_communications cc ON cc.communication_id = c.id
+               WHERE cc.conversation_id = ? AND c.sender_address = ?""",
             (conv_id, addr),
         ).fetchone()["cnt"]
 
         # Get first/last seen dates
         date_row = conn.execute(
-            "SELECT MIN(date) as first_dt, MAX(date) as last_dt FROM emails WHERE conversation_id = ? AND sender_address = ?",
+            """SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
+               FROM communications c
+               JOIN conversation_communications cc ON cc.communication_id = c.id
+               WHERE cc.conversation_id = ? AND c.sender_address = ?""",
             (conv_id, addr),
         ).fetchone()
 
         conn.execute(
             """INSERT INTO conversation_participants
-               (conversation_id, email_address, contact_id, message_count, first_seen_at, last_seen_at)
+               (conversation_id, address, contact_id, communication_count, first_seen_at, last_seen_at)
                VALUES (?, ?, ?, ?, ?, ?)
-               ON CONFLICT(conversation_id, email_address) DO UPDATE SET
+               ON CONFLICT(conversation_id, address) DO UPDATE SET
                    contact_id = excluded.contact_id,
-                   message_count = excluded.message_count,
+                   communication_count = excluded.communication_count,
                    first_seen_at = excluded.first_seen_at,
                    last_seen_at = excluded.last_seen_at""",
             (conv_id, addr, contact_id, msg_count,
              date_row["first_dt"], date_row["last_dt"]),
         )
+
+    # Update participant_count on conversation
+    part_count = conn.execute(
+        "SELECT COUNT(*) as cnt FROM conversation_participants WHERE conversation_id = ?",
+        (conv_id,),
+    ).fetchone()["cnt"]
+    conn.execute(
+        "UPDATE conversations SET participant_count = ? WHERE id = ?",
+        (part_count, conv_id),
+    )
 
     return conversation_created, conversation_updated
 
@@ -378,10 +440,10 @@ def initial_sync(
                     conversations_created += 1
                 if updated:
                     conversations_updated += 1
-                # Count net new emails stored
+                # Count net new communications stored
                 for em in thread_emails:
                     row = conn.execute(
-                        "SELECT 1 FROM emails WHERE account_id = ? AND provider_message_id = ?",
+                        "SELECT 1 FROM communications WHERE account_id = ? AND provider_message_id = ?",
                         (account_id, em.message_id),
                     ).fetchone()
                     if row:
@@ -396,7 +458,7 @@ def initial_sync(
 
     with get_connection() as conn:
         conn.execute(
-            """UPDATE email_accounts
+            """UPDATE provider_accounts
                SET sync_cursor = ?, initial_sync_done = 1,
                    last_synced_at = ?, updated_at = ?
                WHERE id = ?""",
@@ -501,25 +563,33 @@ def incremental_sync(
     if deleted_ids:
         with get_connection() as conn:
             for mid in deleted_ids:
-                # Find the email and its conversation
-                email_row = conn.execute(
-                    "SELECT id, conversation_id FROM emails WHERE account_id = ? AND provider_message_id = ?",
+                # Find the communication and its conversation
+                comm_row = conn.execute(
+                    "SELECT id FROM communications WHERE account_id = ? AND provider_message_id = ?",
                     (account_id, mid),
                 ).fetchone()
-                if email_row:
-                    conv_id = email_row["conversation_id"]
+                if comm_row:
+                    comm_id = comm_row["id"]
+                    # Find conversation via join table
+                    cc_row = conn.execute(
+                        "SELECT conversation_id FROM conversation_communications WHERE communication_id = ?",
+                        (comm_id,),
+                    ).fetchone()
+                    conv_id = cc_row["conversation_id"] if cc_row else None
+
+                    # Delete the communication (CASCADE removes join rows)
                     conn.execute(
-                        "DELETE FROM emails WHERE id = ?",
-                        (email_row["id"],),
+                        "DELETE FROM communications WHERE id = ?",
+                        (comm_id,),
                     )
-                    # Update conversation message count
+                    # Update conversation communication count
                     if conv_id:
                         actual_count = conn.execute(
-                            "SELECT COUNT(*) as cnt FROM emails WHERE conversation_id = ?",
+                            "SELECT COUNT(*) as cnt FROM conversation_communications WHERE conversation_id = ?",
                             (conv_id,),
                         ).fetchone()["cnt"]
                         conn.execute(
-                            "UPDATE conversations SET message_count = ?, updated_at = ? WHERE id = ?",
+                            "UPDATE conversations SET communication_count = ?, updated_at = ? WHERE id = ?",
                             (actual_count, _now_iso(), conv_id),
                         )
 
@@ -529,7 +599,7 @@ def incremental_sync(
 
     with get_connection() as conn:
         conn.execute(
-            """UPDATE email_accounts
+            """UPDATE provider_accounts
                SET sync_cursor = ?, last_synced_at = ?, updated_at = ?
                WHERE id = ?""",
             (history_id, now, now, account_id),
@@ -572,20 +642,19 @@ def process_conversations(
 ) -> tuple[int, int, int]:
     """Triage and summarize conversations that need processing.
 
-    Returns (triaged_count, summarized_count, topic_count).
+    Returns (triaged_count, summarized_count, tag_count).
     """
     contact_index = load_contact_index()
     import anthropic
 
-    # Find conversations needing processing
+    # Find conversations needing processing (account-independent)
     with get_connection() as conn:
         rows = conn.execute(
             """SELECT * FROM conversations
-               WHERE account_id = ?
-                 AND triage_result IS NULL
+               WHERE triage_result IS NULL
                  AND ai_summarized_at IS NULL
-               ORDER BY last_message_at DESC""",
-            (account_id,),
+                 AND dismissed = 0
+               ORDER BY last_activity_at DESC""",
         ).fetchall()
 
     if not rows:
@@ -594,32 +663,35 @@ def process_conversations(
 
     triaged_count = 0
     summarized_count = 0
-    topic_count = 0
+    tag_count = 0
 
     for conv_row in rows:
         conv_id = conv_row["id"]
 
-        # Load emails for this conversation
+        # Load communications for this conversation via join
         with get_connection() as conn:
-            email_rows = conn.execute(
-                "SELECT * FROM emails WHERE conversation_id = ? ORDER BY date",
+            comm_rows = conn.execute(
+                """SELECT c.* FROM communications c
+                   JOIN conversation_communications cc ON cc.communication_id = c.id
+                   WHERE cc.conversation_id = ?
+                   ORDER BY c.timestamp""",
                 (conv_id,),
             ).fetchall()
 
         emails = []
-        for er in email_rows:
+        for cr in comm_rows:
             rec_rows = None
             with get_connection() as conn:
                 rec_rows = conn.execute(
-                    "SELECT * FROM email_recipients WHERE email_id = ?",
-                    (er["id"],),
+                    "SELECT * FROM communication_participants WHERE communication_id = ?",
+                    (cr["id"],),
                 ).fetchall()
-            emails.append(ParsedEmail.from_row(er, recipients=rec_rows))
+            emails.append(ParsedEmail.from_row(cr, recipients=rec_rows))
 
         # Reconstruct Conversation object for triage/summarization
         conv = Conversation(
-            thread_id=conv_row["provider_thread_id"] or conv_id,
-            subject=conv_row["subject"] or "",
+            thread_id=conv_id,
+            title=conv_row["title"] or "",
             emails=emails,
             participants=[],
         )
@@ -672,54 +744,58 @@ def process_conversations(
                 )
             summarized_count += 1
 
-            # Extract and normalize topics
+            # Extract and normalize tags
             if summary.key_topics:
-                topic_count += _store_topics(conv_id, summary.key_topics)
+                tag_count += _store_tags(conv_id, summary.key_topics)
 
     log.info(
-        "Processing complete: %d triaged, %d summarized, %d topics",
-        triaged_count, summarized_count, topic_count,
+        "Processing complete: %d triaged, %d summarized, %d tags",
+        triaged_count, summarized_count, tag_count,
     )
-    return triaged_count, summarized_count, topic_count
+    return triaged_count, summarized_count, tag_count
 
 
-def _store_topics(conversation_id: str, topics: list[str]) -> int:
-    """Normalize and store topics for a conversation. Returns count stored."""
+def _store_tags(conversation_id: str, tag_names: list[str]) -> int:
+    """Normalize and store tags for a conversation. Returns count stored."""
     now = _now_iso()
     count = 0
 
     with get_connection() as conn:
-        for raw_topic in topics:
-            name = raw_topic.strip().lower()
+        for raw_tag in tag_names:
+            name = raw_tag.strip().lower()
             if not name:
                 continue
 
-            # Upsert topic
-            topic_id = str(uuid.uuid4())
+            # Upsert tag
+            tag_id = str(uuid.uuid4())
             conn.execute(
-                """INSERT INTO topics (id, name, created_at)
-                   VALUES (?, ?, ?)
+                """INSERT INTO tags (id, name, source, created_at)
+                   VALUES (?, ?, 'ai', ?)
                    ON CONFLICT(name) DO NOTHING""",
-                (topic_id, name, now),
+                (tag_id, name, now),
             )
 
-            # Get the actual topic ID (may already exist)
-            topic_row = conn.execute(
-                "SELECT id FROM topics WHERE name = ?",
+            # Get the actual tag ID (may already exist)
+            tag_row = conn.execute(
+                "SELECT id FROM tags WHERE name = ?",
                 (name,),
             ).fetchone()
-            actual_id = topic_row["id"]
+            actual_id = tag_row["id"]
 
             # Link to conversation
             conn.execute(
-                """INSERT OR IGNORE INTO conversation_topics
-                   (conversation_id, topic_id, confidence, source, created_at)
+                """INSERT OR IGNORE INTO conversation_tags
+                   (conversation_id, tag_id, confidence, source, created_at)
                    VALUES (?, ?, 1.0, 'ai', ?)""",
                 (conversation_id, actual_id, now),
             )
             count += 1
 
     return count
+
+
+# Keep old name as alias for backward compatibility during transition
+_store_topics = _store_tags
 
 
 # ---------------------------------------------------------------------------
@@ -735,40 +811,52 @@ def load_conversations_for_display(
 ) -> tuple[list[Conversation], list[ConversationSummary], list]:
     """Load conversations with their summaries from DB.
 
-    Pass a single account_id or a list of account_ids for multi-account.
+    Conversations are now account-independent. When account_ids are given,
+    we filter to conversations that contain at least one communication from
+    those accounts.
     Returns (conversations, summaries, triage_filtered) ready for display.py.
     """
-    # Resolve the list of IDs to query
     ids = account_ids or ([account_id] if account_id else [])
-    if not ids:
-        return [], [], []
-
-    placeholders = ",".join("?" for _ in ids)
 
     # Build email-address lookup for account badges
     account_email_map: dict[str, str] = {}
-    with get_connection() as conn:
-        for aid in ids:
-            row = conn.execute(
-                "SELECT email_address FROM email_accounts WHERE id = ?", (aid,)
-            ).fetchone()
-            if row:
-                account_email_map[aid] = row["email_address"]
+    if ids:
+        with get_connection() as conn:
+            for aid in ids:
+                row = conn.execute(
+                    "SELECT email_address FROM provider_accounts WHERE id = ?", (aid,)
+                ).fetchone()
+                if row:
+                    account_email_map[aid] = row["email_address"]
 
     with get_connection() as conn:
-        if include_triaged:
-            query = f"""SELECT * FROM conversations
-                       WHERE account_id IN ({placeholders})
-                       ORDER BY last_message_at DESC"""
+        if ids:
+            placeholders = ",".join("?" for _ in ids)
+            # Find conversations that have at least one communication from these accounts
+            if include_triaged:
+                query = f"""SELECT DISTINCT conv.* FROM conversations conv
+                           JOIN conversation_communications cc ON cc.conversation_id = conv.id
+                           JOIN communications comm ON comm.id = cc.communication_id
+                           WHERE comm.account_id IN ({placeholders})
+                           ORDER BY conv.last_activity_at DESC"""
+            else:
+                query = f"""SELECT DISTINCT conv.* FROM conversations conv
+                           JOIN conversation_communications cc ON cc.conversation_id = conv.id
+                           JOIN communications comm ON comm.id = cc.communication_id
+                           WHERE comm.account_id IN ({placeholders}) AND conv.triage_result IS NULL
+                           ORDER BY conv.last_activity_at DESC"""
+            if limit:
+                query += f" LIMIT {limit}"
+            conv_rows = conn.execute(query, ids).fetchall()
         else:
-            query = f"""SELECT * FROM conversations
-                       WHERE account_id IN ({placeholders}) AND triage_result IS NULL
-                       ORDER BY last_message_at DESC"""
-
-        if limit:
-            query += f" LIMIT {limit}"
-
-        conv_rows = conn.execute(query, ids).fetchall()
+            # No account filter — load all conversations
+            if include_triaged:
+                query = "SELECT * FROM conversations ORDER BY last_activity_at DESC"
+            else:
+                query = "SELECT * FROM conversations WHERE triage_result IS NULL ORDER BY last_activity_at DESC"
+            if limit:
+                query += f" LIMIT {limit}"
+            conv_rows = conn.execute(query).fetchall()
 
     conversations: list[Conversation] = []
     summaries: list[ConversationSummary] = []
@@ -781,36 +869,43 @@ def load_conversations_for_display(
         if cr["triage_result"]:
             triage_filtered.append(
                 TriageResult(
-                    thread_id=cr["provider_thread_id"] or conv_id,
-                    subject=cr["subject"] or "",
+                    thread_id=conv_id,
+                    subject=cr["title"] or "",
                     reason=filter_reason_from_db(cr["triage_result"]),
                 )
             )
             continue
 
-        # Load emails
+        # Load communications via join
         with get_connection() as conn:
-            email_rows = conn.execute(
-                "SELECT * FROM emails WHERE conversation_id = ? ORDER BY date",
+            comm_rows = conn.execute(
+                """SELECT c.* FROM communications c
+                   JOIN conversation_communications cc ON cc.communication_id = c.id
+                   WHERE cc.conversation_id = ?
+                   ORDER BY c.timestamp""",
                 (conv_id,),
             ).fetchall()
 
         emails = []
-        for er in email_rows:
+        for cr2 in comm_rows:
             with get_connection() as conn:
                 rec_rows = conn.execute(
-                    "SELECT * FROM email_recipients WHERE email_id = ?",
-                    (er["id"],),
+                    "SELECT * FROM communication_participants WHERE communication_id = ?",
+                    (cr2["id"],),
                 ).fetchall()
-            emails.append(ParsedEmail.from_row(er, recipients=rec_rows))
+            emails.append(ParsedEmail.from_row(cr2, recipients=rec_rows))
+
+        # Derive account_email from the first communication's account_id
+        first_account_id = comm_rows[0]["account_id"] if comm_rows else None
+        account_email = account_email_map.get(first_account_id, "") if first_account_id else ""
 
         # Build conversation
         conv = Conversation(
-            thread_id=cr["provider_thread_id"] or conv_id,
-            subject=cr["subject"] or "",
+            thread_id=conv_id,
+            title=cr["title"] or "",
             emails=emails,
             participants=[],
-            account_email=account_email_map.get(cr["account_id"], ""),
+            account_email=account_email,
         )
 
         # Load participants and match contacts
@@ -821,15 +916,18 @@ def load_conversations_for_display(
             ).fetchall()
 
         for pr in part_rows:
-            conv.participants.append(pr["email_address"])
+            conv.participants.append(pr["address"])
             if pr["contact_id"]:
                 with get_connection() as conn:
                     contact_row = conn.execute(
-                        "SELECT * FROM contacts WHERE id = ?",
+                        """SELECT c.*, ci.value AS email
+                           FROM contacts c
+                           LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
+                           WHERE c.id = ?""",
                         (pr["contact_id"],),
                     ).fetchone()
                 if contact_row:
-                    conv.matched_contacts[pr["email_address"]] = KnownContact.from_row(contact_row)
+                    conv.matched_contacts[pr["address"]] = KnownContact.from_row(contact_row)
 
         conversations.append(conv)
 
@@ -841,17 +939,27 @@ def load_conversations_for_display(
     # Also load triage-only rows if not already included
     if not include_triaged:
         with get_connection() as conn:
-            triaged_rows = conn.execute(
-                f"""SELECT * FROM conversations
-                   WHERE account_id IN ({placeholders}) AND triage_result IS NOT NULL
-                   ORDER BY last_message_at DESC""",
-                ids,
-            ).fetchall()
+            if ids:
+                placeholders = ",".join("?" for _ in ids)
+                triaged_rows = conn.execute(
+                    f"""SELECT DISTINCT conv.* FROM conversations conv
+                       JOIN conversation_communications cc ON cc.conversation_id = conv.id
+                       JOIN communications comm ON comm.id = cc.communication_id
+                       WHERE comm.account_id IN ({placeholders}) AND conv.triage_result IS NOT NULL
+                       ORDER BY conv.last_activity_at DESC""",
+                    ids,
+                ).fetchall()
+            else:
+                triaged_rows = conn.execute(
+                    """SELECT * FROM conversations
+                       WHERE triage_result IS NOT NULL
+                       ORDER BY last_activity_at DESC""",
+                ).fetchall()
         for tr in triaged_rows:
             triage_filtered.append(
                 TriageResult(
-                    thread_id=tr["provider_thread_id"] or tr["id"],
-                    subject=tr["subject"] or "",
+                    thread_id=tr["id"],
+                    subject=tr["title"] or "",
                     reason=filter_reason_from_db(tr["triage_result"]),
                 )
             )

@@ -73,7 +73,7 @@ def get_credentials_for_account(token_path: Path) -> Credentials:
             # Update DB row to point to new path
             with get_connection() as conn:
                 conn.execute(
-                    "UPDATE email_accounts SET auth_token_path = ? WHERE auth_token_path = ?",
+                    "UPDATE provider_accounts SET auth_token_path = ? WHERE auth_token_path = ?",
                     (str(new_path), str(token_path)),
                 )
         except Exception as exc:

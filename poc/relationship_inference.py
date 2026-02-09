@@ -18,7 +18,7 @@ SELECT
     cp1.contact_id  AS contact_a,
     cp2.contact_id  AS contact_b,
     COUNT(DISTINCT cp1.conversation_id) AS shared_conversations,
-    SUM(cp1.message_count + cp2.message_count) AS shared_messages,
+    SUM(cp1.communication_count + cp2.communication_count) AS shared_messages,
     MAX(cp1.last_seen_at, cp2.last_seen_at) AS last_interaction,
     MIN(cp1.first_seen_at, cp2.first_seen_at) AS first_interaction
 FROM conversation_participants cp1

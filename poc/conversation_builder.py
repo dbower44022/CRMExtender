@@ -41,7 +41,7 @@ def build_conversations(threads: list[list[ParsedEmail]]) -> list[Conversation]:
         conversations.append(
             Conversation(
                 thread_id=thread_id,
-                subject=subject,
+                title=subject,
                 emails=emails,
                 participants=list(all_participants.keys()),
             )

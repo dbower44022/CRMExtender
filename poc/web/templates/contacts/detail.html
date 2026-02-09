@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ contact.name or 'Contact' }} — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>{{ contact.name or '(unnamed)' }}</h1>
+
+<div class="grid">
+  <div>
+    <!-- Conversations -->
+    <h2>Conversations ({{ conversations|length }})</h2>
+    {% if conversations %}
+    <table>
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Status</th>
+          <th>Last Activity</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for conv in conversations %}
+        <tr>
+          <td><a href="/conversations/{{ conv.id }}">{{ conv.title or '(no subject)' }}</a></td>
+          <td>{{ conv.ai_status or conv.status or 'active' }}</td>
+          <td>{{ conv.last_activity_at[:16] if conv.last_activity_at else '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">No conversations.</p>
+    {% endif %}
+  </div>
+
+  <div>
+    <!-- Sidebar -->
+    <article>
+      <header>Contact Info</header>
+      <dl class="detail-sidebar">
+        {% for ident in contact.identifiers %}
+        <dt>{{ ident.type|title }}</dt>
+        <dd>{{ ident.value }}{% if ident.is_primary %} <small>(primary)</small>{% endif %}</dd>
+        {% endfor %}
+
+        <dt>Company</dt>
+        <dd>
+          {% if company %}
+          <a href="/companies/{{ company.id }}">{{ company.name }}</a>
+          {% elif contact.company %}
+          {{ contact.company }}
+          {% else %}
+          <em>None</em>
+          {% endif %}
+        </dd>
+
+        <dt>Source</dt>
+        <dd>{{ contact.source or 'N/A' }}</dd>
+
+        <dt>Status</dt>
+        <dd>{{ contact.status or 'active' }}</dd>
+      </dl>
+    </article>
+
+    {% if relationships %}
+    <article>
+      <header>Relationships</header>
+      <ul>
+        {% for rel in relationships %}
+        <li>
+          <a href="/contacts/{{ rel.other_id }}">{{ rel.other_name or rel.other_email or rel.other_id[:8] }}</a>
+          {% if rel.props.strength is defined %}
+          <span class="strength-bar-bg">
+            <span class="strength-bar" style="width: {{ (rel.props.strength * 100)|int }}px"></span>
+          </span>
+          <small>{{ '%.0f'|format(rel.props.strength * 100) }}%</small>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

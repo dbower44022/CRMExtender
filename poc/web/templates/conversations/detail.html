@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}{{ conv.title or '(no subject)' }} — CRM Extender{% endblock %}
+
+{% block content %}
+<hgroup>
+  <h1>{{ conv.title or '(no subject)' }}</h1>
+  <p>{{ communications|length }} message{{ 's' if communications|length != 1 else '' }}
+     &middot; Last activity: {{ conv.last_activity_at[:16] if conv.last_activity_at else 'N/A' }}</p>
+</hgroup>
+
+<div class="grid">
+  <div>
+    <!-- Email thread -->
+    {% for msg in communications %}
+    <div class="thread-message">
+      <div class="meta">
+        <strong>{{ msg.sender_name or msg.sender_address or 'Unknown' }}</strong>
+        {% if msg.sender_address and msg.sender_name %}
+          &lt;{{ msg.sender_address }}&gt;
+        {% endif %}
+        &middot; {{ msg.timestamp[:16] if msg.timestamp else '' }}
+        {% for r in msg.recipients %}
+          <br><small>{{ r.role }}: {{ r.name or r.address }}</small>
+        {% endfor %}
+      </div>
+      <div class="body">{{ msg.content or msg.snippet or '(no content)' }}</div>
+    </div>
+    {% endfor %}
+
+    {% if not communications %}
+    <p class="empty-state">No messages in this conversation.</p>
+    {% endif %}
+  </div>
+
+  <div>
+    <!-- Sidebar -->
+    <article>
+      <header>Details</header>
+      <dl class="detail-sidebar">
+        <dt>Status</dt>
+        <dd>{{ conv.ai_status or conv.status or 'active' }}</dd>
+
+        {% if conv.triage_result %}
+        <dt>Triage</dt>
+        <dd>{{ conv.triage_result }}</dd>
+        {% endif %}
+
+        <dt>Topic</dt>
+        <dd>
+          {% if topic %}
+            {{ topic.project_name }} / {{ topic.name }}
+            <form method="post" action="/conversations/{{ conv.id }}/unassign" style="display:inline">
+              <button type="submit" class="outline secondary" style="padding:0.2rem 0.5rem;font-size:0.75rem">Remove</button>
+            </form>
+          {% else %}
+            <em>Unassigned</em>
+          {% endif %}
+        </dd>
+
+        {% if all_topics %}
+        <dt>Assign to topic</dt>
+        <dd>
+          <form method="post" action="/conversations/{{ conv.id }}/assign">
+            <select name="topic_id">
+              {% for t in all_topics %}
+              <option value="{{ t.id }}">{{ t.project_name }} / {{ t.name }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" style="padding:0.3rem 0.75rem;font-size:0.85rem">Assign</button>
+          </form>
+        </dd>
+        {% endif %}
+      </dl>
+    </article>
+
+    {% if conv.ai_summary %}
+    <article>
+      <header>AI Summary</header>
+      <p>{{ conv.ai_summary }}</p>
+    </article>
+    {% endif %}
+
+    {% if conv.ai_action_items %}
+    <article>
+      <header>Action Items</header>
+      <p>{{ conv.ai_action_items }}</p>
+    </article>
+    {% endif %}
+
+    {% if tags %}
+    <article>
+      <header>Tags</header>
+      <p>
+        {% for tag in tags %}
+        <span class="tag">{{ tag }}</span>
+        {% endfor %}
+      </p>
+    </article>
+    {% endif %}
+
+    {% if participants %}
+    <article>
+      <header>Participants ({{ participants|length }})</header>
+      <ul>
+        {% for p in participants %}
+        <li>
+          {% if p.contact_id %}
+          <a href="/contacts/{{ p.contact_id }}">{{ p.contact_name or p.address }}</a>
+          {% else %}
+          {{ p.name or p.address }}
+          {% endif %}
+          <small>({{ p.communication_count }} msg{{ 's' if p.communication_count != 1 else '' }})</small>
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

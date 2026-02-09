@@ -1,0 +1,31 @@
+{% if report.assignments %}
+<p><strong>{{ report.matched }}</strong> of {{ report.total_candidates }} conversations matched.</p>
+<table>
+  <thead>
+    <tr>
+      <th>Conversation</th>
+      <th>Topic</th>
+      <th>Score</th>
+      <th>Matched Tags</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in report.assignments %}
+    <tr>
+      <td>{{ a.conversation_title or a.conversation_id[:8] }}</td>
+      <td>{{ a.topic_name }}</td>
+      <td>{{ a.score }}</td>
+      <td>
+        {% for t in a.matched_tags %}<span class="tag">{{ t }}</span>{% endfor %}
+        {% if a.title_matched %}<span class="tag">title match</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<button hx-post="/projects/{{ project_id }}/auto-assign/apply"
+        hx-target="#assign-preview"
+        hx-swap="innerHTML">Apply All</button>
+{% else %}
+<p>No matches found ({{ report.total_candidates }} candidates, 0 matched).</p>
+{% endif %}

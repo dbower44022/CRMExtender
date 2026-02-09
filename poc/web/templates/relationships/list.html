@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Relationships — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Relationships <small>({{ relationships|length }})</small></h1>
+
+<div class="search-bar">
+  <input type="number" name="min_strength" value="{{ min_strength }}"
+         min="0" max="1" step="0.1"
+         placeholder="Min strength"
+         style="width:150px"
+         hx-get="/relationships/search"
+         hx-trigger="change"
+         hx-target="#results"
+         hx-include=".search-bar">
+  <button hx-post="/relationships/infer"
+          hx-target="#infer-result"
+          hx-swap="innerHTML">Re-infer Relationships</button>
+  <span class="htmx-indicator" aria-busy="true"></span>
+</div>
+<div id="infer-result"></div>
+
+<div id="results">
+  {% include "relationships/_rows.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Conversations — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Conversations <small>({{ total }})</small></h1>
+
+<div class="search-bar">
+  <input type="search" name="q" value="{{ q }}"
+         placeholder="Search subjects..."
+         hx-get="/conversations/search"
+         hx-trigger="input changed delay:300ms, search"
+         hx-target="#results"
+         hx-include=".search-bar"
+         hx-push-url="/conversations">
+  <select name="status"
+          hx-get="/conversations/search"
+          hx-trigger="change"
+          hx-target="#results"
+          hx-include=".search-bar"
+          hx-push-url="/conversations">
+    <option value="open" {% if status == 'open' %}selected{% endif %}>Open</option>
+    <option value="triaged" {% if status == 'triaged' %}selected{% endif %}>Triaged</option>
+    <option value="closed" {% if status == 'closed' %}selected{% endif %}>Closed</option>
+    <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+  </select>
+  <select name="topic_id"
+          hx-get="/conversations/search"
+          hx-trigger="change"
+          hx-target="#results"
+          hx-include=".search-bar"
+          hx-push-url="/conversations">
+    <option value="">All topics</option>
+    {% for t in topics %}
+    <option value="{{ t.id }}" {% if topic_id == t.id %}selected{% endif %}>{{ t.project_name }} / {{ t.name }}</option>
+    {% endfor %}
+  </select>
+  <span class="htmx-indicator" aria-busy="true"></span>
+</div>
+
+<div id="results">
+  {% include "conversations/_rows.html" %}
+</div>
+{% endblock %}

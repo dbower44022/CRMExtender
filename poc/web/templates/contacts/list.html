@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Contacts — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Contacts <small>({{ total }})</small></h1>
+
+<div class="search-bar">
+  <input type="search" name="q" value="{{ q }}"
+         placeholder="Search name, email, or company..."
+         hx-get="/contacts/search"
+         hx-trigger="input changed delay:300ms, search"
+         hx-target="#results"
+         hx-push-url="/contacts">
+  <span class="htmx-indicator" aria-busy="true"></span>
+</div>
+
+<div id="results">
+  {% include "contacts/_rows.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,122 @@
+/* CRM Extender — custom overrides on PicoCSS */
+
+/* Nav active state */
+nav a.active {
+  font-weight: bold;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Dashboard cards */
+.grid article {
+  text-align: center;
+}
+.grid article header {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+/* Flash messages */
+.flash-success {
+  background: var(--pico-ins-color);
+  padding: 0.75rem 1rem;
+  border-radius: var(--pico-border-radius);
+  margin-bottom: 1rem;
+}
+.flash-error {
+  background: var(--pico-del-color);
+  padding: 0.75rem 1rem;
+  border-radius: var(--pico-border-radius);
+  margin-bottom: 1rem;
+}
+
+/* Conversation thread */
+.thread-message {
+  border-left: 3px solid var(--pico-primary);
+  padding-left: 1rem;
+  margin-bottom: 1.5rem;
+}
+.thread-message .meta {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-bottom: 0.25rem;
+}
+.thread-message .body {
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+/* Relationship strength bar */
+.strength-bar {
+  display: inline-block;
+  height: 0.5rem;
+  background: var(--pico-primary);
+  border-radius: 0.25rem;
+  vertical-align: middle;
+}
+.strength-bar-bg {
+  display: inline-block;
+  width: 100px;
+  height: 0.5rem;
+  background: var(--pico-muted-border-color);
+  border-radius: 0.25rem;
+  vertical-align: middle;
+}
+
+/* Tag chips */
+.tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  background: var(--pico-secondary-background);
+  border-radius: 1rem;
+  margin: 0.1rem 0.15rem;
+}
+
+/* Sidebar info on detail pages */
+.detail-sidebar dt {
+  font-weight: bold;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+.detail-sidebar dd {
+  margin-bottom: 0.75rem;
+  margin-left: 0;
+}
+
+/* HTMX loading indicator */
+.htmx-indicator {
+  display: none;
+}
+.htmx-request .htmx-indicator {
+  display: inline;
+}
+.htmx-request.htmx-indicator {
+  display: inline;
+}
+
+/* Search bar spacing */
+.search-bar {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.search-bar > * {
+  margin-bottom: 0;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  opacity: 0.6;
+}
+
+/* Hierarchy tree indentation */
+.tree-indent {
+  padding-left: 1.5rem;
+}

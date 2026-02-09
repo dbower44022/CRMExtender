@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Projects — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Projects</h1>
+
+<div class="grid">
+  <div>
+    {% if projects %}
+    {% for proj in projects %}
+    <article id="project-{{ proj.id }}">
+      <header>
+        <a href="/projects/{{ proj.id }}"><strong>{{ proj.name }}</strong></a>
+        <small>{{ proj.topic_count }} topic{{ 's' if proj.topic_count != 1 else '' }} &middot; {{ proj.conversation_count }} conversation{{ 's' if proj.conversation_count != 1 else '' }}</small>
+        <button class="outline secondary"
+                style="padding:0.2rem 0.5rem;font-size:0.75rem;float:right"
+                hx-delete="/projects/{{ proj.id }}"
+                hx-target="#project-{{ proj.id }}"
+                hx-swap="outerHTML"
+                hx-confirm="Delete project '{{ proj.name }}' and all its topics?">Delete</button>
+      </header>
+      {% if proj.description %}
+      <p>{{ proj.description }}</p>
+      {% endif %}
+      {% if proj.topics %}
+      <ul>
+        {% for t in proj.topics %}
+        <li id="topic-{{ t.id }}">
+          {{ t.name }}
+          <small>({{ t.conversation_count }} conversation{{ 's' if t.conversation_count != 1 else '' }})</small>
+          <button class="outline secondary"
+                  style="padding:0.1rem 0.4rem;font-size:0.7rem"
+                  hx-delete="/projects/topics/{{ t.id }}"
+                  hx-target="#topic-{{ t.id }}"
+                  hx-swap="outerHTML"
+                  hx-confirm="Delete topic '{{ t.name }}'?">x</button>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </article>
+    {% endfor %}
+    {% else %}
+    <p class="empty-state">No projects yet.</p>
+    {% endif %}
+  </div>
+
+  <div>
+    <article>
+      <header>New Project</header>
+      <form method="post" action="/projects">
+        <label>
+          Name
+          <input type="text" name="name" required>
+        </label>
+        <label>
+          Description
+          <textarea name="description" rows="2"></textarea>
+        </label>
+        <button type="submit">Create</button>
+      </form>
+    </article>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>{{ project.name }}</h1>
+{% if project.description %}
+<p>{{ project.description }}</p>
+{% endif %}
+
+<div class="grid">
+  <div>
+    <h2>Topics ({{ topics|length }})</h2>
+    {% if topics %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Conversations</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in topics %}
+        <tr id="topic-{{ t.id }}">
+          <td>{{ t.name }}</td>
+          <td>{{ t.description or '' }}</td>
+          <td>{{ t.conversation_count }}</td>
+          <td>
+            <button class="outline secondary"
+                    style="padding:0.2rem 0.5rem;font-size:0.75rem"
+                    hx-delete="/projects/topics/{{ t.id }}"
+                    hx-target="#topic-{{ t.id }}"
+                    hx-swap="outerHTML"
+                    hx-confirm="Delete topic '{{ t.name }}'?">Delete</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">No topics yet.</p>
+    {% endif %}
+
+    <h3>Auto-Assign</h3>
+    <div>
+      <button hx-post="/projects/{{ project.id }}/auto-assign"
+              hx-target="#assign-preview">Preview Matches</button>
+      <span class="htmx-indicator" aria-busy="true"></span>
+    </div>
+    <div id="assign-preview"></div>
+  </div>
+
+  <div>
+    <article>
+      <header>Add Topic</header>
+      <form method="post" action="/projects/{{ project.id }}/topics">
+        <label>
+          Name
+          <input type="text" name="name" required>
+        </label>
+        <label>
+          Description
+          <textarea name="description" rows="2"></textarea>
+        </label>
+        <button type="submit">Create</button>
+      </form>
+    </article>
+  </div>
+</div>
+{% endblock %}

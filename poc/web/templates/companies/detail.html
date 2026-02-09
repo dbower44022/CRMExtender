@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ company.name }} — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>{{ company.name }}</h1>
+
+<div class="grid">
+  <div>
+    <h2>Contacts ({{ contacts|length }})</h2>
+    {% if contacts %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in contacts %}
+        <tr>
+          <td><a href="/contacts/{{ c.id }}">{{ c.name or '(unnamed)' }}</a></td>
+          <td>{{ c.email or '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">No contacts linked to this company.</p>
+    {% endif %}
+  </div>
+
+  <div>
+    <article>
+      <header>Company Info</header>
+      <dl class="detail-sidebar">
+        {% if company.domain %}
+        <dt>Domain</dt>
+        <dd>{{ company.domain }}</dd>
+        {% endif %}
+        {% if company.industry %}
+        <dt>Industry</dt>
+        <dd>{{ company.industry }}</dd>
+        {% endif %}
+        {% if company.description %}
+        <dt>Description</dt>
+        <dd>{{ company.description }}</dd>
+        {% endif %}
+        <dt>Status</dt>
+        <dd>{{ company.status or 'active' }}</dd>
+      </dl>
+    </article>
+  </div>
+</div>
+{% endblock %}

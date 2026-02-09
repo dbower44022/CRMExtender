@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}CRM Extender{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+  <nav class="container-fluid">
+    <ul>
+      <li><a href="/"><strong>CRM Extender</strong></a></li>
+    </ul>
+    <ul>
+      <li><a href="/" {% if active_nav == 'dashboard' %}class="active"{% endif %}>Dashboard</a></li>
+      <li><a href="/conversations" {% if active_nav == 'conversations' %}class="active"{% endif %}>Conversations</a></li>
+      <li><a href="/contacts" {% if active_nav == 'contacts' %}class="active"{% endif %}>Contacts</a></li>
+      <li><a href="/companies" {% if active_nav == 'companies' %}class="active"{% endif %}>Companies</a></li>
+      <li><a href="/projects" {% if active_nav == 'projects' %}class="active"{% endif %}>Projects</a></li>
+      <li><a href="/relationships" {% if active_nav == 'relationships' %}class="active"{% endif %}>Relationships</a></li>
+    </ul>
+  </nav>
+
+  <main class="container">
+    <div id="flash-messages">
+      {% if flash %}
+      <article class="flash-{{ flash.level }}">
+        <p>{{ flash.message }}</p>
+      </article>
+      {% endif %}
+    </div>
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="container">
+    <small>CRM Extender</small>
+  </footer>
+</body>
+</html>

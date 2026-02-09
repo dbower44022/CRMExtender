@@ -1,0 +1,43 @@
+{% if contacts %}
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Company</th>
+      <th>Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in contacts %}
+    <tr>
+      <td><a href="/contacts/{{ c.id }}">{{ c.name or '(unnamed)' }}</a></td>
+      <td>{{ c.email or '' }}</td>
+      <td>
+        {% if c.company_id %}
+        <a href="/companies/{{ c.company_id }}">{{ c.company_name or c.company or '' }}</a>
+        {% else %}
+        {{ c.company or '' }}
+        {% endif %}
+      </td>
+      <td>{{ c.source or '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if total_pages > 1 %}
+<nav>
+  <ul>
+    {% if page > 1 %}
+    <li><a href="/contacts?q={{ q }}&page={{ page - 1 }}">Previous</a></li>
+    {% endif %}
+    <li>Page {{ page }} of {{ total_pages }}</li>
+    {% if page < total_pages %}
+    <li><a href="/contacts?q={{ q }}&page={{ page + 1 }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% else %}
+<p class="empty-state">No contacts found.</p>
+{% endif %}

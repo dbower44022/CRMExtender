@@ -3,6 +3,7 @@
 Usage:
     python -m poc                            # default: run all accounts
     python -m poc run                        # explicit: run all accounts
+    python -m poc serve                      # launch web UI
     python -m poc add-account                # add a new Gmail account
     python -m poc list-accounts              # list registered accounts
     python -m poc remove-account EMAIL       # remove an account
@@ -738,6 +739,21 @@ def cmd_auto_assign(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Subcommand: serve
+# ---------------------------------------------------------------------------
+
+def cmd_serve(args: argparse.Namespace) -> None:
+    """Launch the web UI."""
+    import uvicorn
+
+    from .web.app import create_app
+
+    app = create_app()
+    console.print(f"\n[bold]Starting web UI at http://{args.host}:{args.port}[/bold]")
+    uvicorn.run(app, host=args.host, port=args.port)
+
+
+# ---------------------------------------------------------------------------
 # Subcommand: show-hierarchy
 # ---------------------------------------------------------------------------
 
@@ -763,6 +779,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     # run (also the default when no subcommand given)
     sub.add_parser("run", help="Sync and display all accounts (default)")
+
+    # serve
+    sv = sub.add_parser("serve", help="Launch web UI")
+    sv.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
+    sv.add_argument("--port", type=int, default=8000, help="Port (default: 8000)")
 
     # add-account
     sub.add_parser("add-account", help="Add a new Gmail account")
@@ -872,6 +893,7 @@ def main() -> None:
 
     commands = {
         "run": cmd_run,
+        "serve": cmd_serve,
         "add-account": cmd_add_account,
         "list-accounts": cmd_list_accounts,
         "remove-account": cmd_remove_account,

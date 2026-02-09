@@ -1,0 +1,39 @@
+{% if conversations %}
+<table>
+  <thead>
+    <tr>
+      <th>Subject</th>
+      <th>Status</th>
+      <th>Topic</th>
+      <th>Messages</th>
+      <th>Last Activity</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for conv in conversations %}
+    <tr>
+      <td><a href="/conversations/{{ conv.id }}">{{ conv.title or '(no subject)' }}</a></td>
+      <td>{{ conv.ai_status or conv.status or 'active' }}</td>
+      <td>{{ conv.topic_name or '' }}</td>
+      <td>{{ conv.communication_count }}</td>
+      <td>{{ conv.last_activity_at[:16] if conv.last_activity_at else '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if total_pages > 1 %}
+<nav>
+  <ul>
+    {% if page > 1 %}
+    <li><a href="/conversations?status={{ status }}&topic_id={{ topic_id }}&q={{ q }}&page={{ page - 1 }}">Previous</a></li>
+    {% endif %}
+    <li>Page {{ page }} of {{ total_pages }}</li>
+    {% if page < total_pages %}
+    <li><a href="/conversations?status={{ status }}&topic_id={{ topic_id }}&q={{ q }}&page={{ page + 1 }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% else %}
+<p class="empty-state">No conversations found.</p>
+{% endif %}

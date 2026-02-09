@@ -1,0 +1,31 @@
+{% if relationships %}
+<table>
+  <thead>
+    <tr>
+      <th>Contact A</th>
+      <th>Contact B</th>
+      <th>Strength</th>
+      <th>Shared Conversations</th>
+      <th>Shared Messages</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in relationships %}
+    <tr>
+      <td><a href="/contacts/{{ r.from_id }}">{{ r.from_name }}</a></td>
+      <td><a href="/contacts/{{ r.to_id }}">{{ r.to_name }}</a></td>
+      <td>
+        <span class="strength-bar-bg">
+          <span class="strength-bar" style="width: {{ (r.strength * 100)|int }}px"></span>
+        </span>
+        {{ '%.0f'|format(r.strength * 100) }}%
+      </td>
+      <td>{{ r.shared_conversations }}</td>
+      <td>{{ r.shared_messages }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty-state">No relationships found. Try inferring relationships first.</p>
+{% endif %}

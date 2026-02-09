@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Companies — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Companies <small>({{ companies|length }})</small></h1>
+
+<div class="grid">
+  <div>
+    <div class="search-bar">
+      <input type="search" name="q" value="{{ q }}"
+             placeholder="Search name or domain..."
+             hx-get="/companies/search"
+             hx-trigger="input changed delay:300ms, search"
+             hx-target="#results"
+             hx-push-url="/companies">
+      <span class="htmx-indicator" aria-busy="true"></span>
+    </div>
+
+    <div id="results">
+      {% include "companies/_rows.html" %}
+    </div>
+  </div>
+
+  <div>
+    <article>
+      <header>New Company</header>
+      {% include "companies/_form.html" %}
+    </article>
+  </div>
+</div>
+{% endblock %}

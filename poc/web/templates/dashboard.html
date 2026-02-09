@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="grid">
+  <article>
+    <header>Conversations</header>
+    <p><strong>{{ counts.conversations_total }}</strong> total</p>
+    <p>{{ counts.conversations_open }} open &middot; {{ counts.conversations_closed }} closed</p>
+  </article>
+  <article>
+    <header>Contacts</header>
+    <p><strong>{{ counts.contacts }}</strong></p>
+  </article>
+  <article>
+    <header>Companies</header>
+    <p><strong>{{ counts.companies }}</strong></p>
+  </article>
+  <article>
+    <header>Projects / Topics</header>
+    <p><strong>{{ counts.projects }}</strong> projects &middot; <strong>{{ counts.topics }}</strong> topics</p>
+  </article>
+</div>
+
+{% if recent_conversations %}
+<h2>Recent Conversations</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Subject</th>
+      <th>Status</th>
+      <th>Messages</th>
+      <th>Last Activity</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for conv in recent_conversations %}
+    <tr>
+      <td><a href="/conversations/{{ conv.id }}">{{ conv.title or '(no subject)' }}</a></td>
+      <td>{{ conv.ai_status or conv.status or 'active' }}</td>
+      <td>{{ conv.communication_count }}</td>
+      <td>{{ conv.last_activity_at[:16] if conv.last_activity_at else '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

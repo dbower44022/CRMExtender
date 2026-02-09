@@ -1,0 +1,1857 @@
+ Before I start writing, here are the decisions that will shape the entire data layer:
+
+  1. Database technology — The parent PRD specifies PostgreSQL for production with event sourcing, Neo4j for graph relationships, and SQLite for the PoC/offline. Should the data layer PRD target:
+  - PostgreSQL from the start (production schema)?
+  - SQLite for continued PoC evolution, with a migration path to PostgreSQL?
+  - Both (define the logical model, then map to both engines)?
+
+  2. Event sourcing scope — The parent PRD uses hybrid event sourcing (event-sourced for contacts/intelligence, conventional for config/pipelines). Where does the conversations subsystem fall? Should communications be event-sourced
+  (full history of assignments, edits, moves) or conventional (mutable rows)?
+
+  3. The emails → communications evolution — The current emails table needs to become a generalized communications table. But email has fields (thread_id, headers, HTML body) that SMS and notes don't. Do we:
+  - Single polymorphic table with nullable channel-specific columns?
+  - Base communications table + per-channel extension tables (email_details, sms_details, etc.)?
+  - Hybrid: common columns on the main table + JSONB/JSON for channel-specific metadata?
+
+  What's your thinking on these three? I have opinions on each but want to hear your direction first — especially on database technology and event sourcing, since those are foundational decisions that ripple through everything else.
+
+✻ Cogitated for 43s                                                                                                                                                                                                                        
+  
+❯ We should plan on using postgres for production, but for POC sqllite is much easier. the conversations should use conventional sourcing, please provide more details on the coinces for the communications/conversation table            
+  structure.                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                           
+● Good decisions. PostgreSQL target with SQLite PoC, conventional sourcing. Let me break down the three approaches for the communications table structure with concrete examples.                                                          
+                                                                                                                                                                                                                                           
+  ---                                                                                                                                                                                                                                      
+  Approach A: Single Polymorphic Table
+                                                                                                                                                                                                                                           
+  One communications table with all columns, nullable where channel-specific:                      
+
+  CREATE TABLE communications (
+      id              TEXT PRIMARY KEY,
+      conversation_id TEXT REFERENCES conversations(id),
+      channel         TEXT NOT NULL,  -- 'email', 'sms', 'phone', 'video', 'in_person', 'note'
+      timestamp       TEXT NOT NULL,
+      content         TEXT,           -- cleaned body / transcript / notes
+      direction       TEXT,           -- 'inbound', 'outbound', 'mutual'
+      source          TEXT,           -- 'auto_sync', 'manual'
+
+      -- Sender/participants (universal)
+      sender_address  TEXT,
+      sender_name     TEXT,
+
+      -- Email-specific (NULL for non-email)
+      subject              TEXT,
+      body_html            TEXT,
+      snippet              TEXT,
+      provider_message_id  TEXT,
+      provider_thread_id   TEXT,
+      header_message_id    TEXT,
+      header_references    TEXT,
+      header_in_reply_to   TEXT,
+      is_read              INTEGER,
+
+      -- SMS-specific (NULL for non-SMS)
+      phone_number_from    TEXT,
+      phone_number_to      TEXT,
+
+      -- Call/video-specific (NULL for non-call)
+      duration_seconds     INTEGER,
+      transcript_source    TEXT,       -- 'whisper', 'google', etc.
+      recording_url        TEXT,
+
+      -- Note-specific
+      note_type            TEXT,       -- 'phone_call', 'in_person', 'general'
+
+      -- AI fields (per-communication)
+      ai_summary           TEXT,
+      ai_summarized_at     TEXT,
+
+      -- Triage
+      triage_result        TEXT,
+
+      created_at           TEXT NOT NULL,
+      updated_at           TEXT NOT NULL
+  );
+
+  Pros:
+  - Simplest queries — no JOINs to get a full communication record
+  - Easy to sort/filter across all channels (one ORDER BY timestamp)
+  - Simple migration from current emails table (add columns, rename)
+  - SQLite-friendly (no JSON tricks needed)
+
+  Cons:
+  - Wide rows with many NULLs (email has ~8 columns that are NULL for SMS, etc.)
+  - Adding a new channel means ALTER TABLE for channel-specific columns
+  - No schema enforcement per channel (nothing prevents phone_number_from on an email)
+  - Gets wider over time as channels are added
+
+  ---
+  Approach B: Base Table + Extension Tables
+
+  A slim communications table with shared fields, plus per-channel detail tables:
+
+  CREATE TABLE communications (
+      id              TEXT PRIMARY KEY,
+      conversation_id TEXT REFERENCES conversations(id),
+      channel         TEXT NOT NULL,
+      timestamp       TEXT NOT NULL,
+      content         TEXT,
+      direction       TEXT,
+      source          TEXT,
+      sender_address  TEXT,
+      sender_name     TEXT,
+      ai_summary      TEXT,
+      ai_summarized_at TEXT,
+      triage_result   TEXT,
+      created_at      TEXT NOT NULL,
+      updated_at      TEXT NOT NULL
+  );
+
+  CREATE TABLE email_details (
+      communication_id    TEXT PRIMARY KEY REFERENCES communications(id) ON DELETE CASCADE,
+      subject             TEXT,
+      body_html           TEXT,
+      snippet             TEXT,
+      provider_message_id TEXT,
+      provider_thread_id  TEXT,
+      header_message_id   TEXT,
+      header_references   TEXT,
+      header_in_reply_to  TEXT,
+      is_read             INTEGER DEFAULT 0,
+      has_attachments     INTEGER DEFAULT 0
+  );
+
+  CREATE TABLE sms_details (
+      communication_id    TEXT PRIMARY KEY REFERENCES communications(id) ON DELETE CASCADE,
+      phone_number_from   TEXT,
+      phone_number_to     TEXT,
+      provider_message_id TEXT
+  );
+
+  CREATE TABLE call_details (
+      communication_id    TEXT PRIMARY KEY REFERENCES communications(id) ON DELETE CASCADE,
+      duration_seconds    INTEGER,
+      transcript_source   TEXT,
+      is_recorded         INTEGER DEFAULT 0
+  );
+
+  Pros:
+  - Clean normalization — each channel has exactly the columns it needs
+  - Schema enforces channel-specific structure (can't set email fields on SMS)
+  - Adding a new channel = adding a new extension table (no ALTER on base)
+  - Base table stays slim for fast timeline queries
+  - Each extension table can have its own indexes optimized for that channel
+
+  Cons:
+  - Requires a JOIN to get full details: communications LEFT JOIN email_details
+  - Timeline queries that need channel-specific fields need conditional JOINs
+  - More tables to manage (currently 8 tables → could become 12-15)
+  - Slightly more complex application code (need to know which detail table to hit)
+
+  ---
+  Approach C: Base Table + JSON/JSONB Metadata
+
+  Common columns on the main table, channel-specific data in a JSON column:
+
+  CREATE TABLE communications (
+      id              TEXT PRIMARY KEY,
+      conversation_id TEXT REFERENCES conversations(id),
+      channel         TEXT NOT NULL,
+      timestamp       TEXT NOT NULL,
+      content         TEXT,
+      direction       TEXT,
+      source          TEXT,
+      sender_address  TEXT,
+      sender_name     TEXT,
+
+      -- Channel-specific metadata as JSON
+      channel_metadata TEXT,  -- JSON blob
+      -- PostgreSQL production: JSONB with GIN index
+      -- SQLite PoC: TEXT with json_extract()
+
+      ai_summary       TEXT,
+      ai_summarized_at TEXT,
+      triage_result    TEXT,
+      created_at       TEXT NOT NULL,
+      updated_at       TEXT NOT NULL
+  );
+
+  Where channel_metadata contains:
+
+  // Email
+  {"subject": "Re: Contract", "body_html": "<div>...</div>", "provider_message_id": "abc123",
+   "provider_thread_id": "th456", "header_message_id": "<msg@example.com>",
+   "is_read": true, "has_attachments": false}
+
+  // SMS
+  {"phone_from": "+15550100", "phone_to": "+15550199", "provider_message_id": "sm789"}
+
+  // Phone call
+  {"duration_seconds": 720, "transcript_source": "whisper", "is_recorded": true}
+
+  // Note (in-person meeting)
+  {"note_type": "in_person", "location": "Conference Room B"}
+
+  Pros:
+  - Base table stays slim (same as Approach B)
+  - No extra tables — one table for all channels
+  - Adding a new channel = no schema change, just new JSON shape
+  - JSONB in PostgreSQL is indexable (CREATE INDEX ON communications USING GIN (channel_metadata))
+  - Flexible — channel-specific fields can evolve without migrations
+
+  Cons:
+  - SQLite JSON support is functional but less ergonomic than PostgreSQL JSONB
+  - Queries into channel-specific fields are less clean: json_extract(channel_metadata, '$.subject') vs subject
+  - No schema enforcement on the JSON contents (application layer must validate)
+  - Harder to index specific fields in SQLite (PostgreSQL JSONB handles this well)
+  - Two different query patterns between PoC (SQLite json_extract) and production (PostgreSQL JSONB operators)
+
+  ---
+  My Assessment
+  ┌───────────────────────────┬─────────────────┬──────────────────────┬───────────────────────────┐
+  │         Criteria          │ A (Polymorphic) │ B (Extension Tables) │     C (JSON Metadata)     │
+  ├───────────────────────────┼─────────────────┼──────────────────────┼───────────────────────────┤
+  │ Query simplicity          │ Best            │ Moderate             │ Moderate                  │
+  ├───────────────────────────┼─────────────────┼──────────────────────┼───────────────────────────┤
+  │ Schema cleanliness        │ Weak            │ Best                 │ Good                      │
+  ├───────────────────────────┼─────────────────┼──────────────────────┼───────────────────────────┤
+  │ SQLite PoC ease           │ Best            │ Good                 │ Moderate                  │
+  ├───────────────────────────┼─────────────────┼──────────────────────┼───────────────────────────┤
+  │ PostgreSQL production fit │ Good            │ Best                 │ Good                      │
+  ├───────────────────────────┼─────────────────┼──────────────────────┼───────────────────────────┤
+  │ New channel extensibility │ Weak (ALTER)    │ Good (new table)     │ Best (no migration)       │
+  ├───────────────────────────┼─────────────────┼──────────────────────┼───────────────────────────┤
+  │ Timeline queries          │ Best            │ Needs JOINs          │ Good                      │
+  ├───────────────────────────┼─────────────────┼──────────────────────┼───────────────────────────┤
+  │ Channel-specific indexing │ Good            │ Best                 │ Good (PG) / Weak (SQLite) │
+  └───────────────────────────┴─────────────────┴──────────────────────┴───────────────────────────┘
+  For where you are right now — PoC in SQLite evolving toward PostgreSQL production — I'd lean toward either A or B. Here's my thinking:
+
+  - Approach A is the fastest path forward. The PoC currently has an emails table that's essentially this already. You rename it, add a channel column, add a few nullable columns for other channels, and you're running. The NULL columns
+   for a 6-channel system is maybe 10-12 extra nullable fields — not catastrophic. And every timeline query is dead simple.
+  - Approach B is the cleanest long-term design. It separates concerns properly and maps naturally to PostgreSQL's strengths. The JOIN cost is real but small (1:1 JOINs on primary keys are cheap). It also means the base communications
+  table — which is the one you query most for timelines, filtering, sorting — stays narrow and fast.
+  - Approach C is elegant in PostgreSQL but creates friction in SQLite for the PoC phase.
+
+  What's your instinct? Do you want to optimize for PoC velocity (lean A) or long-term cleanliness (lean B)? Or do you see it differently?
+
+✻ Cooked for 45s                  
+
+❯ I prefer option A because of structure simplicity.  I am not worried about new channel extensibility since after the initial development phase that should be static.  There does seem to be one omission in the table design, we        
+  need a way of adding a collection of recipients that are not the to or from users.  That will have to be a separate table with a join becasue there could be a large number or recipients.                                              
+                                                                                                                                                                                                                                           
+● Agreed on both counts. Approach A it is. And yes — a communication can have many participants beyond the sender: email To/CC/BCC, SMS group recipients, call participants, meeting attendees. That's inherently 1:N and needs its own    
+  table.                                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                           
+  The current email_recipients table handles this for email only (with role of to, cc, bcc). The generalized version needs to cover all channels:
+                                                                                                                                                                                                                                           
+  CREATE TABLE communication_participants (                                                        
+      communication_id TEXT NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
+      address          TEXT NOT NULL,  -- email address, phone number, or other identifier
+      name             TEXT,           -- display name if known
+      contact_id       TEXT REFERENCES contacts(id) ON DELETE SET NULL,
+      role             TEXT NOT NULL,  -- 'sender', 'to', 'cc', 'bcc', 'attendee', 'participant'
+      PRIMARY KEY (communication_id, address, role)
+  );
+
+  The role values map naturally across channels:
+  ┌───────────────────┬───────────────────────────────────────┐
+  │      Channel      │           Applicable Roles            │
+  ├───────────────────┼───────────────────────────────────────┤
+  │ Email             │ sender, to, cc, bcc                   │
+  ├───────────────────┼───────────────────────────────────────┤
+  │ SMS               │ sender, to (or participant for group) │
+  ├───────────────────┼───────────────────────────────────────┤
+  │ Phone call        │ participant (all parties)             │
+  ├───────────────────┼───────────────────────────────────────┤
+  │ Video meeting     │ attendee                              │
+  ├───────────────────┼───────────────────────────────────────┤
+  │ In-person meeting │ attendee                              │
+  ├───────────────────┼───────────────────────────────────────┤
+  │ Note              │ participant (people referenced)       │
+  └───────────────────┴───────────────────────────────────────┘
+  One question on this: should we include the sender in this table too, or keep sender_address / sender_name on the communications row and only put non-sender participants here?
+
+  The current model does it split — sender on the emails row, recipients in email_recipients. But for multi-party communications like calls and meetings where there's no clear "sender", having everyone in one participants table might
+  be cleaner. The role column distinguishes who originated vs. who received.
+
+  My instinct: keep sender on the communications row (it's queried constantly for display and filtering) and also include the sender in the participants table with role='sender'. Slight redundancy, but it means "give me everyone
+  involved in this communication" is a single query against communication_participants without a UNION.
+
+  What's your preference on that? And then we should move on to the hierarchy tables — Projects, Topics, Sub-projects, and how Conversations relate to them.
+
+❯ I like keeping the sender in the communications row.                                                                                                                                                                                     
+                                                         
+● Good. Sender stays on the communications row, and the communication_participants table captures all non-sender participants (plus optionally the sender for "give me everyone" queries — we can decide that during implementation).      
+                                                                                                                                                                                                                                         
+  Let's move up the hierarchy. We need tables for Projects, Sub-projects, Topics, and the relationships between them and Conversations.                                                                                                    
+                                                                                                                                                                                                                                           
+  The key structural question here is how to handle sub-projects. The PRD says projects can have sub-projects, and sub-projects can nest recursively. There are two common approaches:                                                     
+                                                                                                   
+  Option 1: Self-Referential (Adjacency List)
+
+  One projects table with a nullable parent_id pointing to itself:
+
+  CREATE TABLE projects (
+      id          TEXT PRIMARY KEY,
+      parent_id   TEXT REFERENCES projects(id) ON DELETE CASCADE,
+      name        TEXT NOT NULL,
+      description TEXT,
+      status      TEXT DEFAULT 'active',  -- active, on_hold, completed, archived
+      owner_id    TEXT,                    -- user who created/manages
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+  );
+
+  - Top-level project: parent_id = NULL
+  - Sub-project: parent_id = <parent project id>
+  - Sub-sub-project: parent_id = <sub-project id>
+
+  Pros: Simple, one table, easy CRUD. Standard pattern.
+  Cons: Recursive queries (get full tree) require CTEs — WITH RECURSIVE works in both SQLite and PostgreSQL, but can be awkward.
+
+  Option 2: Materialized Path
+
+  Same table but add a path column:
+
+  CREATE TABLE projects (
+      id          TEXT PRIMARY KEY,
+      parent_id   TEXT REFERENCES projects(id) ON DELETE CASCADE,
+      path        TEXT NOT NULL,  -- e.g., '/root-id/child-id/grandchild-id'
+      depth       INTEGER DEFAULT 0,
+      -- ... same other columns
+  );
+
+  Pros: "Get all descendants" is a simple WHERE path LIKE '/root-id/%'. No recursion needed.
+  Cons: Path must be updated when reparenting. Slightly more maintenance.
+
+  ---
+  I'd recommend Option 1 (adjacency list) for now. The recursive nesting is unlikely to be deep (2-3 levels in practice), and WITH RECURSIVE handles the rare "full tree" query. Materialized path is overkill unless you're doing heavy
+  tree traversal queries, which I don't think applies here.
+
+  Then Topics are straightforward — they belong to a project:
+
+  CREATE TABLE topics (
+      id          TEXT PRIMARY KEY,
+      project_id  TEXT REFERENCES projects(id) ON DELETE CASCADE,
+      name        TEXT NOT NULL,
+      description TEXT,
+      source      TEXT DEFAULT 'user',  -- 'user', 'ai_suggested'
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+  );
+
+  And Conversations get an optional FK to topics:
+
+  CREATE TABLE conversations (
+      id              TEXT PRIMARY KEY,
+      topic_id        TEXT REFERENCES topics(id) ON DELETE SET NULL,  -- optional
+      subject         TEXT,
+      status          TEXT DEFAULT 'active',
+      -- ... ai fields, timestamps, etc.
+  );
+
+  With topic_id being nullable — a conversation can exist unassigned.
+
+  The chain then is: projects.id ← topics.project_id ← conversations.topic_id ← communications.conversation_id
+
+  Two questions for you:
+
+  1. Adjacency list vs. materialized path for sub-projects — do you have a preference, or is simple adjacency list fine?
+  2. Conversations and accounts — currently every conversation belongs to an account_id (the email account that sourced it). In the new model where conversations can span channels and include manual notes, should conversations still be
+   tied to a specific account? Or should they be account-independent, with the account association living on the individual communications instead?
+
+❯ Please explain adjacency list vs marerialized path.  Conversations should be account independent.                                                                                                                                        
+                                                                                                    
+● Good call on account-independent conversations. The account stays on the communications (where the data was sourced from), not on the conversation itself.                                                                               
+                                                                                
+  Now let me explain the two tree-storage approaches clearly.                                                                                                                                                                              
+                                                                                                   
+  The Problem                                                                                                                                                                                                                              
+                                                                                                   
+  You have a project tree like this:
+
+  2026 Expansion
+  ├── NYC Office
+  │   ├── Real Estate
+  │   └── Hiring
+  └── London Office
+      └── Visa Sponsorship
+
+  The question is: how do you store this in a flat SQL table so you can efficiently answer questions like "give me all descendants of 2026 Expansion"?
+
+  Adjacency List
+
+  Each row knows only its parent:
+  ┌─────┬──────────────────┬───────────┐
+  │ id  │       name       │ parent_id │
+  ├─────┼──────────────────┼───────────┤
+  │ A   │ 2026 Expansion   │ NULL      │
+  ├─────┼──────────────────┼───────────┤
+  │ B   │ NYC Office       │ A         │
+  ├─────┼──────────────────┼───────────┤
+  │ C   │ London Office    │ A         │
+  ├─────┼──────────────────┼───────────┤
+  │ D   │ Real Estate      │ B         │
+  ├─────┼──────────────────┼───────────┤
+  │ E   │ Hiring           │ B         │
+  ├─────┼──────────────────┼───────────┤
+  │ F   │ Visa Sponsorship │ C         │
+  └─────┴──────────────────┴───────────┘
+  To get direct children of "2026 Expansion":
+  SELECT * FROM projects WHERE parent_id = 'A';
+  -- Returns: NYC Office, London Office
+  Simple, fast, one query.
+
+  To get ALL descendants (children, grandchildren, etc.):
+  WITH RECURSIVE tree AS (
+      SELECT * FROM projects WHERE id = 'A'
+      UNION ALL
+      SELECT p.* FROM projects p
+      JOIN tree t ON p.parent_id = t.id
+  )
+  SELECT * FROM tree;
+  Works, but requires recursive CTE. For 2-3 levels deep, this is perfectly fine. Both SQLite and PostgreSQL support it.
+
+  To move a sub-project (reparent "NYC Office" under "London Office"):
+  UPDATE projects SET parent_id = 'C' WHERE id = 'B';
+  One row update. Done.
+
+  Materialized Path
+
+  Each row stores the full path from root to itself:
+  ┌─────┬──────────────────┬───────────┬────────┬───────┐
+  │ id  │       name       │ parent_id │  path  │ depth │
+  ├─────┼──────────────────┼───────────┼────────┼───────┤
+  │ A   │ 2026 Expansion   │ NULL      │ /A     │ 0     │
+  ├─────┼──────────────────┼───────────┼────────┼───────┤
+  │ B   │ NYC Office       │ A         │ /A/B   │ 1     │
+  ├─────┼──────────────────┼───────────┼────────┼───────┤
+  │ C   │ London Office    │ A         │ /A/C   │ 1     │
+  ├─────┼──────────────────┼───────────┼────────┼───────┤
+  │ D   │ Real Estate      │ B         │ /A/B/D │ 2     │
+  ├─────┼──────────────────┼───────────┼────────┼───────┤
+  │ E   │ Hiring           │ B         │ /A/B/E │ 2     │
+  ├─────┼──────────────────┼───────────┼────────┼───────┤
+  │ F   │ Visa Sponsorship │ C         │ /A/C/F │ 2     │
+  └─────┴──────────────────┴───────────┴────────┴───────┘
+  To get direct children of "2026 Expansion":
+  SELECT * FROM projects WHERE parent_id = 'A';
+  -- Same as adjacency list
+
+  To get ALL descendants — this is where it shines:
+  SELECT * FROM projects WHERE path LIKE '/A/%';
+  -- Returns: NYC Office, London Office, Real Estate, Hiring, Visa Sponsorship
+  No recursion. Simple LIKE query. Fast with an index on path.
+
+  To move a sub-project (reparent "NYC Office" under "London Office") — this is where it hurts:
+  -- Must update NYC Office AND all its descendants
+  UPDATE projects SET
+      path = REPLACE(path, '/A/B', '/A/C/B'),
+      depth = depth + 1
+  WHERE path LIKE '/A/B%';
+  -- Updates 3 rows: NYC Office, Real Estate, Hiring
+  Every descendant's path must be rewritten. More complex, and for a large subtree it touches many rows.
+
+  Summary
+  ┌──────────────────────────────────────┬────────────────────┬───────────────────────┐
+  │              Operation               │   Adjacency List   │   Materialized Path   │
+  ├──────────────────────────────────────┼────────────────────┼───────────────────────┤
+  │ Get direct children                  │ Simple, fast       │ Same                  │
+  ├──────────────────────────────────────┼────────────────────┼───────────────────────┤
+  │ Get all descendants                  │ Recursive CTE      │ Simple LIKE query     │
+  ├──────────────────────────────────────┼────────────────────┼───────────────────────┤
+  │ Insert new node                      │ One row            │ One row               │
+  ├──────────────────────────────────────┼────────────────────┼───────────────────────┤
+  │ Move/reparent                        │ One row update     │ Update entire subtree │
+  ├──────────────────────────────────────┼────────────────────┼───────────────────────┤
+  │ Delete subtree                       │ CASCADE handles it │ CASCADE handles it    │
+  ├──────────────────────────────────────┼────────────────────┼───────────────────────┤
+  │ Depth query ("all level-2 projects") │ Recursive CTE      │ WHERE depth = 2       │
+  └──────────────────────────────────────┴────────────────────┴───────────────────────┘
+  My Recommendation
+
+  Adjacency list. Here's why for your case:
+
+  - Project trees will be shallow (2-3 levels realistically)
+  - Reparenting should be cheap (users reorganize projects)
+  - "Get all descendants" is an infrequent query, and recursive CTE handles it fine at small depth
+  - Simpler to implement and reason about
+  - No path maintenance overhead
+
+  Materialized path pays off when you have deep trees (10+ levels) and do frequent "get all descendants" queries — think file systems or org charts with hundreds of nodes. That's not your use case.
+
+  Does adjacency list work for you? If so, we can move on to the next design decision — Segments (the split/reference model for cross-conversation communications) and Attachments.
+
+❯ I strongly prefer adjacency.                                                                                                                                                                                                             
+                                      
+● Good. Adjacency list it is. Let's talk about Segments and Attachments.                                                                                                                                                                   
+                                                                                
+  Segments                                                                                                                                                                                                                                 
+                                                                                                   
+  From the PRD: when a communication spans two conversations, the user selects a portion of text and assigns it to a different conversation. The full original stays in the primary conversation; the segment appears in the secondary.    
+                                                                                                                                                                                                                                           
+  CREATE TABLE segments (
+      id                  TEXT PRIMARY KEY,
+      communication_id    TEXT NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
+      target_conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+      content             TEXT NOT NULL,      -- the selected text
+      start_offset        INTEGER,            -- character position in original content (optional)
+      end_offset          INTEGER,            -- character position in original content (optional)
+      created_by          TEXT,               -- user who created the segment
+      created_at          TEXT NOT NULL
+  );
+
+  The offsets are optional but useful — they let the UI highlight the segmented portion in the original communication. If the user just pastes/types the text manually, offsets can be NULL.
+
+  Key relationships:
+  - communication_id → the original communication (lives in its primary conversation)
+  - target_conversation_id → the secondary conversation where this segment appears
+
+  When rendering a conversation timeline, you'd query both communications WHERE conversation_id = X and segments WHERE target_conversation_id = X to get the full picture.
+
+  Attachments
+
+  Any communication can have zero or more files attached:
+
+  CREATE TABLE attachments (
+      id                  TEXT PRIMARY KEY,
+      communication_id    TEXT NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
+      filename            TEXT NOT NULL,
+      mime_type           TEXT,
+      size_bytes          INTEGER,
+      storage_ref         TEXT,               -- S3/MinIO path or local file path
+      source              TEXT,               -- 'email_sync', 'upload', 'recording', 'transcript'
+      created_at          TEXT NOT NULL
+  );
+
+  For recorded calls: the transcript becomes the content field on the communication, and the audio file becomes an attachment with source = 'recording'. Clean separation.
+
+  ---
+  Both of these are straightforward 1:N relationships off the communications table. Any concerns or additions on either one?
+
+  If these look right, the next topic is the conversation-level structure — the conversations table itself, particularly how the AI fields, status dimensions, and participant tracking evolve from the current model.
+
+❯ I don't like segments.  To complicated.  Instead all conversations are related to a communications, and only a portion of the text of the communication is displayed in the conversation (removed headers, signatures etc).  So when     
+   a protion of a communications is to be added to a second conversation, we should relate the communication to both conversations and copy the appropriate text to each conversation.                                                    
+                                                                                                                                                                                                                                           
+● That's much simpler. And it's actually a cleaner model — it eliminates the segments table entirely and changes the communication-to-conversation relationship from 1:N to M:N.                                                           
+                                                                                                                                                                                                                                           
+  Right now the design has conversation_id as a direct FK on the communications table. Your approach replaces that with a join table:                                                                                                      
+   
+  CREATE TABLE conversation_communications (                                                                                                                                                                                               
+      conversation_id  TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,               
+      communication_id TEXT NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
+      display_content  TEXT,        -- the relevant text for this conversation's context
+      is_primary       INTEGER DEFAULT 1,  -- 1 = original assignment, 0 = user added portion
+      created_at       TEXT NOT NULL,
+      PRIMARY KEY (conversation_id, communication_id)
+  );
+
+  So a single email might have:
+  - Row 1: (conversation_A, email_123, "full cleaned email text", is_primary=1)
+  - Row 2: (conversation_B, email_123, "just the paragraph about the lease", is_primary=0)
+
+  The communications table itself stores the full original content (cleaned of headers/signatures). The join table stores what's displayed in each conversation context. conversation_id comes off the communications table entirely — an
+  unassigned communication simply has no rows in the join table.
+
+  This means:
+  - Timeline query: SELECT * FROM conversation_communications cc JOIN communications c ON ... WHERE cc.conversation_id = X ORDER BY c.timestamp
+  - Unassigned communications: SELECT * FROM communications WHERE id NOT IN (SELECT communication_id FROM conversation_communications)
+  - "Which conversations reference this communication?": SELECT * FROM conversation_communications WHERE communication_id = X
+
+  Does this match what you had in mind? If so, let's move on to the conversations table itself — the AI fields, status dimensions, and how conversation_participants evolves.
+
+❯ yes that's right. We should consider that a communications could be connected to a large number of conversations.  I think this architecture handles that elegently.                                                                     
+                                                                                                                                                                       
+● It really does. Whether a communication touches 1 conversation or 20, it's just more rows in the join table. The original communication is stored once, the display content is tailored per conversation, and there's no structural      
+  limit. Clean and scalable.                                                    
+                                                                                                                                                                                                                                           
+  Let's move on to the conversations table. Here's the current structure and what needs to change:                                                                                                                                         
+                                                                                                                                                                                                                                           
+  Current → Proposed                                                                               
+
+  Removing:
+  - account_id — conversations are now account-independent (agreed earlier)
+  - provider_thread_id — this is email-specific; moves to the communications table
+  - message_count, first_message_at, last_message_at — these are now computed from the join table rather than stored directly
+
+  Keeping (evolved):
+  - subject — still useful as the conversation title, but now user-editable (not just pulled from email subject)
+  - status, ai_status, triage_result — the three independent status dimensions
+  - AI fields: ai_summary, ai_action_items, ai_topics, ai_summarized_at
+
+  Adding:
+  - topic_id — optional FK to topics (hierarchy link)
+
+  That gives us:
+
+  CREATE TABLE conversations (
+      id               TEXT PRIMARY KEY,
+      topic_id         TEXT REFERENCES topics(id) ON DELETE SET NULL,
+      title            TEXT,            -- was 'subject'; user-editable
+      status           TEXT DEFAULT 'active',   -- system: active, stale, closed
+      ai_summary       TEXT,
+      ai_status        TEXT,            -- open, closed, uncertain
+      ai_action_items  TEXT,            -- JSON array
+      ai_topics        TEXT,            -- JSON array
+      ai_summarized_at TEXT,
+      triage_result    TEXT,
+      created_at       TEXT NOT NULL,
+      updated_at       TEXT NOT NULL
+  );
+
+  The question I want to raise: should message_count, first_message_at, last_message_at be stored or computed?
+
+  Stored (denormalized): Faster reads for listing/sorting conversations. But must be updated every time a communication is added, removed, or reassigned. The current PoC does this — it recomputes counts on every sync.
+
+  Computed (query-time): Always accurate, no maintenance. But requires a JOIN + aggregate for every conversation listing:
+  SELECT c.*, COUNT(cc.communication_id), MIN(comm.timestamp), MAX(comm.timestamp)
+  FROM conversations c
+  LEFT JOIN conversation_communications cc ON ...
+  LEFT JOIN communications comm ON ...
+  GROUP BY c.id
+
+  For a PoC with hundreds to low thousands of conversations, the computed approach is fine and eliminates a class of bugs (stale counts). For production with heavy listing queries, you'd add denormalized columns later as a performance
+  optimization.
+
+  My recommendation: compute for now, denormalize later if needed. Keeps the schema clean and avoids count maintenance logic.
+
+  The other piece is conversation participants. Currently conversation_participants tracks every email address seen in a conversation with message counts. In the new model, participants come from communication_participants through the
+  join table — so this becomes a computed view as well, or we keep it as a denormalized summary table.
+
+  Same question: store or compute? Your preference?
+
+❯ One of the critical features of this tool will be blinding fast display of information.  And we need to denormalize wherever necessary to reduce display times. So I think denormalize is a good idea wherever practicle and for         
+  data that is going to be displayed frequently.  The start and end time for the conversation is important and will be displayed frequently.  The participants is more diffiluct to denormalize I would suspect, and may be impossible    
+   if there are large numbers of participats.                                                                                                                                                                                              
+                                                                                                                                                                                                                                           
+● Good principle. Denormalize for display speed, accept the maintenance cost.                                                                                                                                                              
+                                                                                                                                                                                                                                           
+  Here's how I'd split it:                                                                                                                                                                                                                 
+   
+  On the conversations row (cheap to maintain, displayed on every listing):                                                                                                                                                                
+                                                                                                   
+      communication_count  INTEGER DEFAULT 0,
+      first_activity_at    TEXT,
+      last_activity_at     TEXT,
+      participant_count    INTEGER DEFAULT 0,
+
+  These four values are updated whenever a communication is added to or removed from a conversation. Simple increment/decrement and min/max operations. They cover the listing view — you can sort by recency, show counts, all without any
+   JOINs.
+
+  Conversation participants as a maintained summary table:
+
+  CREATE TABLE conversation_participants (
+      conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+      address         TEXT NOT NULL,
+      name            TEXT,
+      contact_id      TEXT REFERENCES contacts(id) ON DELETE SET NULL,
+      communication_count INTEGER DEFAULT 0,
+      first_seen_at   TEXT,
+      last_seen_at    TEXT,
+      PRIMARY KEY (conversation_id, address)
+  );
+
+  This is close to what you have today. It's maintained — when a communication is added to a conversation, the participants from that communication are upserted here. It gives you fast answers to:
+  - "Who's in this conversation?" — single table scan, no joins
+  - "All conversations involving Bob" — indexed query on address
+  - Display names for participants — right there on the row
+
+  The participant_count on the conversations row is just a denormalized COUNT(*) from this table. Cheap to maintain in sync.
+
+  What stays computed (not displayed in listings, only needed in detail views):
+  - Channel breakdown (count of emails vs SMS vs calls) — only matters when you open a conversation
+  - Full communication timeline — always a join through conversation_communications
+
+  So the conversations table becomes:
+
+  CREATE TABLE conversations (
+      id                   TEXT PRIMARY KEY,
+      topic_id             TEXT REFERENCES topics(id) ON DELETE SET NULL,
+      title                TEXT,
+      status               TEXT DEFAULT 'active',
+      communication_count  INTEGER DEFAULT 0,
+      participant_count    INTEGER DEFAULT 0,
+      first_activity_at    TEXT,
+      last_activity_at     TEXT,
+      ai_summary           TEXT,
+      ai_status            TEXT,
+      ai_action_items      TEXT,
+      ai_topics            TEXT,
+      ai_summarized_at     TEXT,
+      triage_result        TEXT,
+      created_at           TEXT NOT NULL,
+      updated_at           TEXT NOT NULL
+  );
+
+  Does this feel right for the display speed vs. maintenance tradeoff? If so, we should discuss the remaining tables — Views, Alerts, and the ai_topics / conversation_topics structure — and then I think we'll have the complete data
+  model ready to write up.
+
+❯ yes that looks right, lets continue                                                                                                                                                                                                      
+                                      
+● Views & Alerts                                                                                                                                                                                                                           
+                                                                                
+  From the PRD: views are saved queries, alerts are views with triggers. No default alerts — entirely user-defined.                                                                                                                        
+                                                                                                                                                                                                                                           
+  CREATE TABLE views (                                                                                                                                                                                                                     
+      id          TEXT PRIMARY KEY,                                                                
+      owner_id    TEXT,                -- user who created it
+      name        TEXT NOT NULL,
+      description TEXT,
+      query_def   TEXT NOT NULL,       -- JSON: filters, sorting, grouping, columns
+      is_shared   INTEGER DEFAULT 0,   -- 0 = private, 1 = shared with team
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+  );
+
+  The query_def is a JSON structure that the UI query builder produces and the backend translates to SQL. Something like:
+
+  {
+      "filters": [
+          {"field": "ai_status", "op": "eq", "value": "open"},
+          {"field": "last_activity_at", "op": "lt", "value": "-14d"}
+      ],
+      "sort": [{"field": "last_activity_at", "dir": "desc"}],
+      "group_by": "contact",
+      "columns": ["title", "participant_count", "last_activity_at", "ai_summary"]
+  }
+
+  Then alerts build on top:
+
+  CREATE TABLE alerts (
+      id              TEXT PRIMARY KEY,
+      view_id         TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
+      owner_id        TEXT,
+      is_active       INTEGER DEFAULT 1,
+      frequency       TEXT NOT NULL,       -- 'immediate', 'hourly', 'daily', 'weekly'
+      aggregation     TEXT DEFAULT 'batched', -- 'individual', 'batched'
+      delivery_method TEXT NOT NULL,        -- 'in_app', 'push', 'email', 'sms'
+      last_triggered  TEXT,                -- timestamp of last alert sent
+      created_at      TEXT NOT NULL,
+      updated_at      TEXT NOT NULL
+  );
+
+  An alert is just a view with a schedule attached. The system periodically runs the view's query, compares results to the last run, and delivers notifications for new results based on frequency/aggregation settings.
+
+  Topics (AI-Extracted)
+
+  Currently there are two topic concepts in the system that we should distinguish clearly:
+
+  1. Topics in the hierarchy — the topics table we already defined (user-created or AI-suggested organizational containers under projects, with conversations linked to them)
+  2. AI-extracted topic tags — the short phrases Claude pulls out of conversations ("budget review", "hiring timeline"). These are tags, not organizational containers.
+
+  The current PoC conflates these — it has a topics table and conversation_topics join table that store AI-extracted tags. But in the new hierarchy, topics means something different (an organizational entity under a project).
+
+  I'd rename the AI tag concept to avoid confusion:
+
+  CREATE TABLE tags (
+      id         TEXT PRIMARY KEY,
+      name       TEXT NOT NULL UNIQUE,  -- lowercase, trimmed
+      source     TEXT DEFAULT 'ai',     -- 'ai', 'user'
+      created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE conversation_tags (
+      conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+      tag_id          TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+      confidence      REAL DEFAULT 1.0,
+      source          TEXT DEFAULT 'ai',
+      created_at      TEXT NOT NULL,
+      PRIMARY KEY (conversation_id, tag_id)
+  );
+
+  This keeps ai_topics (raw JSON array) on the conversations row as the AI source-of-truth, and tags / conversation_tags as the normalized, queryable, cross-conversation version. Same pattern as today, just renamed to avoid collision
+  with the hierarchy's topics table.
+
+  Sync Infrastructure
+
+  The existing email_accounts and sync_log tables are still relevant. The only change is email_accounts should probably be renamed to reflect multi-channel:
+
+  CREATE TABLE provider_accounts (
+      id                TEXT PRIMARY KEY,
+      provider          TEXT NOT NULL,       -- 'gmail', 'outlook', 'imap', 'sms_twilio', etc.
+      account_type      TEXT NOT NULL,       -- 'email', 'sms', 'voip'
+      email_address     TEXT,                -- NULL for non-email providers
+      phone_number      TEXT,                -- NULL for non-phone providers
+      display_name      TEXT,
+      auth_token_path   TEXT,
+      sync_cursor       TEXT,
+      last_synced_at    TEXT,
+      initial_sync_done INTEGER DEFAULT 0,
+      backfill_query    TEXT,
+      created_at        TEXT NOT NULL,
+      updated_at        TEXT NOT NULL,
+      UNIQUE(provider, email_address),
+      UNIQUE(provider, phone_number)
+  );
+
+  And sync_log stays essentially the same, just referencing provider_accounts instead of email_accounts.
+
+  ---
+  That covers all the tables. Let me do a quick count of the full proposed schema:
+  ┌─────────────────────────────┬──────────────────────────────────────────────────────────┐
+  │            Table            │                         Purpose                          │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ provider_accounts           │ Connected accounts & sync state                          │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ contacts                    │ Known contacts (unchanged)                               │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ projects                    │ Hierarchy: top-level + sub-projects (adjacency list)     │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ topics                      │ Hierarchy: organizational groupings under projects       │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ conversations               │ Conversation records with denormalized stats + AI fields │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ conversation_participants   │ Denormalized participant summary per conversation        │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ communications              │ All channel types, single polymorphic table              │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ communication_participants  │ Recipients/attendees per communication                   │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ conversation_communications │ M:N join with display_content per context                │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ attachments                 │ Files on any communication                               │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ tags                        │ Normalized AI-extracted topic tags                       │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ conversation_tags           │ M:N join: conversations ↔ tags                           │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ views                       │ User-defined saved queries                               │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ alerts                      │ Triggers on views with frequency/delivery                │
+  ├─────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ sync_log                    │ Sync audit trail                                         │
+  └─────────────────────────────┴──────────────────────────────────────────────────────────┘
+  15 tables total (up from 8). Any of these feel wrong, missing, or over-engineered? If this looks right, I'm ready to write up the full data layer PRD.
+
+
+That looks good.  Have you reviewed the database architect skill?  Please respect some of the costraints in that skill.                                                                                                                  
+                                                                                                                          
+● Yes, I read it when it was loaded. Let me call out the areas from the skill's workflow that we've covered in discussion and what still needs to be addressed in the PRD:                                                                 
+                                                                                                                                                                                                                                           
+  Covered in our discussion:                                                                                                                                                                                                               
+  - Requirements & access patterns                                                                 
+  - Technology selection (PostgreSQL production, SQLite PoC)                                                                                                                                                                               
+  - Schema design (tables, relationships, constraints)                                             
+  - Normalization vs. denormalization trade-offs (explicit decisions documented)
+
+  Not yet discussed but required by the skill:
+  - Index strategy — specific indexes with rationale tied to query patterns
+  - Caching architecture — layers and invalidation strategy
+  - Migration plan — from current 8-table SQLite schema to the new 15-table schema, and future SQLite → PostgreSQL path
+  - Scaling strategy — growth projections, partitioning considerations
+  - ERD diagram — Mermaid format
+  - ORM / integration considerations — SQLAlchemy, Alembic, or staying with raw SQL
+  - Monitoring & observability — what to measure
+  - Trade-offs documentation — rationale for each decision with alternatives considered
+  - Transaction design — consistency requirements, especially around denormalized counts
+  - Security — row-level concerns, tenant isolation path
+
+  Do you want to discuss any of these interactively before I write, or should I use my judgment on these and include them in the PRD? Some of these (like caching, scaling, monitoring) may be premature for a PoC but worth documenting as
+   production considerations.
+
+❯ use your judgment, write the full PRD                                                                                                                                                                                                    
+                                        
+● Write(docs/data-layer-prd.md)                                                                                                                                                                                                            
+  ⎿  Wrote 1429 lines to docs/data-layer-prd.md                                 
+       1 # Data Layer & Database Architecture PRD                                                                                                                                                                                          
+       2                                                                                                                                                                                                                                   
+       3 ## CRMExtender — Communication & Conversation Intelligence Data Model                                                                                                                                                             
+       4                                                                                                                                                                                                                                   
+       5 **Version:** 1.0                                                                          
+       6 **Date:** 2026-02-07
+       7 **Status:** Draft
+       8 **Parent Documents:** [Communication & Conversation Intelligence PRD](email-conversations-prd.md), [CRMExtender PRD v1.1](PRD.md)
+       9
+      10 ---
+     … +1419 lines (ctrl+o to expand)
+
+● The Data Layer & Database Architecture PRD is written at docs/data-layer-prd.md. Here's a summary of what's covered:
+                                                   
+  19 sections, ~1,200 lines:                                                                                                                                                                                                               
+                                                                                                                                                                                                                                           
+  1. Technology selection — PostgreSQL production, SQLite PoC, with rationale and alternatives considered                                                                                                                                  
+  2. Design principles — 6 principles, 8 key decisions with alternatives documented                                                                                                                                                        
+  3. ERD — Full Mermaid diagram showing all 15 tables and relationships                                                                                                                                                                    
+  4. Schema design — Every table, every column, constraints, write patterns, and design rationale
+  5. Referential integrity — FK summary with CASCADE vs SET NULL decisions explained
+  6. Indexing strategy — 24 indexes across 15 tables, each tied to a specific query pattern
+  7. Query patterns — High/medium/low frequency queries with SQL and index references
+  8. Denormalization strategy — What's denormalized, maintenance triggers, transactional consistency, repair mechanism
+  9. Transaction design — Boundaries, isolation levels, idempotency patterns, concurrency
+  10. ORM integration — Raw SQL (PoC) → SQLAlchemy Core (production), with Alembic migrations
+  11. Caching — Two-tier (Redis + client SQLite) with invalidation strategy
+  12. Migration plan — 3 phases: current→new SQLite schema, SQLite→PostgreSQL, ongoing Alembic
+  13. Scaling strategy — Year 1-3 projections, partitioning plan, archive strategy
+  14. Security — Schema-per-tenant, credential isolation, RLS path
+  15. Monitoring — Metrics, thresholds, tooling recommendations
+  16. Trade-offs — 6 major decisions with explicit alternatives and rationale
+  17. SQLite/PostgreSQL compatibility — What works in both, what's deferred to production
+
+  Take a look and let me know if anything needs adjustment.
+
+✻ Brewed for 6m 50s                 
+
+❯ commit this                                                                                                                                                                                                                              
+              
+● Bash(git status)                                                                                                                                                                                                                         
+  ⎿  On branch main                                                                                                                                                                                                                      
+     Your branch is up to date with 'origin/main'.                                                                                                                                                                                         
+     … +8 lines (ctrl+o to expand)                                                                 
+                                                                                                                                                                                                                                           
+● Bash(git diff --stat)                                                                                                                                                                                                                    
+  ⎿  (No content)
+                                                                                                                                                                                                                                           
+● Bash(git log --oneline -5)                                                                       
+  ⎿  1c3283d Update documentation to reflect dual-track email parsing pipeline                                                                                                                                                             
+     100e57a Fix Gmail body-inside-signature and underscore separator signature leaks                                                                                                                                                      
+     68673d7 Fix 4 remaining signature/boilerplate leak patterns in email parser
+     … +2 lines (ctrl+o to expand)                                                                                                                                                                                                         
+                                                                                                   
+● I see there are also the two PRD files from the previous conversation (email-conversations-prd.md) and what appear to be AI prompt log directories. I'll commit just the two PRD documents you and I have been working on.
+
+● Bash(git add docs/data-layer-prd.md docs/email-conversations-prd.md && git commit -m "Add Communication & Conversation Intelligence PRD and Data Layer Architecture P…)                                                                  
+  ⎿  [main 02ec1b3] Add Communication & Conversation Intelligence PRD and Data Layer Architecture PRD
+      2 files changed, 2907 insertions(+)                                                                                                                                                                                                  
+      create mode 100644 docs/data-layer-prd.md                                                    
+     … +11 lines (ctrl+o to expand)                                                                                                                                                                                                        
+                                                                                                   
+● Committed as 02ec1b3. Both PRDs are in — 2,907 lines across the two documents. The two AI prompt log directories remain untracked.                                                                                                       
+   
+❯ push it                                                                                                                                                                                                                                  
+                                                                                
+● Bash(git push)                                                                                                                                                                                                                           
+  ⎿  To github.com:dbower44022/CRMExtender.git                                                                                                                                                                                             
+        1c3283d..02ec1b3  main -> main                                                                                                                                                                                                     
+                                                                                                   
+● Pushed to origin/main.                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                           
+❯ lets discuss the PoC direction                                                                                                                                                                                                           
+                                                                                                                                                                                                                                           
+● Let's think about this. The PoC today is a working Gmail pipeline — sync, parse, triage, summarize, display in terminal. The PRD and data layer docs describe a much larger system. The question is: what's the right next step for the  
+  PoC?                                                                                             
+                                                                                                                                                                                                                                           
+  I see a few possible directions, and they're not mutually exclusive but they have different priorities:
+                                                                                                                                                                                                                                           
+  Direction A: Data Model Migration                                                                
+  Evolve the current 8-table schema to the new 15-table schema within SQLite. Refactor the application code (models.py, sync.py, database.py) to use the new structure. The Gmail pipeline keeps working, but now communications live in
+  the polymorphic table, conversations are account-independent, and the M:N join table connects them. The hierarchy tables exist but are empty until users create projects/topics.
+
+  This is foundational — everything else builds on it.
+
+  Direction B: API Layer
+  Stand up a FastAPI server exposing the data through REST endpoints. The current PoC is CLI-only — there's no way for a web or mobile UI to interact with it. An API layer would enable a frontend and make the PoC usable beyond the
+  terminal.
+
+  Direction C: Web UI
+  Build a basic web interface for reviewing conversations, managing the hierarchy, and the review workflow (accepting/correcting auto-assignments). This is where the product becomes tangible to users.
+
+  Direction D: AI Classification & Routing
+  Evolve the summarizer into the classify-and-route system described in the PRD. Instead of just summarizing, the AI would assign communications to conversations and suggest topics. This is the intelligence that makes the hierarchy
+  useful.
+
+  Direction E: Multi-Channel
+  Add a second communication channel (SMS or manual notes) to prove the multi-channel model works end-to-end.
+
+  My instinct is that A comes first — you can't build any of the other directions on the current flat schema. After that, I'd lean toward B+C together (API + minimal UI) so the product is actually usable, then D (AI routing) to make it
+   smart.
+
+  What's your thinking? Is there a different priority order, or a specific area you want to focus on first?
+
+❯ I agree.  Data model and functional specs need to be tight before we start with the API layer, and eventually UI.  But I want to continue working on the Data Layer first.                                                               
+                                                                                                                                                                             
+● Makes sense. Let's keep going on the data layer.                                                                                                                                                                                         
+                                                                                
+  What aspect do you want to dig into? A few things come to mind:                                                                                                                                                                          
+                                                                                                                                                                                                                                           
+  1. Migration script — Actually write the SQLite migration code that transforms the current 8-table schema into the new 15-table schema, preserving existing data.                                                                        
+  2. Updated models.py — Rewrite the Python dataclasses to match the new schema (Communication replacing ParsedEmail, updated Conversation, new Project/Topic classes, new serialization methods).
+  3. Updated database.py — Rewrite the schema DDL and index definitions for the new 15 tables.
+  4. Updated sync.py — Refactor the sync orchestration to work with the new table structure (communications instead of emails, conversation_communications join table, denormalized count maintenance).
+  5. Gaps in the PRD — If there are areas of the data layer design that feel incomplete or need more discussion before we write code.
+
+  Where do you want to focus?
+
+❯ 5, lets make sure we haven't missed anything.                                                                                                                                                                                            
+                                                  
+● Good instinct. Let me do a systematic review — I'll cross-reference the Conversations PRD requirements against the data layer schema and flag anything that's missing or underspecified.                                                 
+                                                                                
+● Read 1 file (ctrl+o to expand)                                                                                                                                                                                                           
+                                                                                                                                                                                                                                           
+● I've reviewed both documents systematically. Here are the gaps I've found, organized by severity:                                                                                                                                        
+                                                                                                   
+  Gaps That Need Discussion                                                                                                                                                                                                                
+                                                                                                   
+  1. AI Assignment Tracking — No confidence or source on conversation_communications                                                                                                                                                       
+                                                                                                   
+  The PRD says the AI auto-assigns communications to conversations with confidence scores, and low-confidence assignments are flagged for user review. But the conversation_communications join table only has is_primary (0/1). There's no
+   way to record:
+  - Was this assignment made by AI, by the sync pipeline (email threading), or by the user?
+  - What's the AI's confidence level?
+  - Has the user reviewed/confirmed it?
+
+  We probably need columns like assignment_source (ai, sync, user), confidence (0.0-1.0), and reviewed (0/1) on conversation_communications.
+
+  2. User Corrections — No audit trail for learning
+
+  The PRD says the system learns from user corrections. When a user moves a communication from conversation A to conversation B, that correction is a training signal. But there's nowhere to store it. The old row in
+  conversation_communications just gets deleted and a new one inserted — the correction history is lost.
+
+  Do we need a correction_log table? Or is this deferred to the AI Learning PRD?
+
+  3. Pending Identification State — No status on contacts or participants
+
+  The PRD says unknown identifiers enter "Pending Identification" state. But communication_participants.contact_id is just nullable — NULL could mean "unresolved" or "not a known contact and we don't care." There's no explicit state
+  distinguishing "we're actively trying to identify this person" from "unknown and not important."
+
+  4. Users Table — Referenced but not defined
+
+  owner_id appears on projects, views, alerts, and conversation_communications.created_by (in the segments discussion). But there's no users table in the schema. Is this handled by the parent system's auth layer, or do we need to
+  define it?
+
+  5. Provider Labels / Categories — No storage
+
+  Gmail has labels (Primary, Social, Promotions, Updates). Outlook has Focused/Other. These are useful signals for triage and organization but have nowhere to go in the current schema.
+
+  6. Communication Edit History
+
+  If a user edits a note (updates their meeting notes, corrects a phone call summary), the current schema just overwrites content. Is that acceptable, or do we need versioning?
+
+  ---
+  Minor Gaps (Probably Fine to Defer)
+
+  - Calendar integration — PRD mentions calendar-triggered placeholder communications. No schema support yet, but could just be a note communication with a source = 'calendar'.
+  - Search indexing — Meilisearch is external. No schema needed unless we want to track indexing state.
+  - Conversation merge operations — PRD lists this as an open question. No schema support, but M:N model handles it naturally (move communications between conversations).
+  - Archive tables — Mentioned in scaling strategy but not defined. Deferred until volumes justify it.
+
+  ---
+  Which of these do you want to discuss? I think #1 (AI assignment tracking) and #2 (correction history) are the most important since they directly affect the learning system. #3 and #4 are structural questions worth settling. #5 and
+  #6 could go either way.
+
+✻ Brewed for 54s                                                                                                                                                                                                                           
+   
+❯ lets do 1 and 2                                                                                                                                                                                                                          
+                                                                                
+● 1. AI Assignment Tracking                                                                                                                                                                                                                
+                                                                                
+  Right now conversation_communications has:                                                                                                                                                                                               
+                                                                                                   
+  conversation_id, communication_id, display_content, is_primary, created_at                                                                                                                                                               
+                                                                                                                                                                                                                                           
+  A communication can land in a conversation through three different paths:
+
+  - Sync pipeline — Email threading (Gmail threadId match). High confidence, automatic.
+  - AI classification — AI analyzes content and assigns to a conversation. Variable confidence.
+  - User action — User manually assigns or corrects. 100% confidence by definition.
+
+  And the review workflow from the PRD says: "14 new communications since yesterday. 11 auto-assigned (review). 3 unassigned (needs your input)." To drive that UI, we need to know which assignments are user-confirmed and which are
+  still pending review.
+
+  I'd add these columns to conversation_communications:
+
+      assignment_source  TEXT NOT NULL DEFAULT 'sync',  -- 'sync', 'ai', 'user'
+      confidence         REAL DEFAULT 1.0,              -- 0.0-1.0; always 1.0 for sync/user
+      reviewed           INTEGER DEFAULT 0,             -- 0 = pending review, 1 = user confirmed
+      reviewed_at        TEXT,                           -- timestamp of user review
+
+  So the query for the review workflow becomes:
+
+  -- Auto-assigned, not yet reviewed
+  SELECT * FROM conversation_communications
+  WHERE assignment_source IN ('ai', 'sync') AND reviewed = 0;
+
+  -- Unassigned communications
+  SELECT * FROM communications
+  WHERE id NOT IN (SELECT communication_id FROM conversation_communications);
+
+  One question: should sync assignments default to reviewed = 0 or reviewed = 1? Email threading is highly reliable — Gmail's threadId is almost always correct. Requiring users to review every synced email defeats the purpose. My
+  instinct: sync defaults to reviewed = 1 (trusted), AI defaults to reviewed = 0 (needs confirmation), user is always reviewed = 1.
+
+  What's your thinking?
+
+  2. User Corrections / Learning Signals
+
+  When a user corrects an assignment — moves a communication from conversation A to conversation B, or assigns an unassigned communication — that's a training signal the AI Learning system needs. The question is where to capture it.
+
+  Two approaches:
+
+  Approach A: Dedicated correction log table
+
+  CREATE TABLE assignment_corrections (
+      id                  TEXT PRIMARY KEY,
+      communication_id    TEXT NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
+      from_conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+      to_conversation_id  TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+      correction_type     TEXT NOT NULL,  -- 'reassign', 'assign', 'remove'
+      original_source     TEXT,           -- what made the original assignment: 'sync', 'ai'
+      original_confidence REAL,           -- what confidence the AI had
+      corrected_by        TEXT,           -- user id
+      created_at          TEXT NOT NULL
+  );
+
+  This captures: "The AI assigned communication X to conversation A with 0.7 confidence. The user moved it to conversation B." The AI Learning system can query this table to find patterns — which contacts, subjects, or content types
+  does the AI consistently get wrong?
+
+  Approach B: General event/activity log
+
+  A broader activity_log table that captures all user actions, not just corrections:
+
+  CREATE TABLE activity_log (
+      id          TEXT PRIMARY KEY,
+      action      TEXT NOT NULL,     -- 'assignment_corrected', 'conversation_created', 'topic_changed', etc.
+      entity_type TEXT NOT NULL,     -- 'communication', 'conversation', 'project', etc.
+      entity_id   TEXT NOT NULL,
+      details     TEXT,              -- JSON with action-specific data
+      user_id     TEXT,
+      created_at  TEXT NOT NULL
+  );
+
+  More flexible, captures everything, but less structured for the specific use case of learning from assignment corrections.
+
+  ---
+  My recommendation: Approach A. The correction log has a specific, well-defined purpose — training the AI classification system. It needs structured fields (from/to conversation, original source, original confidence) that a generic
+  activity log would stuff into a JSON blob. A generic activity log can be added later for audit purposes, but the correction log serves the AI Learning PRD directly.
+
+  That said, I can see an argument for Approach B if you think we'll want a general activity trail for other purposes too. What's your preference?
+
+❯ I agree with the reviewed value being 1 if email, 0 for AI, and 0 for non-email communications types, and users = 1,  I like approach A also.  We can create different learining tables for other areas that we want AI to learn         
+  from.  For example lets discuss how the system determines an email id junk mail, and how we correct and learn in that area.                                                                                                             
+                                                                                                                                                                                                                                           
+● Good topic. Let me walk through how triage works today, what changes in the new model, and where learning fits in.                                                                                                                       
+                                                                                                                                                                                                                                           
+  Current Triage Model                                                                                                                                                                                                                     
+   
+  Today, triage operates at the conversation level. The triage_result column on conversations stores why it was filtered: automated_sender, automated_subject, marketing, or no_known_contacts. Filtered conversations are kept in the DB  
+  but skipped for AI processing.                                                                   
+
+  The rules are entirely heuristic — hardcoded patterns:
+  - 16 automated sender patterns (noreply@, notification@, etc.)
+  - 12 automated subject patterns ("out of office", "password reset", etc.)
+  - Body contains "unsubscribe" → marketing
+  - No known contacts among participants → filtered
+
+  No learning. No user overrides. If the heuristic is wrong, there's no way to correct it.
+
+  What Needs to Change
+
+  In the new model, a few things shift:
+
+  Triage should operate per-communication, not per-conversation. A conversation could contain a mix — 5 legitimate emails and 1 marketing email that got threaded in. Triaging the whole conversation loses granularity.
+
+  But there's a nuance: we still want to triage at the conversation level for display purposes. If every communication in a conversation is junk, the conversation is junk. If even one is legitimate, the conversation should be visible.
+
+  I'd propose: triage lives on communications (per-communication decision), and the conversation's triage_result becomes a computed/denormalized rollup. A conversation is only triaged if ALL its communications are triaged.
+
+  User corrections flow in two directions:
+
+  1. False positive — System filtered a communication as junk, but the user says "this is legitimate." The user overrides the triage result.
+  2. False negative — System let a communication through, but the user says "this is junk." The user marks it as filtered.
+
+  Both are learning signals. Over time the system should learn: "emails from billing@acmecorp.com are NOT junk for this user, even though they match the billing@ pattern" or "emails from newsletter@partner.com are always junk for this
+  user, even though they don't match any pattern."
+
+  Triage Corrections Table
+
+  Following the same pattern as assignment_corrections:
+
+  CREATE TABLE triage_corrections (
+      id                  TEXT PRIMARY KEY,
+      communication_id    TEXT NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
+      original_result     TEXT,           -- what the system decided: 'automated_sender',
+                                          -- 'marketing', etc., or NULL (passed triage)
+      corrected_result    TEXT,           -- what the user says it should be: NULL (legitimate)
+                                          -- or a filter reason (junk)
+      correction_type     TEXT NOT NULL,  -- 'false_positive' (was filtered, should not be)
+                                          -- 'false_negative' (was not filtered, should be)
+      sender_address      TEXT,           -- denormalized for pattern learning
+      sender_domain       TEXT,           -- denormalized: 'acmecorp.com'
+      subject             TEXT,           -- denormalized for pattern learning
+      corrected_by        TEXT,           -- user id
+      created_at          TEXT NOT NULL
+  );
+
+  I'm denormalizing sender_address, sender_domain, and subject onto the correction row because the AI Learning system will be querying for patterns: "how many times has this user overridden triage for @acmecorp.com?" Having those
+  fields directly on the correction row avoids JOINs back to communications.
+
+  How Learning Would Work (Conceptually)
+
+  The AI Learning PRD will define the details, but the data model needs to support these queries:
+
+  -- "Which sender domains does this user consistently mark as legitimate?"
+  SELECT sender_domain, COUNT(*) as override_count
+  FROM triage_corrections
+  WHERE correction_type = 'false_positive'
+  GROUP BY sender_domain
+  ORDER BY override_count DESC;
+
+  -- "Which specific senders does this user consistently mark as junk?"
+  SELECT sender_address, COUNT(*) as junk_count
+  FROM triage_corrections
+  WHERE correction_type = 'false_negative'
+  GROUP BY sender_address
+  ORDER BY junk_count DESC;
+
+  After enough corrections, the system could build per-user allowlists and blocklists — either explicit rules or AI-driven patterns.
+
+  One More Piece: User Allow/Block Lists
+
+  The corrections table captures history, but should we also have an explicit table where learned rules are stored?
+
+  CREATE TABLE triage_rules (
+      id          TEXT PRIMARY KEY,
+      rule_type   TEXT NOT NULL,     -- 'allow', 'block'
+      match_type  TEXT NOT NULL,     -- 'sender', 'domain', 'subject_pattern'
+      match_value TEXT NOT NULL,     -- 'billing@acmecorp.com', 'acmecorp.com', 'invoice*'
+      source      TEXT NOT NULL,     -- 'user' (explicit), 'learned' (from corrections)
+      confidence  REAL DEFAULT 1.0,  -- 1.0 for user-created, <1.0 for learned
+      user_id     TEXT,
+      created_at  TEXT NOT NULL
+  );
+
+  This gives triage a three-layer pipeline:
+
+  1. User rules — Explicit allow/block lists (highest priority)
+  2. Learned rules — Derived from correction patterns (medium priority)
+  3. Heuristic patterns — The current hardcoded patterns (lowest priority, default)
+
+  A communication is evaluated against all three layers in priority order.
+
+  Does this model fit your thinking? And should we include triage_rules in the data layer, or defer that to the AI Learning PRD?
+
+✻ Baked for 41s                         
+
+❯ I agree with this model, and think we should add some of the triage rules in the data layer for now.  But I have one question.  I understand that all communications = junk makes conversation junk, but I think a user can mark a       
+  conversation as "not a conversation" even if all of the communications are not junk.                                                                                                                                                    
+                                                                                                                                                                                                                                           
+● That's an important distinction. A conversation could contain legitimate communications — real emails from real contacts — but the grouping itself isn't a meaningful conversation. Examples:                                            
+                                                                                                                                                                                                                                           
+  - A thread where two unrelated emails got grouped by Gmail because they share a subject line                                                                                                                                             
+  - A recurring automated report from a known contact — each email is legitimate, but the "conversation" isn't something you want the AI analyzing or tracking
+  - A thread that devolved into a mass-reply-all chain — individual emails are real, but the conversation is noise                                                                                                                         
+                                                                                                   
+  So we need a way for a user to say "these communications are fine, but stop treating this as a conversation." That's a different action than triaging individual communications as junk.
+
+  I'd add a column to conversations:
+
+      dismissed          INTEGER DEFAULT 0,    -- 0 = active conversation, 1 = user dismissed
+      dismissed_reason   TEXT,                 -- optional: 'not_a_conversation', 'irrelevant',
+                                               -- 'duplicate', etc.
+      dismissed_at       TEXT,                 -- timestamp
+      dismissed_by       TEXT,                 -- user id
+
+  This is separate from triage_result (which is system-determined) and status (which is time-based). It's a user-level override that says "I've seen this, it's not useful as a conversation."
+
+  Behavior when dismissed:
+  - The conversation stops appearing in active listings and views (unless the user explicitly filters for dismissed conversations)
+  - AI processing stops (no re-summarization)
+  - The communications inside it remain accessible — they could be reassigned to other conversations
+  - Reversible — user can un-dismiss
+
+  And this feeds into learning too. If a user dismisses a conversation, that's a signal about the type of groupings that aren't useful. Should we add this to a corrections table as well, or is the flag on the conversation sufficient?
+
+❯ Let's add a correction table for communications triage learning.  I am sure it will be usefull.                                                                                                                                          
+                                                                                                  
+● Agreed. So we'd have a conversation_corrections table:                                                                                                                                                                                   
+                                                                                
+  CREATE TABLE conversation_corrections (                                                                                                                                                                                                  
+      id                  TEXT PRIMARY KEY,                                                                                                                                                                                                
+      conversation_id     TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,                                                                                                                                                    
+      correction_type     TEXT NOT NULL,     -- 'dismissed', 'undismissed', 'merged',              
+                                             -- 'split', 'status_override'
+      reason              TEXT,              -- 'not_a_conversation', 'irrelevant',
+                                             -- 'duplicate', user-entered text, etc.
+      details             TEXT,              -- JSON for action-specific context
+      participant_addresses TEXT,            -- denormalized: comma-separated participants
+      subject             TEXT,              -- denormalized: conversation title
+      communication_count INTEGER,           -- denormalized: how many comms at time of action
+      corrected_by        TEXT,              -- user id
+      created_at          TEXT NOT NULL
+  );
+
+  I'm denormalizing participant addresses, subject, and communication count so the learning system can look for patterns without JOINing back:
+
+  -- "Conversations with only 1 communication from automated senders
+  --  keep getting dismissed — maybe triage should catch these earlier"
+  SELECT subject, participant_addresses, COUNT(*)
+  FROM conversation_corrections
+  WHERE correction_type = 'dismissed'
+  GROUP BY subject, participant_addresses
+  ORDER BY COUNT(*) DESC;
+
+  I'm also making correction_type broader than just dismiss/undismiss. Future operations like merge and split are conversation-level corrections worth tracking. The details JSON field captures action-specific context without needing
+  separate columns for every correction type.
+
+  So now we have three correction/learning tables:
+  ┌──────────────────────────┬───────────────────────────────────────────────────────────┬───────────────────────────────────────────────────────────────────────┐
+  │          Table           │                      What It Tracks                       │                            AI Learning Use                            │
+  ├──────────────────────────┼───────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────┤
+  │ assignment_corrections   │ Communication moved between conversations                 │ Improve conversation auto-assignment                                  │
+  ├──────────────────────────┼───────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────┤
+  │ triage_corrections       │ Communication triage overridden (false positive/negative) │ Improve junk detection, build allow/block lists                       │
+  ├──────────────────────────┼───────────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────┤
+  │ conversation_corrections │ Conversation dismissed, merged, split, status overridden  │ Improve conversation formation, identify non-useful grouping patterns │
+  └──────────────────────────┴───────────────────────────────────────────────────────────┴───────────────────────────────────────────────────────────────────────┘
+  That brings the total schema to 18 tables (15 original + assignment_corrections + triage_corrections + conversation_corrections) plus the triage_rules table makes 19.
+
+  Should we keep going through the remaining gaps? We still have:
+
+  - 3. Pending Identification state — How to distinguish "actively resolving this contact" from "unknown and unimportant"
+  - 4. Users table — Referenced by owner_id everywhere but undefined
+  - 5. Provider labels/categories — Gmail labels, Outlook Focused/Other
+  - 6. Communication edit history — Overwrite vs. versioning for notes
+
+  Or do you want to focus on updating the PRD with what we've discussed so far?
+
+❯ lets discuss 3 through 6                                                                                                                                                                                                                 
+                           
+● 3. Pending Identification State                                                                                                                                                                                                          
+                                                                                
+  The PRD says when a communication arrives with an unrecognized sender/participant, the identifier enters "Pending Identification" state. The Contact Intelligence system works to resolve it. Currently,                                 
+  communication_participants.contact_id is just nullable — NULL means unresolved, but there's no distinction between:                                                                                                                      
+                                                                                                                                                                                                                                           
+  - Pending — "We're actively trying to figure out who +1-555-0199 is"                             
+  - Unresolved — "We tried and couldn't match this identifier"
+  - Irrelevant — "This is a no-reply address, we don't care who it is"
+
+  I see two options:
+
+  Option A: Status column on communication_participants
+
+      contact_status  TEXT DEFAULT 'pending',  -- 'pending', 'resolved', 'unresolved', 'irrelevant'
+
+  When contact_id gets populated, contact_status flips to resolved. If resolution fails, it moves to unresolved. If a user says "don't bother," it's irrelevant.
+
+  Option B: This belongs on the contacts system, not here
+
+  The Contact Intelligence PRD will define a resolution workflow with its own tables — pending identifiers, resolution attempts, match candidates. Our communication_participants table just has a nullable contact_id. When the Contact
+  Intelligence system resolves an identifier, it updates contact_id across all tables that reference it.
+
+  Under this approach, we don't need a status column here. The Contact Intelligence system owns the resolution state. Our table just reflects the current answer: resolved (has contact_id) or not (NULL).
+
+  My instinct is Option B. Pending identification is a Contact Intelligence concern, not a conversations concern. Adding resolution state to communication_participants duplicates responsibility. Our table is a consumer — it gets
+  updated when the Contact Intelligence system figures something out.
+
+  The one thing we might want is a way to query "show me all communications with unresolved participants" for a user review screen. That's already possible:
+
+  SELECT DISTINCT c.* FROM communications c
+  JOIN communication_participants cp ON cp.communication_id = c.id
+  WHERE cp.contact_id IS NULL AND cp.role != 'bcc';
+
+  Does that feel right, or do you think conversations needs its own resolution tracking?
+
+  4. Users Table
+
+  owner_id appears on projects, views, alerts, and correction tables (corrected_by). But there's no users table in our schema.
+
+  The parent PRD defines the broader platform architecture with FastAPI, JWT auth, and schema-per-tenant isolation. Users and authentication are platform-level concerns, not conversation-subsystem concerns.
+
+  I think we have three options:
+
+  Option A: Define a minimal users table here
+
+  CREATE TABLE users (
+      id          TEXT PRIMARY KEY,
+      email       TEXT NOT NULL UNIQUE,
+      name        TEXT,
+      role        TEXT DEFAULT 'member',  -- 'admin', 'member'
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+  );
+
+  Simple, gives us FK targets for owner_id, and gets replaced/extended when the full auth system is built.
+
+  Option B: Leave owner_id as a soft reference (no FK)
+
+  Keep it as a TEXT column with no FK constraint. The auth system will own user records. Our tables just store the user ID as a string and trust the application layer to validate it.
+
+  Option C: Defer entirely
+
+  For the PoC, there's one user. owner_id can be NULL everywhere. Define the users table when multi-user support is actually implemented.
+
+  My recommendation: Option A for the PRD, Option C for the PoC implementation. The PRD should document that a users table exists (or will exist) as the FK target. The PoC doesn't need it yet — a single user running the CLI doesn't
+  need user records.
+
+  What's your preference?
+
+  5. Provider Labels / Categories
+
+  Gmail has labels: Primary, Social, Promotions, Updates, Forums, plus user-created labels. Outlook has Focused vs. Other, plus categories. These are useful signals:
+
+  - A Gmail "Promotions" label is a strong triage signal
+  - User-created labels like "VIP" or "Project X" could inform conversation assignment
+  - Outlook categories could map to topics
+
+  Where should these live? Two options:
+
+  Option A: JSON column on communications
+
+      provider_labels  TEXT,  -- JSON array: ["Primary", "Important", "Project-Alpha"]
+
+  Simple. Labels are provider-specific metadata that we don't need to query frequently. Stuffing them in a JSON array keeps the schema clean. For the rare query ("show me all communications labeled Important"), json_each() in SQLite or
+   JSONB operators in PostgreSQL handle it.
+
+  Option B: Separate labels table
+
+  CREATE TABLE communication_labels (
+      communication_id TEXT NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
+      label           TEXT NOT NULL,
+      source          TEXT NOT NULL,  -- 'gmail', 'outlook', 'user'
+      PRIMARY KEY (communication_id, label)
+  );
+
+  Normalized, indexable, queryable. But adds a 20th table and a JOIN for something that may not be a primary query pattern.
+
+  My instinct: Option A (JSON column). Labels are provider metadata — useful context but not a primary access pattern. If labels become critical for triage or classification, we can promote them to a table later. The JSON column is
+  queryable enough for the PoC and production doesn't lose anything since PostgreSQL JSONB is fully indexable.
+
+  How do you see labels being used?
+
+  6. Communication Edit History
+
+  When a user edits a note — updates their meeting notes, corrects a phone call summary, fixes a typo — what happens?
+
+  Current design: The content column is overwritten. updated_at changes. The previous version is lost.
+
+  The question: Is that acceptable?
+
+  For auto-synced communications (email, SMS), editing doesn't apply — the content comes from the provider and shouldn't be modified. For user-entered communications (notes, unrecorded calls, in-person meetings), the user is the author
+   and may want to revise.
+
+  Three options:
+
+  Option A: Overwrite is fine
+
+  Notes are user-entered. If they edit, the new version is what they want. No need to keep history. updated_at records that a change happened. This is how most note-taking apps work.
+
+  Option B: Simple version column
+
+      edit_count      INTEGER DEFAULT 0,
+      last_edited_at  TEXT,
+      last_edited_by  TEXT,
+
+  Track that an edit happened, but don't preserve old content. Lightweight audit.
+
+  Option C: Full version history table
+
+  CREATE TABLE communication_versions (
+      id                TEXT PRIMARY KEY,
+      communication_id  TEXT NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
+      content           TEXT,
+      version           INTEGER NOT NULL,
+      edited_by         TEXT,
+      created_at        TEXT NOT NULL
+  );
+
+  Every edit creates a new version row. Full history preserved. Useful for "what did this note say before the edit?" and compliance.
+
+  My recommendation: Option A for now, with Option B's columns added. Most users don't need version history for their own notes. But knowing that a note was edited (and when) is useful metadata. If version history becomes a
+  requirement, Option C can be added without changing the communications table.
+
+  ---
+  Those are all four. What's your thinking on each?
+
+3 - I agree 100%.  So would the system create a contact and put the contact in a state of needing updates?  I assume that there would not be a matching email address or phone number or else it would not need updating. 
+
+● That's the right question. Let me think through the flow:
+
+  An email arrives from sarah@unknowncorp.com. Nobody in the contacts table has that email. What happens?
+
+  Current PoC behavior: The communication_participants row gets contact_id = NULL. The triage system sees no known contacts and may filter the conversation as no_known_contacts. That's it — no contact is created.
+
+  What should happen in the new model:
+
+  The system knows an email address, possibly a display name from the email header ("Sarah Chen"), and the domain (unknowncorp.com). That's enough to create a contact record. The question is what that record looks like.
+
+  I think there are two scenarios:
+
+  Scenario A: Identifier matches an existing contact's alternate identifier
+
+  The Contact Intelligence system maintains multiple identifiers per contact. Bob Smith has bob@acmecorp.com (known) and bob.smith@gmail.com (unknown to us). An email arrives from bob.smith@gmail.com. The Contact Intelligence system recognizes this is probably Bob based on name matching, domain patterns,
+  or other signals. It links the new identifier to Bob's existing contact record.
+
+  This is entirely the Contact Intelligence system's job. Our conversations subsystem just says "I have an unknown bob.smith@gmail.com" and waits for resolution.
+
+  Scenario B: Truly new person
+
+  sarah@unknowncorp.com doesn't match anyone. The system should create a new contact record — but a minimal one that signals "this needs enrichment."
+
+  The current contacts table could handle this with a status indicator:
+
+      status      TEXT DEFAULT 'active',  -- 'active', 'pending', 'incomplete'
+      source      TEXT,                    -- 'google_contacts', 'auto_detected', 'manual', 'osint'
+
+  A contact created from an incoming communication would be:
+  - email = 'sarah@unknowncorp.com'
+  - name = 'Sarah Chen' (from email From header, if available)
+  - source = 'auto_detected'
+  - status = 'incomplete'
+
+  The incomplete status tells the system and the user: "We created this from an incoming communication. It has minimal information. It needs review/enrichment."
+
+  But here's my hesitation: the contacts table is owned by the Contact Intelligence system. If we start adding status fields and auto-creating contacts here, we're making design decisions that belong in that PRD. The Contact Intelligence system might have a much richer model — multiple identifiers per
+  contact, confidence scores on matches, enrichment pipelines.
+
+  I think the cleanest boundary is:
+
+  1. Conversations subsystem detects unknown identifier — no match in contacts table
+  2. Conversations subsystem creates a signal — "unknown identifier sarah@unknowncorp.com with display name Sarah Chen seen in communication X"
+  3. Contact Intelligence system receives the signal — creates or matches the contact using its own logic
+  4. Contact Intelligence system updates contact_id — on communication_participants and conversation_participants once resolved
+
+  The signal could be as simple as a row in a pending_identifiers table, or it could be a message on a queue. But the conversations subsystem doesn't create contacts — it flags unknowns and lets the Contact Intelligence system handle resolution.
+
+  Does that separation of responsibility feel right? Or would you rather the conversations subsystem create the contact directly and let the Contact Intelligence system enrich it later?
+
+✻ Worked for 36s
+
+❯ I have another scenario for you.  We get the unknown email for sarah@unknowncorp.com and pass it to the CIS, but do not create a contact record.  Let's say we get another email from sarah@unknowncorp.com.  Since we did not create a contact the communications system will not find a contact and will  
+  send a second, third... Signal to the CIS system, and we will not be able to relate the communication to a contact because we cannot get a contact_id.  So we end up with a bunch of zombie communications that we need to clean up somehow.                                                                
+
+● That's a great catch. You're right — without a contact record, every subsequent communication from Sarah generates another signal, and none of them can be linked to each other via contact_id. When CIS finally resolves Sarah, we'd have to go back and backfill contact_id on every
+  communication_participants row that has address = 'sarah@unknowncorp.com'. It works, but it's messy.
+
+  The simpler answer: create the contact immediately. A minimal record, but a real row in the contacts table with a real contact_id that can be referenced right away.
+
+  Email arrives from sarah@unknowncorp.com
+    → contacts table: no match on email
+    → CREATE contact: email='sarah@unknowncorp.com', name='Sarah Chen',
+      source='auto_detected', status='incomplete'
+    → contact_id assigned immediately
+    → communication_participants gets the contact_id
+    → conversation_participants gets the contact_id
+    → Signal to CIS: "new incomplete contact, please enrich"
+
+  Second email from Sarah arrives:
+    → contacts table: MATCH on email
+    → contact_id already exists
+    → communication_participants linked immediately
+    → No duplicate signal needed
+
+  CIS enriches later:
+    → Updates contact: name, company, phone numbers, status='active'
+    → No backfill needed — contact_id was correct from the start
+
+  So the contacts table needs:
+
+  CREATE TABLE contacts (
+      id          TEXT PRIMARY KEY,
+      email       TEXT NOT NULL UNIQUE,
+      name        TEXT,
+      source      TEXT,        -- 'google_contacts', 'auto_detected', 'manual', 'osint'
+      source_id   TEXT,
+      status      TEXT DEFAULT 'active',  -- 'active', 'incomplete'
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+  );
+
+  The only addition is status. An incomplete contact is a real contact — it has an ID, it can be referenced, it can be queried ("show me all conversations with Sarah"). It just hasn't been enriched yet. The CIS system queries for status = 'incomplete' to find contacts that need work, enriches them, and
+  flips status to active.
+
+  The Contact Intelligence PRD will likely extend this table significantly — multiple identifiers, company associations, enrichment fields. But for our purposes, status is the only addition needed.
+
+  One nuance: what about phone numbers? The contacts table currently has UNIQUE(email) and that's the lookup key. When an SMS arrives from +1-555-0199, there's no email to match on. The Contact Intelligence system will need a multi-identifier model, but for our data layer PRD, should we note this as a
+  known limitation, or add a phone column to contacts now?
+
+❯ That is always a problem.  Especially when the phone number 1-555-0199 is updated and the email exists in the system :(    
+
+● Exactly. That's the classic identity resolution problem. You end up with:
+
+  Contact A: email=sarah@unknowncorp.com  (created from email)
+  Contact B: phone=+1-555-0199            (created from SMS)
+
+  Both are Sarah. Now you have communications split across two contact_id values. Conversation participants reference both. The system thinks they're two different people.
+
+  When CIS figures out they're the same person, it needs to merge — pick one contact_id as the winner, update every reference to the loser, and delete the duplicate. That's a painful operation touching communication_participants, conversation_participants, and any other table referencing contact_id.
+
+  The root cause is that our contacts table uses email as the unique lookup key. That works for an email-only system but breaks the moment we add phone-based channels.
+
+  The real fix is a multi-identifier model:
+
+  CREATE TABLE contacts (
+      id          TEXT PRIMARY KEY,
+      name        TEXT,
+      source      TEXT,
+      status      TEXT DEFAULT 'active',
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+      -- NO email column, NO phone column
+  );
+
+  CREATE TABLE contact_identifiers (
+      id          TEXT PRIMARY KEY,
+      contact_id  TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      type        TEXT NOT NULL,      -- 'email', 'phone', 'slack', 'linkedin'
+      value       TEXT NOT NULL,      -- 'sarah@unknowncorp.com', '+15550199'
+      is_primary  INTEGER DEFAULT 0,  -- primary identifier for this type
+      source      TEXT,               -- 'google_contacts', 'auto_detected', 'sms_sync'
+      verified    INTEGER DEFAULT 0,  -- confirmed by CIS or user
+      created_at  TEXT NOT NULL,
+      UNIQUE(type, value)             -- no duplicate identifiers
+  );
+
+  Now when an email arrives from sarah@unknowncorp.com:
+
+  → Look up contact_identifiers WHERE type='email' AND value='sarah@unknowncorp.com'
+  → No match → Create contact + create identifier → get contact_id
+
+  When an SMS arrives from +1-555-0199:
+
+  → Look up contact_identifiers WHERE type='phone' AND value='+15550199'
+  → No match → Create contact + create identifier → get contact_id
+
+  When CIS later discovers they're the same person:
+
+  → Merge: keep Contact A, move all identifiers from B to A
+  → UPDATE contact_identifiers SET contact_id = A WHERE contact_id = B
+  → UPDATE communication_participants SET contact_id = A WHERE contact_id = B
+  → UPDATE conversation_participants SET contact_id = A WHERE contact_id = B
+  → DELETE contact B
+
+  The merge is still multi-table, but the identifier model prevents the problem from getting worse over time. Once merged, every future communication from either identifier resolves to the same contact immediately.
+
+  The tradeoff: This adds a table and changes every contact lookup from a simple SELECT FROM contacts WHERE email = ? to a join through contact_identifiers. It's the right long-term design but it's more complex than what the PoC needs today.
+
+  Question for you: Should we adopt the multi-identifier model now in the data layer PRD (since we know we'll need it), or keep the simple email column on contacts for the PoC and note the multi-identifier migration as a planned evolution?
+
+  My instinct is to put it in the PRD now. The merge problem you just identified is nasty enough that designing around a single-identifier model and then migrating later is more painful than getting it right from the start.
+
+❯ I like the idea of a contact_identifier table.  There is another scenario we did not consider.  A Contact has multiple email addresses. So we are going to need a many to one table for identifiers in every case.  Also, the user may have changed their current email address and a communications            
+  arrives with the old email address.  So I think right from the start, we need a contact identifier table that should handle all kinds of identifiers for the contact.                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                  
+● Absolutely. One contact, many identifiers, any type. And identifiers have a lifecycle — an email address that was active last year might be obsolete today, but old communications still reference it and it still needs to resolve to the right contact.                                                       
+                                                                                                                                                                                                                                                                                                                  
+  Let me refine the model:                                                                                                                                                                                                                                                                                        
+   
+  CREATE TABLE contacts (                                                                                                                                                                                                                                                                                         
+      id          TEXT PRIMARY KEY,                                                                
+      name        TEXT,
+      company     TEXT,
+      source      TEXT,           -- 'google_contacts', 'auto_detected', 'manual', 'osint'
+      status      TEXT DEFAULT 'active',  -- 'active', 'incomplete'
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+  );
+
+  CREATE TABLE contact_identifiers (
+      id          TEXT PRIMARY KEY,
+      contact_id  TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      type        TEXT NOT NULL,       -- 'email', 'phone', 'slack', 'linkedin', 'twitter'
+      value       TEXT NOT NULL,       -- normalized: lowercased email, E.164 phone
+      label       TEXT,                -- 'work', 'personal', 'mobile', 'old', etc.
+      is_primary  INTEGER DEFAULT 0,   -- primary identifier for this type
+      status      TEXT DEFAULT 'active', -- 'active', 'inactive', 'unverified'
+      source      TEXT,                -- 'google_contacts', 'auto_detected', 'sms_sync', 'osint'
+      verified    INTEGER DEFAULT 0,   -- confirmed by CIS, user, or source system
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL,
+      UNIQUE(type, value)
+  );
+
+  The status on identifiers handles the lifecycle:
+  ┌────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │   Status   │                                                  Meaning                                                  │
+  ├────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ active     │ Current, valid identifier. Use for outreach.                                                              │
+  ├────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ inactive   │ No longer in use (old email, changed phone). Still resolves to the contact for historical communications. │
+  ├────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ unverified │ Auto-detected but not confirmed. May or may not be valid.                                                 │
+  └────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+  So Sarah might look like:
+
+  Contact: Sarah Chen (Acme Corp)
+  ├── email: sarah@acmecorp.com        (active, work, primary, verified)
+  ├── email: sarah.chen@oldcompany.com (inactive, work, verified)
+  ├── email: sarahc@gmail.com          (active, personal, verified)
+  ├── phone: +1-555-0199               (active, mobile, primary, verified)
+  └── slack: @sarah.chen               (active, unverified)
+
+  An email from sarah.chen@oldcompany.com still resolves to Sarah even though that email is inactive. The system knows it's an old address but still matches the contact correctly.
+
+  The lookup flow for any incoming communication:
+
+  Incoming identifier: sarah.chen@oldcompany.com
+    → SELECT ci.contact_id FROM contact_identifiers ci
+      WHERE ci.type = 'email' AND ci.value = 'sarah.chen@oldcompany.com'
+    → Found: contact_id = Sarah's ID
+    → communication_participants.contact_id = Sarah's ID
+
+  Same query works for phone, Slack, whatever — just change the type.
+
+  The label column is useful for display: "Sarah Chen (work)" vs "Sarah Chen (personal)". It's also useful for the user when reviewing identifiers — knowing which email is work vs personal vs old helps them manage contacts.
+
+  This changes how communication_participants and conversation_participants do their lookups. Instead of matching on contacts.email, they match through contact_identifiers. But contact_id on those tables still points to contacts.id — the identifier table is just the resolution layer.
+
+  One thing to settle: the current contacts table has UNIQUE(email). That goes away entirely — email moves to contact_identifiers. Do you also want to keep source_id on contacts (the Google People API resource name)? That could also move to contact_identifiers as an identifier type, or stay on contacts as
+   a provider-level link.
+
+❯ I think the Contact Intelligence system will probably still have email(s) and phone number(s)  associated with the contact that is not in the contact identifier.  There may be more information they want to store related to that data (Date setup, provider, etc).  But that is a problem for the            
+  Contact Intelligence system.                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                                  
+● Right. We're defining the conversations subsystem's data layer, not the full Contact Intelligence system. Our responsibility is:                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                                  
+  1. contacts table — minimal: id, name, company, status. Enough to display a contact name in the UI.                                                                                                                                                                                                             
+  2. contact_identifiers table — the resolution lookup. Maps any identifier (email, phone, etc.) to a contact_id. This is what the conversations subsystem uses to link incoming communications to contacts.
+                                                                                                                                                                                                                                                                                                                  
+  The Contact Intelligence system will own the rich contact model — multiple emails with provider info, phone numbers with dates and sources, enrichment data, OSINT, etc. It may extend the contacts table or add its own tables around it. That's their PRD.
+
+  Our contract with the Contact Intelligence system is simple:
+  - We write: new rows in contact_identifiers when we encounter unknown identifiers (with status = 'unverified', source = 'auto_detected')
+  - We read: contact_identifiers to resolve identifiers to contact_id
+  - They write: enriched contacts records, additional identifiers, status updates, merges
+  - They read: our auto-detected identifiers as signals to process
+
+  Clean boundary. Let's move on to the remaining gaps.
+
+  4. Users table — do you want a minimal users table in our schema, soft references with no FK, or defer for the PoC?
+
+  5. Provider labels — JSON column on communications, separate table, or skip?
+
+  6. Communication edit history — overwrite, track edit metadata, or full versioning?
+
+❯ We need a users table, so we should create it. We want json columns on communications so users can define tags/lables or any other attribute. full version control for communication - where we right a new record and add the new communications_id to the old communication's "next_revision" field, and      
+  add the old communications_id to the new record's "Previouw_revision field.                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                  
+● Great, three clear decisions. Let me work through each.                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                                  
+  Users Table                                                                                                                                                                                                                                                                                                     
+                                                                                
+  Minimal, just enough to be an FK target:                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                  
+  CREATE TABLE users (
+      id          TEXT PRIMARY KEY,
+      email       TEXT NOT NULL UNIQUE,
+      name        TEXT,
+      role        TEXT DEFAULT 'member',   -- 'admin', 'manager', 'member'
+      is_active   INTEGER DEFAULT 1,
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+  );
+
+  This gets referenced by projects.owner_id, views.owner_id, alerts.owner_id, and all the corrected_by / created_by columns on correction tables. The full auth system (JWT, sessions, permissions) is a platform concern — this table just gives us a place to point FKs.
+
+  JSON Metadata on Communications
+
+  Two JSON columns — one for provider-sourced metadata, one for user-defined:
+
+      provider_metadata   TEXT,    -- JSON: synced from provider (Gmail labels, Outlook
+                                   -- categories, read receipts, etc.)
+      user_metadata       TEXT,    -- JSON: user-defined tags, labels, custom attributes
+
+  Keeping them separate because they have different write authorities:
+  - provider_metadata is written by the sync pipeline, never by the user
+  - user_metadata is written by the user, never by sync
+
+  Examples:
+
+  // provider_metadata (email from Gmail)
+  {
+      "labels": ["Primary", "Important"],
+      "category": "primary",
+      "starred": true
+  }
+
+  // provider_metadata (SMS from Twilio)
+  {
+      "delivery_status": "delivered",
+      "media_urls": []
+  }
+
+  // user_metadata (user-defined on any communication)
+  {
+      "tags": ["urgent", "follow-up"],
+      "priority": "high",
+      "custom_field_1": "some value"
+  }
+
+  This handles provider labels (gap #5) and user-defined attributes in one design. Both are queryable via json_extract() in SQLite and JSONB operators in PostgreSQL.
+
+  Communication Version Control
+
+  The linked-list revision chain. When a user edits a communication (notes, meeting summaries, etc.), we create a new record and link them:
+
+      -- On communications table
+      previous_revision   TEXT REFERENCES communications(id) ON DELETE SET NULL,
+      next_revision       TEXT REFERENCES communications(id) ON DELETE SET NULL,
+      is_current          INTEGER DEFAULT 1,   -- 1 = latest revision, 0 = superseded
+
+  The edit flow:
+
+  User edits note (communication v1, id='aaa'):
+
+  1. INSERT new communication (v2, id='bbb')
+     - Copy all fields from v1
+     - Update content with user's changes
+     - Set previous_revision = 'aaa'
+     - Set next_revision = NULL
+     - Set is_current = 1
+
+  2. UPDATE old communication (v1, id='aaa')
+     - Set next_revision = 'bbb'
+     - Set is_current = 0
+
+  3. UPDATE conversation_communications
+     - Change communication_id from 'aaa' to 'bbb'
+     (conversation now points to latest revision)
+
+  The chain looks like:
+
+  v1 (is_current=0) ──next──→ v2 (is_current=0) ──next──→ v3 (is_current=1)
+  v3 (is_current=1) ──prev──→ v2 (is_current=0) ──prev──→ v1 (is_current=0)
+
+  Queries:
+
+  -- Get current version (what's displayed)
+  SELECT * FROM communications WHERE id = ? AND is_current = 1;
+
+  -- Get full revision history for a communication
+  WITH RECURSIVE history AS (
+      -- Start from current version
+      SELECT * FROM communications WHERE id = ?
+      UNION ALL
+      -- Walk backwards
+      SELECT c.* FROM communications c
+      JOIN history h ON c.id = h.previous_revision
+  )
+  SELECT * FROM history ORDER BY created_at;
+
+  -- All current communications only (for listings)
+  -- Already handled: conversation_communications always points to current
+
+  I added is_current even though next_revision IS NULL could serve the same purpose. The explicit flag is more readable in queries and avoids edge cases if a revision chain breaks.
+
+  Important constraint: Only user-entered communications (notes, unrecorded calls, in-person meetings) should be editable. Auto-synced communications (email, SMS) are immutable — the content came from the provider. We enforce this in the application layer, not the schema, since the channel and source
+  fields tell us which is which.
+
+  ---
+  So the updated table count:
+  ┌──────────────────────────┬─────────┐
+  │          Table           │ Status  │
+  ├──────────────────────────┼─────────┤
+  │ Original 15              │ Defined │
+  ├──────────────────────────┼─────────┤
+  │ assignment_corrections   │ New     │
+  ├──────────────────────────┼─────────┤
+  │ triage_corrections       │ New     │
+  ├──────────────────────────┼─────────┤
+  │ triage_rules             │ New     │
+  ├──────────────────────────┼─────────┤
+  │ conversation_corrections │ New     │
+  ├──────────────────────────┼─────────┤
+  │ contact_identifiers      │ New     │
+  ├──────────────────────────┼─────────┤
+  │ users                    │ New     │
+  ├──────────────────────────┼─────────┤
+  │ Total: 21 tables         │         │
+  └──────────────────────────┴─────────┘
+  Plus these column additions to existing tables:
+  - conversations: dismissed, dismissed_reason, dismissed_at, dismissed_by
+  - communications: provider_metadata, user_metadata, previous_revision, next_revision, is_current
+  - contacts: status, company (remove email, source_id)
+  - conversation_communications: assignment_source, confidence, reviewed, reviewed_at
+
+  That covers all six gaps. Should we update the PRD with everything we've discussed, or are there more areas to explore first?
+

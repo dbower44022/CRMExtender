@@ -1,0 +1,161 @@
+The plan is ready. It covers:                                                                    
+                                                                                                                                                                                                                         
+  - Schema: relationships table matching the PRD Section 12.5 spec                                                                                                                                                       
+  - Model: Relationship dataclass following existing to_row()/from_row() patterns
+  - Algorithm: SQL-driven co-occurrence mining from conversation_participants with a strength scoring formula based on shared conversations, message volume, and recency                                                 
+  - Display: Rich table output with contact name resolution                                        
+  - CLI: Two new subcommands (infer-relationships, show-relationships) plus optional integration into the default run command
+  - Testing: Both unit tests and manual verification steps
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Ready to code?
+                                                                                                                                                                                                                         
+ Here is Claude's plan:
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ Plan: PoC Contact Relationship Inference                                                          
+
+ Context
+
+ The CRM Extender PoC already stores conversation participants (conversation_participants table) with per-conversation message counts and timestamps. This data is rich enough to infer who knows whom — two people
+ appearing in the same email thread is a strong signal of a working relationship. The contact-data-layer PRD (Section 12.5) defines a relationships PoC table as the SQLite substitute for the production Neo4j graph.
+ This plan implements communication-based relationship inference using existing data.
+
+ What We're Building
+
+ A new infer-relationships CLI command that mines conversation_participants for co-occurrence patterns, scores relationship strength, stores results in a relationships table, and displays them with a new
+ show-relationships command.
+
+ ---
+ Files to Modify
+ ┌───────────────────────────────┬────────────────────────────────────────────────────────────┐
+ │             File              │                           Change                           │
+ ├───────────────────────────────┼────────────────────────────────────────────────────────────┤
+ │ poc/database.py               │ Add relationships table DDL + indexes                      │
+ ├───────────────────────────────┼────────────────────────────────────────────────────────────┤
+ │ poc/models.py                 │ Add Relationship dataclass with to_row()/from_row()        │
+ ├───────────────────────────────┼────────────────────────────────────────────────────────────┤
+ │ poc/relationship_inference.py │ New file — co-occurrence algorithm + scoring               │
+ ├───────────────────────────────┼────────────────────────────────────────────────────────────┤
+ │ poc/display.py                │ Add display_relationships() function                       │
+ ├───────────────────────────────┼────────────────────────────────────────────────────────────┤
+ │ poc/__main__.py               │ Add infer-relationships and show-relationships subcommands │
+ └───────────────────────────────┴────────────────────────────────────────────────────────────┘
+ Step-by-Step Implementation
+
+ 1. Add relationships table to database.py
+
+ Append to _SCHEMA_SQL (matches PRD Section 12.5):
+
+ CREATE TABLE IF NOT EXISTS relationships (
+     id                TEXT PRIMARY KEY,
+     from_entity_type  TEXT NOT NULL DEFAULT 'contact',
+     from_entity_id    TEXT NOT NULL,
+     to_entity_type    TEXT NOT NULL DEFAULT 'contact',
+     to_entity_id      TEXT NOT NULL,
+     relationship_type TEXT NOT NULL DEFAULT 'KNOWS',
+     properties        TEXT,  -- JSON: strength, shared_conversations, last_interaction, etc.
+     created_at        TEXT NOT NULL,
+     updated_at        TEXT NOT NULL,
+     UNIQUE(from_entity_id, to_entity_id, relationship_type)
+ );
+
+ Add indexes to _INDEX_SQL:
+ CREATE INDEX IF NOT EXISTS idx_relationships_from ON relationships(from_entity_id);
+ CREATE INDEX IF NOT EXISTS idx_relationships_to   ON relationships(to_entity_id);
+
+ 2. Add Relationship dataclass to models.py
+
+ @dataclass
+ class Relationship:
+     from_contact_id: str
+     to_contact_id: str
+     relationship_type: str = "KNOWS"
+     strength: float = 0.0
+     shared_conversations: int = 0
+     shared_messages: int = 0
+     last_interaction: str | None = None
+     first_interaction: str | None = None
+
+     def to_row(self, *, relationship_id: str | None = None) -> dict: ...
+     @classmethod
+     def from_row(cls, row) -> Relationship: ...
+
+ The properties JSON blob stores: strength, shared_conversations, shared_messages, last_interaction, first_interaction.
+
+ 3. Create poc/relationship_inference.py — the core algorithm
+
+ Co-occurrence mining (SQL-driven, not in-memory):
+
+ -- Find all pairs of contacts who share conversations
+ SELECT
+     cp1.contact_id AS contact_a,
+     cp2.contact_id AS contact_b,
+     COUNT(DISTINCT cp1.conversation_id) AS shared_conversations,
+     SUM(cp1.message_count + cp2.message_count) AS shared_messages,
+     MAX(cp1.last_seen_at, cp2.last_seen_at) AS last_interaction,
+     MIN(cp1.first_seen_at, cp2.first_seen_at) AS first_interaction
+ FROM conversation_participants cp1
+ JOIN conversation_participants cp2
+     ON cp1.conversation_id = cp2.conversation_id
+     AND cp1.contact_id < cp2.contact_id  -- avoid duplicates + self-pairs
+ WHERE cp1.contact_id IS NOT NULL
+   AND cp2.contact_id IS NOT NULL
+ GROUP BY cp1.contact_id, cp2.contact_id
+ HAVING shared_conversations >= 1
+
+ Strength scoring formula (simple, tunable):
+
+ strength = min(1.0,
+     0.4 * log2(1 + shared_conversations) / log2(1 + MAX_CONVERSATIONS) +
+     0.3 * log2(1 + shared_messages) / log2(1 + MAX_MESSAGES) +
+     0.3 * recency_factor
+ )
+
+ Where recency_factor = 1.0 if last interaction < 30 days, decaying to 0.1 at 365+ days.
+
+ Module functions:
+ - infer_relationships() -> int — runs the query, scores, upserts into relationships table, returns count
+ - _compute_strength(shared_conversations, shared_messages, last_interaction) -> float
+ - load_relationships(contact_id: str | None = None) -> list[Relationship] — load from DB
+
+ 4. Add display_relationships() to display.py
+
+ A Rich table showing:
+ Contact A         Contact B         Strength   Shared Convos   Last Interaction
+ ─────────────────────────────────────────────────────────────────────────────────
+ Doug Smith        Jane Doe          0.85       12              2026-02-05
+ Doug Smith        Bob Lee           0.42       3               2026-01-15
+
+ - Uses contacts table to resolve names from IDs
+ - Sorted by strength descending
+ - Strength displayed as a colored bar or numeric value
+
+ 5. Add CLI subcommands to __main__.py
+
+ infer-relationships — runs the inference pipeline:
+ python -m poc infer-relationships
+ Steps: init_db → run infer_relationships() → print summary
+
+ show-relationships — displays stored relationships:
+ python -m poc show-relationships [--contact EMAIL] [--min-strength 0.3]
+ Steps: init_db → load relationships (optionally filtered) → display
+
+ 6. Integration with cmd_run
+
+ Optionally add relationship inference as a step in the default run command, after conversation processing. This keeps it automatic — every sync refreshes relationship data.
+
+ ---
+ Verification
+
+ 1. Unit tests in tests/test_relationship_inference.py:
+   - Test _compute_strength() with known inputs
+   - Test co-occurrence query with a fixture database containing 3+ contacts across 3+ conversations
+   - Test upsert behavior (re-running inference updates existing relationships)
+   - Test Relationship.to_row() / from_row() round-trip
+ 2. Manual end-to-end:
+   - Run python3 -m poc run (syncs data)
+   - Run python3 -m poc infer-relationships
+   - Run python3 -m poc show-relationships
+   - Verify relationships appear with sensible strength scores
+   - Run inference again — verify counts stay stable (upsert, not duplicate)
+ 3. Existing tests must still pass: python3 -m pytest tests/ -v

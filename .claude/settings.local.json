@@ -43,7 +43,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git remote set-url:*)",
-      "Bash(ssh-keygen:*)"
+      "Bash(ssh-keygen:*)",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender log --oneline)",
+      "Bash(xargs:*)",
+      "Bash(git status:*)"
     ]
   }
 }

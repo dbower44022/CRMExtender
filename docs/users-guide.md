@@ -188,6 +188,11 @@ conversations.
 # User setup (auto-creates from first provider account)
 python -m poc bootstrap-user
 
+# Companies
+python -m poc create-company "Company Name" [--domain example.com] [--industry Tech] [--description "..."]
+python -m poc list-companies
+python -m poc delete-company "Company Name"
+
 # Projects
 python -m poc create-project "Project Name" [--parent "Parent"] [--description "..."]
 python -m poc list-projects
@@ -210,13 +215,22 @@ python -m poc auto-assign "Project Name" [--dry-run] [--include-triaged]
 python -m poc show-hierarchy
 ```
 
+Companies track the organizations your contacts belong to.  During
+contact sync, company records are auto-created from Google Contacts
+organization data.  You can also manage them manually:
+
+- `create-company` — register a company with optional domain and industry
+- `list-companies` — display all companies sorted alphabetically
+- `delete-company` — remove a company (unlinks any associated contacts)
+
 The typical workflow is:
 
 1. `bootstrap-user` — create a user record from your provider account
-2. `create-project` — create one or more projects
-3. `create-topic` — add topics to each project
-4. `auto-assign` — bulk-assign conversations by tag/title matching
-5. `show-hierarchy` — review the result
+2. `create-company` — (optional) pre-create companies before sync
+3. `create-project` — create one or more projects
+4. `create-topic` — add topics to each project
+5. `auto-assign` — bulk-assign conversations by tag/title matching
+6. `show-hierarchy` — review the result
 
 ---
 
@@ -369,6 +383,7 @@ CRMExtender/
     migrate_strip_boilerplate.py  # Migration: re-strip stored emails
     migrate_refetch_emails.py     # Migration: re-fetch emails from Gmail
     migrate_to_v2.py              # Migration: v1 to v2 schema
+    migrate_to_v3.py              # Migration: v2 to v3 schema (companies + audit)
   .env                            # Environment variables (you create)
   .env.example                    # Template for .env
 ```
@@ -503,6 +518,31 @@ python3 -m poc.migrate_refetch_emails
 ```
 
 Requires valid OAuth tokens for the relevant accounts.
+
+### Migration: v1 to v2 Schema
+
+Migrates the database from the original 8-table email-only schema to the
+21-table multi-channel design.  See `poc/migrate_to_v2.py` for details.
+
+```bash
+python3 -m poc.migrate_to_v2 --dry-run   # Preview on a backup copy
+python3 -m poc.migrate_to_v2              # Apply to production
+```
+
+### Migration: v2 to v3 Schema
+
+Adds the `companies` table, `company_id` foreign key on contacts, and
+`created_by`/`updated_by` audit columns on contacts, contact_identifiers,
+conversations, projects, and topics.  Backfills company records from
+existing `contacts.company` values.
+
+```bash
+python3 -m poc.migrate_to_v3 --dry-run   # Preview on a backup copy
+python3 -m poc.migrate_to_v3              # Apply to production
+```
+
+Both migration scripts create a timestamped backup before making changes
+and support `--db PATH` to target a specific database file.
 
 ---
 

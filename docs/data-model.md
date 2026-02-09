@@ -1,10 +1,10 @@
 # Data Model & Database Design
 
 This document describes the persistent data layer that backs the CRM
-Extender email pipeline.  It covers the SQLite schema, every table and
-column, the relationships between entities, the serialization layer that
-maps Python dataclasses to database rows, the indexing strategy, and the
-data flows that populate and query the database.
+Extender pipeline.  It covers the SQLite schema (v3, 22 tables), every
+table and column, the relationships between entities, the serialization
+layer that maps Python dataclasses to database rows, the indexing
+strategy, and the data flows that populate and query the database.
 
 **Implementation files:**
 
@@ -13,38 +13,42 @@ data flows that populate and query the database.
 | `poc/database.py` | Connection management, schema DDL, WAL/FK pragmas |
 | `poc/models.py` | Dataclasses with `to_row()` / `from_row()` serialization |
 | `poc/sync.py` | Sync orchestration: writes to DB, reads from DB for display |
-| `poc/hierarchy.py` | Project/topic/assignment CRUD and stats queries |
+| `poc/hierarchy.py` | Company/project/topic/assignment CRUD and stats queries |
 | `poc/auto_assign.py` | Bulk auto-assign conversations to topics by tag/title matching |
+| `poc/contacts_client.py` | Google People API client (names, emails, organizations) |
 | `poc/relationship_inference.py` | Contact relationship inference from co-occurrence data |
 | `poc/config.py` | `DB_PATH` setting (default `data/crm_extender.db`) |
+| `poc/migrate_to_v2.py` | Schema migration: v1 (8-table) to v2 (21-table) |
+| `poc/migrate_to_v3.py` | Schema migration: v2 to v3 (companies + audit columns) |
 
 ---
 
 ## Architecture Overview
 
 ```
-                         ┌──────────────────────────────────┐
-                         │         SQLite Database           │
-                         │   data/crm_extender.db (WAL mode) │
-                         └──────────────┬───────────────────┘
-                                        │
-        ┌──────────────────┬────────────┼────────────────┬──────────────────┐
-        │                  │            │                │                  │
-  ┌─────┴─────┐    ┌──────┴──────┐ ┌───┴──────┐  ┌─────┴──────┐  ┌───────┴────────┐
-  │  sync.py   │    │relationship_│ │models.py │  │ database.py │  │ conversation_  │
-  │            │    │inference.py │ │          │  │             │  │  builder.py    │
-  │ Writes:    │    │             │ │ to_row() │  │ init_db()   │  │               │
-  │  accounts  │    │ Reads:      │ │ from_row()│  │ get_conn()  │  │ Reads:        │
-  │  contacts  │    │  conv_      │ │ Enum maps│  │ Schema DDL  │  │  emails       │
-  │  emails    │    │  partici-   │ │          │  │ Index DDL   │  │  recipients   │
-  │  convos    │    │  pants      │ └──────────┘  └─────────────┘  │  participants │
-  │  topics    │    │  contacts   │                                 └───────────────┘
-  │  sync_log  │    │             │
-  │            │    │ Writes:     │
-  │ Reads:     │    │  relation-  │
-  │  display   │    │  ships      │
-  │  processing│    └─────────────┘
-  └────────────┘
+                         +------------------------------------+
+                         |         SQLite Database             |
+                         |   data/crm_extender.db (WAL mode)  |
+                         +----------------+-------------------+
+                                          |
+        +------------------+--------------+----------------+------------------+
+        |                  |              |                |                  |
+  +-----+-----+    +------+------+ +-----+------+  +-----+------+  +-------+--------+
+  |  sync.py   |    |relationship_| |models.py   |  | database.py |  | conversation_  |
+  |            |    |inference.py | |            |  |             |  |  builder.py    |
+  | Writes:    |    |             | | to_row()   |  | init_db()   |  |               |
+  |  accounts  |    | Reads:      | | from_row() |  | get_conn()  |  | Reads:        |
+  |  contacts  |    |  conv_      | | Enum maps  |  | Schema DDL  |  |  comms        |
+  |  companies |    |  partici-   | |            |  | Index DDL   |  |  recipients   |
+  |  comms     |    |  pants      | +------------+  +-------------+  |  participants |
+  |  convos    |    |  contacts   |                                  +---------------+
+  |  tags      |    |             |
+  |  sync_log  |    | Writes:     |
+  |            |    |  relation-  |
+  | Reads:     |    |  ships      |
+  |  display   |    +-------------+
+  |  processing|
+  +------------+
 ```
 
 The database is the single source of truth after the first sync.
@@ -55,21 +59,155 @@ from DB rows when needed for triage, summarization, or display.
 
 ---
 
+## Schema Version History
+
+| Version | Tables | Key changes |
+|---------|--------|-------------|
+| v1 | 8 | Original email-only schema: `email_accounts`, `emails`, `email_recipients`, `contacts`, `conversations`, `conversation_participants`, `topics`, `conversation_topics`, `sync_log` |
+| v2 | 21 | Multi-channel design: renamed tables (`provider_accounts`, `communications`, `communication_participants`, `tags`, `conversation_tags`), added `conversation_communications` M:N join, `contact_identifiers`, `users`, `projects`, organizational `topics`, `attachments`, `views`, `alerts`, correction tables, `relationships` |
+| v3 | 22 | Companies + audit tracking: added `companies` table, `company_id` FK on `contacts`, `created_by`/`updated_by` audit columns on `contacts`, `contact_identifiers`, `conversations`, `projects`, `topics`, `companies` |
+
+---
+
+## Entity-Relationship Diagram
+
+```
++------------------+
+|      users       |
+|------------------|     +-------------------+
+| PK id            |     |    companies      |
+|    email (UNIQ)  |     |-------------------|
+|    name          |     | PK id             |
+|    role          |     |    name (UNIQ)    |
+|    is_active     |     |    domain         |
++--------+---------+     |    industry       |
+         |               |    status         |
+         | FK created_by |    created_by ----+---> users
+         | FK updated_by |    updated_by ----+---> users
+         |               +--------+----------+
+         |                        |
+         |                        | FK company_id
+         |                        |
++--------+---------+     +--------+----------+     +-------------------+
+| provider_accounts|     |     contacts      |     | contact_          |
+|------------------|     |-------------------|     |   identifiers     |
+| PK id            |     | PK id             |     |-------------------|
+|    provider      |     |    name           |     | PK id             |
+|    email_address |     |    company (text)  |     | FK contact_id     |
+|    sync_cursor   |     |    company_id  ---+---->|    type           |
+|    ...           |     |    source         |     |    value (UNIQ w/ |
++---------+--------+     |    status         |     |      type)        |
+          |               |    created_by ----+---->|    created_by     |
+          |               |    updated_by ----+---->|    updated_by     |
+          |               +-------------------+     +-------------------+
+          |
+          | FK account_id
+          |
++---------+--------+                     +-------------------+
+|  communications  |                     |    projects       |
+|------------------|                     |-------------------|
+| PK id            |                     | PK id             |
+| FK account_id    |                     |    parent_id (FK) |
+|    channel       |                     |    name           |
+|    timestamp     |                     |    owner_id       |
+|    content       |                     |    created_by     |
+|    direction     |                     |    updated_by     |
+|    sender_address|                     +--------+----------+
+|    subject       |                              |
+|    provider_     |                              | FK project_id
+|     message_id   |                              |
+|    provider_     |                     +--------+----------+
+|     thread_id    |                     |      topics       |
+|    ...           |                     | (organizational)  |
++--+----------+----+                     |-------------------|
+   |          |                          | PK id             |
+   |          |                          | FK project_id     |
+   |          | N                        |    name           |
+   |          v                          |    created_by     |
+   |  +-------------------+             |    updated_by     |
+   |  | communication_    |             +--------+----------+
+   |  |   participants    |                      |
+   |  |-------------------|                      | FK topic_id
+   |  | PK comm_id,       |                      |
+   |  |    address, role  |             +--------+----------+
+   |  |    contact_id     |             |   conversations   |
+   |  +-------------------+             |-------------------|
+   |                                    | PK id             |
+   |  +-------------------+             | FK topic_id       |
+   |  | conversation_     |             |    title          |
+   +->|   communications  |------------>|    status         |
+      |-------------------|             |    comm_count     |
+      | PK conv_id,       |             |    triage_result  |
+      |    comm_id        |             |    ai_summary     |
+      |    assignment_src |             |    created_by     |
+      |    confidence     |             |    updated_by     |
+      +-------------------+             +--------+----------+
+                                                 |
+                         +-----------+-----------+-----------+
+                         |           |                       |
+                +--------+--+  +----+----------+  +---------+-------+
+                | conv_      |  | conv_tags    |  | relationships   |
+                | participants|  |-------------|  |-----------------|
+                |------------|  | PK conv_id,  |  | PK id           |
+                | PK conv_id,|  |    tag_id    |  |    from_entity  |
+                |    address |  +----+---------+  |    to_entity    |
+                | FK contact |       |            |    type         |
+                +------------+       v            |    properties   |
+                              +-----------+       +-----------------+
+                              |   tags    |
+                              |-----------|
+                              | PK id     |
+                              |    name   |
+                              |    source |
+                              +-----------+
+```
+
+### Relationship Summary
+
+| Parent | Child | Cardinality | FK Column | On Delete |
+|--------|-------|-------------|-----------|-----------|
+| `users` | `companies` | 1:N | `created_by`, `updated_by` | SET NULL |
+| `users` | `contacts` | 1:N | `created_by`, `updated_by` | SET NULL |
+| `users` | `contact_identifiers` | 1:N | `created_by`, `updated_by` | SET NULL |
+| `users` | `conversations` | 1:N | `created_by`, `updated_by` | SET NULL |
+| `users` | `projects` | 1:N | `owner_id`, `created_by`, `updated_by` | SET NULL |
+| `users` | `topics` | 1:N | `created_by`, `updated_by` | SET NULL |
+| `companies` | `contacts` | 1:N | `company_id` | SET NULL |
+| `provider_accounts` | `communications` | 1:N | `account_id` | SET NULL |
+| `provider_accounts` | `sync_log` | 1:N | `account_id` | CASCADE |
+| `contacts` | `contact_identifiers` | 1:N | `contact_id` | CASCADE |
+| `contacts` | `conversation_participants` | 0..1:N | `contact_id` | SET NULL |
+| `contacts` | `communication_participants` | 0..1:N | `contact_id` | SET NULL |
+| `conversations` | `conversation_communications` | 1:N | `conversation_id` | CASCADE |
+| `communications` | `conversation_communications` | 1:N | `communication_id` | CASCADE |
+| `conversations` | `conversation_participants` | 1:N | `conversation_id` | CASCADE |
+| `conversations` | `conversation_tags` | 1:N | `conversation_id` | CASCADE |
+| `tags` | `conversation_tags` | 1:N | `tag_id` | CASCADE |
+| `communications` | `communication_participants` | 1:N | `communication_id` | CASCADE |
+| `communications` | `attachments` | 1:N | `communication_id` | CASCADE |
+| `projects` | `projects` (self) | 1:N | `parent_id` | CASCADE |
+| `projects` | `topics` | 1:N | `project_id` | CASCADE |
+| `topics` | `conversations` | 1:N | `topic_id` | SET NULL |
+| `contacts` | `relationships` (from) | 1:N | `from_entity_id` | *(no FK)* |
+| `contacts` | `relationships` (to) | 1:N | `to_entity_id` | *(no FK)* |
+
+---
+
 ## Connection Management
 
 `database.py` provides two entry points:
 
-**`init_db(db_path=None)`** — Creates the database file, parent
+**`init_db(db_path=None)`** -- Creates the database file, parent
 directories, all tables (`CREATE TABLE IF NOT EXISTS`), and all indexes.
-Called once at startup in `__main__.py` Step 0.
+Called once at startup in `__main__.py`.
 
-**`get_connection(db_path=None)`** — Context manager that yields a
+**`get_connection(db_path=None)`** -- Context manager that yields a
 `sqlite3.Connection` with:
 
-- `journal_mode=WAL` — Write-Ahead Logging for concurrent reads during
+- `journal_mode=WAL` -- Write-Ahead Logging for concurrent reads during
   sync writes.
-- `foreign_keys=ON` — Enforces all `REFERENCES` / `ON DELETE` constraints.
-- `row_factory=sqlite3.Row` — Rows are returned as dict-like objects,
+- `foreign_keys=ON` -- Enforces all `REFERENCES` / `ON DELETE` constraints.
+- `row_factory=sqlite3.Row` -- Rows are returned as dict-like objects,
   enabling column access by name.
 - Auto-commit on clean exit, rollback on exception.
 
@@ -78,534 +216,548 @@ overridable via the `POC_DB_PATH` environment variable.
 
 ---
 
-## Entity-Relationship Diagram
-
-```
-┌──────────────────┐
-│  email_accounts   │
-│──────────────────│
-│ PK id             │
-│    provider       │
-│    email_address   │     ┌───────────────────┐
-│    sync_cursor     │     │     contacts       │
-│    ...             │     │───────────────────│
-└────────┬─────────┘     │ PK id              │
-         │                │    email (UNIQUE)   │
-         │ 1              │    name             │
-         │                │    source           │
-         ▼ N              │    ...              │
-┌──────────────────┐     └─────────┬─────────┘
-│  conversations    │              │
-│──────────────────│              │ 0..1
-│ PK id             │              │
-│ FK account_id     │──────────────┼──────────────────────┐
-│    provider_      │              │                      │
-│     thread_id     │              │                      │
-│    subject        │     ┌────────┴──────────┐           │
-│    ai_summary     │     │  conversation_    │           │
-│    ai_status      │     │   participants    │           │
-│    triage_result  │     │──────────────────│           │
-│    ...            │     │ PK conv_id, email │           │
-└──┬────────┬──────┘     │ FK contact_id     │           │
-   │        │             │    message_count   │           │
-   │        │             │    first_seen_at   │           │
-   │        │             │    last_seen_at    │           │
-   │        │             └───────────────────┘           │
-   │        │                                              │
-   │        │ N                                            │
-   │        ▼                                              │
-   │  ┌──────────────────┐                                │
-   │  │     emails        │                                │
-   │  │──────────────────│                                │
-   │  │ PK id             │                                │
-   │  │ FK account_id     │                                │
-   │  │ FK conversation_id│                                │
-   │  │    provider_      │                                │
-   │  │     message_id    │                                │
-   │  │    sender_address │                                │
-   │  │    date           │                                │
-   │  │    body_text      │                                │
-   │  │    direction      │                                │
-   │  │    ...            │                                │
-   │  └────────┬─────────┘                                │
-   │           │ N                                         │
-   │           ▼                                           │
-   │  ┌──────────────────┐                                │
-   │  │ email_recipients  │                                │
-   │  │──────────────────│                                │
-   │  │ PK email_id,      │                                │
-   │  │    address, role   │                                │
-   │  │    name            │                                │
-   │  └──────────────────┘                                │
-   │                                                       │
-   │ N (via conversation_topics)                           │
-   ▼                                                       │
-┌──────────────────┐     ┌───────────────────┐            │
-│     topics        │     │ conversation_     │            │
-│──────────────────│     │   topics          │            │
-│ PK id             │◄────│──────────────────│            │
-│    name (UNIQUE)  │     │ PK conv_id,       │            │
-│    created_at     │     │    topic_id       │            │
-└──────────────────┘     │    confidence      │            │
-                          │    source          │            │
-                          └───────────────────┘            │
-                                                            │
-                          ┌───────────────────┐            │
-                          │     sync_log       │            │
-                          │───────────────────│            │
-                          │ PK id              │────────────┘
-                          │ FK account_id      │
-                          │    sync_type       │
-                          │    status          │
-                          │    cursor_before   │
-                          │    cursor_after    │
-                          │    ...             │
-                          └───────────────────┘
-
-                     ┌───────────────────────────┐
-                     │       relationships        │
-                     │───────────────────────────│
-                     │ PK id                      │
-                     │    from_entity_type        │
-                     │    from_entity_id ─────────┼──── contacts(id)
-                     │    to_entity_type          │
-                     │    to_entity_id ───────────┼──── contacts(id)
-                     │    relationship_type       │
-                     │    properties (JSON)       │
-                     │    UNIQUE(from_entity_id,  │
-                     │      to_entity_id,         │
-                     │      relationship_type)    │
-                     └───────────────────────────┘
-```
-
-### Relationship Summary
-
-| Parent | Child | Cardinality | FK Column | On Delete |
-|--------|-------|-------------|-----------|-----------|
-| `email_accounts` | `conversations` | 1:N | `account_id` | CASCADE |
-| `email_accounts` | `emails` | 1:N | `account_id` | CASCADE |
-| `email_accounts` | `sync_log` | 1:N | `account_id` | CASCADE |
-| `conversations` | `emails` | 1:N | `conversation_id` | SET NULL |
-| `conversations` | `conversation_participants` | 1:N | `conversation_id` | CASCADE |
-| `conversations` | `conversation_topics` | 1:N | `conversation_id` | CASCADE |
-| `contacts` | `conversation_participants` | 0..1:N | `contact_id` | SET NULL |
-| `topics` | `conversation_topics` | 1:N | `topic_id` | CASCADE |
-| `emails` | `email_recipients` | 1:N | `email_id` | CASCADE |
-| `contacts` | `relationships` (from) | 1:N | `from_entity_id` | *(no FK constraint)* |
-| `contacts` | `relationships` (to) | 1:N | `to_entity_id` | *(no FK constraint)* |
-
----
-
 ## Table Reference
 
-### 1. `email_accounts`
+### 1. `users`
 
-Tracks connected email accounts and their synchronization state.  One
-row per provider+address combination.  The pipeline creates an account
-row the first time a user authenticates, and updates it after every sync.
+Minimal user table for ownership and audit tracking.  FK target for
+`created_by`/`updated_by` columns throughout the schema.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `email` | TEXT | NOT NULL, UNIQUE | User's email address. |
+| `name` | TEXT | | Display name. |
+| `role` | TEXT | DEFAULT `'member'` | User role (`'member'`, `'admin'`). |
+| `is_active` | INTEGER | DEFAULT 1 | Boolean (0/1). |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Populated by:** `hierarchy.bootstrap_user()`, which auto-creates a
+user from the first `provider_accounts` email.
+
+### 2. `companies`
+
+Companies that contacts can be linked to.  Auto-created during contact
+sync when a contact has an organization in Google Contacts, or manually
+via the CLI.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `name` | TEXT | NOT NULL, **UNIQUE** | Company name.  The unique index `idx_companies_name` enforces no duplicates. |
+| `domain` | TEXT | | Company domain (e.g. `'acme.com'`). |
+| `industry` | TEXT | | Industry classification. |
+| `description` | TEXT | | Free-text description. |
+| `status` | TEXT | DEFAULT `'active'` | Company status. |
+| `created_by` | TEXT | FK -> `users(id)` | User who created this record.  ON DELETE SET NULL. |
+| `updated_by` | TEXT | FK -> `users(id)` | User who last updated this record.  ON DELETE SET NULL. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Populated by:** `sync._resolve_company_id()` (auto-creates during
+contact sync from Google organization names), `hierarchy.create_company()`
+(manual creation via CLI).
+
+**Deleted by:** `hierarchy.delete_company()`.  Contacts with
+`company_id` pointing to the deleted company get `company_id` SET NULL
+via the FK constraint.
+
+### 3. `provider_accounts`
+
+Tracks connected accounts (email, future: phone, chat) and their
+synchronization state.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | TEXT | **PK** | UUID v4.  Generated by `sync.register_account()`. |
-| `provider` | TEXT | NOT NULL | Email provider identifier.  Currently always `'gmail'`.  Designed for future `'outlook'`, `'imap'` values. |
-| `email_address` | TEXT | NOT NULL | The account owner's email address, lowercased.  Retrieved from the Gmail profile API (`users.getProfile`). |
-| `display_name` | TEXT | | Optional human-readable name.  Currently set to NULL; reserved for future use. |
-| `auth_token_path` | TEXT | | Filesystem path to the OAuth token file (e.g. `credentials/token.json`).  Keeps actual tokens out of the database. |
-| `sync_cursor` | TEXT | | Provider-specific opaque sync position.  For Gmail this is the `historyId` (a numeric string).  For Outlook it would be a `deltaLink` URL.  For IMAP it would be `UIDVALIDITY:lastUID`.  NULL before initial sync completes. |
-| `last_synced_at` | TEXT | | ISO 8601 timestamp of the most recent successful sync completion. |
-| `initial_sync_done` | INTEGER | DEFAULT 0 | Boolean flag (0/1).  Set to 1 when the first full sync completes.  The pipeline uses this to decide between initial sync (full fetch) and incremental sync (history-based). |
-| `backfill_query` | TEXT | DEFAULT `'newer_than:90d'` | Gmail search query used during initial sync.  Controls how far back the first sync reaches.  Stored per-account so different accounts can have different backfill depths. |
-| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp of account registration. |
-| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp of last modification. |
+| `provider` | TEXT | NOT NULL | Provider identifier (`'gmail'`; future: `'outlook'`, `'imap'`). |
+| `account_type` | TEXT | NOT NULL, DEFAULT `'email'` | Channel type. |
+| `email_address` | TEXT | | Account email address, lowercased. |
+| `phone_number` | TEXT | | Phone number (future use). |
+| `display_name` | TEXT | | Human-readable name. |
+| `auth_token_path` | TEXT | | Filesystem path to the OAuth token file. |
+| `sync_cursor` | TEXT | | Provider-specific sync position.  For Gmail: `historyId`. |
+| `last_synced_at` | TEXT | | ISO 8601 timestamp of last successful sync. |
+| `initial_sync_done` | INTEGER | DEFAULT 0 | Boolean (0/1).  Set to 1 after first full sync. |
+| `backfill_query` | TEXT | DEFAULT `'newer_than:90d'` | Gmail search query for initial sync. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 
-**Unique constraint:** `(provider, email_address)` — prevents duplicate
-registration of the same account.
+**Unique constraints:** `(provider, email_address)`, `(provider, phone_number)`.
 
-**Populated by:** `sync.register_account()` (INSERT), `sync.initial_sync()` /
-`sync.incremental_sync()` (UPDATE of `sync_cursor`, `last_synced_at`,
-`initial_sync_done`).
+### 4. `contacts`
 
-### 2. `conversations`
-
-Groups emails into threaded exchanges.  One row per provider thread per
-account.  This is the central table that most queries target — it holds
-both the system-level metadata and the AI-generated analysis fields.
+Known contacts from address books.  Currently populated from Google
+People API.  Contacts are global (not per-account).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `id` | TEXT | **PK** | UUID v4.  Generated when the conversation is first stored. |
-| `account_id` | TEXT | NOT NULL, FK → `email_accounts(id)` | Which account this conversation belongs to.  ON DELETE CASCADE. |
-| `provider_thread_id` | TEXT | | The provider's native thread identifier.  For Gmail this is the `threadId` from the API.  For Outlook it would be `conversationId`.  NULL for IMAP where threading is reconstructed from Message-ID/References headers. |
-| `subject` | TEXT | | Subject line from the first email in the thread.  Defaults to `'(no subject)'` if missing. |
-| `status` | TEXT | DEFAULT `'active'` | System-level conversation status based on activity window.  Values: `'active'`, `'stale'`, `'closed'`.  Distinct from `ai_status` which is the AI's semantic classification.  Currently all conversations are set to `'active'` on creation. |
-| `message_count` | INTEGER | DEFAULT 0 | Total number of email messages in this conversation.  Updated when new messages arrive during incremental sync.  Recomputed from `SELECT COUNT(*) FROM emails WHERE conversation_id = ?` on update. |
-| `first_message_at` | TEXT | | ISO 8601 timestamp of the earliest email in the conversation.  Computed from `MIN(emails.date)`. |
-| `last_message_at` | TEXT | | ISO 8601 timestamp of the most recent email.  Computed from `MAX(emails.date)`.  Used for sorting conversations (most recent first) in display and processing queries. |
-| `ai_summary` | TEXT | | Claude-generated 2-4 sentence summary of the conversation.  NULL until the summarizer runs.  Written by `sync.process_conversations()` via `ConversationSummary.to_update_dict()`. |
-| `ai_status` | TEXT | | AI classification of the conversation state.  Values: `'open'`, `'closed'`, `'uncertain'` (lowercased from Claude's OPEN/CLOSED/UNCERTAIN output).  NULL until summarized. |
-| `ai_action_items` | TEXT | | JSON-serialized array of strings, each an action item extracted by Claude.  Example: `'["Follow up with Alice", "Send the report"]'`.  NULL if no action items or not yet summarized.  Serialized via `json.dumps()`, deserialized via `json.loads()`. |
-| `ai_topics` | TEXT | | JSON-serialized array of strings, the raw topic list from Claude.  Example: `'["project timeline", "budget review"]'`.  This is the source-of-truth from the AI.  The normalized, queryable version lives in the `topics` / `conversation_topics` tables.  NULL until summarized. |
-| `ai_summarized_at` | TEXT | | ISO 8601 timestamp of when the AI summary was last generated.  **Key behavior:** set to NULL when new messages arrive in the conversation (during incremental sync), which marks the conversation for re-processing in the next `process_conversations()` batch. |
-| `triage_result` | TEXT | | NULL if the conversation passed triage (i.e. it's a real conversation worth summarizing).  Non-NULL values indicate why it was filtered out.  Values: `'no_known_contacts'`, `'automated_sender'`, `'automated_subject'`, `'marketing'`.  Mapped to/from the `FilterReason` enum via `filter_reason_to_db()` / `filter_reason_from_db()`. |
-| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp of conversation creation. |
-| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp of last modification.  Updated on any write: new messages, triage, summarization. |
+| `id` | TEXT | **PK** | UUID v4. |
+| `name` | TEXT | | Display name from contact source. |
+| `company` | TEXT | | Company name as text (backward compat; kept in sync with `company_id`). |
+| `company_id` | TEXT | FK -> `companies(id)` | Link to the `companies` table.  ON DELETE SET NULL. |
+| `source` | TEXT | | Origin: `'google_contacts'`, `'manual'`, etc. |
+| `status` | TEXT | DEFAULT `'active'` | Contact status. |
+| `created_by` | TEXT | FK -> `users(id)` | Audit: who created.  ON DELETE SET NULL. |
+| `updated_by` | TEXT | FK -> `users(id)` | Audit: who last updated.  ON DELETE SET NULL. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 
-**Unique constraint:** `(account_id, provider_thread_id)` — one
-conversation per provider thread per account.
+**Populated by:** `sync.sync_contacts()`, which fetches from the Google
+People API, resolves companies, and performs UPSERT operations keyed on
+`contact_identifiers(type, value)`.
+
+### 5. `contact_identifiers`
+
+Maps contacts to their identifiers (email, phone, etc.).  A contact can
+have multiple identifiers.  The `(type, value)` unique constraint enables
+identity-based UPSERT during sync.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `contact_id` | TEXT | NOT NULL, FK -> `contacts(id)` | Parent contact.  ON DELETE CASCADE. |
+| `type` | TEXT | NOT NULL | Identifier type: `'email'`, `'phone'`, etc. |
+| `value` | TEXT | NOT NULL | The identifier value, normalized (emails lowercased). |
+| `label` | TEXT | | Optional label (e.g. `'work'`, `'personal'`). |
+| `is_primary` | INTEGER | DEFAULT 0 | Boolean (0/1).  Whether this is the contact's primary identifier. |
+| `status` | TEXT | DEFAULT `'active'` | Identifier status. |
+| `source` | TEXT | | Origin of this identifier. |
+| `verified` | INTEGER | DEFAULT 0 | Boolean (0/1).  Whether this identifier has been verified. |
+| `created_by` | TEXT | FK -> `users(id)` | Audit: who created.  ON DELETE SET NULL. |
+| `updated_by` | TEXT | FK -> `users(id)` | Audit: who last updated.  ON DELETE SET NULL. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(type, value)`.
+
+### 6. `projects`
+
+Organizational hierarchy using an adjacency-list pattern.  Projects
+contain topics, which in turn organize conversations.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `parent_id` | TEXT | FK -> `projects(id)` | Parent project for nesting.  ON DELETE CASCADE. |
+| `name` | TEXT | NOT NULL | Project name. |
+| `description` | TEXT | | Free-text description. |
+| `status` | TEXT | DEFAULT `'active'` | Project status. |
+| `owner_id` | TEXT | FK -> `users(id)` | Project owner.  ON DELETE SET NULL. |
+| `created_by` | TEXT | FK -> `users(id)` | Audit: who created.  ON DELETE SET NULL. |
+| `updated_by` | TEXT | FK -> `users(id)` | Audit: who last updated.  ON DELETE SET NULL. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+### 7. `topics` (organizational)
+
+Groupings within a project.  Conversations are assigned to topics either
+manually or via the auto-assign feature.  Distinct from `tags` (which
+are AI-extracted keywords).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `project_id` | TEXT | NOT NULL, FK -> `projects(id)` | Parent project.  ON DELETE CASCADE. |
+| `name` | TEXT | NOT NULL | Topic name. |
+| `description` | TEXT | | Free-text description. |
+| `source` | TEXT | DEFAULT `'user'` | How this topic was created. |
+| `created_by` | TEXT | FK -> `users(id)` | Audit: who created.  ON DELETE SET NULL. |
+| `updated_by` | TEXT | FK -> `users(id)` | Audit: who last updated.  ON DELETE SET NULL. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+### 8. `conversations`
+
+Account-independent threaded conversations.  The central table that most
+queries target.  Holds system metadata, AI analysis fields, triage
+results, and organizational assignment.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `topic_id` | TEXT | FK -> `topics(id)` | Organizational topic assignment.  ON DELETE SET NULL. |
+| `title` | TEXT | | Subject line from the first communication. |
+| `status` | TEXT | DEFAULT `'active'` | System status. |
+| `communication_count` | INTEGER | DEFAULT 0 | Total communications in this conversation. |
+| `participant_count` | INTEGER | DEFAULT 0 | Total unique participants. |
+| `first_activity_at` | TEXT | | ISO 8601 timestamp of earliest communication. |
+| `last_activity_at` | TEXT | | ISO 8601 timestamp of most recent communication. |
+| `ai_summary` | TEXT | | Claude-generated summary.  NULL until summarized. |
+| `ai_status` | TEXT | | AI classification: `'open'`, `'closed'`, `'uncertain'`. |
+| `ai_action_items` | TEXT | | JSON array of action item strings. |
+| `ai_topics` | TEXT | | JSON array of topic strings (raw AI output). |
+| `ai_summarized_at` | TEXT | | ISO 8601 timestamp.  Set to NULL when new messages arrive to trigger re-processing. |
+| `triage_result` | TEXT | | NULL if passed triage.  Values: `'no_known_contacts'`, `'automated_sender'`, `'automated_subject'`, `'marketing'`. |
+| `dismissed` | INTEGER | DEFAULT 0 | Boolean (0/1).  User-dismissed. |
+| `dismissed_reason` | TEXT | | Why the conversation was dismissed. |
+| `dismissed_at` | TEXT | | When dismissed. |
+| `dismissed_by` | TEXT | FK -> `users(id)` | Who dismissed.  ON DELETE SET NULL. |
+| `created_by` | TEXT | FK -> `users(id)` | Audit: who created.  ON DELETE SET NULL. |
+| `updated_by` | TEXT | FK -> `users(id)` | Audit: who last updated.  ON DELETE SET NULL. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 
 **Populated by:** `sync._store_thread()` (INSERT on new thread, UPDATE
 on incremental), `sync.process_conversations()` (UPDATE for
 `triage_result` and `ai_*` fields).
 
-**Design rationale — AI fields on the conversation row:**  There is a
-strict 1:1 relationship between a conversation and its AI summary.
-Storing the summary fields directly on the conversation row avoids a
-JOIN for the most common query pattern: listing conversations with their
-summaries.  The tradeoff is wider rows, but the cardinality is low
-(hundreds to low thousands of conversations per account).
-
-**Design rationale — per-account conversations:**  If two connected
-accounts participate in the same email thread, each account has its own
-conversation record.  This avoids the complexity of cross-account
-merging.  A future `merged_conversation_id` column could link them.
-
-### 3. `emails`
-
-Individual email messages, provider-normalized.  Every email fetched
-from Gmail (or future providers) gets one row here.  The email content
-is preserved in full — both the cleaned plain text and the raw HTML —
-even though the summarizer only uses the plain text.
-
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `id` | TEXT | **PK** | UUID v4.  Generated at insertion time. |
-| `account_id` | TEXT | NOT NULL, FK → `email_accounts(id)` | Which account fetched this email.  ON DELETE CASCADE. |
-| `conversation_id` | TEXT | FK → `conversations(id)` | Which conversation this email belongs to.  ON DELETE SET NULL (email survives if conversation is deleted, allowing re-threading). |
-| `provider_message_id` | TEXT | NOT NULL | The provider's native message identifier.  For Gmail this is the message `id` from the API (e.g. `'18f3a4b2c1d0e5f6'`).  Used for deduplication and incremental sync lookups. |
-| `subject` | TEXT | | The email's Subject header, decoded from RFC 2047 encoding. |
-| `sender_address` | TEXT | NOT NULL | The sender's email address, lowercased.  Extracted from the `From` header. |
-| `sender_name` | TEXT | | The sender's display name from the `From` header (e.g. `'Alice Smith <alice@example.com>'` → `'Alice Smith'`).  NULL if the From header contains only an address. |
-| `date` | TEXT | | ISO 8601 timestamp of the email.  Parsed from the `Date` header, with fallback to Gmail's `internalDate` (milliseconds since epoch, converted to UTC).  Used for chronological sorting within conversations and for computing `conversations.first_message_at` / `last_message_at`. |
-| `body_text` | TEXT | | The cleaned plain-text body of the email.  If the original email had only HTML, it is converted via `gmail_client._html_to_text()`.  Quote stripping (`email_parser.strip_quotes()`) is applied before storage, removing forwarded blocks, Outlook separators, "On ... wrote:" attributions, and mobile signatures.  The stored text is the full original (minus quotes) for display; further truncation for summarization happens at prompt-formatting time. |
-| `body_html` | TEXT | | The raw HTML body of the email, preserved as-is from the provider.  Not used by the pipeline directly, but stored for potential future use (rich display, re-processing). |
-| `snippet` | TEXT | | Short preview text from the Gmail API.  Used as a fallback when `body_text` is empty. |
-| `header_message_id` | TEXT | | The RFC 5322 `Message-ID` header.  Currently NULL for Gmail (not extracted yet).  Reserved for IMAP thread reconstruction, where `Message-ID` / `References` / `In-Reply-To` chains are used to build threads from scratch. |
-| `header_references` | TEXT | | The `References` header (space-separated list of Message-IDs).  Reserved for IMAP threading. |
-| `header_in_reply_to` | TEXT | | The `In-Reply-To` header.  Reserved for IMAP threading. |
-| `direction` | TEXT | | Whether the email is inbound or outbound relative to the account owner.  Values: `'inbound'`, `'outbound'`.  Computed by comparing `sender_address` to the account's `email_address`: if they match, it's outbound; otherwise inbound. |
-| `is_read` | INTEGER | DEFAULT 0 | Boolean (0/1).  Currently always 0; reserved for future read-state tracking. |
-| `has_attachments` | INTEGER | DEFAULT 0 | Boolean (0/1).  Currently always 0; reserved for future attachment detection. |
-| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp of when this row was inserted. |
-
-**Unique constraint:** `(account_id, provider_message_id)` — prevents
-storing the same message twice for the same account.  This is what makes
-sync idempotent: `INSERT OR IGNORE` silently skips duplicates.
-
-**Populated by:** `sync._store_thread()` via `ParsedEmail.to_row()`.
-During initial sync, all emails from all fetched threads are inserted.
-During incremental sync, only new messages (from `history.list`) are
-inserted.
-
-### 4. `email_recipients`
-
-Normalizes the To/CC/BCC recipients of each email into separate rows.
-This enables queries like "find all emails sent to alice@example.com"
-without parsing delimited strings.
-
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `email_id` | TEXT | NOT NULL, FK → `emails(id)` | Which email this recipient belongs to.  ON DELETE CASCADE. |
-| `address` | TEXT | NOT NULL | The recipient's email address, lowercased. |
-| `name` | TEXT | | The recipient's display name from the header.  Currently NULL (not yet extracted from address parsing); reserved for future enrichment. |
-| `role` | TEXT | NOT NULL | The recipient type.  Values: `'to'`, `'cc'`, `'bcc'`.  Currently only `'to'` and `'cc'` are populated (Gmail API doesn't expose BCC to recipients). |
-
-**Primary key:** `(email_id, address, role)` — composite.  The same
-address can appear as both `to` and `cc` on the same email (unusual but
-valid per RFC 5322), so `role` is included in the key.
-
-**Populated by:** `sync._store_thread()` via `ParsedEmail.recipient_rows()`.
-Uses `INSERT OR IGNORE` for idempotent re-insertion.
-
-### 5. `contacts`
-
-Known contacts from address books or manual entry.  Currently populated
-from the Google People API (Google Contacts).  Contacts are global — not
-per-account — because the same person may correspond with multiple
-connected accounts.
-
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `id` | TEXT | **PK** | UUID v4. |
-| `email` | TEXT | NOT NULL, **UNIQUE** | The contact's email address, lowercased.  The UNIQUE constraint enables UPSERT semantics: `INSERT ... ON CONFLICT(email) DO UPDATE`. |
-| `name` | TEXT | | Display name from the contact source. |
-| `source` | TEXT | | Where this contact came from.  Values: `'google_contacts'`, `'outlook_contacts'`, `'manual'`.  Currently always `'google_contacts'`. |
-| `source_id` | TEXT | | The provider's native identifier for this contact.  For Google Contacts this is the People API resource name (e.g. `'people/c1234567890'`).  Enables future two-way sync. |
-| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp of first insertion. |
-| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp of last update.  The UPSERT in `sync_contacts()` updates `name`, `source_id`, and `updated_at` on conflict. |
-
-**Populated by:** `sync.sync_contacts()`, which fetches from the Google
-People API and performs UPSERT operations.  One contact row per unique
-email address, regardless of how many accounts reference that contact.
-
-**Read by:** `sync.load_contact_index()`, which builds the in-memory
-`email → KnownContact` lookup used by triage (known-contact gate) and
-display (name resolution).
-
-### 6. `conversation_participants`
+### 9. `conversation_participants`
 
 Links email addresses to conversations, optionally matching them to
-known contacts.  Every unique sender/recipient who appears in a
-conversation gets a row here, regardless of whether they match a known
-contact.  This enables queries like "which conversations involve
-alice@example.com?" and "how active is each participant?"
+known contacts.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `conversation_id` | TEXT | NOT NULL, FK → `conversations(id)` | Which conversation.  ON DELETE CASCADE. |
-| `email_address` | TEXT | NOT NULL | The participant's email address, lowercased.  Always populated, even without a contact match. |
-| `contact_id` | TEXT | FK → `contacts(id)` | The matched contact's ID, if this address appears in the `contacts` table.  NULL if no match.  ON DELETE SET NULL (participant row survives if the contact is deleted). |
-| `message_count` | INTEGER | DEFAULT 0 | How many messages this participant sent in this conversation.  Computed from `SELECT COUNT(*) FROM emails WHERE conversation_id = ? AND sender_address = ?`.  Updated on each sync. |
-| `first_seen_at` | TEXT | | ISO 8601 timestamp of this participant's earliest message in the conversation.  Computed from `MIN(emails.date)`. |
-| `last_seen_at` | TEXT | | ISO 8601 timestamp of this participant's most recent message.  Computed from `MAX(emails.date)`. |
+| `conversation_id` | TEXT | NOT NULL, FK -> `conversations(id)` | ON DELETE CASCADE. |
+| `address` | TEXT | NOT NULL | Participant's address, lowercased. |
+| `name` | TEXT | | Display name. |
+| `contact_id` | TEXT | FK -> `contacts(id)` | Matched contact.  ON DELETE SET NULL. |
+| `communication_count` | INTEGER | DEFAULT 0 | Messages sent by this participant in this conversation. |
+| `first_seen_at` | TEXT | | Earliest message timestamp. |
+| `last_seen_at` | TEXT | | Most recent message timestamp. |
 
-**Primary key:** `(conversation_id, email_address)` — one row per
-participant per conversation.
+**Primary key:** `(conversation_id, address)`.
 
-**Populated by:** `sync._store_thread()`.  Uses UPSERT: on conflict
-(re-sync), updates `contact_id`, `message_count`, `first_seen_at`, and
-`last_seen_at`.  The participant list is derived from
-`ParsedEmail.all_participants` across all emails in the thread.
+### 10. `communications`
 
-### 7. `topics` and `conversation_topics`
-
-Normalized topic tracking across conversations.  Topics are short
-phrases extracted by Claude during summarization (the `key_topics` field
-in the AI response).  They are stored in two tables to enable
-cross-conversation topic queries.
-
-#### `topics`
-
-The global dictionary of known topics.
+Individual messages (email, future: SMS, call, note).  Provider-normalized.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | TEXT | **PK** | UUID v4. |
-| `name` | TEXT | NOT NULL, **UNIQUE** | The topic string, lowercased and trimmed.  Examples: `'project timeline'`, `'budget review'`, `'hiring'`. |
-| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp of first insertion. |
+| `account_id` | TEXT | FK -> `provider_accounts(id)` | Which account fetched this.  ON DELETE SET NULL. |
+| `channel` | TEXT | NOT NULL | Channel type: `'email'`, future `'sms'`, `'call'`, `'note'`. |
+| `timestamp` | TEXT | NOT NULL | ISO 8601 timestamp of the message. |
+| `content` | TEXT | | Cleaned plain-text body (quotes/signatures stripped). |
+| `direction` | TEXT | | `'inbound'` or `'outbound'` relative to the account owner. |
+| `source` | TEXT | | How this was created: `'auto_sync'`, `'manual'`. |
+| `sender_address` | TEXT | | Sender's address, lowercased. |
+| `sender_name` | TEXT | | Sender's display name. |
+| `subject` | TEXT | | Message subject line. |
+| `body_html` | TEXT | | Raw HTML body (preserved for re-processing). |
+| `snippet` | TEXT | | Short preview text from the provider. |
+| `provider_message_id` | TEXT | | Provider's native message ID (e.g. Gmail message ID). |
+| `provider_thread_id` | TEXT | | Provider's native thread ID. |
+| `header_message_id` | TEXT | | RFC 5322 Message-ID header.  For IMAP threading. |
+| `header_references` | TEXT | | References header.  For IMAP threading. |
+| `header_in_reply_to` | TEXT | | In-Reply-To header.  For IMAP threading. |
+| `is_read` | INTEGER | DEFAULT 0 | Boolean. |
+| `phone_number_from` | TEXT | | SMS/call: sender phone. |
+| `phone_number_to` | TEXT | | SMS/call: recipient phone. |
+| `duration_seconds` | INTEGER | | Call duration. |
+| `transcript_source` | TEXT | | Call transcript origin. |
+| `note_type` | TEXT | | Note classification. |
+| `provider_metadata` | TEXT | | JSON blob of provider-specific data. |
+| `user_metadata` | TEXT | | JSON blob of user-added data. |
+| `previous_revision` | TEXT | FK -> `communications(id)` | Edit chain: previous version.  ON DELETE SET NULL. |
+| `next_revision` | TEXT | FK -> `communications(id)` | Edit chain: next version.  ON DELETE SET NULL. |
+| `is_current` | INTEGER | DEFAULT 1 | Boolean.  Whether this is the current revision. |
+| `ai_summary` | TEXT | | Per-message AI summary. |
+| `ai_summarized_at` | TEXT | | When summarized. |
+| `triage_result` | TEXT | | Per-message triage result. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 
-**Populated by:** `sync._store_topics()`.  Uses `INSERT ... ON
-CONFLICT(name) DO NOTHING` so existing topics are reused, not
-duplicated.
+**Unique constraint:** `(account_id, provider_message_id)`.
 
-#### `conversation_topics`
+### 11. `communication_participants`
 
-The many-to-many join between conversations and topics.
+To/CC/BCC recipients of each communication.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `conversation_id` | TEXT | NOT NULL, FK → `conversations(id)` | ON DELETE CASCADE. |
-| `topic_id` | TEXT | NOT NULL, FK → `topics(id)` | ON DELETE CASCADE. |
-| `confidence` | REAL | DEFAULT 1.0 | AI confidence score for this topic assignment.  Currently always 1.0; reserved for future confidence-weighted extraction. |
-| `source` | TEXT | DEFAULT `'ai'` | How this topic was assigned.  Values: `'ai'`, `'manual'`.  Currently always `'ai'`. |
+| `communication_id` | TEXT | NOT NULL, FK -> `communications(id)` | ON DELETE CASCADE. |
+| `address` | TEXT | NOT NULL | Recipient address, lowercased. |
+| `name` | TEXT | | Recipient display name. |
+| `contact_id` | TEXT | FK -> `contacts(id)` | Matched contact.  ON DELETE SET NULL. |
+| `role` | TEXT | NOT NULL | Recipient type: `'to'`, `'cc'`, `'bcc'`. |
+
+**Primary key:** `(communication_id, address, role)`.
+
+### 12. `conversation_communications`
+
+Many-to-many join between conversations and communications.  Replaces
+the direct `conversation_id` FK that existed on v1 emails.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `conversation_id` | TEXT | NOT NULL, FK -> `conversations(id)` | ON DELETE CASCADE. |
+| `communication_id` | TEXT | NOT NULL, FK -> `communications(id)` | ON DELETE CASCADE. |
+| `display_content` | TEXT | | Optional display-time content override. |
+| `is_primary` | INTEGER | DEFAULT 1 | Whether this is the primary conversation for this communication. |
+| `assignment_source` | TEXT | NOT NULL, DEFAULT `'sync'` | How assigned: `'sync'`, `'ai'`, `'manual'`. |
+| `confidence` | REAL | DEFAULT 1.0 | Assignment confidence score. |
+| `reviewed` | INTEGER | DEFAULT 0 | Whether a human has reviewed this assignment. |
+| `reviewed_at` | TEXT | | When reviewed. |
 | `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 
-**Primary key:** `(conversation_id, topic_id)` — one link per
-conversation-topic pair.
+**Primary key:** `(conversation_id, communication_id)`.
 
-**Populated by:** `sync._store_topics()`.  Uses `INSERT OR IGNORE` for
-idempotent re-insertion.
+### 13. `attachments`
 
-**Dual storage rationale:** Topics exist in two places:
-1. `conversations.ai_topics` — the raw JSON array from Claude, stored as
-   a TEXT field directly on the conversation row.  This is the
-   source-of-truth AI output.
-2. `topics` / `conversation_topics` — the normalized, deduplicated,
-   queryable version.  Enables queries like "show all conversations
-   about topic X" and "what are the most common topics across all
-   conversations?"
-
-The normalized tables are derived from the raw JSON during
-`process_conversations()`.
-
-### 8. `sync_log`
-
-Audit trail of sync operations.  One row per sync run (initial or
-incremental).  Useful for debugging, monitoring sync health, and
-verifying idempotency.
+File attachments on communications.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | TEXT | **PK** | UUID v4. |
-| `account_id` | TEXT | NOT NULL, FK → `email_accounts(id)` | Which account was synced.  ON DELETE CASCADE. |
-| `sync_type` | TEXT | NOT NULL | What kind of sync this was.  Values: `'initial'`, `'incremental'`. |
-| `started_at` | TEXT | NOT NULL | ISO 8601 timestamp of when the sync began. |
-| `completed_at` | TEXT | | ISO 8601 timestamp of when the sync finished.  NULL while running. |
-| `messages_fetched` | INTEGER | DEFAULT 0 | Total messages retrieved from the provider API. |
-| `messages_stored` | INTEGER | DEFAULT 0 | Net new messages actually inserted into the DB (not already present).  Lower than `messages_fetched` on re-syncs due to deduplication. |
-| `conversations_created` | INTEGER | DEFAULT 0 | Number of new conversation rows inserted. |
-| `conversations_updated` | INTEGER | DEFAULT 0 | Number of existing conversation rows updated (new messages arrived). |
-| `cursor_before` | TEXT | | The `sync_cursor` value at the start of this sync.  NULL for initial syncs.  For incremental syncs, this is the `historyId` that was used as `startHistoryId`. |
-| `cursor_after` | TEXT | | The `sync_cursor` value recorded after the sync completed.  This becomes the `cursor_before` for the next incremental sync. |
-| `status` | TEXT | DEFAULT `'running'` | Lifecycle state of this sync run.  Values: `'running'`, `'completed'`, `'failed'`.  Enforced by a CHECK constraint. |
-| `error` | TEXT | | Error message if the sync failed.  NULL on success. |
+| `communication_id` | TEXT | NOT NULL, FK -> `communications(id)` | ON DELETE CASCADE. |
+| `filename` | TEXT | NOT NULL | Original filename. |
+| `mime_type` | TEXT | | MIME type. |
+| `size_bytes` | INTEGER | | File size. |
+| `storage_ref` | TEXT | | Reference to stored file. |
+| `source` | TEXT | | Origin. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 
-**Populated by:** `sync.initial_sync()` and `sync.incremental_sync()`.
-A row is inserted with `status='running'` at the start, then updated to
-`'completed'` (with counts and `cursor_after`) or `'failed'` (with
-error message) at the end.
+### 14. `tags` and `conversation_tags`
 
-### 9. `relationships`
+AI-extracted keyword phrases.  Distinct from organizational `topics`.
 
-Inferred relationships between contacts based on their co-occurrence in
-conversations.  One row per directional pair per relationship type.  The
-inference engine computes relationship strength from conversation
-co-occurrence data and stores the result here.
+#### `tags`
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `id` | TEXT | **PK** | UUID v4.  Generated at insertion time. |
-| `from_entity_type` | TEXT | NOT NULL, DEFAULT `'contact'` | The entity type of the source.  Currently always `'contact'`.  Designed for future polymorphism (e.g. `'organization'`). |
-| `from_entity_id` | TEXT | NOT NULL | The source contact's ID.  References `contacts(id)` by convention (no formal FK constraint, since the polymorphic `entity_type` column means the target table varies). |
-| `to_entity_type` | TEXT | NOT NULL, DEFAULT `'contact'` | The entity type of the target.  Currently always `'contact'`. |
-| `to_entity_id` | TEXT | NOT NULL | The target contact's ID.  References `contacts(id)` by convention. |
-| `relationship_type` | TEXT | NOT NULL, DEFAULT `'KNOWS'` | The kind of relationship.  Currently always `'KNOWS'`.  Designed for future types (e.g. `'REPORTS_TO'`, `'WORKS_WITH'`). |
-| `properties` | TEXT | | JSON-serialized metadata blob.  Contains computed relationship attributes: `strength` (float 0.0–1.0), `shared_conversations` (int), `shared_messages` (int), `last_interaction` (ISO 8601 or null), `first_interaction` (ISO 8601 or null).  Using JSON keeps the schema stable while allowing the inference engine to evolve its output. |
-| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp of first insertion. |
-| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp of last update.  The UPSERT updates this on every re-inference run. |
+| `id` | TEXT | **PK** | UUID v4. |
+| `name` | TEXT | NOT NULL, UNIQUE | Lowercase, trimmed tag string. |
+| `source` | TEXT | DEFAULT `'ai'` | How created: `'ai'`, `'manual'`. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 
-**Unique constraint:** `(from_entity_id, to_entity_id, relationship_type)` —
-one relationship of each type per ordered pair of entities.  The inference
-engine always stores the lexicographically smaller contact ID in
-`from_entity_id` to prevent duplicate pairs.
+#### `conversation_tags`
 
-**Populated by:** `relationship_inference.infer_relationships()` via
-`_upsert_relationship()`.  Uses `INSERT ... ON CONFLICT(from_entity_id,
-to_entity_id, relationship_type) DO UPDATE SET properties, updated_at`.
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `conversation_id` | TEXT | NOT NULL, FK -> `conversations(id)` | ON DELETE CASCADE. |
+| `tag_id` | TEXT | NOT NULL, FK -> `tags(id)` | ON DELETE CASCADE. |
+| `confidence` | REAL | DEFAULT 1.0 | AI confidence. |
+| `source` | TEXT | DEFAULT `'ai'` | Assignment source. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 
-**Read by:** `relationship_inference.get_relationships()` for CLI display,
-and future contact-detail views.
+**Primary key:** `(conversation_id, tag_id)`.
 
-**Design rationale — polymorphic entity columns:**  The `from_entity_type`
-/ `to_entity_type` columns make the table a generic edge store.  This
-avoids creating separate relationship tables for each future entity type
-(contacts, organizations, deals).  The tradeoff is no formal FK
-constraints — referential integrity is enforced at the application layer.
+### 15. `views`
 
-**Design rationale — JSON properties blob:**  Relationship metadata
-(strength, shared counts, interaction dates) is stored as a single JSON
-TEXT column rather than individual columns.  This allows the inference
-algorithm to evolve its output (add new metrics, change scoring) without
-schema migrations.  The tradeoff is that these fields cannot be indexed
-or filtered at the SQL level, but the current query patterns don't
-require this — relationships are always loaded in bulk and filtered in
-Python.
+User-defined saved queries.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `owner_id` | TEXT | FK -> `users(id)` | ON DELETE SET NULL. |
+| `name` | TEXT | NOT NULL | View name. |
+| `description` | TEXT | | Description. |
+| `query_def` | TEXT | NOT NULL | Serialized query definition. |
+| `is_shared` | INTEGER | DEFAULT 0 | Whether visible to others. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+### 16. `alerts`
+
+Notification triggers on views.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `view_id` | TEXT | NOT NULL, FK -> `views(id)` | ON DELETE CASCADE. |
+| `owner_id` | TEXT | FK -> `users(id)` | ON DELETE SET NULL. |
+| `is_active` | INTEGER | DEFAULT 1 | Boolean. |
+| `frequency` | TEXT | NOT NULL | How often to check. |
+| `aggregation` | TEXT | DEFAULT `'batched'` | Delivery aggregation. |
+| `delivery_method` | TEXT | NOT NULL | How to deliver. |
+| `last_triggered` | TEXT | | Last trigger timestamp. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+### 17. `relationships`
+
+Inferred relationships between contacts from conversation co-occurrence.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `from_entity_type` | TEXT | NOT NULL, DEFAULT `'contact'` | Source entity type (polymorphic). |
+| `from_entity_id` | TEXT | NOT NULL | Source contact ID. |
+| `to_entity_type` | TEXT | NOT NULL, DEFAULT `'contact'` | Target entity type. |
+| `to_entity_id` | TEXT | NOT NULL | Target contact ID. |
+| `relationship_type` | TEXT | NOT NULL, DEFAULT `'KNOWS'` | Relationship kind. |
+| `properties` | TEXT | | JSON: `{strength, shared_conversations, shared_messages, last_interaction, first_interaction}`. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(from_entity_id, to_entity_id, relationship_type)`.
+
+### 18. `sync_log`
+
+Audit trail of sync operations.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `account_id` | TEXT | NOT NULL, FK -> `provider_accounts(id)` | ON DELETE CASCADE. |
+| `sync_type` | TEXT | NOT NULL | `'initial'` or `'incremental'`. |
+| `started_at` | TEXT | NOT NULL | ISO 8601. |
+| `completed_at` | TEXT | | ISO 8601.  NULL while running. |
+| `messages_fetched` | INTEGER | DEFAULT 0 | Total fetched from provider. |
+| `messages_stored` | INTEGER | DEFAULT 0 | Net new stored. |
+| `conversations_created` | INTEGER | DEFAULT 0 | New conversations. |
+| `conversations_updated` | INTEGER | DEFAULT 0 | Updated conversations. |
+| `cursor_before` | TEXT | | Sync cursor at start. |
+| `cursor_after` | TEXT | | Sync cursor after completion. |
+| `status` | TEXT | DEFAULT `'running'` | `'running'`, `'completed'`, `'failed'`.  CHECK constraint. |
+| `error` | TEXT | | Error message on failure. |
+
+### 19-22. Correction tables
+
+Four tables for AI learning from user corrections:
+
+- **`assignment_corrections`** -- Records when a communication is moved between conversations.
+- **`triage_corrections`** -- Records when a triage result is overridden.
+- **`triage_rules`** -- Allow/block rules derived from corrections.
+- **`conversation_corrections`** -- Records conversation-level corrections (splits, merges).
 
 ---
 
 ## Indexes
 
-Fourteen indexes support the common query patterns.  All use
-`CREATE INDEX IF NOT EXISTS` for idempotent creation.
+All use `CREATE INDEX IF NOT EXISTS` for idempotent creation.
 
-### Emails table
-
-| Index | Column(s) | Supports |
-|-------|-----------|----------|
-| `idx_emails_account` | `account_id` | "All emails for account X" — used by every sync and display query. |
-| `idx_emails_conversation` | `conversation_id` | "All emails in conversation Y" — the most frequent read pattern (loading a conversation's messages for triage, summarization, and display). |
-| `idx_emails_date` | `date` | Chronological sorting and date-range filtering. |
-| `idx_emails_sender` | `sender_address` | "All emails from address Z" — participant activity queries. |
-| `idx_emails_message_id_hdr` | `header_message_id` | IMAP thread reconstruction: looking up emails by their RFC 5322 Message-ID to build Reference chains. |
-
-### Conversations table
+### Communications
 
 | Index | Column(s) | Supports |
 |-------|-----------|----------|
-| `idx_conversations_account` | `account_id` | "All conversations for account X" — listing and processing queries. |
-| `idx_conversations_status` | `status` | Filtering by system status (`active` / `stale` / `closed`). |
-| `idx_conversations_last_msg` | `last_message_at` | Sorting conversations by recency (the default display order). |
+| `idx_comm_account` | `account_id` | All communications for an account. |
+| `idx_comm_channel` | `channel` | Filter by channel type. |
+| `idx_comm_timestamp` | `timestamp` | Chronological sorting, date-range filtering. |
+| `idx_comm_sender` | `sender_address` | All messages from a sender. |
+| `idx_comm_thread` | `provider_thread_id` | Thread lookup during sync. |
+| `idx_comm_header_msg_id` | `header_message_id` | IMAP thread reconstruction. |
+| `idx_comm_current` | `is_current` | Filter to current revisions. |
 
-### Recipients table
-
-| Index | Column(s) | Supports |
-|-------|-----------|----------|
-| `idx_recipients_address` | `address` | "Find all emails sent to address Z". |
-
-### Participants table
+### Conversations
 
 | Index | Column(s) | Supports |
 |-------|-----------|----------|
-| `idx_participants_contact` | `contact_id` | "Find all conversations involving contact C". |
-| `idx_participants_email` | `email_address` | "Find all conversations involving address Z" (even without a contact match). |
+| `idx_conv_topic` | `topic_id` | Conversations in a topic. |
+| `idx_conv_status` | `status` | Filter by system status. |
+| `idx_conv_last_activity` | `last_activity_at` | Sort by recency. |
+| `idx_conv_ai_status` | `ai_status` | Filter by AI classification. |
+| `idx_conv_triage` | `triage_result` | Filter triaged/untriaged. |
+| `idx_conv_needs_processing` | `(triage_result, ai_summarized_at)` | Find conversations needing processing. |
+| `idx_conv_dismissed` | `dismissed` | Filter dismissed conversations. |
 
-### Sync log table
+### Join tables
 
 | Index | Column(s) | Supports |
 |-------|-----------|----------|
-| `idx_sync_log_account` | `account_id` | "Show sync history for account X". |
+| `idx_cc_communication` | `conversation_communications(communication_id)` | Reverse lookup: conversation for a communication. |
+| `idx_cc_review` | `conversation_communications(assignment_source, reviewed)` | Find unreviewed assignments. |
+| `idx_cp_contact` | `conversation_participants(contact_id)` | Conversations involving a contact. |
+| `idx_cp_address` | `conversation_participants(address)` | Conversations involving an address. |
+| `idx_commpart_address` | `communication_participants(address)` | Messages sent to an address. |
+| `idx_commpart_contact` | `communication_participants(contact_id)` | Messages involving a contact. |
 
-### Relationships table
+### Contact resolution
 
 | Index | Column(s) | Supports |
 |-------|-----------|----------|
-| `idx_relationships_from` | `from_entity_id` | "All relationships originating from contact X". |
-| `idx_relationships_to` | `to_entity_id` | "All relationships targeting contact X". |
+| `idx_ci_contact` | `contact_identifiers(contact_id)` | All identifiers for a contact. |
+| `idx_ci_status` | `contact_identifiers(status)` | Filter active identifiers. |
+
+### Companies
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_companies_name` | `companies(name)` UNIQUE | Company lookup by name (also enforces uniqueness). |
+| `idx_companies_domain` | `companies(domain)` | Company lookup by domain. |
+| `idx_contacts_company` | `contacts(company_id)` | All contacts at a company. |
+
+### Other tables
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_projects_parent` | `projects(parent_id)` | Child project lookup. |
+| `idx_topics_project` | `topics(project_id)` | Topics in a project. |
+| `idx_attachments_comm` | `attachments(communication_id)` | Attachments for a communication. |
+| `idx_sync_log_account` | `sync_log(account_id)` | Sync history for an account. |
+| `idx_views_owner` | `views(owner_id)` | Views owned by a user. |
+| `idx_alerts_view` | `alerts(view_id)` | Alerts for a view. |
+| `idx_triage_rules_match` | `triage_rules(match_type, match_value)` | Rule lookup. |
+| `idx_relationships_from` | `relationships(from_entity_id)` | Relationships from a contact. |
+| `idx_relationships_to` | `relationships(to_entity_id)` | Relationships to a contact. |
+
+### Correction tables
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_ac_communication` | `assignment_corrections(communication_id)` | Corrections for a communication. |
+| `idx_tc_communication` | `triage_corrections(communication_id)` | Triage corrections. |
+| `idx_tc_sender_domain` | `triage_corrections(sender_domain)` | Domain-based triage patterns. |
+| `idx_cc_conversation` | `conversation_corrections(conversation_id)` | Conversation corrections. |
 
 ---
 
 ## Serialization Layer (`models.py`)
 
 The Python dataclasses include `to_row()` and `from_row()` methods that
-handle conversion between in-memory objects and database rows.  This
-keeps SQL out of the model definitions and centralizes column mapping.
+handle conversion between in-memory objects and database rows.
+
+### `Company`
+
+| Method | Direction | Notes |
+|--------|-----------|-------|
+| `to_row(company_id=None, created_by=None, updated_by=None)` | Object -> `companies` row | Generates UUID if not provided.  Passes through audit fields. |
+| `from_row(row)` | `companies` row -> Object | Maps name, domain, industry, description, status. |
 
 ### `KnownContact`
 
 | Method | Direction | Notes |
 |--------|-----------|-------|
-| `to_row(contact_id=None)` | Object → `contacts` row | Generates UUID if not provided.  Lowercases email.  Sets `source='google_contacts'`. |
-| `from_row(row)` | `contacts` row → Object | Maps `email` → `email`, `name` → `name`, `source_id` → `resource_name`. |
+| `to_row(contact_id=None, company_id=None, created_by=None, updated_by=None)` | Object -> `(contacts, contact_identifiers)` tuple | Returns two dicts.  Lowercases email.  Sets `source='google_contacts'`.  Includes `company_id` and audit columns. |
+| `from_row(row, email=None)` | `contacts` JOIN row -> Object | Resolves email from `value` column or explicit kwarg. |
 
 ### `ParsedEmail`
 
 | Method | Direction | Notes |
 |--------|-----------|-------|
-| `to_row(account_id, conversation_id, email_id, account_email)` | Object → `emails` row | Computes `direction` by comparing `sender_email` to `account_email`.  Formats `date` as ISO 8601. |
-| `recipient_rows(email_id)` | Object → `email_recipients` rows | Returns list of dicts, one per To/CC address. |
-| `from_row(row, recipients=None)` | `emails` row + optional `email_recipients` rows → Object | Parses ISO 8601 date back to `datetime`.  Splits recipients by role into `recipients` (to) and `cc` lists. |
+| `to_row(account_id, communication_id=None, account_email='')` | Object -> `communications` row | Computes `direction` from sender vs account email.  Formats `date` as ISO 8601. |
+| `recipient_rows(communication_id)` | Object -> `communication_participants` rows | Returns list of dicts, one per To/CC address. |
+| `from_row(row, recipients=None)` | `communications` row -> Object | Parses ISO 8601 date.  Splits recipients by role. |
 
 ### `Conversation`
 
 | Method | Direction | Notes |
 |--------|-----------|-------|
-| `to_row(account_id, conversation_id)` | Object → `conversations` row | Computes `message_count`, `first_message_at`, `last_message_at` from the emails list.  Initializes all AI fields to NULL. |
-| `from_row(row, emails=None)` | `conversations` row → Object | Uses `provider_thread_id` as `thread_id`, falling back to the row `id`. |
+| `to_row(conversation_id=None, created_by=None, updated_by=None)` | Object -> `conversations` row | Computes counts and date range from emails list.  Initializes AI fields to NULL.  Includes audit columns. |
+| `from_row(row, emails=None)` | `conversations` row -> Object | Uses row `id` as `thread_id`. |
 
-### `ConversationSummary`
+### `Project`
 
 | Method | Direction | Notes |
 |--------|-----------|-------|
-| `to_update_dict()` | Object → partial `conversations` UPDATE dict | Lowercases `status` for storage.  JSON-serializes `action_items` and `key_topics`.  Sets `ai_summarized_at` to now. |
-| `from_conversation_row(row)` | `conversations` row → Object or None | Returns None if `ai_summarized_at` is NULL (not yet summarized).  Uppercases `ai_status` back to enum.  JSON-deserializes `ai_action_items` and `ai_topics`. |
+| `to_row(project_id=None, created_by=None, updated_by=None)` | Object -> `projects` row | Includes audit columns. |
+| `from_row(row)` | `projects` row -> Object | |
+
+### `Topic`
+
+| Method | Direction | Notes |
+|--------|-----------|-------|
+| `to_row(topic_id=None, created_by=None, updated_by=None)` | Object -> `topics` row | Includes audit columns. |
+| `from_row(row)` | `topics` row -> Object | |
 
 ### `Relationship`
 
 | Method | Direction | Notes |
 |--------|-----------|-------|
-| `to_row(rel_id=None)` | Object → `relationships` row | Generates UUID if not provided.  Packs `strength`, `shared_conversations`, `shared_messages`, `last_interaction`, `first_interaction` into a JSON `properties` blob.  Sets `from_entity_type` / `to_entity_type` to `'contact'`. |
-| `from_row(row)` | `relationships` row → Object | Parses the JSON `properties` column.  Maps `from_entity_id` → `from_contact_id`, `to_entity_id` → `to_contact_id`.  Extracts properties with defaults (`strength=0.0`, `shared_conversations=0`, `shared_messages=0`, `last_interaction=None`, `first_interaction=None`). |
+| `to_row(relationship_id=None)` | Object -> `relationships` row | Packs metrics into JSON `properties` blob. |
+| `from_row(row)` | `relationships` row -> Object | Extracts metrics from JSON. |
+
+### `ConversationSummary`
+
+| Method | Direction | Notes |
+|--------|-----------|-------|
+| `to_update_dict()` | Object -> partial UPDATE dict | JSON-serializes action_items/topics.  Sets `ai_summarized_at`. |
+| `from_conversation_row(row)` | `conversations` row -> Object or None | Returns None if not yet summarized. |
 
 ### `FilterReason` mapping
-
-Two helper functions convert between the Python enum and the database
-string representation:
-
-| Function | Direction | Example |
-|----------|-----------|---------|
-| `filter_reason_to_db(reason)` | `FilterReason.NO_KNOWN_CONTACTS` → `'no_known_contacts'` | Used when writing `triage_result` to conversations. |
-| `filter_reason_from_db(db_str)` | `'automated_sender'` → `FilterReason.AUTOMATED_SENDER` | Used when reading `triage_result` for display. |
-
-The mapping:
 
 | Enum value | DB string |
 |------------|-----------|
@@ -618,378 +770,146 @@ The mapping:
 
 ## Data Flows
 
-### Flow 1: Initial Sync
-
-Triggered on first run (or when `initial_sync_done = 0`).  Fetches all
-matching threads from Gmail and populates the database from scratch.
+### Flow 1: Contact Sync (with Company Resolution)
 
 ```
-register_account()
-│  ├─ gmail_client.get_user_email()     → user's email
-│  ├─ INSERT email_accounts             → account_id
-│  └─ return account_id
-│
-sync_contacts()
-│  ├─ contacts_client.fetch_contacts()  → list[KnownContact]
-│  └─ UPSERT contacts                  (ON CONFLICT email DO UPDATE)
-│
+sync_contacts(creds)
+|  +- contacts_client.fetch_contacts(creds)
+|  |   -> list[KnownContact]  (with company from Google organizations)
+|  |
+|  +- get_connection()
+|  +- for each KnownContact:
+|      +- _resolve_company_id(conn, kc.company, now)
+|      |   +- SELECT id FROM companies WHERE name = ?
+|      |   +- if not found: INSERT INTO companies -> new company_id
+|      |   +- return company_id (or None if no company)
+|      |
+|      +- SELECT contact_id FROM contact_identifiers WHERE type='email' AND value=?
+|      +- if exists:
+|      |   +- UPDATE contacts SET name, company, company_id, updated_at
+|      +- if new:
+|          +- INSERT INTO contacts (with company, company_id)
+|          +- INSERT INTO contact_identifiers
+```
+
+### Flow 2: Initial Sync
+
+```
 initial_sync(account_id)
-│  ├─ INSERT sync_log (status='running')
-│  ├─ load_contact_index()              → dict[email, KnownContact]
-│  │
-│  ├─ LOOP (paginated):
-│  │   ├─ gmail_client.fetch_threads()  → list[list[ParsedEmail]]
-│  │   └─ for each thread:
-│  │       └─ _store_thread(conn, ...)
-│  │           ├─ email_parser.strip_quotes()   (clean bodies)
-│  │           ├─ INSERT conversations          (new thread)
-│  │           ├─ for each email:
-│  │           │   ├─ INSERT OR IGNORE emails
-│  │           │   └─ INSERT OR IGNORE email_recipients
-│  │           └─ for each participant:
-│  │               └─ UPSERT conversation_participants
-│  │
-│  ├─ gmail_client.get_history_id()     → current historyId
-│  ├─ UPDATE email_accounts
-│  │   SET sync_cursor=historyId, initial_sync_done=1
-│  └─ UPDATE sync_log (status='completed', cursor_after=historyId)
+|  +- INSERT sync_log (status='running')
+|  +- load_contact_index()
+|  |
+|  +- LOOP (paginated):
+|  |   +- fetch_threads() -> list[list[ParsedEmail]]
+|  |   +- for each thread:
+|  |       +- _store_thread(conn, ...)
+|  |           +- strip_quotes() on each email body
+|  |           +- INSERT conversations (new thread)
+|  |           +- for each email:
+|  |           |   +- INSERT OR IGNORE communications
+|  |           |   +- INSERT OR IGNORE conversation_communications
+|  |           |   +- INSERT OR IGNORE communication_participants
+|  |           +- for each participant:
+|  |               +- UPSERT conversation_participants
+|  |
+|  +- get_history_id() -> current historyId
+|  +- UPDATE provider_accounts SET sync_cursor, initial_sync_done=1
+|  +- UPDATE sync_log (status='completed')
 ```
 
-### Flow 2: Incremental Sync
-
-Triggered on subsequent runs (when `initial_sync_done = 1`).  Uses the
-Gmail History API to fetch only changes since the last sync.
+### Flow 3: Incremental Sync
 
 ```
 incremental_sync(account_id)
-│  ├─ SELECT sync_cursor FROM email_accounts  → cursor_before
-│  ├─ INSERT sync_log (cursor_before, status='running')
-│  ├─ load_contact_index()
-│  │
-│  ├─ gmail_client.fetch_history(cursor_before)
-│  │   → (added_message_ids, deleted_message_ids)
-│  │
-│  ├─ PROCESS ADDITIONS:
-│  │   ├─ gmail_client.fetch_messages(added_ids)  → list[ParsedEmail]
-│  │   ├─ Group by thread_id
-│  │   └─ for each thread group:
-│  │       └─ _store_thread(conn, ...)
-│  │           ├─ INSERT conversations (if new thread)
-│  │           ├─ INSERT OR IGNORE emails
-│  │           ├─ INSERT OR IGNORE email_recipients
-│  │           ├─ UPSERT conversation_participants
-│  │           └─ if existing conversation gained new emails:
-│  │               UPDATE conversations
-│  │                 SET message_count=recount, dates=recompute,
-│  │                     ai_summarized_at=NULL  ← marks for re-summarization
-│  │
-│  ├─ PROCESS DELETIONS:
-│  │   └─ for each deleted message_id:
-│  │       ├─ DELETE FROM emails WHERE provider_message_id = ?
-│  │       └─ UPDATE conversations SET message_count = recount
-│  │
-│  ├─ gmail_client.get_history_id()  → new historyId
-│  ├─ UPDATE email_accounts SET sync_cursor=new_historyId
-│  └─ UPDATE sync_log (status='completed', cursor_after=new_historyId)
+|  +- SELECT sync_cursor FROM provider_accounts
+|  +- INSERT sync_log (cursor_before, status='running')
+|  +- load_contact_index()
+|  |
+|  +- fetch_history(cursor_before) -> (added_ids, deleted_ids)
+|  +- PROCESS ADDITIONS:
+|  |   +- fetch_messages(added_ids)
+|  |   +- Group by thread_id
+|  |   +- for each thread: _store_thread(...)
+|  |       +- if existing conversation gained new communications:
+|  |           UPDATE conversations SET ai_summarized_at=NULL  <- re-summarization trigger
+|  |
+|  +- PROCESS DELETIONS:
+|  |   +- DELETE FROM communications WHERE provider_message_id = ?
+|  |   +- UPDATE conversations SET communication_count = recount
+|  |
+|  +- UPDATE provider_accounts SET sync_cursor=new_historyId
+|  +- UPDATE sync_log (status='completed')
 ```
 
-**Re-summarization trigger:** When `_store_thread()` detects that an
-existing conversation received new messages (`new_email_count > 0`), it
-sets `ai_summarized_at = NULL`.  This marks the conversation as needing
-re-processing.  The next `process_conversations()` call will pick it up
-because it queries for rows where both `triage_result IS NULL` and
-`ai_summarized_at IS NULL`.
-
-### Flow 3: Conversation Processing (Triage + Summarize + Topics)
-
-Runs after sync completes.  Processes conversations that have not yet
-been triaged or summarized.
+### Flow 4: Conversation Processing (Triage + Summarize)
 
 ```
 process_conversations(account_id, user_email)
-│  ├─ load_contact_index()
-│  │
-│  ├─ SELECT * FROM conversations
-│  │   WHERE triage_result IS NULL AND ai_summarized_at IS NULL
-│  │
-│  └─ for each conversation row:
-│      ├─ SELECT emails WHERE conversation_id = ?
-│      ├─ SELECT email_recipients WHERE email_id IN (...)
-│      ├─ Reconstruct Conversation + ParsedEmail objects
-│      ├─ Collect participants, match contacts
-│      │
-│      ├─ triage.triage_conversations([conv], user_email)
-│      │   ├─ Layer 1: Check automated sender patterns
-│      │   ├─ Layer 1: Check automated subject patterns
-│      │   ├─ Layer 1: Check marketing (unsubscribe in body)
-│      │   └─ Layer 2: Check known-contact gate
-│      │
-│      ├─ IF FILTERED:
-│      │   └─ UPDATE conversations SET triage_result = '<reason>'
-│      │
-│      └─ IF KEPT (passed triage):
-│          ├─ summarizer.summarize_conversation(conv, claude_client)
-│          │   → ConversationSummary (summary, status, action_items, key_topics)
-│          │
-│          ├─ UPDATE conversations SET
-│          │   ai_summary, ai_status, ai_action_items, ai_topics, ai_summarized_at
-│          │
-│          └─ _store_topics(conversation_id, key_topics)
-│              ├─ for each topic string:
-│              │   ├─ lowercase, trim
-│              │   ├─ INSERT topics ON CONFLICT(name) DO NOTHING
-│              │   └─ INSERT OR IGNORE conversation_topics
-│              └─ return topic_count
-```
-
-### Flow 4: Display (Reading from DB)
-
-After processing, the pipeline loads conversations back from the
-database for Rich terminal output.
-
-```
-load_conversations_for_display(account_id)
-│  ├─ SELECT * FROM conversations WHERE account_id = ? AND triage_result IS NULL
-│  │   ORDER BY last_message_at DESC
-│  │
-│  ├─ for each conversation row:
-│  │   ├─ skip if triage_result is set → add to triage_filtered list
-│  │   ├─ SELECT * FROM emails WHERE conversation_id = ? ORDER BY date
-│  │   ├─ SELECT * FROM email_recipients WHERE email_id = ?  (per email)
-│  │   ├─ Reconstruct ParsedEmail objects via from_row()
-│  │   ├─ SELECT * FROM conversation_participants WHERE conversation_id = ?
-│  │   ├─ for each participant with contact_id:
-│  │   │   └─ SELECT * FROM contacts WHERE id = ?
-│  │   │       → populate conv.matched_contacts
-│  │   ├─ Build Conversation object
-│  │   └─ ConversationSummary.from_conversation_row()  → summary or None
-│  │
-│  ├─ SELECT * FROM conversations WHERE triage_result IS NOT NULL
-│  │   → build TriageResult list for display stats
-│  │
-│  └─ return (conversations, summaries, triage_filtered)
-│
-display_triage_stats(triage_filtered)   → Rich table of filter reasons
-display_results(conversations, summaries) → Rich panels grouped by status
+|  +- load_contact_index()
+|  +- SELECT * FROM conversations
+|  |   WHERE triage_result IS NULL AND ai_summarized_at IS NULL
+|  |
+|  +- for each conversation:
+|      +- Load communications via conversation_communications JOIN
+|      +- Reconstruct Conversation + ParsedEmail objects
+|      +- Match participants to contacts
+|      |
+|      +- triage_conversations([conv], user_email)
+|      +- IF FILTERED:
+|      |   +- UPDATE conversations SET triage_result = '<reason>'
+|      +- IF KEPT:
+|          +- summarize_conversation(conv, client)
+|          +- UPDATE conversations SET ai_summary, ai_status, ...
+|          +- _store_tags(conversation_id, key_topics)
+|              +- INSERT tags ON CONFLICT(name) DO NOTHING
+|              +- INSERT OR IGNORE conversation_tags
 ```
 
 ### Flow 5: Relationship Inference
 
-Runs on demand via the CLI (`infer-relationships` command).  Analyzes
-conversation co-occurrence to infer which contacts know each other and
-how strongly.
-
 ```
-infer_relationships(db_path)
-│  ├─ get_connection(db_path)
-│  │
-│  ├─ BUILD CANONICAL MAP:
-│  │   ├─ SELECT id, name FROM contacts
-│  │   ├─ Group contacts by lowercased name
-│  │   ├─ For multi-email contacts (same name, N addresses):
-│  │   │   └─ SELECT contact_id, COUNT(*) FROM conversation_participants
-│  │   │       → pick the contact_id with the highest participation count
-│  │   └─ Return dict[contact_id → canonical_contact_id]
-│  │
-│  ├─ QUERY CO-OCCURRENCE:
-│  │   └─ SELECT cp1.contact_id AS contact_a,
-│  │             cp2.contact_id AS contact_b,
-│  │             COUNT(DISTINCT cp1.conversation_id) AS shared_conversations,
-│  │             SUM(cp1.message_count + cp2.message_count) AS shared_messages,
-│  │             MAX(cp1.last_seen_at, cp2.last_seen_at) AS last_interaction,
-│  │             MIN(cp1.first_seen_at, cp2.first_seen_at) AS first_interaction
-│  │      FROM conversation_participants cp1
-│  │      JOIN conversation_participants cp2
-│  │          ON cp1.conversation_id = cp2.conversation_id
-│  │          AND cp1.contact_id < cp2.contact_id   ← prevents duplicate pairs
-│  │      WHERE cp1.contact_id IS NOT NULL
-│  │        AND cp2.contact_id IS NOT NULL
-│  │      GROUP BY cp1.contact_id, cp2.contact_id
-│  │      HAVING shared_conversations >= 1
-│  │
-│  ├─ DEDUPLICATE & AGGREGATE:
-│  │   ├─ Map each contact_id to its canonical_id
-│  │   ├─ Skip self-relationships (canonical_a == canonical_b)
-│  │   ├─ Order pair so smaller ID is always "from"
-│  │   └─ Merge stats for duplicate canonical pairs:
-│  │       max(shared_conversations), max(shared_messages),
-│  │       max(last_interaction), min(first_interaction)
-│  │
-│  ├─ COMPUTE STRENGTH (for each pair):
-│  │   ├─ conv_score  = log2(1 + shared_conversations) / log2(1 + 50)
-│  │   ├─ msg_score   = log2(1 + shared_messages) / log2(1 + 200)
-│  │   ├─ recency     = _recency_factor(last_interaction)
-│  │   │                 1.0 if ≤30 days ago
-│  │   │                 linear decay 1.0→0.1 over 30–365 days
-│  │   │                 0.1 if >365 days or NULL
-│  │   └─ strength    = min(1.0, 0.4×conv_score + 0.3×msg_score + 0.3×recency)
-│  │
-│  └─ UPSERT RELATIONSHIPS:
-│      └─ for each (from_id, to_id, stats):
-│          ├─ Build Relationship dataclass
-│          ├─ Relationship.to_row()  → dict with JSON properties
-│          └─ INSERT INTO relationships ...
-│              ON CONFLICT(from_entity_id, to_entity_id, relationship_type)
-│              DO UPDATE SET properties = excluded.properties,
-│                            updated_at = excluded.updated_at
+infer_relationships()
+|  +- Build canonical contact map (dedup by name)
+|  +- Query co-occurrence from conversation_participants
+|  +- For each contact pair:
+|  |   +- Compute strength = 0.4*conv_score + 0.3*msg_score + 0.3*recency
+|  +- UPSERT relationships ON CONFLICT DO UPDATE
 ```
 
-### Flow 6: Bulk Auto-Assign Conversations to Topics
-
-Runs on demand via the CLI (`auto-assign` command).  Scores unassigned
-conversations against all topics in a project using tag and title
-matching, then batch-updates topic assignments.
+### Flow 6: Bulk Auto-Assign
 
 ```
-auto_assign.find_matching_topics(project_id, include_triaged=False)
-│  ├─ get_connection()
-│  │
-│  ├─ SELECT name FROM projects WHERE id = ? AND status = 'active'
-│  │   → project_name (ValueError if not found)
-│  │
-│  ├─ SELECT id, name FROM topics WHERE project_id = ?
-│  │   → topic list (ValueError if empty)
-│  │
-│  ├─ LOAD CANDIDATES:
-│  │   └─ SELECT c.id, c.title, GROUP_CONCAT(t.name, '||') AS tag_names
-│  │      FROM conversations c
-│  │      LEFT JOIN conversation_tags ct ON ct.conversation_id = c.id
-│  │      LEFT JOIN tags t ON t.id = ct.tag_id
-│  │      WHERE c.topic_id IS NULL
-│  │        AND (c.triage_result IS NULL OR :include_triaged)
-│  │      GROUP BY c.id
-│  │
-│  ├─ SCORE EACH CANDIDATE:
-│  │   └─ for each conversation × topic pair:
-│  │       └─ _score_conversation(title, tags, topic_name)
-│  │           ├─ Tag match: 2 pts each (case-insensitive substring)
-│  │           ├─ Title match: 1 pt (case-insensitive substring)
-│  │           └─ Pick highest-scoring topic (alpha tiebreak)
-│  │
-│  └─ return AutoAssignReport
-│       {project_name, total_candidates, matched, unmatched, assignments}
+auto_assign.find_matching_topics(project_id)
+|  +- Load topics for project
+|  +- Load unassigned conversations with their tags
+|  +- Score each conversation against each topic:
+|  |   +- Tag match: 2 pts each (case-insensitive substring)
+|  |   +- Title match: 1 pt
+|  |   +- Pick highest score (alpha tiebreak)
+|  +- return AutoAssignReport
 
 auto_assign.apply_assignments(assignments)
-│  ├─ get_connection()
-│  └─ for each MatchResult:
-│      └─ UPDATE conversations SET topic_id = ?, updated_at = ? WHERE id = ?
+|  +- UPDATE conversations SET topic_id = ? WHERE id = ?
 ```
-
-**Tables read:** `projects`, `topics`, `conversations`,
-`conversation_tags`, `tags`
-
-**Tables written:** `conversations` (SET `topic_id`)
-
-**Idempotent:** Yes — re-running after an assignment has been applied
-will not find those conversations again (they now have `topic_id IS NOT
-NULL`).
 
 ---
 
 ## UPSERT and Idempotency Patterns
 
-The sync layer is designed to be safe to re-run at any time without
-creating duplicates or corrupting data.
-
 | Table | UNIQUE constraint | Write pattern | Effect on duplicate |
 |-------|-------------------|---------------|---------------------|
-| `email_accounts` | `(provider, email_address)` | Check-then-insert in `register_account()` | Returns existing ID |
-| `conversations` | `(account_id, provider_thread_id)` | Check-then-insert in `_store_thread()` | Updates existing row |
-| `emails` | `(account_id, provider_message_id)` | `INSERT OR IGNORE` | Silently skipped |
-| `email_recipients` | `(email_id, address, role)` | `INSERT OR IGNORE` | Silently skipped |
-| `contacts` | `email` | `INSERT ... ON CONFLICT(email) DO UPDATE` | Name/source_id updated |
-| `conversation_participants` | `(conversation_id, email_address)` | `INSERT ... ON CONFLICT DO UPDATE` | Counts/dates refreshed |
-| `topics` | `name` | `INSERT ... ON CONFLICT(name) DO NOTHING` | Existing row reused |
-| `conversation_topics` | `(conversation_id, topic_id)` | `INSERT OR IGNORE` | Silently skipped |
-| `relationships` | `(from_entity_id, to_entity_id, relationship_type)` | `INSERT ... ON CONFLICT DO UPDATE` | Properties/updated_at refreshed |
-
----
-
-## Sync Cursor Mechanics
-
-The `sync_cursor` field on `email_accounts` is an opaque TEXT field
-whose interpretation depends on the `provider` value.
-
-| Provider | Cursor format | API used | Meaning |
-|----------|---------------|----------|---------|
-| `gmail` | Numeric string (e.g. `'12345678'`) | `history.list(startHistoryId=...)` | Gmail's historyId.  A monotonically increasing identifier.  Changes since this ID can be retrieved via the History API. |
-| `outlook` *(future)* | URL string | Delta query (`deltaLink`) | Outlook's delta sync token, returned as a URL. |
-| `imap` *(future)* | `'UIDVALIDITY:lastUID'` | IMAP `FETCH` with UID range | Compound cursor: UIDVALIDITY detects mailbox rebuild, lastUID marks how far we've synced. |
-
-**Lifecycle:**
-1. NULL before initial sync.
-2. Set to the current `historyId` when initial sync completes.
-3. Used as `startHistoryId` in each incremental sync.
-4. Advanced to the new `historyId` after each incremental sync.
-5. Recorded in `sync_log.cursor_before` / `cursor_after` for audit.
-
----
-
-## Conversation Lifecycle States
-
-Conversations have two independent status dimensions:
-
-### System status (`conversations.status`)
-
-Based on activity window and sync state.  Currently all conversations
-are created with `'active'`.
-
-| Value | Meaning |
-|-------|---------|
-| `active` | Conversation has recent activity (within the backfill window). |
-| `stale` | No new messages for an extended period.  *(Not yet implemented.)* |
-| `closed` | System-determined closed (e.g. all participants left).  *(Not yet implemented.)* |
-
-### AI status (`conversations.ai_status`)
-
-Semantic classification by Claude, from the account owner's perspective.
-
-| Value | Meaning |
-|-------|---------|
-| `open` | Active conversation: unanswered questions, pending tasks, ongoing discussion.  Claude biases toward this for multi-message threads between known contacts. |
-| `closed` | Definitively finished: question fully answered, explicit goodbye, or one-way notification. |
-| `uncertain` | Not enough context to determine. |
-
-### Triage status (`conversations.triage_result`)
-
-Whether the conversation was filtered out before summarization.
-
-| Value | Meaning |
-|-------|---------|
-| NULL | Passed triage — real conversation, eligible for summarization. |
-| `no_known_contacts` | No participant (other than the account owner) is a known contact. |
-| `automated_sender` | First email's sender matches automated-sender patterns (noreply@, notification@, etc.). |
-| `automated_subject` | Subject matches automated-subject patterns (out of office, password reset, etc.). |
-| `marketing` | Email body contains "unsubscribe" text. |
-
----
-
-## Query Patterns
-
-The most common queries the system executes, and which indexes support
-them:
-
-| Query | SQL pattern | Indexes used |
-|-------|-------------|--------------|
-| Find account by provider+email | `WHERE provider = ? AND email_address = ?` | UNIQUE constraint |
-| All conversations for an account | `WHERE account_id = ?` | `idx_conversations_account` |
-| Conversations needing processing | `WHERE account_id = ? AND triage_result IS NULL AND ai_summarized_at IS NULL` | `idx_conversations_account` |
-| Conversations sorted by recency | `ORDER BY last_message_at DESC` | `idx_conversations_last_msg` |
-| Emails in a conversation | `WHERE conversation_id = ? ORDER BY date` | `idx_emails_conversation`, `idx_emails_date` |
-| Recipients of an email | `WHERE email_id = ?` | PK on `email_recipients` |
-| Participants in a conversation | `WHERE conversation_id = ?` | PK on `conversation_participants` |
-| Conversations involving a contact | `WHERE contact_id = ?` | `idx_participants_contact` |
-| Conversations involving an address | `WHERE email_address = ?` | `idx_participants_email` |
-| Emails from a specific sender | `WHERE sender_address = ?` | `idx_emails_sender` |
-| Sync history for an account | `WHERE account_id = ?` | `idx_sync_log_account` |
-| Email by provider message ID | `WHERE account_id = ? AND provider_message_id = ?` | UNIQUE constraint |
-| Find email by RFC Message-ID | `WHERE header_message_id = ?` | `idx_emails_message_id_hdr` |
-| Contact co-occurrence pairs | `JOIN conversation_participants cp1/cp2 ON conversation_id, contact_id < contact_id` | PK on `conversation_participants` |
-| Relationships for a contact | `WHERE from_entity_id = ? OR to_entity_id = ?` | `idx_relationships_from`, `idx_relationships_to` |
-| Relationships above threshold | `WHERE json_extract(properties, '$.strength') >= ?` | Full table scan (JSON field) |
-| Unassigned conversations with tags | `conversations LEFT JOIN conversation_tags/tags WHERE topic_id IS NULL GROUP BY c.id` | `idx_conv_topic`, PK on `conversation_tags` |
-| Topics in a project | `WHERE project_id = ? ORDER BY name` | `idx_topics_project` |
-| Auto-assign: update topic_id | `UPDATE conversations SET topic_id = ? WHERE id = ?` | PK on `conversations` |
+| `provider_accounts` | `(provider, email_address)` | Check-then-insert | Returns existing ID |
+| `companies` | `name` | Check-then-insert in `_resolve_company_id()` | Returns existing ID |
+| `conversations` | *(check via communications JOIN)* | Check-then-insert in `_store_thread()` | Updates existing row |
+| `communications` | `(account_id, provider_message_id)` | `INSERT OR IGNORE` | Silently skipped |
+| `communication_participants` | `(communication_id, address, role)` | `INSERT OR IGNORE` | Silently skipped |
+| `contacts` | *(via contact_identifiers)* | Check `contact_identifiers(type, value)` then insert/update | Name/company updated |
+| `contact_identifiers` | `(type, value)` | Check-then-insert | Existing row reused |
+| `conversation_participants` | `(conversation_id, address)` | `INSERT ... ON CONFLICT DO UPDATE` | Counts/dates refreshed |
+| `conversation_communications` | `(conversation_id, communication_id)` | `INSERT OR IGNORE` | Silently skipped |
+| `tags` | `name` | `INSERT ... ON CONFLICT(name) DO NOTHING` | Existing row reused |
+| `conversation_tags` | `(conversation_id, tag_id)` | `INSERT OR IGNORE` | Silently skipped |
+| `relationships` | `(from_entity_id, to_entity_id, relationship_type)` | `INSERT ... ON CONFLICT DO UPDATE` | Properties refreshed |
 
 ---
 

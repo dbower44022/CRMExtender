@@ -226,27 +226,34 @@ def _display_conversation(
 def display_relationships(
     relationships: list[Relationship],
     contact_names: dict[str, str],
+    *,
+    type_names: dict[str, str] | None = None,
 ) -> None:
-    """Display inferred relationships in a Rich table.
+    """Display relationships in a Rich table.
 
     :param relationships: sorted list of Relationship objects
     :param contact_names: mapping of contact_id -> display name
+    :param type_names: mapping of relationship_type_id -> type name
     """
     if not relationships:
         console.print("\n[yellow]No relationships found.[/yellow]")
         return
 
     console.print()
-    console.rule("[bold]Inferred Relationships[/bold]")
+    console.rule("[bold]Relationships[/bold]")
     console.print()
 
     table = Table(show_header=True, header_style="bold")
-    table.add_column("Contact A")
-    table.add_column("Contact B")
+    table.add_column("From")
+    table.add_column("To")
+    table.add_column("Type")
+    table.add_column("Source")
     table.add_column("Strength", justify="right")
     table.add_column("Shared Convos", justify="right")
     table.add_column("Shared Msgs", justify="right")
     table.add_column("Last Interaction")
+
+    type_names = type_names or {}
 
     for rel in relationships:
         name_a = contact_names.get(rel.from_contact_id, rel.from_contact_id[:8])
@@ -265,9 +272,17 @@ def display_relationships(
         if last:
             last = last[:10]  # date portion only
 
+        type_name = type_names.get(rel.relationship_type_id, rel.relationship_type_id)
+        source_str = (
+            f"[cyan]{rel.source}[/cyan]" if rel.source == "inferred"
+            else f"[green]{rel.source}[/green]"
+        )
+
         table.add_row(
             name_a,
             name_b,
+            type_name,
+            source_str,
             strength_str,
             str(rel.shared_conversations),
             str(rel.shared_messages),

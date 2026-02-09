@@ -67,12 +67,20 @@
       <ul>
         {% for rel in relationships %}
         <li>
+          <em>{{ rel.label }}</em>
+          {% if rel.other_entity_type == 'company' %}
+          <a href="/companies/{{ rel.other_id }}">{{ rel.other_name or rel.other_email or rel.other_id[:8] }}</a>
+          {% else %}
           <a href="/contacts/{{ rel.other_id }}">{{ rel.other_name or rel.other_email or rel.other_id[:8] }}</a>
-          {% if rel.props.strength is defined %}
+          {% endif %}
+          {% if rel.props.strength is defined and rel.props.strength > 0 %}
           <span class="strength-bar-bg">
             <span class="strength-bar" style="width: {{ (rel.props.strength * 100)|int }}px"></span>
           </span>
           <small>{{ '%.0f'|format(rel.props.strength * 100) }}%</small>
+          {% endif %}
+          {% if rel.source == 'manual' %}
+          <small class="badge">manual</small>
           {% endif %}
         </li>
         {% endfor %}

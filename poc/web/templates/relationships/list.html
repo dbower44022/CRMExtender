@@ -5,6 +5,27 @@
 <h1>Relationships <small>({{ relationships|length }})</small></h1>
 
 <div class="search-bar">
+  <select name="type_id"
+          style="width:180px"
+          hx-get="/relationships/search"
+          hx-trigger="change"
+          hx-target="#results"
+          hx-include=".search-bar">
+    <option value="">All Types</option>
+    {% for rt in relationship_types %}
+    <option value="{{ rt.id }}" {% if type_id == rt.id %}selected{% endif %}>{{ rt.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="source"
+          style="width:150px"
+          hx-get="/relationships/search"
+          hx-trigger="change"
+          hx-target="#results"
+          hx-include=".search-bar">
+    <option value="">All Sources</option>
+    <option value="inferred" {% if source == 'inferred' %}selected{% endif %}>Inferred</option>
+    <option value="manual" {% if source == 'manual' %}selected{% endif %}>Manual</option>
+  </select>
   <input type="number" name="min_strength" value="{{ min_strength }}"
          min="0" max="1" step="0.1"
          placeholder="Min strength"
@@ -16,6 +37,8 @@
   <button hx-post="/relationships/infer"
           hx-target="#infer-result"
           hx-swap="innerHTML">Re-infer Relationships</button>
+  <a href="/relationships/types" role="button" class="outline secondary"
+     style="margin-left:auto">Manage Types</a>
   <span class="htmx-indicator" aria-busy="true"></span>
 </div>
 <div id="infer-result"></div>

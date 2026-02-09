@@ -342,19 +342,86 @@ class ConversationSummary:
 
 
 @dataclass
-class Relationship:
-    """An inferred relationship between two contacts."""
+class RelationshipType:
+    """A relationship type definition."""
 
-    from_contact_id: str
-    to_contact_id: str
-    relationship_type: str = "KNOWS"
+    name: str
+    from_entity_type: str = "contact"
+    to_entity_type: str = "contact"
+    forward_label: str = ""
+    reverse_label: str = ""
+    is_system: bool = False
+    description: str = ""
+
+    def to_row(
+        self,
+        *,
+        type_id: str | None = None,
+        created_by: str | None = None,
+        updated_by: str | None = None,
+    ) -> dict:
+        now = _now_iso()
+        return {
+            "id": type_id or str(uuid.uuid4()),
+            "name": self.name,
+            "from_entity_type": self.from_entity_type,
+            "to_entity_type": self.to_entity_type,
+            "forward_label": self.forward_label,
+            "reverse_label": self.reverse_label,
+            "is_system": 1 if self.is_system else 0,
+            "description": self.description or None,
+            "created_by": created_by,
+            "updated_by": updated_by,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> RelationshipType:
+        r = dict(row)
+        return cls(
+            name=r["name"],
+            from_entity_type=r.get("from_entity_type") or "contact",
+            to_entity_type=r.get("to_entity_type") or "contact",
+            forward_label=r.get("forward_label") or "",
+            reverse_label=r.get("reverse_label") or "",
+            is_system=bool(r.get("is_system", 0)),
+            description=r.get("description") or "",
+        )
+
+
+@dataclass
+class Relationship:
+    """A relationship between two entities."""
+
+    from_entity_id: str
+    to_entity_id: str
+    relationship_type_id: str = "rt-knows"
+    from_entity_type: str = "contact"
+    to_entity_type: str = "contact"
+    source: str = "inferred"
     strength: float = 0.0
     shared_conversations: int = 0
     shared_messages: int = 0
     last_interaction: str | None = None
     first_interaction: str | None = None
 
-    def to_row(self, *, relationship_id: str | None = None) -> dict:
+    # Backward-compatible aliases
+    @property
+    def from_contact_id(self) -> str:
+        return self.from_entity_id
+
+    @property
+    def to_contact_id(self) -> str:
+        return self.to_entity_id
+
+    def to_row(
+        self,
+        *,
+        relationship_id: str | None = None,
+        created_by: str | None = None,
+        updated_by: str | None = None,
+    ) -> dict:
         """Serialize to a dict suitable for INSERT into relationships table."""
         now = _now_iso()
         properties = json.dumps({
@@ -366,12 +433,15 @@ class Relationship:
         })
         return {
             "id": relationship_id or str(uuid.uuid4()),
-            "from_entity_type": "contact",
-            "from_entity_id": self.from_contact_id,
-            "to_entity_type": "contact",
-            "to_entity_id": self.to_contact_id,
-            "relationship_type": self.relationship_type,
+            "relationship_type_id": self.relationship_type_id,
+            "from_entity_type": self.from_entity_type,
+            "from_entity_id": self.from_entity_id,
+            "to_entity_type": self.to_entity_type,
+            "to_entity_id": self.to_entity_id,
+            "source": self.source,
             "properties": properties,
+            "created_by": created_by,
+            "updated_by": updated_by,
             "created_at": now,
             "updated_at": now,
         }
@@ -382,9 +452,12 @@ class Relationship:
         r = dict(row)
         props = json.loads(r.get("properties") or "{}")
         return cls(
-            from_contact_id=r["from_entity_id"],
-            to_contact_id=r["to_entity_id"],
-            relationship_type=r.get("relationship_type", "KNOWS"),
+            from_entity_id=r["from_entity_id"],
+            to_entity_id=r["to_entity_id"],
+            relationship_type_id=r.get("relationship_type_id", "rt-knows"),
+            from_entity_type=r.get("from_entity_type", "contact"),
+            to_entity_type=r.get("to_entity_type", "contact"),
+            source=r.get("source", "inferred"),
             strength=props.get("strength", 0.0),
             shared_conversations=props.get("shared_conversations", 0),
             shared_messages=props.get("shared_messages", 0),

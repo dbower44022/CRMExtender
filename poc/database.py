@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
 
@@ -273,18 +274,39 @@ CREATE TABLE IF NOT EXISTS alerts (
     updated_at      TEXT NOT NULL
 );
 
--- Inferred relationships between contacts
+-- Relationship type definitions
+CREATE TABLE IF NOT EXISTS relationship_types (
+    id               TEXT PRIMARY KEY,
+    name             TEXT NOT NULL UNIQUE,
+    from_entity_type TEXT NOT NULL DEFAULT 'contact',
+    to_entity_type   TEXT NOT NULL DEFAULT 'contact',
+    forward_label    TEXT NOT NULL,
+    reverse_label    TEXT NOT NULL,
+    is_system        INTEGER NOT NULL DEFAULT 0,
+    description      TEXT,
+    created_by       TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by       TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at       TEXT NOT NULL,
+    updated_at       TEXT NOT NULL,
+    CHECK (from_entity_type IN ('contact', 'company')),
+    CHECK (to_entity_type IN ('contact', 'company'))
+);
+
+-- Relationships between entities
 CREATE TABLE IF NOT EXISTS relationships (
-    id                TEXT PRIMARY KEY,
-    from_entity_type  TEXT NOT NULL DEFAULT 'contact',
-    from_entity_id    TEXT NOT NULL,
-    to_entity_type    TEXT NOT NULL DEFAULT 'contact',
-    to_entity_id      TEXT NOT NULL,
-    relationship_type TEXT NOT NULL DEFAULT 'KNOWS',
-    properties        TEXT,
-    created_at        TEXT NOT NULL,
-    updated_at        TEXT NOT NULL,
-    UNIQUE(from_entity_id, to_entity_id, relationship_type)
+    id                   TEXT PRIMARY KEY,
+    relationship_type_id TEXT NOT NULL REFERENCES relationship_types(id) ON DELETE RESTRICT,
+    from_entity_type     TEXT NOT NULL DEFAULT 'contact',
+    from_entity_id       TEXT NOT NULL,
+    to_entity_type       TEXT NOT NULL DEFAULT 'contact',
+    to_entity_id         TEXT NOT NULL,
+    source               TEXT NOT NULL DEFAULT 'manual',
+    properties           TEXT,
+    created_by           TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by           TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at           TEXT NOT NULL,
+    updated_at           TEXT NOT NULL,
+    UNIQUE(from_entity_id, to_entity_id, relationship_type_id)
 );
 
 -- Sync audit log
@@ -410,8 +432,24 @@ CREATE INDEX IF NOT EXISTS idx_tc_sender_domain    ON triage_corrections(sender_
 CREATE INDEX IF NOT EXISTS idx_cc_conversation     ON conversation_corrections(conversation_id);
 
 -- Relationships
-CREATE INDEX IF NOT EXISTS idx_relationships_from  ON relationships(from_entity_id);
-CREATE INDEX IF NOT EXISTS idx_relationships_to    ON relationships(to_entity_id);
+CREATE INDEX IF NOT EXISTS idx_relationships_from   ON relationships(from_entity_id);
+CREATE INDEX IF NOT EXISTS idx_relationships_to     ON relationships(to_entity_id);
+CREATE INDEX IF NOT EXISTS idx_relationships_type   ON relationships(relationship_type_id);
+CREATE INDEX IF NOT EXISTS idx_relationships_source ON relationships(source);
+"""
+
+
+_SEED_RELATIONSHIP_TYPES_SQL = """\
+INSERT OR IGNORE INTO relationship_types
+    (id, name, from_entity_type, to_entity_type, forward_label, reverse_label,
+     is_system, description, created_at, updated_at)
+VALUES
+    ('rt-knows',      'KNOWS',      'contact', 'contact', 'Knows',             'Knows',            1, 'Auto-inferred co-occurrence',      '{now}', '{now}'),
+    ('rt-employee',   'EMPLOYEE',   'company', 'contact', 'Employs',           'Works at',         0, 'Employment relationship',           '{now}', '{now}'),
+    ('rt-reports-to', 'REPORTS_TO', 'contact', 'contact', 'Has direct report', 'Reports to',       0, 'Reporting chain',                   '{now}', '{now}'),
+    ('rt-works-with', 'WORKS_WITH', 'contact', 'contact', 'Works with',        'Works with',       0, 'Peer / collaborator',               '{now}', '{now}'),
+    ('rt-partner',    'PARTNER',    'company', 'company', 'Partners with',     'Partners with',    0, 'Business partnership',              '{now}', '{now}'),
+    ('rt-vendor',     'VENDOR',     'company', 'company', 'Is a vendor of',    'Is a client of',   0, 'Vendor / client relationship',      '{now}', '{now}');
 """
 
 
@@ -430,6 +468,8 @@ def init_db(db_path: Path | None = None) -> None:
         conn.execute("PRAGMA foreign_keys=ON;")
         conn.executescript(_SCHEMA_SQL)
         conn.executescript(_INDEX_SQL)
+        now = datetime.now(timezone.utc).isoformat()
+        conn.executescript(_SEED_RELATIONSHIP_TYPES_SQL.format(now=now))
         conn.commit()
         log.info("Database initialized at %s", path)
     finally:

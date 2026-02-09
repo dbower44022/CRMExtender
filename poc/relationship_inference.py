@@ -31,6 +31,8 @@ GROUP BY cp1.contact_id, cp2.contact_id
 HAVING shared_conversations >= 1
 """
 
+KNOWS_TYPE_ID = "rt-knows"
+
 
 def _compute_strength(
     shared_conversations: int,
@@ -40,7 +42,7 @@ def _compute_strength(
     max_conversations: int = 50,
     max_messages: int = 200,
 ) -> float:
-    """Score relationship strength on a 0.0–1.0 scale.
+    """Score relationship strength on a 0.0-1.0 scale.
 
     Formula weights:
     - 40% conversation co-occurrence (log-scaled)
@@ -81,7 +83,7 @@ def _recency_factor(last_interaction: str | None) -> float:
 
 
 def _build_canonical_map(conn) -> dict[str, str]:
-    """Build a mapping from contact_id → canonical_id for same-name groups.
+    """Build a mapping from contact_id -> canonical_id for same-name groups.
 
     Contacts sharing the same name are grouped together.  The canonical ID
     is the one that appears most often in conversation_participants (i.e.
@@ -175,8 +177,8 @@ def infer_relationships() -> int:
         max_convos = max(e["shared_conversations"] for e in merged.values())
         max_msgs = max(e["shared_messages"] for e in merged.values())
 
-        # Clear old relationships before full rewrite
-        conn.execute("DELETE FROM relationships")
+        # Clear only inferred relationships before full rewrite
+        conn.execute("DELETE FROM relationships WHERE source = 'inferred'")
 
         count = 0
         for (cid_a, cid_b), entry in merged.items():
@@ -189,8 +191,10 @@ def infer_relationships() -> int:
             )
 
             rel = Relationship(
-                from_contact_id=cid_a,
-                to_contact_id=cid_b,
+                from_entity_id=cid_a,
+                to_entity_id=cid_b,
+                relationship_type_id=KNOWS_TYPE_ID,
+                source="inferred",
                 strength=strength,
                 shared_conversations=entry["shared_conversations"],
                 shared_messages=entry["shared_messages"],
@@ -218,19 +222,20 @@ def _upsert_relationship(conn, rel: Relationship) -> None:
 
     conn.execute(
         """\
-        INSERT INTO relationships (id, from_entity_type, from_entity_id,
-                                   to_entity_type, to_entity_id,
-                                   relationship_type, properties,
+        INSERT INTO relationships (id, relationship_type_id, from_entity_type,
+                                   from_entity_id, to_entity_type, to_entity_id,
+                                   source, properties,
                                    created_at, updated_at)
-        VALUES (?, 'contact', ?, 'contact', ?, 'KNOWS', ?, ?, ?)
-        ON CONFLICT(from_entity_id, to_entity_id, relationship_type) DO UPDATE SET
+        VALUES (?, ?, 'contact', ?, 'contact', ?, 'inferred', ?, ?, ?)
+        ON CONFLICT(from_entity_id, to_entity_id, relationship_type_id) DO UPDATE SET
             properties = excluded.properties,
             updated_at = excluded.updated_at
         """,
         (
             str(uuid.uuid4()),
-            rel.from_contact_id,
-            rel.to_contact_id,
+            KNOWS_TYPE_ID,
+            rel.from_entity_id,
+            rel.to_entity_id,
             properties,
             now,
             now,
@@ -242,6 +247,8 @@ def load_relationships(
     *,
     contact_id: str | None = None,
     min_strength: float = 0.0,
+    relationship_type_id: str | None = None,
+    source: str | None = None,
 ) -> list[Relationship]:
     """Load relationships from the database, optionally filtered.
 
@@ -259,13 +266,26 @@ def load_relationships(
         params: list = []
 
         if lookup_id:
-            clauses.append("(from_entity_id = ? OR to_entity_id = ?)")
+            clauses.append("(r.from_entity_id = ? OR r.to_entity_id = ?)")
             params.extend([lookup_id, lookup_id])
+
+        if relationship_type_id:
+            clauses.append("r.relationship_type_id = ?")
+            params.append(relationship_type_id)
+
+        if source:
+            clauses.append("r.source = ?")
+            params.append(source)
 
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
 
         rows = conn.execute(
-            f"SELECT * FROM relationships {where} ORDER BY updated_at DESC",
+            f"""SELECT r.*, rt.name AS type_name,
+                       rt.forward_label, rt.reverse_label
+                FROM relationships r
+                JOIN relationship_types rt ON rt.id = r.relationship_type_id
+                {where}
+                ORDER BY r.updated_at DESC""",
             params,
         ).fetchall()
 

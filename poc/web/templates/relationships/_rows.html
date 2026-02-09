@@ -2,26 +2,60 @@
 <table>
   <thead>
     <tr>
-      <th>Contact A</th>
-      <th>Contact B</th>
+      <th>From</th>
+      <th>Label</th>
+      <th>To</th>
+      <th>Type</th>
+      <th>Source</th>
       <th>Strength</th>
-      <th>Shared Conversations</th>
-      <th>Shared Messages</th>
+      <th>Shared Convos</th>
+      <th></th>
     </tr>
   </thead>
   <tbody>
     {% for r in relationships %}
     <tr>
-      <td><a href="/contacts/{{ r.from_id }}">{{ r.from_name }}</a></td>
-      <td><a href="/contacts/{{ r.to_id }}">{{ r.to_name }}</a></td>
       <td>
+        {% if r.from_entity_type == 'contact' %}
+        <a href="/contacts/{{ r.from_id }}">{{ r.from_name }}</a>
+        {% else %}
+        <a href="/companies/{{ r.from_id }}">{{ r.from_name }}</a>
+        {% endif %}
+      </td>
+      <td><em>{{ r.forward_label }}</em></td>
+      <td>
+        {% if r.to_entity_type == 'contact' %}
+        <a href="/contacts/{{ r.to_id }}">{{ r.to_name }}</a>
+        {% else %}
+        <a href="/companies/{{ r.to_id }}">{{ r.to_name }}</a>
+        {% endif %}
+      </td>
+      <td>{{ r.type_name }}</td>
+      <td>
+        {% if r.source == 'inferred' %}
+        <span class="badge secondary">inferred</span>
+        {% else %}
+        <span class="badge">manual</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if r.strength > 0 %}
         <span class="strength-bar-bg">
           <span class="strength-bar" style="width: {{ (r.strength * 100)|int }}px"></span>
         </span>
         {{ '%.0f'|format(r.strength * 100) }}%
+        {% endif %}
       </td>
       <td>{{ r.shared_conversations }}</td>
-      <td>{{ r.shared_messages }}</td>
+      <td>
+        {% if r.source == 'manual' and r.id %}
+        <button class="outline secondary small"
+                hx-delete="/relationships/{{ r.id }}"
+                hx-target="closest tr"
+                hx-swap="outerHTML"
+                hx-confirm="Delete this relationship?">Del</button>
+        {% endif %}
+      </td>
     </tr>
     {% endfor %}
   </tbody>

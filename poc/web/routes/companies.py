@@ -185,8 +185,50 @@ def company_detail(request: Request, company_id: str):
         ).fetchall()
         contacts = [dict(r) for r in contacts]
 
+        # Relationships involving this company
+        import json
+        rels = conn.execute(
+            """SELECT r.*, rt.name AS type_name,
+                      rt.forward_label, rt.reverse_label
+               FROM relationships r
+               JOIN relationship_types rt ON rt.id = r.relationship_type_id
+               WHERE r.from_entity_id = ? OR r.to_entity_id = ?
+               ORDER BY r.updated_at DESC""",
+            (company_id, company_id),
+        ).fetchall()
+        relationships = []
+        for r in rels:
+            rd = dict(r)
+            if rd.get("properties"):
+                try:
+                    rd["props"] = json.loads(rd["properties"])
+                except (json.JSONDecodeError, TypeError):
+                    rd["props"] = {}
+            else:
+                rd["props"] = {}
+            is_from = rd["from_entity_id"] == company_id
+            rd["other_id"] = rd["to_entity_id"] if is_from else rd["from_entity_id"]
+            rd["other_entity_type"] = rd["to_entity_type"] if is_from else rd["from_entity_type"]
+            rd["label"] = rd["forward_label"] if is_from else rd["reverse_label"]
+            # Resolve other entity name
+            if rd["other_entity_type"] == "contact":
+                ct = conn.execute(
+                    """SELECT c.name, ci.value AS email FROM contacts c
+                       LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
+                       WHERE c.id = ?""",
+                    (rd["other_id"],),
+                ).fetchone()
+                rd["other_name"] = (ct["name"] or ct["email"]) if ct else rd["other_id"][:8]
+            else:
+                co = conn.execute(
+                    "SELECT name FROM companies WHERE id = ?", (rd["other_id"],)
+                ).fetchone()
+                rd["other_name"] = co["name"] if co else rd["other_id"][:8]
+            relationships.append(rd)
+
     return templates.TemplateResponse(request, "companies/detail.html", {
         "active_nav": "companies",
         "company": company,
         "contacts": contacts,
+        "relationships": relationships,
     })

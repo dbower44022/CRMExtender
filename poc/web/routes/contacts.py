@@ -118,8 +118,11 @@ def contact_detail(request: Request, contact_id: str):
         # Relationships
         import json
         rels = conn.execute(
-            """SELECT r.*, c.name AS other_name, ci.value AS other_email
+            """SELECT r.*, rt.name AS type_name,
+                      rt.forward_label, rt.reverse_label,
+                      c.name AS other_name, ci.value AS other_email
                FROM relationships r
+               JOIN relationship_types rt ON rt.id = r.relationship_type_id
                LEFT JOIN contacts c ON c.id = CASE
                    WHEN r.from_entity_id = ? THEN r.to_entity_id
                    ELSE r.from_entity_id END
@@ -138,11 +141,17 @@ def contact_detail(request: Request, contact_id: str):
                     rd["props"] = {}
             else:
                 rd["props"] = {}
-            # Figure out the other contact's id
-            rd["other_id"] = (
-                rd["to_entity_id"] if rd["from_entity_id"] == contact_id
-                else rd["from_entity_id"]
-            )
+            is_from = rd["from_entity_id"] == contact_id
+            rd["other_id"] = rd["to_entity_id"] if is_from else rd["from_entity_id"]
+            rd["other_entity_type"] = rd["to_entity_type"] if is_from else rd["from_entity_type"]
+            rd["label"] = rd["forward_label"] if is_from else rd["reverse_label"]
+            # Try to resolve company names for non-contact other entities
+            if rd["other_entity_type"] == "company" and not rd.get("other_name"):
+                co = conn.execute(
+                    "SELECT name FROM companies WHERE id = ?", (rd["other_id"],)
+                ).fetchone()
+                if co:
+                    rd["other_name"] = co["name"]
             relationships.append(rd)
 
     return templates.TemplateResponse(request, "contacts/detail.html", {

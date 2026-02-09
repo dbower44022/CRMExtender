@@ -343,7 +343,7 @@ def cmd_infer_relationships(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 
 def cmd_show_relationships(args: argparse.Namespace) -> None:
-    """Display inferred relationships."""
+    """Display relationships."""
     from .relationship_inference import load_relationships
 
     init_db()
@@ -373,9 +373,10 @@ def cmd_show_relationships(args: argparse.Namespace) -> None:
         contact_ids.add(rel.to_contact_id)
 
     contact_names: dict[str, str] = {}
-    if contact_ids:
-        placeholders = ",".join("?" for _ in contact_ids)
-        with get_connection() as conn:
+    type_names: dict[str, str] = {}
+    with get_connection() as conn:
+        if contact_ids:
+            placeholders = ",".join("?" for _ in contact_ids)
             rows = conn.execute(
                 f"""SELECT c.id, c.name, ci.value AS email
                     FROM contacts c
@@ -383,10 +384,14 @@ def cmd_show_relationships(args: argparse.Namespace) -> None:
                     WHERE c.id IN ({placeholders})""",
                 list(contact_ids),
             ).fetchall()
-        for row in rows:
-            contact_names[row["id"]] = row["name"] or row["email"] or row["id"][:8]
+            for row in rows:
+                contact_names[row["id"]] = row["name"] or row["email"] or row["id"][:8]
 
-    display_relationships(relationships, contact_names)
+        # Build type name lookup
+        for row in conn.execute("SELECT id, name FROM relationship_types").fetchall():
+            type_names[row["id"]] = row["name"]
+
+    display_relationships(relationships, contact_names, type_names=type_names)
 
 
 # ---------------------------------------------------------------------------
@@ -742,6 +747,51 @@ def cmd_auto_assign(args: argparse.Namespace) -> None:
 # Subcommand: serve
 # ---------------------------------------------------------------------------
 
+def cmd_list_relationship_types(args: argparse.Namespace) -> None:
+    """List all relationship types."""
+    from .relationship_types import list_relationship_types
+
+    init_db()
+    types = list_relationship_types()
+
+    if not types:
+        console.print("\n[yellow]No relationship types found.[/yellow]")
+        return
+
+    table = Table(title="Relationship Types")
+    table.add_column("Name", style="bold")
+    table.add_column("From")
+    table.add_column("To")
+    table.add_column("Forward Label")
+    table.add_column("Reverse Label")
+    table.add_column("System", justify="center")
+
+    for t in types:
+        table.add_row(
+            t["name"],
+            t["from_entity_type"],
+            t["to_entity_type"],
+            t["forward_label"],
+            t["reverse_label"],
+            "[green]Yes[/green]" if t["is_system"] else "[dim]No[/dim]",
+        )
+
+    console.print()
+    console.print(table)
+    console.print()
+
+
+def cmd_migrate_to_v4(args: argparse.Namespace) -> None:
+    """Run the v3 -> v4 migration."""
+    from .migrate_to_v4 import migrate
+
+    db_path = args.db
+    if not db_path:
+        db_path = config.DB_PATH
+
+    migrate(db_path, dry_run=args.dry_run)
+
+
 def cmd_serve(args: argparse.Namespace) -> None:
     """Launch the web UI."""
     import uvicorn
@@ -877,6 +927,15 @@ def build_parser() -> argparse.ArgumentParser:
     # show-hierarchy
     sub.add_parser("show-hierarchy", help="Show full project/topic hierarchy")
 
+    # list-relationship-types
+    sub.add_parser("list-relationship-types", help="List all relationship types")
+
+    # migrate-to-v4
+    m4 = sub.add_parser("migrate-to-v4", help="Migrate database from v3 to v4")
+    m4.add_argument("--db", type=Path, help="Path to the SQLite database file")
+    m4.add_argument("--dry-run", action="store_true",
+                    help="Apply migration to a backup copy instead of the real database")
+
     return parser
 
 
@@ -914,6 +973,8 @@ def main() -> None:
         "unassign-topic": cmd_unassign_topic,
         "auto-assign": cmd_auto_assign,
         "show-hierarchy": cmd_show_hierarchy,
+        "list-relationship-types": cmd_list_relationship_types,
+        "migrate-to-v4": cmd_migrate_to_v4,
     }
 
     # Default to "run" when no subcommand given

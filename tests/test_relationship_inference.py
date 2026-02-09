@@ -10,6 +10,7 @@ import pytest
 from poc.database import init_db, get_connection, _db_path
 from poc.models import Relationship
 from poc.relationship_inference import (
+    KNOWS_TYPE_ID,
     _compute_strength,
     _recency_factor,
     infer_relationships,
@@ -169,8 +170,10 @@ class TestRelationshipModel:
 
     def test_to_row_from_row_roundtrip(self):
         rel = Relationship(
-            from_contact_id="c-1",
-            to_contact_id="c-2",
+            from_entity_id="c-1",
+            to_entity_id="c-2",
+            relationship_type_id="rt-knows",
+            source="inferred",
             strength=0.75,
             shared_conversations=5,
             shared_messages=42,
@@ -182,20 +185,29 @@ class TestRelationshipModel:
         assert row["id"] == "rel-123"
         assert row["from_entity_id"] == "c-1"
         assert row["to_entity_id"] == "c-2"
-        assert row["relationship_type"] == "KNOWS"
+        assert row["relationship_type_id"] == "rt-knows"
+        assert row["source"] == "inferred"
 
         # Reconstruct
         rebuilt = Relationship.from_row(row)
-        assert rebuilt.from_contact_id == "c-1"
-        assert rebuilt.to_contact_id == "c-2"
+        assert rebuilt.from_entity_id == "c-1"
+        assert rebuilt.to_entity_id == "c-2"
+        assert rebuilt.relationship_type_id == "rt-knows"
+        assert rebuilt.source == "inferred"
         assert rebuilt.strength == 0.75
         assert rebuilt.shared_conversations == 5
         assert rebuilt.shared_messages == 42
         assert rebuilt.last_interaction == "2026-02-01T10:00:00+00:00"
 
+    def test_backward_compat_aliases(self):
+        rel = Relationship(from_entity_id="a", to_entity_id="b")
+        assert rel.from_contact_id == "a"
+        assert rel.to_contact_id == "b"
+
     def test_defaults(self):
-        rel = Relationship(from_contact_id="a", to_contact_id="b")
-        assert rel.relationship_type == "KNOWS"
+        rel = Relationship(from_entity_id="a", to_entity_id="b")
+        assert rel.relationship_type_id == "rt-knows"
+        assert rel.source == "inferred"
         assert rel.strength == 0.0
         assert rel.shared_conversations == 0
 
@@ -218,6 +230,8 @@ class TestInferRelationships:
         for rel in rels:
             assert rel.strength > 0
             assert rel.shared_conversations >= 1
+            assert rel.relationship_type_id == KNOWS_TYPE_ID
+            assert rel.source == "inferred"
 
     def test_no_data_returns_zero(self, tmp_db):
         count = infer_relationships()
@@ -272,3 +286,67 @@ class TestInferRelationships:
 
         count = infer_relationships()
         assert count == 0
+
+    def test_manual_relationships_preserved(self, tmp_db):
+        """Inference should NOT delete manually-created relationships."""
+        now = datetime.now(timezone.utc).isoformat()
+        with get_connection() as conn:
+            _insert_account(conn)
+            _insert_contact(conn, "c-1", "a@example.com", "Alice")
+            _insert_contact(conn, "c-2", "b@example.com", "Bob")
+            _insert_conversation(conn, "conv-1")
+            _insert_participant(conn, "conv-1", "a@example.com", "c-1")
+            _insert_participant(conn, "conv-1", "b@example.com", "c-2")
+
+            # Create a manual relationship (different type)
+            conn.execute(
+                """INSERT INTO relationships
+                   (id, relationship_type_id, from_entity_type, from_entity_id,
+                    to_entity_type, to_entity_id, source, created_at, updated_at)
+                   VALUES ('manual-1', 'rt-works-with', 'contact', 'c-1',
+                           'contact', 'c-2', 'manual', ?, ?)""",
+                (now, now),
+            )
+
+        # Run inference
+        count = infer_relationships()
+        assert count >= 1
+
+        # The manual relationship should still exist
+        with get_connection() as conn:
+            manual = conn.execute(
+                "SELECT * FROM relationships WHERE id = 'manual-1'"
+            ).fetchone()
+            assert manual is not None
+            assert manual["source"] == "manual"
+
+    def test_filter_by_source(self, tmp_db):
+        """load_relationships can filter by source."""
+        now = datetime.now(timezone.utc).isoformat()
+        with get_connection() as conn:
+            _insert_account(conn)
+            _insert_contact(conn, "c-1", "a@example.com", "Alice")
+            _insert_contact(conn, "c-2", "b@example.com", "Bob")
+            _insert_conversation(conn, "conv-1")
+            _insert_participant(conn, "conv-1", "a@example.com", "c-1")
+            _insert_participant(conn, "conv-1", "b@example.com", "c-2")
+
+            # Create a manual relationship
+            conn.execute(
+                """INSERT INTO relationships
+                   (id, relationship_type_id, from_entity_type, from_entity_id,
+                    to_entity_type, to_entity_id, source, created_at, updated_at)
+                   VALUES ('manual-1', 'rt-works-with', 'contact', 'c-1',
+                           'contact', 'c-2', 'manual', ?, ?)""",
+                (now, now),
+            )
+
+        infer_relationships()
+
+        manual = load_relationships(source="manual")
+        assert len(manual) == 1
+        assert manual[0].source == "manual"
+
+        inferred = load_relationships(source="inferred")
+        for r in inferred:
+            assert r.source == "inferred"

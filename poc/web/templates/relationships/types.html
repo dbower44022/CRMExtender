@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Relationship Types — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Relationship Types <small>({{ relationship_types|length }})</small></h1>
+
+<details>
+  <summary>Add Relationship Type</summary>
+  <form method="post" action="/relationships/types">
+    <div class="grid">
+      <label>Name <input type="text" name="name" required placeholder="e.g. MENTOR"></label>
+      <label>From Entity
+        <select name="from_entity_type">
+          <option value="contact">Contact</option>
+          <option value="company">Company</option>
+        </select>
+      </label>
+      <label>To Entity
+        <select name="to_entity_type">
+          <option value="contact">Contact</option>
+          <option value="company">Company</option>
+        </select>
+      </label>
+    </div>
+    <div class="grid">
+      <label>Forward Label <input type="text" name="forward_label" placeholder="e.g. Mentors"></label>
+      <label>Reverse Label <input type="text" name="reverse_label" placeholder="e.g. Mentored by"></label>
+      <label>Description <input type="text" name="description" placeholder="Optional"></label>
+    </div>
+    <button type="submit">Create</button>
+  </form>
+</details>
+
+{% if relationship_types %}
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>From</th>
+      <th>To</th>
+      <th>Forward Label</th>
+      <th>Reverse Label</th>
+      <th>System</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for rt in relationship_types %}
+    <tr>
+      <td><strong>{{ rt.name }}</strong></td>
+      <td>{{ rt.from_entity_type }}</td>
+      <td>{{ rt.to_entity_type }}</td>
+      <td>{{ rt.forward_label }}</td>
+      <td>{{ rt.reverse_label }}</td>
+      <td>{% if rt.is_system %}Yes{% else %}No{% endif %}</td>
+      <td>
+        {% if not rt.is_system %}
+        <button class="outline secondary small"
+                hx-delete="/relationships/types/{{ rt.id }}"
+                hx-target="closest tr"
+                hx-swap="outerHTML"
+                hx-confirm="Delete type {{ rt.name }}?">Del</button>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty-state">No relationship types defined.</p>
+{% endif %}
+
+<p><a href="/relationships">&larr; Back to Relationships</a></p>
+{% endblock %}

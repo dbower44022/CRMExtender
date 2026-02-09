@@ -647,6 +647,133 @@ class TestRelationships:
         resp = client.get("/relationships/search")
         assert resp.status_code == 200
 
+    def test_list_shows_type_and_source(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_account(conn)
+            _insert_contact(conn, "ct-1", "Alice", "alice@a.com")
+            _insert_contact(conn, "ct-2", "Bob", "bob@b.com")
+            _insert_conversation(conn, "conv-1", "Chat")
+            _insert_participant(conn, "conv-1", "alice@a.com", contact_id="ct-1")
+            _insert_participant(conn, "conv-1", "bob@b.com", contact_id="ct-2")
+
+        client.post("/relationships/infer")
+        resp = client.get("/relationships")
+        assert "KNOWS" in resp.text
+        assert "inferred" in resp.text
+
+    def test_filter_by_type(self, client, tmp_db):
+        resp = client.get("/relationships?type_id=rt-knows")
+        assert resp.status_code == 200
+
+    def test_filter_by_source(self, client, tmp_db):
+        resp = client.get("/relationships?source=manual")
+        assert resp.status_code == 200
+
+    def test_create_manual_relationship(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@a.com")
+            _insert_contact(conn, "ct-2", "Bob", "bob@b.com")
+
+        resp = client.post("/relationships", data={
+            "relationship_type_id": "rt-works-with",
+            "from_entity_id": "ct-1",
+            "to_entity_id": "ct-2",
+        })
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM relationships WHERE source = 'manual'"
+            ).fetchone()
+        assert row is not None
+        assert row["relationship_type_id"] == "rt-works-with"
+
+    def test_delete_manual_relationship(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@a.com")
+            _insert_contact(conn, "ct-2", "Bob", "bob@b.com")
+            conn.execute(
+                """INSERT INTO relationships
+                   (id, relationship_type_id, from_entity_type, from_entity_id,
+                    to_entity_type, to_entity_id, source, created_at, updated_at)
+                   VALUES ('rel-1', 'rt-works-with', 'contact', 'ct-1',
+                           'contact', 'ct-2', 'manual', ?, ?)""",
+                (_NOW, _NOW),
+            )
+
+        resp = client.delete("/relationships/rel-1")
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM relationships WHERE id = 'rel-1'"
+            ).fetchone()
+        assert row is None
+
+    def test_cannot_delete_inferred_relationship(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@a.com")
+            _insert_contact(conn, "ct-2", "Bob", "bob@b.com")
+            conn.execute(
+                """INSERT INTO relationships
+                   (id, relationship_type_id, from_entity_type, from_entity_id,
+                    to_entity_type, to_entity_id, source, created_at, updated_at)
+                   VALUES ('rel-1', 'rt-knows', 'contact', 'ct-1',
+                           'contact', 'ct-2', 'inferred', ?, ?)""",
+                (_NOW, _NOW),
+            )
+
+        resp = client.delete("/relationships/rel-1")
+        assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Relationship Types Admin
+# ---------------------------------------------------------------------------
+
+class TestRelationshipTypes:
+    def test_type_list_loads(self, client, tmp_db):
+        resp = client.get("/relationships/types")
+        assert resp.status_code == 200
+        assert "KNOWS" in resp.text
+
+    def test_create_type(self, client, tmp_db):
+        resp = client.post("/relationships/types", data={
+            "name": "MENTOR",
+            "from_entity_type": "contact",
+            "to_entity_type": "contact",
+            "forward_label": "Mentors",
+            "reverse_label": "Mentored by",
+            "description": "Mentorship",
+        })
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM relationship_types WHERE name = 'MENTOR'"
+            ).fetchone()
+        assert row is not None
+        assert row["forward_label"] == "Mentors"
+
+    def test_delete_user_type(self, client, tmp_db):
+        with get_connection() as conn:
+            conn.execute(
+                """INSERT INTO relationship_types
+                   (id, name, from_entity_type, to_entity_type,
+                    forward_label, reverse_label, is_system,
+                    created_at, updated_at)
+                   VALUES ('rt-test', 'TEST_TYPE', 'contact', 'contact',
+                           'A', 'B', 0, ?, ?)""",
+                (_NOW, _NOW),
+            )
+
+        resp = client.delete("/relationships/types/rt-test")
+        assert resp.status_code == 200
+
+    def test_cannot_delete_system_type(self, client, tmp_db):
+        resp = client.delete("/relationships/types/rt-knows")
+        assert resp.status_code == 400
+
 
 # ---------------------------------------------------------------------------
 # Assign / Unassign conversations

@@ -27,6 +27,36 @@
     {% else %}
     <p class="empty-state">No contacts linked to this company.</p>
     {% endif %}
+
+    {% if relationships %}
+    <h2>Relationships ({{ relationships|length }})</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Label</th>
+          <th>Entity</th>
+          <th>Type</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rel in relationships %}
+        <tr>
+          <td><em>{{ rel.label }}</em></td>
+          <td>
+            {% if rel.other_entity_type == 'contact' %}
+            <a href="/contacts/{{ rel.other_id }}">{{ rel.other_name }}</a>
+            {% else %}
+            <a href="/companies/{{ rel.other_id }}">{{ rel.other_name }}</a>
+            {% endif %}
+          </td>
+          <td>{{ rel.type_name }}</td>
+          <td>{{ rel.source }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
   </div>
 
   <div>

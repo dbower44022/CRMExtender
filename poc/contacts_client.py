@@ -31,7 +31,7 @@ def fetch_contacts(
             .list(
                 resourceName="people/me",
                 pageSize=200,
-                personFields="names,emailAddresses",
+                personFields="names,emailAddresses,organizations",
                 pageToken=page_token or "",
             )
             .execute()
@@ -40,8 +40,10 @@ def fetch_contacts(
         for person in result.get("connections", []):
             emails = person.get("emailAddresses", [])
             names = person.get("names", [])
+            orgs = person.get("organizations", [])
             name = names[0].get("displayName", "") if names else ""
             resource_name = person.get("resourceName", "")
+            company = orgs[0].get("name", "") if orgs else ""
 
             for email_entry in emails:
                 addr = email_entry.get("value", "").strip().lower()
@@ -51,6 +53,7 @@ def fetch_contacts(
                             email=addr,
                             name=name,
                             resource_name=resource_name,
+                            company=company,
                         )
                     )
 

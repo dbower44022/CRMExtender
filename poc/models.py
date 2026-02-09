@@ -29,7 +29,14 @@ class KnownContact:
     def display(self) -> str:
         return self.name if self.name else self.email
 
-    def to_row(self, *, contact_id: str | None = None) -> tuple[dict, dict]:
+    def to_row(
+        self,
+        *,
+        contact_id: str | None = None,
+        company_id: str | None = None,
+        created_by: str | None = None,
+        updated_by: str | None = None,
+    ) -> tuple[dict, dict]:
         """Serialize to (contact_dict, identifier_dict) for INSERT.
 
         Returns a tuple of two dicts: one for the contacts table and one for
@@ -41,8 +48,11 @@ class KnownContact:
             "id": cid,
             "name": self.name,
             "company": self.company,
+            "company_id": company_id,
             "source": "google_contacts",
             "status": self.status,
+            "created_by": created_by,
+            "updated_by": updated_by,
             "created_at": now,
             "updated_at": now,
         }
@@ -56,6 +66,8 @@ class KnownContact:
             "status": "active",
             "source": "google_contacts",
             "verified": 1,
+            "created_by": created_by,
+            "updated_by": updated_by,
             "created_at": now,
             "updated_at": now,
         }
@@ -211,6 +223,8 @@ class Conversation:
         self,
         *,
         conversation_id: str | None = None,
+        created_by: str | None = None,
+        updated_by: str | None = None,
     ) -> dict:
         """Serialize to a dict suitable for INSERT into conversations table."""
         first_dt, last_dt = self.date_range
@@ -231,6 +245,8 @@ class Conversation:
             "ai_summarized_at": None,
             "triage_result": None,
             "dismissed": 0,
+            "created_by": created_by,
+            "updated_by": updated_by,
             "created_at": now,
             "updated_at": now,
         }
@@ -419,7 +435,13 @@ class Project:
     owner_id: str | None = None
     status: str = "active"
 
-    def to_row(self, *, project_id: str | None = None) -> dict:
+    def to_row(
+        self,
+        *,
+        project_id: str | None = None,
+        created_by: str | None = None,
+        updated_by: str | None = None,
+    ) -> dict:
         now = _now_iso()
         return {
             "id": project_id or str(uuid.uuid4()),
@@ -428,6 +450,8 @@ class Project:
             "description": self.description or None,
             "status": self.status,
             "owner_id": self.owner_id,
+            "created_by": created_by,
+            "updated_by": updated_by,
             "created_at": now,
             "updated_at": now,
         }
@@ -453,7 +477,13 @@ class Topic:
     description: str = ""
     source: str = "user"
 
-    def to_row(self, *, topic_id: str | None = None) -> dict:
+    def to_row(
+        self,
+        *,
+        topic_id: str | None = None,
+        created_by: str | None = None,
+        updated_by: str | None = None,
+    ) -> dict:
         now = _now_iso()
         return {
             "id": topic_id or str(uuid.uuid4()),
@@ -461,6 +491,8 @@ class Topic:
             "name": self.name,
             "description": self.description or None,
             "source": self.source,
+            "created_by": created_by,
+            "updated_by": updated_by,
             "created_at": now,
             "updated_at": now,
         }
@@ -473,6 +505,49 @@ class Topic:
             name=r["name"],
             description=r.get("description") or "",
             source=r.get("source") or "user",
+        )
+
+
+@dataclass
+class Company:
+    """A company that contacts can be linked to."""
+
+    name: str
+    domain: str = ""
+    industry: str = ""
+    description: str = ""
+    status: str = "active"
+
+    def to_row(
+        self,
+        *,
+        company_id: str | None = None,
+        created_by: str | None = None,
+        updated_by: str | None = None,
+    ) -> dict:
+        now = _now_iso()
+        return {
+            "id": company_id or str(uuid.uuid4()),
+            "name": self.name,
+            "domain": self.domain or None,
+            "industry": self.industry or None,
+            "description": self.description or None,
+            "status": self.status,
+            "created_by": created_by,
+            "updated_by": updated_by,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> Company:
+        r = dict(row)
+        return cls(
+            name=r["name"],
+            domain=r.get("domain") or "",
+            industry=r.get("industry") or "",
+            description=r.get("description") or "",
+            status=r.get("status") or "active",
         )
 
 

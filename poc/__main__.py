@@ -410,6 +410,84 @@ def cmd_bootstrap_user(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Subcommand: create-company
+# ---------------------------------------------------------------------------
+
+def cmd_create_company(args: argparse.Namespace) -> None:
+    """Create a new company."""
+    from .hierarchy import create_company
+
+    init_db()
+    try:
+        row = create_company(
+            args.name,
+            domain=args.domain or "",
+            industry=args.industry or "",
+            description=args.description or "",
+        )
+    except ValueError as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(f"\n[bold green]Company created:[/bold green] {row['name']}")
+    if row.get("domain"):
+        console.print(f"  Domain: {row['domain']}")
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: list-companies
+# ---------------------------------------------------------------------------
+
+def cmd_list_companies(args: argparse.Namespace) -> None:
+    """List all companies."""
+    from .hierarchy import list_companies
+
+    init_db()
+    companies = list_companies()
+
+    if not companies:
+        console.print("\n[yellow]No companies found.[/yellow]")
+        return
+
+    table = Table(title="Companies")
+    table.add_column("Name", style="bold")
+    table.add_column("Domain")
+    table.add_column("Industry")
+    table.add_column("Status")
+
+    for c in companies:
+        table.add_row(
+            c["name"],
+            c.get("domain") or "",
+            c.get("industry") or "",
+            c.get("status") or "active",
+        )
+
+    console.print()
+    console.print(table)
+    console.print()
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: delete-company
+# ---------------------------------------------------------------------------
+
+def cmd_delete_company(args: argparse.Namespace) -> None:
+    """Delete a company."""
+    from .hierarchy import delete_company, find_company_by_name
+
+    init_db()
+    company = find_company_by_name(args.name)
+    if not company:
+        console.print(f"\n[red]Company not found:[/red] {args.name}")
+        sys.exit(1)
+
+    impact = delete_company(company["id"])
+    console.print(f"\n[bold green]Deleted company:[/bold green] {args.name}")
+    console.print(f"  Contacts unlinked: {impact['contacts_unlinked']}")
+
+
+# ---------------------------------------------------------------------------
 # Subcommand: create-project
 # ---------------------------------------------------------------------------
 
@@ -710,6 +788,20 @@ def build_parser() -> argparse.ArgumentParser:
     # bootstrap-user
     sub.add_parser("bootstrap-user", help="Auto-create user from provider account")
 
+    # create-company
+    cc = sub.add_parser("create-company", help="Create a new company")
+    cc.add_argument("name", help="Company name")
+    cc.add_argument("--domain", help="Company domain (e.g. acme.com)")
+    cc.add_argument("--industry", help="Industry")
+    cc.add_argument("--description", help="Company description")
+
+    # list-companies
+    sub.add_parser("list-companies", help="List all companies")
+
+    # delete-company
+    dc = sub.add_parser("delete-company", help="Delete a company")
+    dc.add_argument("name", help="Company name")
+
     # create-project
     cp = sub.add_parser("create-project", help="Create a new project")
     cp.add_argument("name", help="Project name")
@@ -786,6 +878,9 @@ def main() -> None:
         "infer-relationships": cmd_infer_relationships,
         "show-relationships": cmd_show_relationships,
         "bootstrap-user": cmd_bootstrap_user,
+        "create-company": cmd_create_company,
+        "list-companies": cmd_list_companies,
+        "delete-company": cmd_delete_company,
         "create-project": cmd_create_project,
         "list-projects": cmd_list_projects,
         "show-project": cmd_show_project,

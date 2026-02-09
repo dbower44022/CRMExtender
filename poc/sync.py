@@ -106,6 +106,27 @@ def get_all_accounts() -> list[dict]:
 # Contact sync
 # ---------------------------------------------------------------------------
 
+def _resolve_company_id(conn, company_name: str, now: str) -> str | None:
+    """Look up or auto-create a company by name. Returns company_id or None."""
+    if not company_name:
+        return None
+
+    row = conn.execute(
+        "SELECT id FROM companies WHERE name = ?", (company_name,)
+    ).fetchone()
+    if row:
+        return row["id"]
+
+    # Auto-create
+    company_id = str(uuid.uuid4())
+    conn.execute(
+        """INSERT INTO companies (id, name, status, created_at, updated_at)
+           VALUES (?, ?, 'active', ?, ?)""",
+        (company_id, company_name, now, now),
+    )
+    return company_id
+
+
 def sync_contacts(
     creds: Credentials,
     rate_limiter: RateLimiter | None = None,
@@ -121,6 +142,7 @@ def sync_contacts(
     with get_connection() as conn:
         for kc in contacts:
             email_lower = kc.email.lower()
+            company_id = _resolve_company_id(conn, kc.company, now)
 
             # Check if identifier already exists
             existing = conn.execute(
@@ -131,16 +153,16 @@ def sync_contacts(
             if existing:
                 # Update existing contact
                 conn.execute(
-                    "UPDATE contacts SET name = ?, updated_at = ? WHERE id = ?",
-                    (kc.name, now, existing["contact_id"]),
+                    "UPDATE contacts SET name = ?, company = ?, company_id = ?, updated_at = ? WHERE id = ?",
+                    (kc.name, kc.company, company_id, now, existing["contact_id"]),
                 )
             else:
                 # Insert new contact + identifier
                 contact_id = str(uuid.uuid4())
                 conn.execute(
-                    """INSERT INTO contacts (id, name, source, status, created_at, updated_at)
-                       VALUES (?, ?, 'google_contacts', 'active', ?, ?)""",
-                    (contact_id, kc.name, now, now),
+                    """INSERT INTO contacts (id, name, company, company_id, source, status, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, 'google_contacts', 'active', ?, ?)""",
+                    (contact_id, kc.name, kc.company, company_id, now, now),
                 )
                 conn.execute(
                     """INSERT INTO contact_identifiers

@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from .database import get_connection
-from .models import Project, Topic, User
+from .models import Company, Project, Topic, User
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +58,87 @@ def get_current_user() -> dict | None:
 
 
 # ---------------------------------------------------------------------------
+# Companies
+# ---------------------------------------------------------------------------
+
+def create_company(
+    name: str,
+    *,
+    domain: str = "",
+    industry: str = "",
+    description: str = "",
+    created_by: str | None = None,
+) -> dict:
+    """Create a company. Returns the new row as a dict.
+
+    Raises ValueError on duplicate name.
+    """
+    with get_connection() as conn:
+        dup = conn.execute(
+            "SELECT id FROM companies WHERE name = ?", (name,)
+        ).fetchone()
+        if dup:
+            raise ValueError(f"Company '{name}' already exists.")
+
+        company = Company(name=name, domain=domain, industry=industry,
+                          description=description)
+        row = company.to_row(created_by=created_by, updated_by=created_by)
+        conn.execute(
+            "INSERT INTO companies (id, name, domain, industry, description, "
+            "status, created_by, updated_by, created_at, updated_at) "
+            "VALUES (:id, :name, :domain, :industry, :description, "
+            ":status, :created_by, :updated_by, :created_at, :updated_at)",
+            row,
+        )
+        return row
+
+
+def list_companies() -> list[dict]:
+    """Return all active companies ordered by name."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM companies WHERE status = 'active' ORDER BY name"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_company(company_id: str) -> dict | None:
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM companies WHERE id = ?", (company_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def find_company_by_name(name: str) -> dict | None:
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM companies WHERE name = ? AND status = 'active'", (name,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def find_company_by_domain(domain: str) -> dict | None:
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM companies WHERE domain = ? AND status = 'active'",
+            (domain,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def delete_company(company_id: str) -> dict:
+    """Delete a company. Contacts get company_id SET NULL. Returns impact summary."""
+    with get_connection() as conn:
+        contact_count = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM contacts WHERE company_id = ?",
+            (company_id,),
+        ).fetchone()["cnt"]
+        conn.execute("DELETE FROM companies WHERE id = ?", (company_id,))
+    return {"contacts_unlinked": contact_count}
+
+
+# ---------------------------------------------------------------------------
 # Projects
 # ---------------------------------------------------------------------------
 
@@ -66,6 +147,7 @@ def create_project(
     description: str = "",
     parent_name: str | None = None,
     owner_id: str | None = None,
+    created_by: str | None = None,
 ) -> dict:
     """Create a project. Returns the new row as a dict.
 
@@ -91,12 +173,12 @@ def create_project(
 
         proj = Project(name=name, description=description,
                        parent_id=parent_id, owner_id=owner_id)
-        row = proj.to_row()
+        row = proj.to_row(created_by=created_by, updated_by=created_by)
         conn.execute(
             "INSERT INTO projects (id, parent_id, name, description, status, "
-            "owner_id, created_at, updated_at) "
+            "owner_id, created_by, updated_by, created_at, updated_at) "
             "VALUES (:id, :parent_id, :name, :description, :status, "
-            ":owner_id, :created_at, :updated_at)",
+            ":owner_id, :created_by, :updated_by, :created_at, :updated_at)",
             row,
         )
         return row
@@ -151,7 +233,12 @@ def delete_project(project_id: str) -> dict:
 # Topics
 # ---------------------------------------------------------------------------
 
-def create_topic(project_id: str, name: str, description: str = "") -> dict:
+def create_topic(
+    project_id: str,
+    name: str,
+    description: str = "",
+    created_by: str | None = None,
+) -> dict:
     """Create a topic within a project. Returns the new row as a dict.
 
     Raises ValueError on duplicate name within the project or nonexistent project.
@@ -171,12 +258,12 @@ def create_topic(project_id: str, name: str, description: str = "") -> dict:
             raise ValueError(f"Topic '{name}' already exists in this project.")
 
         topic = Topic(project_id=project_id, name=name, description=description)
-        row = topic.to_row()
+        row = topic.to_row(created_by=created_by, updated_by=created_by)
         conn.execute(
             "INSERT INTO topics (id, project_id, name, description, source, "
-            "created_at, updated_at) "
+            "created_by, updated_by, created_at, updated_at) "
             "VALUES (:id, :project_id, :name, :description, :source, "
-            ":created_at, :updated_at)",
+            ":created_by, :updated_by, :created_at, :updated_at)",
             row,
         )
         return row

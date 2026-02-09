@@ -43,13 +43,31 @@ CREATE TABLE IF NOT EXISTS provider_accounts (
     UNIQUE(provider, phone_number)
 );
 
+-- Companies
+CREATE TABLE IF NOT EXISTS companies (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    domain      TEXT,
+    industry    TEXT,
+    description TEXT,
+    status      TEXT DEFAULT 'active',
+    created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_companies_name ON companies(name);
+
 -- Known contacts (identity resolved via contact_identifiers)
 CREATE TABLE IF NOT EXISTS contacts (
     id         TEXT PRIMARY KEY,
     name       TEXT,
     company    TEXT,
+    company_id TEXT REFERENCES companies(id) ON DELETE SET NULL,
     source     TEXT,
     status     TEXT DEFAULT 'active',
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -65,6 +83,8 @@ CREATE TABLE IF NOT EXISTS contact_identifiers (
     status     TEXT DEFAULT 'active',
     source     TEXT,
     verified   INTEGER DEFAULT 0,
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     UNIQUE(type, value)
@@ -78,6 +98,8 @@ CREATE TABLE IF NOT EXISTS projects (
     description TEXT,
     status      TEXT DEFAULT 'active',
     owner_id    TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
@@ -89,6 +111,8 @@ CREATE TABLE IF NOT EXISTS topics (
     name        TEXT NOT NULL,
     description TEXT,
     source      TEXT DEFAULT 'user',
+    created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
@@ -113,6 +137,8 @@ CREATE TABLE IF NOT EXISTS conversations (
     dismissed_reason    TEXT,
     dismissed_at        TEXT,
     dismissed_by        TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at          TEXT NOT NULL,
     updated_at          TEXT NOT NULL
 );
@@ -363,6 +389,10 @@ CREATE INDEX IF NOT EXISTS idx_commpart_contact    ON communication_participants
 -- Contact resolution
 CREATE INDEX IF NOT EXISTS idx_ci_contact          ON contact_identifiers(contact_id);
 CREATE INDEX IF NOT EXISTS idx_ci_status           ON contact_identifiers(status);
+
+-- Companies
+CREATE INDEX IF NOT EXISTS idx_companies_domain    ON companies(domain);
+CREATE INDEX IF NOT EXISTS idx_contacts_company    ON contacts(company_id);
 
 -- Other tables
 CREATE INDEX IF NOT EXISTS idx_projects_parent     ON projects(parent_id);

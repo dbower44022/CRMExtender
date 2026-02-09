@@ -13,6 +13,7 @@ data flows that populate and query the database.
 | `poc/database.py` | Connection management, schema DDL, WAL/FK pragmas |
 | `poc/models.py` | Dataclasses with `to_row()` / `from_row()` serialization |
 | `poc/sync.py` | Sync orchestration: writes to DB, reads from DB for display |
+| `poc/relationship_inference.py` | Contact relationship inference from co-occurrence data |
 | `poc/config.py` | `DB_PATH` setting (default `data/crm_extender.db`) |
 
 ---
@@ -25,23 +26,23 @@ data flows that populate and query the database.
                          │   data/crm_extender.db (WAL mode) │
                          └──────────────┬───────────────────┘
                                         │
-                ┌───────────────────────┼───────────────────────┐
-                │                       │                       │
-          ┌─────┴─────┐         ┌──────┴───────┐        ┌─────┴──────┐
-          │  sync.py   │         │  models.py   │        │ database.py │
-          │            │         │              │        │             │
-          │ Writes:    │         │ to_row()     │        │ init_db()   │
-          │  accounts  │         │ from_row()   │        │ get_conn()  │
-          │  contacts  │         │ Enum maps    │        │ Schema DDL  │
-          │  emails    │         │              │        │ Index DDL   │
-          │  convos    │         └──────────────┘        └─────────────┘
-          │  topics    │
-          │  sync_log  │
-          │            │
-          │ Reads:     │
-          │  display   │
-          │  processing│
-          └────────────┘
+        ┌──────────────────┬────────────┼────────────────┬──────────────────┐
+        │                  │            │                │                  │
+  ┌─────┴─────┐    ┌──────┴──────┐ ┌───┴──────┐  ┌─────┴──────┐  ┌───────┴────────┐
+  │  sync.py   │    │relationship_│ │models.py │  │ database.py │  │ conversation_  │
+  │            │    │inference.py │ │          │  │             │  │  builder.py    │
+  │ Writes:    │    │             │ │ to_row() │  │ init_db()   │  │               │
+  │  accounts  │    │ Reads:      │ │ from_row()│  │ get_conn()  │  │ Reads:        │
+  │  contacts  │    │  conv_      │ │ Enum maps│  │ Schema DDL  │  │  emails       │
+  │  emails    │    │  partici-   │ │          │  │ Index DDL   │  │  recipients   │
+  │  convos    │    │  pants      │ └──────────┘  └─────────────┘  │  participants │
+  │  topics    │    │  contacts   │                                 └───────────────┘
+  │  sync_log  │    │             │
+  │            │    │ Writes:     │
+  │ Reads:     │    │  relation-  │
+  │  display   │    │  ships      │
+  │  processing│    └─────────────┘
+  └────────────┘
 ```
 
 The database is the single source of truth after the first sync.
@@ -158,6 +159,21 @@ overridable via the `POC_DB_PATH` environment variable.
                           │    cursor_after    │
                           │    ...             │
                           └───────────────────┘
+
+                     ┌───────────────────────────┐
+                     │       relationships        │
+                     │───────────────────────────│
+                     │ PK id                      │
+                     │    from_entity_type        │
+                     │    from_entity_id ─────────┼──── contacts(id)
+                     │    to_entity_type          │
+                     │    to_entity_id ───────────┼──── contacts(id)
+                     │    relationship_type       │
+                     │    properties (JSON)       │
+                     │    UNIQUE(from_entity_id,  │
+                     │      to_entity_id,         │
+                     │      relationship_type)    │
+                     └───────────────────────────┘
 ```
 
 ### Relationship Summary
@@ -173,6 +189,8 @@ overridable via the `POC_DB_PATH` environment variable.
 | `contacts` | `conversation_participants` | 0..1:N | `contact_id` | SET NULL |
 | `topics` | `conversation_topics` | 1:N | `topic_id` | CASCADE |
 | `emails` | `email_recipients` | 1:N | `email_id` | CASCADE |
+| `contacts` | `relationships` (from) | 1:N | `from_entity_id` | *(no FK constraint)* |
+| `contacts` | `relationships` (to) | 1:N | `to_entity_id` | *(no FK constraint)* |
 
 ---
 
@@ -434,11 +452,57 @@ A row is inserted with `status='running'` at the start, then updated to
 `'completed'` (with counts and `cursor_after`) or `'failed'` (with
 error message) at the end.
 
+### 9. `relationships`
+
+Inferred relationships between contacts based on their co-occurrence in
+conversations.  One row per directional pair per relationship type.  The
+inference engine computes relationship strength from conversation
+co-occurrence data and stores the result here.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4.  Generated at insertion time. |
+| `from_entity_type` | TEXT | NOT NULL, DEFAULT `'contact'` | The entity type of the source.  Currently always `'contact'`.  Designed for future polymorphism (e.g. `'organization'`). |
+| `from_entity_id` | TEXT | NOT NULL | The source contact's ID.  References `contacts(id)` by convention (no formal FK constraint, since the polymorphic `entity_type` column means the target table varies). |
+| `to_entity_type` | TEXT | NOT NULL, DEFAULT `'contact'` | The entity type of the target.  Currently always `'contact'`. |
+| `to_entity_id` | TEXT | NOT NULL | The target contact's ID.  References `contacts(id)` by convention. |
+| `relationship_type` | TEXT | NOT NULL, DEFAULT `'KNOWS'` | The kind of relationship.  Currently always `'KNOWS'`.  Designed for future types (e.g. `'REPORTS_TO'`, `'WORKS_WITH'`). |
+| `properties` | TEXT | | JSON-serialized metadata blob.  Contains computed relationship attributes: `strength` (float 0.0–1.0), `shared_conversations` (int), `shared_messages` (int), `last_interaction` (ISO 8601 or null), `first_interaction` (ISO 8601 or null).  Using JSON keeps the schema stable while allowing the inference engine to evolve its output. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp of first insertion. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp of last update.  The UPSERT updates this on every re-inference run. |
+
+**Unique constraint:** `(from_entity_id, to_entity_id, relationship_type)` —
+one relationship of each type per ordered pair of entities.  The inference
+engine always stores the lexicographically smaller contact ID in
+`from_entity_id` to prevent duplicate pairs.
+
+**Populated by:** `relationship_inference.infer_relationships()` via
+`_upsert_relationship()`.  Uses `INSERT ... ON CONFLICT(from_entity_id,
+to_entity_id, relationship_type) DO UPDATE SET properties, updated_at`.
+
+**Read by:** `relationship_inference.get_relationships()` for CLI display,
+and future contact-detail views.
+
+**Design rationale — polymorphic entity columns:**  The `from_entity_type`
+/ `to_entity_type` columns make the table a generic edge store.  This
+avoids creating separate relationship tables for each future entity type
+(contacts, organizations, deals).  The tradeoff is no formal FK
+constraints — referential integrity is enforced at the application layer.
+
+**Design rationale — JSON properties blob:**  Relationship metadata
+(strength, shared counts, interaction dates) is stored as a single JSON
+TEXT column rather than individual columns.  This allows the inference
+algorithm to evolve its output (add new metrics, change scoring) without
+schema migrations.  The tradeoff is that these fields cannot be indexed
+or filtered at the SQL level, but the current query patterns don't
+require this — relationships are always loaded in bulk and filtered in
+Python.
+
 ---
 
 ## Indexes
 
-Twelve indexes support the common query patterns.  All use
+Fourteen indexes support the common query patterns.  All use
 `CREATE INDEX IF NOT EXISTS` for idempotent creation.
 
 ### Emails table
@@ -478,6 +542,13 @@ Twelve indexes support the common query patterns.  All use
 |-------|-----------|----------|
 | `idx_sync_log_account` | `account_id` | "Show sync history for account X". |
 
+### Relationships table
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_relationships_from` | `from_entity_id` | "All relationships originating from contact X". |
+| `idx_relationships_to` | `to_entity_id` | "All relationships targeting contact X". |
+
 ---
 
 ## Serialization Layer (`models.py`)
@@ -514,6 +585,13 @@ keeps SQL out of the model definitions and centralizes column mapping.
 |--------|-----------|-------|
 | `to_update_dict()` | Object → partial `conversations` UPDATE dict | Lowercases `status` for storage.  JSON-serializes `action_items` and `key_topics`.  Sets `ai_summarized_at` to now. |
 | `from_conversation_row(row)` | `conversations` row → Object or None | Returns None if `ai_summarized_at` is NULL (not yet summarized).  Uppercases `ai_status` back to enum.  JSON-deserializes `ai_action_items` and `ai_topics`. |
+
+### `Relationship`
+
+| Method | Direction | Notes |
+|--------|-----------|-------|
+| `to_row(rel_id=None)` | Object → `relationships` row | Generates UUID if not provided.  Packs `strength`, `shared_conversations`, `shared_messages`, `last_interaction`, `first_interaction` into a JSON `properties` blob.  Sets `from_entity_type` / `to_entity_type` to `'contact'`. |
+| `from_row(row)` | `relationships` row → Object | Parses the JSON `properties` column.  Maps `from_entity_id` → `from_contact_id`, `to_entity_id` → `to_contact_id`.  Extracts properties with defaults (`strength=0.0`, `shared_conversations=0`, `shared_messages=0`, `last_interaction=None`, `first_interaction=None`). |
 
 ### `FilterReason` mapping
 
@@ -693,6 +771,67 @@ display_triage_stats(triage_filtered)   → Rich table of filter reasons
 display_results(conversations, summaries) → Rich panels grouped by status
 ```
 
+### Flow 5: Relationship Inference
+
+Runs on demand via the CLI (`infer-relationships` command).  Analyzes
+conversation co-occurrence to infer which contacts know each other and
+how strongly.
+
+```
+infer_relationships(db_path)
+│  ├─ get_connection(db_path)
+│  │
+│  ├─ BUILD CANONICAL MAP:
+│  │   ├─ SELECT id, name FROM contacts
+│  │   ├─ Group contacts by lowercased name
+│  │   ├─ For multi-email contacts (same name, N addresses):
+│  │   │   └─ SELECT contact_id, COUNT(*) FROM conversation_participants
+│  │   │       → pick the contact_id with the highest participation count
+│  │   └─ Return dict[contact_id → canonical_contact_id]
+│  │
+│  ├─ QUERY CO-OCCURRENCE:
+│  │   └─ SELECT cp1.contact_id AS contact_a,
+│  │             cp2.contact_id AS contact_b,
+│  │             COUNT(DISTINCT cp1.conversation_id) AS shared_conversations,
+│  │             SUM(cp1.message_count + cp2.message_count) AS shared_messages,
+│  │             MAX(cp1.last_seen_at, cp2.last_seen_at) AS last_interaction,
+│  │             MIN(cp1.first_seen_at, cp2.first_seen_at) AS first_interaction
+│  │      FROM conversation_participants cp1
+│  │      JOIN conversation_participants cp2
+│  │          ON cp1.conversation_id = cp2.conversation_id
+│  │          AND cp1.contact_id < cp2.contact_id   ← prevents duplicate pairs
+│  │      WHERE cp1.contact_id IS NOT NULL
+│  │        AND cp2.contact_id IS NOT NULL
+│  │      GROUP BY cp1.contact_id, cp2.contact_id
+│  │      HAVING shared_conversations >= 1
+│  │
+│  ├─ DEDUPLICATE & AGGREGATE:
+│  │   ├─ Map each contact_id to its canonical_id
+│  │   ├─ Skip self-relationships (canonical_a == canonical_b)
+│  │   ├─ Order pair so smaller ID is always "from"
+│  │   └─ Merge stats for duplicate canonical pairs:
+│  │       max(shared_conversations), max(shared_messages),
+│  │       max(last_interaction), min(first_interaction)
+│  │
+│  ├─ COMPUTE STRENGTH (for each pair):
+│  │   ├─ conv_score  = log2(1 + shared_conversations) / log2(1 + 50)
+│  │   ├─ msg_score   = log2(1 + shared_messages) / log2(1 + 200)
+│  │   ├─ recency     = _recency_factor(last_interaction)
+│  │   │                 1.0 if ≤30 days ago
+│  │   │                 linear decay 1.0→0.1 over 30–365 days
+│  │   │                 0.1 if >365 days or NULL
+│  │   └─ strength    = min(1.0, 0.4×conv_score + 0.3×msg_score + 0.3×recency)
+│  │
+│  └─ UPSERT RELATIONSHIPS:
+│      └─ for each (from_id, to_id, stats):
+│          ├─ Build Relationship dataclass
+│          ├─ Relationship.to_row()  → dict with JSON properties
+│          └─ INSERT INTO relationships ...
+│              ON CONFLICT(from_entity_id, to_entity_id, relationship_type)
+│              DO UPDATE SET properties = excluded.properties,
+│                            updated_at = excluded.updated_at
+```
+
 ---
 
 ## UPSERT and Idempotency Patterns
@@ -710,6 +849,7 @@ creating duplicates or corrupting data.
 | `conversation_participants` | `(conversation_id, email_address)` | `INSERT ... ON CONFLICT DO UPDATE` | Counts/dates refreshed |
 | `topics` | `name` | `INSERT ... ON CONFLICT(name) DO NOTHING` | Existing row reused |
 | `conversation_topics` | `(conversation_id, topic_id)` | `INSERT OR IGNORE` | Silently skipped |
+| `relationships` | `(from_entity_id, to_entity_id, relationship_type)` | `INSERT ... ON CONFLICT DO UPDATE` | Properties/updated_at refreshed |
 
 ---
 
@@ -792,6 +932,9 @@ them:
 | Sync history for an account | `WHERE account_id = ?` | `idx_sync_log_account` |
 | Email by provider message ID | `WHERE account_id = ? AND provider_message_id = ?` | UNIQUE constraint |
 | Find email by RFC Message-ID | `WHERE header_message_id = ?` | `idx_emails_message_id_hdr` |
+| Contact co-occurrence pairs | `JOIN conversation_participants cp1/cp2 ON conversation_id, contact_id < contact_id` | PK on `conversation_participants` |
+| Relationships for a contact | `WHERE from_entity_id = ? OR to_entity_id = ?` | `idx_relationships_from`, `idx_relationships_to` |
+| Relationships above threshold | `WHERE json_extract(properties, '$.strength') >= ?` | Full table scan (JSON field) |
 
 ---
 

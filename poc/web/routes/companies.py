@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -9,6 +11,31 @@ from ...database import get_connection
 from ...hierarchy import create_company, delete_company, list_companies
 
 router = APIRouter()
+
+PUBLIC_DOMAINS = {
+    "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.uk",
+    "hotmail.com", "outlook.com", "live.com", "msn.com", "aol.com",
+    "icloud.com", "me.com", "mac.com", "mail.com",
+    "protonmail.com", "pm.me", "zoho.com", "yandex.com",
+    "gmx.com", "fastmail.com", "tutanota.com", "hey.com",
+    "comcast.net", "att.net", "verizon.net", "sbcglobal.net",
+    "cox.net", "charter.net", "earthlink.net",
+}
+
+
+def _find_contacts_by_domain(domain: str) -> list[dict]:
+    """Return unlinked contacts whose email matches *@domain*."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT c.id, c.name, ci.value AS email
+               FROM contacts c
+               JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
+               WHERE ci.value LIKE ?
+                 AND c.company_id IS NULL
+               ORDER BY c.name""",
+            (f"%@{domain}",),
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 @router.get("", response_class=HTMLResponse)
@@ -55,6 +82,10 @@ def company_search(request: Request, q: str = ""):
     })
 
 
+def _is_htmx(request: Request) -> bool:
+    return request.headers.get("HX-Request") == "true"
+
+
 @router.post("", response_class=HTMLResponse)
 def company_create(
     request: Request,
@@ -63,10 +94,66 @@ def company_create(
     industry: str = Form(""),
     description: str = Form(""),
 ):
+    templates = request.app.state.templates
+    domain_clean = domain.strip().lower()
+
+    # Check if we should show a confirmation preview
+    if domain_clean and domain_clean not in PUBLIC_DOMAINS:
+        matches = _find_contacts_by_domain(domain_clean)
+        if matches:
+            ctx = {
+                "active_nav": "companies",
+                "name": name,
+                "domain": domain,
+                "industry": industry,
+                "description": description,
+                "contacts": matches,
+            }
+            template = ("companies/_confirm_link.html" if _is_htmx(request)
+                        else "companies/confirm_link.html")
+            return templates.TemplateResponse(request, template, ctx)
+
+    # No preview needed — create directly
     try:
         create_company(name, domain=domain, industry=industry, description=description)
     except ValueError:
         pass
+    if _is_htmx(request):
+        return HTMLResponse("", headers={"HX-Redirect": "/companies"})
+    return RedirectResponse("/companies", status_code=303)
+
+
+@router.post("/confirm", response_class=HTMLResponse)
+def company_confirm(
+    request: Request,
+    name: str = Form(...),
+    domain: str = Form(""),
+    industry: str = Form(""),
+    description: str = Form(""),
+    link: str = Form("false"),
+):
+    try:
+        row = create_company(
+            name, domain=domain, industry=industry, description=description,
+        )
+    except ValueError:
+        if _is_htmx(request):
+            return HTMLResponse("", headers={"HX-Redirect": "/companies"})
+        return RedirectResponse("/companies", status_code=303)
+
+    if link == "true" and domain.strip():
+        domain_clean = domain.strip().lower()
+        contacts = _find_contacts_by_domain(domain_clean)
+        if contacts:
+            now = datetime.now(timezone.utc).isoformat()
+            with get_connection() as conn:
+                conn.executemany(
+                    "UPDATE contacts SET company_id = ?, updated_at = ? WHERE id = ?",
+                    [(row["id"], now, c["id"]) for c in contacts],
+                )
+
+    if _is_htmx(request):
+        return HTMLResponse("", headers={"HX-Redirect": "/companies"})
     return RedirectResponse("/companies", status_code=303)
 
 

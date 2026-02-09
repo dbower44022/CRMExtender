@@ -1,0 +1,36 @@
+<article>
+  <header>Link contacts to {{ name }}?</header>
+  <p>Found <strong>{{ contacts|length }}</strong> unlinked contact{{ "s" if contacts|length != 1 }} with <strong>@{{ domain }}</strong>:</p>
+  <table role="grid">
+    <thead>
+      <tr><th>Name</th><th>Email</th></tr>
+    </thead>
+    <tbody>
+      {% for c in contacts %}
+      <tr><td>{{ c.name or "—" }}</td><td>{{ c.email }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="grid">
+    <form method="post" action="/companies/confirm"
+          hx-post="/companies/confirm" hx-target="#company-form-area">
+      <input type="hidden" name="name" value="{{ name }}">
+      <input type="hidden" name="domain" value="{{ domain }}">
+      <input type="hidden" name="industry" value="{{ industry }}">
+      <input type="hidden" name="description" value="{{ description }}">
+      <input type="hidden" name="link" value="true">
+      <button type="submit">Confirm &amp; Create</button>
+    </form>
+    <form method="post" action="/companies/confirm"
+          hx-post="/companies/confirm" hx-target="#company-form-area">
+      <input type="hidden" name="name" value="{{ name }}">
+      <input type="hidden" name="domain" value="{{ domain }}">
+      <input type="hidden" name="industry" value="{{ industry }}">
+      <input type="hidden" name="description" value="{{ description }}">
+      <input type="hidden" name="link" value="false">
+      <button type="submit" class="secondary">Just Create Company</button>
+    </form>
+  </div>
+  <p><a href="/companies">Cancel</a></p>
+</article>

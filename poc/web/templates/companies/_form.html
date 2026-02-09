@@ -1,4 +1,5 @@
-<form method="post" action="/companies">
+<form method="post" action="/companies"
+      hx-post="/companies" hx-target="#company-form-area">
   <label>
     Name
     <input type="text" name="name" required>

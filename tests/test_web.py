@@ -387,6 +387,116 @@ class TestCompanies:
         resp = client.get("/companies/nonexistent")
         assert resp.status_code == 404
 
+    def test_create_shows_preview_for_matching_domain(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@acme.com")
+            _insert_contact(conn, "ct-2", "Bob", "bob@acme.com")
+
+        resp = client.post("/companies", data={
+            "name": "Acme Corp",
+            "domain": "acme.com",
+            "industry": "",
+            "description": "",
+        })
+        assert resp.status_code == 200
+        assert "alice@acme.com" in resp.text
+        assert "bob@acme.com" in resp.text
+        assert "Confirm" in resp.text
+
+        # Company should NOT be created yet
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM companies WHERE name = 'Acme Corp'"
+            ).fetchone()
+        assert row is None
+
+    def test_confirm_with_link_creates_and_links(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@acme.com")
+            _insert_contact(conn, "ct-2", "Bob", "bob@acme.com")
+
+        resp = client.post("/companies/confirm", data={
+            "name": "Acme Corp",
+            "domain": "acme.com",
+            "industry": "Tech",
+            "description": "",
+            "link": "true",
+        })
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            company = conn.execute(
+                "SELECT * FROM companies WHERE name = 'Acme Corp'"
+            ).fetchone()
+            assert company is not None
+
+            linked = conn.execute(
+                "SELECT id FROM contacts WHERE company_id = ?",
+                (company["id"],),
+            ).fetchall()
+        assert len(linked) == 2
+
+    def test_confirm_without_link_creates_only(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@acme.com")
+
+        resp = client.post("/companies/confirm", data={
+            "name": "Acme Corp",
+            "domain": "acme.com",
+            "industry": "",
+            "description": "",
+            "link": "false",
+        })
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            company = conn.execute(
+                "SELECT * FROM companies WHERE name = 'Acme Corp'"
+            ).fetchone()
+            assert company is not None
+
+            linked = conn.execute(
+                "SELECT id FROM contacts WHERE company_id = ?",
+                (company["id"],),
+            ).fetchall()
+        assert len(linked) == 0
+
+    def test_public_domain_creates_directly(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@gmail.com")
+
+        resp = client.post("/companies", data={
+            "name": "Gmail Fan Club",
+            "domain": "gmail.com",
+            "industry": "",
+            "description": "",
+        })
+        assert resp.status_code == 200
+        # Should NOT show preview — company created directly
+        assert "Confirm" not in resp.text
+
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM companies WHERE name = 'Gmail Fan Club'"
+            ).fetchone()
+        assert row is not None
+
+    def test_no_matching_contacts_creates_directly(self, client, tmp_db):
+        resp = client.post("/companies", data={
+            "name": "Newco",
+            "domain": "newco.com",
+            "industry": "",
+            "description": "",
+        })
+        assert resp.status_code == 200
+        assert "Confirm" not in resp.text
+
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM companies WHERE name = 'Newco'"
+            ).fetchone()
+        assert row is not None
+
 
 # ---------------------------------------------------------------------------
 # Projects & Topics

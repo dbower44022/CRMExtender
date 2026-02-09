@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Callable
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+from rich.tree import Tree
 
 from .models import (
     Conversation,
@@ -272,4 +275,105 @@ def display_relationships(
 
     console.print(table)
     console.print(f"\n[dim]{len(relationships)} relationship(s) displayed.[/dim]")
+    console.print()
+
+
+def display_hierarchy(
+    project_stats: list[dict],
+    topic_stats_fn: Callable[[str], list[dict]],
+) -> None:
+    """Display the full project/topic hierarchy as a Rich Tree.
+
+    :param project_stats: list from get_hierarchy_stats()
+    :param topic_stats_fn: callable(project_id) -> list of topic stat dicts
+    """
+    if not project_stats:
+        console.print("\n[yellow]No projects found.[/yellow]")
+        console.print("Run [bold]python -m poc create-project NAME[/bold] to create one.")
+        return
+
+    # Build parent→children map for nested display
+    children: dict[str | None, list[dict]] = {}
+    by_id: dict[str, dict] = {}
+    for p in project_stats:
+        by_id[p["id"]] = p
+        parent = p["parent_id"]
+        children.setdefault(parent, []).append(p)
+
+    console.print()
+    console.rule("[bold]Project Hierarchy[/bold]")
+    console.print()
+
+    tree = Tree("[bold]Projects[/bold]")
+
+    def _add_project(parent_node, proj: dict) -> None:
+        label = f"[bold]{proj['name']}[/bold]"
+        if proj.get("description"):
+            label += f"  [dim]{proj['description']}[/dim]"
+        label += (
+            f"  [cyan]{proj['topic_count']} topic(s)[/cyan]"
+            f", [green]{proj['conversation_count']} conversation(s)[/green]"
+        )
+        node = parent_node.add(label)
+
+        # Add topics under this project
+        topics = topic_stats_fn(proj["id"])
+        for t in topics:
+            t_label = f"{t['name']}"
+            if t.get("description"):
+                t_label += f"  [dim]{t['description']}[/dim]"
+            t_label += f"  [green]{t['conversation_count']} conversation(s)[/green]"
+            node.add(t_label)
+
+        # Add child projects
+        for child in children.get(proj["id"], []):
+            _add_project(node, child)
+
+    # Start from root projects (parent_id IS NULL)
+    for proj in children.get(None, []):
+        _add_project(tree, proj)
+
+    console.print(tree)
+    console.print()
+
+
+def display_project_detail(project: dict, topic_stats: list[dict]) -> None:
+    """Display a single project's topics in a Rich Table.
+
+    :param project: project row dict
+    :param topic_stats: list from get_topic_stats()
+    """
+    console.print()
+    title = f"Project: {project['name']}"
+    if project.get("description"):
+        title += f"  —  {project['description']}"
+    console.rule(f"[bold]{title}[/bold]")
+    console.print()
+
+    if not topic_stats:
+        console.print("[yellow]No topics in this project.[/yellow]")
+        console.print(
+            f"Run [bold]python -m poc create-topic \"{project['name']}\" NAME[/bold] "
+            "to create one."
+        )
+        console.print()
+        return
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Topic")
+    table.add_column("Description")
+    table.add_column("Conversations", justify="right")
+
+    for t in topic_stats:
+        table.add_row(
+            t["name"],
+            t.get("description") or "",
+            str(t["conversation_count"]),
+        )
+
+    console.print(table)
+    total = sum(t["conversation_count"] for t in topic_stats)
+    console.print(
+        f"\n[dim]{len(topic_stats)} topic(s), {total} conversation(s) assigned.[/dim]"
+    )
     console.print()

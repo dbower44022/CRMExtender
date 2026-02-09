@@ -377,5 +377,104 @@ class Relationship:
         )
 
 
+@dataclass
+class User:
+    """A CRM user (owner of projects, dismisser of conversations)."""
+
+    email: str
+    name: str = ""
+    role: str = "member"
+    is_active: bool = True
+
+    def to_row(self, *, user_id: str | None = None) -> dict:
+        now = _now_iso()
+        return {
+            "id": user_id or str(uuid.uuid4()),
+            "email": self.email,
+            "name": self.name or None,
+            "role": self.role,
+            "is_active": 1 if self.is_active else 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> User:
+        r = dict(row)
+        return cls(
+            email=r["email"],
+            name=r.get("name") or "",
+            role=r.get("role") or "member",
+            is_active=bool(r.get("is_active", 1)),
+        )
+
+
+@dataclass
+class Project:
+    """An organizational project that contains topics."""
+
+    name: str
+    description: str = ""
+    parent_id: str | None = None
+    owner_id: str | None = None
+    status: str = "active"
+
+    def to_row(self, *, project_id: str | None = None) -> dict:
+        now = _now_iso()
+        return {
+            "id": project_id or str(uuid.uuid4()),
+            "parent_id": self.parent_id,
+            "name": self.name,
+            "description": self.description or None,
+            "status": self.status,
+            "owner_id": self.owner_id,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> Project:
+        r = dict(row)
+        return cls(
+            name=r["name"],
+            description=r.get("description") or "",
+            parent_id=r.get("parent_id"),
+            owner_id=r.get("owner_id"),
+            status=r.get("status") or "active",
+        )
+
+
+@dataclass
+class Topic:
+    """An organizational topic within a project."""
+
+    project_id: str
+    name: str
+    description: str = ""
+    source: str = "user"
+
+    def to_row(self, *, topic_id: str | None = None) -> dict:
+        now = _now_iso()
+        return {
+            "id": topic_id or str(uuid.uuid4()),
+            "project_id": self.project_id,
+            "name": self.name,
+            "description": self.description or None,
+            "source": self.source,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> Topic:
+        r = dict(row)
+        return cls(
+            project_id=r["project_id"],
+            name=r["name"],
+            description=r.get("description") or "",
+            source=r.get("source") or "user",
+        )
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()

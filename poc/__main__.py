@@ -23,7 +23,13 @@ from rich.table import Table
 
 from . import config
 from .database import get_connection, init_db
-from .display import display_relationships, display_results, display_triage_stats
+from .display import (
+    display_hierarchy,
+    display_project_detail,
+    display_relationships,
+    display_results,
+    display_triage_stats,
+)
 
 console = Console()
 
@@ -381,6 +387,259 @@ def cmd_show_relationships(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Subcommand: bootstrap-user
+# ---------------------------------------------------------------------------
+
+def cmd_bootstrap_user(args: argparse.Namespace) -> None:
+    """Auto-create a user from the first provider account."""
+    from .hierarchy import bootstrap_user
+
+    init_db()
+    try:
+        result = bootstrap_user()
+    except ValueError as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    if result["created"]:
+        console.print(f"\n[bold green]User created:[/bold green] {result['email']}")
+    else:
+        console.print(f"\n[yellow]User already exists:[/yellow] {result['email']}")
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: create-project
+# ---------------------------------------------------------------------------
+
+def cmd_create_project(args: argparse.Namespace) -> None:
+    """Create a new project."""
+    from .hierarchy import create_project, get_current_user
+
+    init_db()
+    user = get_current_user()
+    owner_id = user["id"] if user else None
+
+    try:
+        row = create_project(
+            name=args.name,
+            description=args.description or "",
+            parent_name=args.parent,
+            owner_id=owner_id,
+        )
+    except ValueError as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(f"\n[bold green]Project created:[/bold green] {row['name']}")
+    if row["parent_id"]:
+        console.print(f"  Parent: {args.parent}")
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: list-projects
+# ---------------------------------------------------------------------------
+
+def cmd_list_projects(args: argparse.Namespace) -> None:
+    """List all projects as a tree."""
+    from .hierarchy import get_hierarchy_stats, get_topic_stats
+
+    init_db()
+    stats = get_hierarchy_stats()
+    display_hierarchy(stats, get_topic_stats)
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: show-project
+# ---------------------------------------------------------------------------
+
+def cmd_show_project(args: argparse.Namespace) -> None:
+    """Show a project's topics and stats."""
+    from .hierarchy import find_project_by_name, get_topic_stats
+
+    init_db()
+    project = find_project_by_name(args.name)
+    if not project:
+        console.print(f"\n[red]Project not found:[/red] {args.name}")
+        sys.exit(1)
+
+    topic_stats = get_topic_stats(project["id"])
+    display_project_detail(project, topic_stats)
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: delete-project
+# ---------------------------------------------------------------------------
+
+def cmd_delete_project(args: argparse.Namespace) -> None:
+    """Delete a project and its topics."""
+    from .hierarchy import delete_project, find_project_by_name
+
+    init_db()
+    project = find_project_by_name(args.name)
+    if not project:
+        console.print(f"\n[red]Project not found:[/red] {args.name}")
+        sys.exit(1)
+
+    impact = delete_project(project["id"])
+    console.print(f"\n[bold green]Deleted project:[/bold green] {args.name}")
+    console.print(f"  Topics removed: {impact['topics_removed']}")
+    console.print(f"  Conversations unassigned: {impact['conversations_unassigned']}")
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: create-topic
+# ---------------------------------------------------------------------------
+
+def cmd_create_topic(args: argparse.Namespace) -> None:
+    """Create a topic within a project."""
+    from .hierarchy import create_topic, find_project_by_name
+
+    init_db()
+    project = find_project_by_name(args.project)
+    if not project:
+        console.print(f"\n[red]Project not found:[/red] {args.project}")
+        sys.exit(1)
+
+    try:
+        row = create_topic(
+            project_id=project["id"],
+            name=args.name,
+            description=args.description or "",
+        )
+    except ValueError as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(
+        f"\n[bold green]Topic created:[/bold green] {row['name']} "
+        f"(in {args.project})"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: list-topics
+# ---------------------------------------------------------------------------
+
+def cmd_list_topics(args: argparse.Namespace) -> None:
+    """List topics in a project."""
+    from .hierarchy import find_project_by_name, get_topic_stats
+
+    init_db()
+    project = find_project_by_name(args.project)
+    if not project:
+        console.print(f"\n[red]Project not found:[/red] {args.project}")
+        sys.exit(1)
+
+    topic_stats = get_topic_stats(project["id"])
+    display_project_detail(project, topic_stats)
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: delete-topic
+# ---------------------------------------------------------------------------
+
+def cmd_delete_topic(args: argparse.Namespace) -> None:
+    """Delete a topic from a project."""
+    from .hierarchy import delete_topic, find_project_by_name, find_topic_by_name
+
+    init_db()
+    project = find_project_by_name(args.project)
+    if not project:
+        console.print(f"\n[red]Project not found:[/red] {args.project}")
+        sys.exit(1)
+
+    topic = find_topic_by_name(project["id"], args.topic)
+    if not topic:
+        console.print(f"\n[red]Topic not found:[/red] {args.topic} (in {args.project})")
+        sys.exit(1)
+
+    impact = delete_topic(topic["id"])
+    console.print(f"\n[bold green]Deleted topic:[/bold green] {args.topic}")
+    console.print(f"  Conversations unassigned: {impact['conversations_unassigned']}")
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: assign-topic
+# ---------------------------------------------------------------------------
+
+def cmd_assign_topic(args: argparse.Namespace) -> None:
+    """Assign a conversation to a topic."""
+    from .hierarchy import (
+        assign_conversation_to_topic,
+        find_project_by_name,
+        find_topic_by_name,
+        resolve_conversation_by_prefix,
+    )
+
+    init_db()
+    try:
+        conv_id = resolve_conversation_by_prefix(args.conversation)
+    except ValueError as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    project = find_project_by_name(args.project)
+    if not project:
+        console.print(f"\n[red]Project not found:[/red] {args.project}")
+        sys.exit(1)
+
+    topic = find_topic_by_name(project["id"], args.topic)
+    if not topic:
+        console.print(f"\n[red]Topic not found:[/red] {args.topic} (in {args.project})")
+        sys.exit(1)
+
+    try:
+        assign_conversation_to_topic(conv_id, topic["id"])
+    except ValueError as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(
+        f"\n[bold green]Assigned[/bold green] conversation {conv_id[:8]}... "
+        f"to {args.topic} (in {args.project})"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: unassign-topic
+# ---------------------------------------------------------------------------
+
+def cmd_unassign_topic(args: argparse.Namespace) -> None:
+    """Clear topic assignment from a conversation."""
+    from .hierarchy import resolve_conversation_by_prefix, unassign_conversation
+
+    init_db()
+    try:
+        conv_id = resolve_conversation_by_prefix(args.conversation)
+    except ValueError as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    try:
+        unassign_conversation(conv_id)
+    except ValueError as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(
+        f"\n[bold green]Unassigned[/bold green] conversation {conv_id[:8]}... from its topic."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: show-hierarchy
+# ---------------------------------------------------------------------------
+
+def cmd_show_hierarchy(args: argparse.Namespace) -> None:
+    """Show the full project/topic/conversation hierarchy."""
+    from .hierarchy import get_hierarchy_stats, get_topic_stats
+
+    init_db()
+    stats = get_hierarchy_stats()
+    display_hierarchy(stats, get_topic_stats)
+
+
+# ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
 
@@ -415,6 +674,54 @@ def build_parser() -> argparse.ArgumentParser:
         help="Minimum strength threshold (0.0–1.0)",
     )
 
+    # bootstrap-user
+    sub.add_parser("bootstrap-user", help="Auto-create user from provider account")
+
+    # create-project
+    cp = sub.add_parser("create-project", help="Create a new project")
+    cp.add_argument("name", help="Project name")
+    cp.add_argument("--parent", help="Parent project name (for nesting)")
+    cp.add_argument("--description", help="Project description")
+
+    # list-projects
+    sub.add_parser("list-projects", help="List all projects as a tree")
+
+    # show-project
+    sp = sub.add_parser("show-project", help="Show project detail with topics")
+    sp.add_argument("name", help="Project name")
+
+    # delete-project
+    dp = sub.add_parser("delete-project", help="Delete a project")
+    dp.add_argument("name", help="Project name")
+
+    # create-topic
+    ct = sub.add_parser("create-topic", help="Create a topic in a project")
+    ct.add_argument("project", help="Project name")
+    ct.add_argument("name", help="Topic name")
+    ct.add_argument("--description", help="Topic description")
+
+    # list-topics
+    lt = sub.add_parser("list-topics", help="List topics in a project")
+    lt.add_argument("project", help="Project name")
+
+    # delete-topic
+    dt = sub.add_parser("delete-topic", help="Delete a topic from a project")
+    dt.add_argument("project", help="Project name")
+    dt.add_argument("topic", help="Topic name")
+
+    # assign-topic
+    at = sub.add_parser("assign-topic", help="Assign a conversation to a topic")
+    at.add_argument("conversation", help="Conversation ID or prefix")
+    at.add_argument("project", help="Project name")
+    at.add_argument("topic", help="Topic name")
+
+    # unassign-topic
+    ut = sub.add_parser("unassign-topic", help="Clear topic from a conversation")
+    ut.add_argument("conversation", help="Conversation ID or prefix")
+
+    # show-hierarchy
+    sub.add_parser("show-hierarchy", help="Show full project/topic hierarchy")
+
     return parser
 
 
@@ -436,6 +743,17 @@ def main() -> None:
         "remove-account": cmd_remove_account,
         "infer-relationships": cmd_infer_relationships,
         "show-relationships": cmd_show_relationships,
+        "bootstrap-user": cmd_bootstrap_user,
+        "create-project": cmd_create_project,
+        "list-projects": cmd_list_projects,
+        "show-project": cmd_show_project,
+        "delete-project": cmd_delete_project,
+        "create-topic": cmd_create_topic,
+        "list-topics": cmd_list_topics,
+        "delete-topic": cmd_delete_topic,
+        "assign-topic": cmd_assign_topic,
+        "unassign-topic": cmd_unassign_topic,
+        "show-hierarchy": cmd_show_hierarchy,
     }
 
     # Default to "run" when no subcommand given

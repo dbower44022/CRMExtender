@@ -8,6 +8,7 @@ Usage:
     python -m poc remove-account EMAIL       # remove an account
     python -m poc infer-relationships        # infer contact relationships
     python -m poc show-relationships         # display inferred relationships
+    python -m poc auto-assign PROJECT        # bulk assign conversations to topics
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from rich.table import Table
 from . import config
 from .database import get_connection, init_db
 from .display import (
+    display_auto_assign_report,
     display_hierarchy,
     display_project_detail,
     display_relationships,
@@ -627,6 +629,37 @@ def cmd_unassign_topic(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Subcommand: auto-assign
+# ---------------------------------------------------------------------------
+
+def cmd_auto_assign(args: argparse.Namespace) -> None:
+    """Bulk auto-assign conversations to topics by tag/title matching."""
+    from .auto_assign import apply_assignments, find_matching_topics
+    from .hierarchy import find_project_by_name
+
+    init_db()
+    project = find_project_by_name(args.project)
+    if not project:
+        console.print(f"\n[red]Project not found:[/red] {args.project}")
+        sys.exit(1)
+
+    try:
+        report = find_matching_topics(
+            project["id"],
+            include_triaged=args.include_triaged,
+        )
+    except ValueError as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    display_auto_assign_report(report, dry_run=args.dry_run)
+
+    if not args.dry_run and report.assignments:
+        count = apply_assignments(report.assignments)
+        console.print(f"[bold green]{count} conversation(s) assigned.[/bold green]")
+
+
+# ---------------------------------------------------------------------------
 # Subcommand: show-hierarchy
 # ---------------------------------------------------------------------------
 
@@ -719,6 +752,15 @@ def build_parser() -> argparse.ArgumentParser:
     ut = sub.add_parser("unassign-topic", help="Clear topic from a conversation")
     ut.add_argument("conversation", help="Conversation ID or prefix")
 
+    # auto-assign
+    aa = sub.add_parser("auto-assign", help="Bulk auto-assign conversations to topics")
+    aa.add_argument("project", help="Project name")
+    aa.add_argument("--dry-run", action="store_true", help="Preview without applying")
+    aa.add_argument(
+        "--include-triaged", action="store_true",
+        help="Also consider triaged-out conversations",
+    )
+
     # show-hierarchy
     sub.add_parser("show-hierarchy", help="Show full project/topic hierarchy")
 
@@ -753,6 +795,7 @@ def main() -> None:
         "delete-topic": cmd_delete_topic,
         "assign-topic": cmd_assign_topic,
         "unassign-topic": cmd_unassign_topic,
+        "auto-assign": cmd_auto_assign,
         "show-hierarchy": cmd_show_hierarchy,
     }
 

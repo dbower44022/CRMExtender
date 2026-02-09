@@ -558,11 +558,84 @@ __main__
   |           \-- html_email_parser (strip_html_quotes)
   |-- triage            (triage_conversations)
   |-- summarizer        (summarize_all)
-  |-- display           (display_triage_stats, display_results)
+  |-- hierarchy         (projects, topics, assignment CRUD)
+  |-- auto_assign       (bulk topic assignment by tag/title matching)
+  |     \-- database    (get_connection)
+  |-- relationship_inference (contact co-occurrence analysis)
+  |-- display           (display_triage_stats, display_results,
+  |                       display_hierarchy, display_auto_assign_report)
   \-- config            (all settings)
 
+database                (init_db, get_connection — used by sync, hierarchy,
+                         auto_assign, relationship_inference)
 rate_limiter            (used by gmail_client, contacts_client, summarizer)
 models                  (used by every module)
+```
+
+---
+
+## Bulk Auto-Assign (`poc/auto_assign.py`)
+
+A standalone pipeline that bulk-assigns unassigned conversations to
+topics within a project, based on tag name and conversation title
+matching.  This is invoked on demand via the `auto-assign` CLI command,
+not as part of the main sync pipeline.
+
+### Entry Point
+
+**Function**: `find_matching_topics(project_id, *, include_triaged=False) -> AutoAssignReport`
+
+### Algorithm
+
+1. **Load topics** for the target project from the `topics` table.
+2. **Load candidate conversations** — all conversations where
+   `topic_id IS NULL`, optionally excluding those with a non-NULL
+   `triage_result`.  Tags are loaded via a `LEFT JOIN` on
+   `conversation_tags` / `tags` with `GROUP_CONCAT` to collect all tag
+   names per conversation in a single query.
+3. **Score each conversation** against each topic using
+   `_score_conversation(title, tags, topic_name)`:
+   - **Tag match: 2 points each** — tag name contains the topic name
+     (case-insensitive substring match).
+   - **Title match: 1 point** — conversation title contains the topic
+     name (case-insensitive substring match).
+   - **Score = `2 × matching_tags + (1 if title_matched)`**
+4. **Pick the best topic** per conversation — highest score wins.  Ties
+   broken alphabetically by topic name.  Minimum score of 1 required.
+5. **Return an `AutoAssignReport`** with match details and summary
+   statistics.
+
+### Applying Assignments
+
+**Function**: `apply_assignments(assignments) -> int`
+
+Batch-updates `conversations.topic_id` for each matched conversation.
+Returns the count of rows updated.  Idempotent — safe to re-run.
+
+### Data Structures
+
+- **`MatchResult`** — single match: `conversation_id`,
+  `conversation_title`, `topic_id`, `topic_name`, `score`,
+  `matched_tags`, `title_matched`
+- **`AutoAssignReport`** — run summary: `project_name`,
+  `total_candidates`, `matched`, `unmatched`, `assignments`
+
+### Display
+
+`display.display_auto_assign_report(report, *, dry_run=False)` renders
+the report as a Rich table sorted by score, with summary statistics and
+a mode indicator (DRY RUN vs. APPLIED).
+
+### Key SQL (candidates query)
+
+```sql
+SELECT c.id, c.title, GROUP_CONCAT(t.name, '||') AS tag_names
+FROM conversations c
+LEFT JOIN conversation_tags ct ON ct.conversation_id = c.id
+LEFT JOIN tags t ON t.id = ct.tag_id
+WHERE c.topic_id IS NULL
+  AND (c.triage_result IS NULL OR :include_triaged)
+GROUP BY c.id
 ```
 
 ---
@@ -584,3 +657,6 @@ models                  (used by every module)
 | Claude API error             | `summarizer.py`       | Returns summary with `error` field set      |
 | Claude JSON parse error      | `summarizer.py`       | Returns summary with `error` field set      |
 | No API key                   | `summarizer.py`       | Returns placeholder summaries for all       |
+| Project not found            | `auto_assign.py`      | `ValueError` with project name              |
+| No topics in project         | `auto_assign.py`      | `ValueError` with project name              |
+| No matching conversations    | `auto_assign.py`      | Returns report with `matched=0`             |

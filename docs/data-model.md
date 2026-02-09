@@ -13,6 +13,8 @@ data flows that populate and query the database.
 | `poc/database.py` | Connection management, schema DDL, WAL/FK pragmas |
 | `poc/models.py` | Dataclasses with `to_row()` / `from_row()` serialization |
 | `poc/sync.py` | Sync orchestration: writes to DB, reads from DB for display |
+| `poc/hierarchy.py` | Project/topic/assignment CRUD and stats queries |
+| `poc/auto_assign.py` | Bulk auto-assign conversations to topics by tag/title matching |
 | `poc/relationship_inference.py` | Contact relationship inference from co-occurrence data |
 | `poc/config.py` | `DB_PATH` setting (default `data/crm_extender.db`) |
 
@@ -832,6 +834,56 @@ infer_relationships(db_path)
 │                            updated_at = excluded.updated_at
 ```
 
+### Flow 6: Bulk Auto-Assign Conversations to Topics
+
+Runs on demand via the CLI (`auto-assign` command).  Scores unassigned
+conversations against all topics in a project using tag and title
+matching, then batch-updates topic assignments.
+
+```
+auto_assign.find_matching_topics(project_id, include_triaged=False)
+│  ├─ get_connection()
+│  │
+│  ├─ SELECT name FROM projects WHERE id = ? AND status = 'active'
+│  │   → project_name (ValueError if not found)
+│  │
+│  ├─ SELECT id, name FROM topics WHERE project_id = ?
+│  │   → topic list (ValueError if empty)
+│  │
+│  ├─ LOAD CANDIDATES:
+│  │   └─ SELECT c.id, c.title, GROUP_CONCAT(t.name, '||') AS tag_names
+│  │      FROM conversations c
+│  │      LEFT JOIN conversation_tags ct ON ct.conversation_id = c.id
+│  │      LEFT JOIN tags t ON t.id = ct.tag_id
+│  │      WHERE c.topic_id IS NULL
+│  │        AND (c.triage_result IS NULL OR :include_triaged)
+│  │      GROUP BY c.id
+│  │
+│  ├─ SCORE EACH CANDIDATE:
+│  │   └─ for each conversation × topic pair:
+│  │       └─ _score_conversation(title, tags, topic_name)
+│  │           ├─ Tag match: 2 pts each (case-insensitive substring)
+│  │           ├─ Title match: 1 pt (case-insensitive substring)
+│  │           └─ Pick highest-scoring topic (alpha tiebreak)
+│  │
+│  └─ return AutoAssignReport
+│       {project_name, total_candidates, matched, unmatched, assignments}
+
+auto_assign.apply_assignments(assignments)
+│  ├─ get_connection()
+│  └─ for each MatchResult:
+│      └─ UPDATE conversations SET topic_id = ?, updated_at = ? WHERE id = ?
+```
+
+**Tables read:** `projects`, `topics`, `conversations`,
+`conversation_tags`, `tags`
+
+**Tables written:** `conversations` (SET `topic_id`)
+
+**Idempotent:** Yes — re-running after an assignment has been applied
+will not find those conversations again (they now have `topic_id IS NOT
+NULL`).
+
 ---
 
 ## UPSERT and Idempotency Patterns
@@ -935,6 +987,9 @@ them:
 | Contact co-occurrence pairs | `JOIN conversation_participants cp1/cp2 ON conversation_id, contact_id < contact_id` | PK on `conversation_participants` |
 | Relationships for a contact | `WHERE from_entity_id = ? OR to_entity_id = ?` | `idx_relationships_from`, `idx_relationships_to` |
 | Relationships above threshold | `WHERE json_extract(properties, '$.strength') >= ?` | Full table scan (JSON field) |
+| Unassigned conversations with tags | `conversations LEFT JOIN conversation_tags/tags WHERE topic_id IS NULL GROUP BY c.id` | `idx_conv_topic`, PK on `conversation_tags` |
+| Topics in a project | `WHERE project_id = ? ORDER BY name` | `idx_topics_project` |
+| Auto-assign: update topic_id | `UPDATE conversations SET topic_id = ? WHERE id = ?` | PK on `conversations` |
 
 ---
 

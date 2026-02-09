@@ -10,6 +10,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
+from .auto_assign import AutoAssignReport
 from .models import (
     Conversation,
     ConversationStatus,
@@ -375,5 +376,60 @@ def display_project_detail(project: dict, topic_stats: list[dict]) -> None:
     total = sum(t["conversation_count"] for t in topic_stats)
     console.print(
         f"\n[dim]{len(topic_stats)} topic(s), {total} conversation(s) assigned.[/dim]"
+    )
+    console.print()
+
+
+def display_auto_assign_report(report: AutoAssignReport, *, dry_run: bool = False) -> None:
+    """Display the results of an auto-assign run.
+
+    :param report: AutoAssignReport from find_matching_topics()
+    :param dry_run: if True, labels output as a preview
+    """
+    mode = "[yellow]DRY RUN[/yellow]" if dry_run else "[green]APPLIED[/green]"
+
+    console.print()
+    console.rule(f"[bold]Auto-Assign: {report.project_name}[/bold]  ({mode})")
+    console.print()
+
+    # Summary stats
+    stats = Table(show_header=False, box=None, padding=(0, 2))
+    stats.add_column(style="bold")
+    stats.add_column(justify="right")
+    stats.add_row("Candidates:", str(report.total_candidates))
+    stats.add_row("Matched:", f"[green]{report.matched}[/green]")
+    stats.add_row("Unmatched:", f"[dim]{report.unmatched}[/dim]")
+    console.print(stats)
+    console.print()
+
+    if not report.assignments:
+        console.print("[yellow]No matches found.[/yellow]")
+        console.print()
+        return
+
+    # Assignments table
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Topic")
+    table.add_column("Conversation", max_width=50, no_wrap=True)
+    table.add_column("Score", justify="right")
+    table.add_column("Matched Tags")
+    table.add_column("Title", justify="center")
+
+    for m in sorted(report.assignments, key=lambda x: (-x.score, x.topic_name)):
+        title_str = "[green]Y[/green]" if m.title_matched else "[dim]-[/dim]"
+        tags_str = ", ".join(m.matched_tags) if m.matched_tags else "[dim]-[/dim]"
+        conv_display = m.conversation_title[:50] if m.conversation_title else "[dim](no title)[/dim]"
+        table.add_row(
+            m.topic_name,
+            conv_display,
+            str(m.score),
+            tags_str,
+            title_str,
+        )
+
+    console.print(table)
+    console.print(
+        f"\n[dim]{report.matched} conversation(s) "
+        f"{'would be assigned' if dry_run else 'assigned'}.[/dim]"
     )
     console.print()

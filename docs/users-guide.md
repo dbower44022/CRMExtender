@@ -111,6 +111,59 @@ Displays a table of all registered accounts:
 | Initial Sync   | Whether the first full sync has completed|
 | Conversations  | Total conversation count for the account |
 
+### `auto-assign`
+
+```bash
+python -m poc auto-assign PROJECT [--dry-run] [--include-triaged]
+```
+
+Bulk-assigns unassigned conversations to topics within a project based
+on tag and title matching.  This is the primary tool for populating the
+organizational hierarchy after creating projects and topics.
+
+**Matching algorithm:**
+
+For each unassigned conversation (`topic_id IS NULL`), the system scores
+it against every topic in the project:
+
+| Match type | Points | Condition |
+|------------|--------|-----------|
+| Tag match  | 2 each | Conversation tag name contains the topic name (case-insensitive substring) |
+| Title match| 1      | Conversation title contains the topic name (case-insensitive substring) |
+
+The conversation is assigned to the highest-scoring topic.  Ties are
+broken alphabetically by topic name.  A minimum score of 1 is required
+(at least one match).
+
+**Example:** Topic "Tax", conversation with tags ["tax strategy",
+"tax filing"] and title "Tax planning" scores 2x2 + 1 = 5.
+
+**Flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Preview assignments without applying them.  Shows a table of what would be assigned. |
+| `--include-triaged` | Also consider conversations that were triaged out (marketing, automated).  By default these are excluded. |
+
+**Example workflow:**
+
+```bash
+# 1. Create a project and topics
+python -m poc create-project "Finance"
+python -m poc create-topic "Finance" "Tax"
+python -m poc create-topic "Finance" "Budget"
+python -m poc create-topic "Finance" "Insurance"
+
+# 2. Preview what would be assigned
+python -m poc auto-assign "Finance" --dry-run
+
+# 3. Apply the assignments
+python -m poc auto-assign "Finance"
+
+# 4. Verify
+python -m poc show-hierarchy
+```
+
 ### `remove-account`
 
 ```bash
@@ -125,6 +178,45 @@ Removes the specified account and **all associated data**:
 
 This is irreversible.  Re-adding the same address later starts fresh
 with a new initial sync.
+
+### Organizational Hierarchy Commands
+
+These commands manage the project/topic hierarchy for organizing
+conversations.
+
+```bash
+# User setup (auto-creates from first provider account)
+python -m poc bootstrap-user
+
+# Projects
+python -m poc create-project "Project Name" [--parent "Parent"] [--description "..."]
+python -m poc list-projects
+python -m poc show-project "Project Name"
+python -m poc delete-project "Project Name"
+
+# Topics
+python -m poc create-topic "Project Name" "Topic Name" [--description "..."]
+python -m poc list-topics "Project Name"
+python -m poc delete-topic "Project Name" "Topic Name"
+
+# Manual assignment
+python -m poc assign-topic CONVERSATION_ID "Project Name" "Topic Name"
+python -m poc unassign-topic CONVERSATION_ID
+
+# Bulk assignment
+python -m poc auto-assign "Project Name" [--dry-run] [--include-triaged]
+
+# View hierarchy
+python -m poc show-hierarchy
+```
+
+The typical workflow is:
+
+1. `bootstrap-user` — create a user record from your provider account
+2. `create-project` — create one or more projects
+3. `create-topic` — add topics to each project
+4. `auto-assign` — bulk-assign conversations by tag/title matching
+5. `show-hierarchy` — review the result
 
 ---
 
@@ -256,6 +348,7 @@ CRMExtender/
   poc/
     __main__.py                   # CLI entry point and subcommands
     auth.py                       # OAuth flow and token management
+    auto_assign.py                # Bulk auto-assign conversations to topics
     config.py                     # Environment-based configuration
     contact_matcher.py            # Contact matching logic
     contacts_client.py            # Google People API client
@@ -265,14 +358,17 @@ CRMExtender/
     email_parser.py               # Quote/signature stripping (plain-text track)
     html_email_parser.py          # HTML-aware quote/signature stripping
     gmail_client.py               # Gmail API client
+    hierarchy.py                  # Project/topic/assignment data access
     models.py                     # Core dataclasses
     rate_limiter.py               # Token-bucket rate limiter
+    relationship_inference.py     # Contact relationship inference
     summarizer.py                 # Claude AI summarization
     sync.py                       # Sync orchestration
     triage.py                     # Heuristic junk filtering
     audit_parser.py               # Audit tool: compare old vs new parsing
     migrate_strip_boilerplate.py  # Migration: re-strip stored emails
     migrate_refetch_emails.py     # Migration: re-fetch emails from Gmail
+    migrate_to_v2.py              # Migration: v1 to v2 schema
   .env                            # Environment variables (you create)
   .env.example                    # Template for .env
 ```

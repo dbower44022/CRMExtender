@@ -1,13 +1,23 @@
-"""Contact routes — list, search, detail."""
+"""Contact routes — list, search, detail, edit, sub-entity CRUD."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Form, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...database import get_connection
+from ...hierarchy import (
+    update_contact, list_companies,
+    add_contact_identifier, get_contact_identifiers, remove_contact_identifier,
+    add_phone_number, get_phone_numbers, remove_phone_number,
+    add_address, get_addresses, remove_address,
+)
 
 router = APIRouter()
+
+
+def _is_htmx(request: Request) -> bool:
+    return request.headers.get("HX-Request") == "true"
 
 
 def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50):
@@ -151,10 +161,180 @@ def contact_detail(request: Request, contact_id: str):
                     rd["other_name"] = co["name"]
             relationships.append(rd)
 
+        # Social profiles
+        social_profiles = [dict(r) for r in conn.execute(
+            "SELECT * FROM contact_social_profiles WHERE contact_id = ? ORDER BY platform",
+            (contact_id,),
+        ).fetchall()]
+
+    phones = get_phone_numbers("contact", contact_id)
+    addresses = get_addresses("contact", contact_id)
+    all_companies = list_companies()
+
     return templates.TemplateResponse(request, "contacts/detail.html", {
         "active_nav": "contacts",
         "contact": contact,
         "company": company,
         "conversations": conversations,
         "relationships": relationships,
+        "identifiers": contact["identifiers"],
+        "phones": phones,
+        "addresses": addresses,
+        "social_profiles": social_profiles,
+        "all_companies": all_companies,
+    })
+
+
+@router.get("/{contact_id}/edit", response_class=HTMLResponse)
+def contact_edit_form(request: Request, contact_id: str):
+    templates = request.app.state.templates
+
+    with get_connection() as conn:
+        contact = conn.execute(
+            "SELECT * FROM contacts WHERE id = ?", (contact_id,)
+        ).fetchone()
+        if not contact:
+            return HTMLResponse("Contact not found", status_code=404)
+        contact = dict(contact)
+
+    all_companies = list_companies()
+
+    return templates.TemplateResponse(request, "contacts/edit.html", {
+        "active_nav": "contacts",
+        "contact": contact,
+        "all_companies": all_companies,
+    })
+
+
+@router.post("/{contact_id}/edit", response_class=HTMLResponse)
+def contact_edit(
+    request: Request,
+    contact_id: str,
+    name: str = Form(...),
+    company_id: str = Form(""),
+    source: str = Form(""),
+    status: str = Form("active"),
+):
+    update_contact(
+        contact_id,
+        name=name,
+        company_id=company_id if company_id else None,
+        source=source,
+        status=status,
+    )
+    if _is_htmx(request):
+        return HTMLResponse("", headers={"HX-Redirect": f"/contacts/{contact_id}"})
+    return RedirectResponse(f"/contacts/{contact_id}", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Contact Identifiers
+# ---------------------------------------------------------------------------
+
+@router.post("/{contact_id}/identifiers", response_class=HTMLResponse)
+def contact_add_identifier(
+    request: Request,
+    contact_id: str,
+    type: str = Form("email"),
+    value: str = Form(...),
+):
+    templates = request.app.state.templates
+    add_contact_identifier(contact_id, type, value)
+    identifiers = get_contact_identifiers(contact_id)
+
+    return templates.TemplateResponse(request, "contacts/_identifiers.html", {
+        "contact": {"id": contact_id},
+        "identifiers": identifiers,
+    })
+
+
+@router.delete("/{contact_id}/identifiers/{identifier_id}", response_class=HTMLResponse)
+def contact_remove_identifier(
+    request: Request, contact_id: str, identifier_id: str,
+):
+    templates = request.app.state.templates
+    remove_contact_identifier(identifier_id)
+    identifiers = get_contact_identifiers(contact_id)
+
+    return templates.TemplateResponse(request, "contacts/_identifiers.html", {
+        "contact": {"id": contact_id},
+        "identifiers": identifiers,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Phone Numbers
+# ---------------------------------------------------------------------------
+
+@router.post("/{contact_id}/phones", response_class=HTMLResponse)
+def contact_add_phone(
+    request: Request,
+    contact_id: str,
+    phone_type: str = Form("mobile"),
+    number: str = Form(...),
+):
+    templates = request.app.state.templates
+    add_phone_number("contact", contact_id, number, phone_type=phone_type)
+    phones = get_phone_numbers("contact", contact_id)
+
+    return templates.TemplateResponse(request, "contacts/_phones.html", {
+        "contact": {"id": contact_id},
+        "phones": phones,
+    })
+
+
+@router.delete("/{contact_id}/phones/{phone_id}", response_class=HTMLResponse)
+def contact_remove_phone(
+    request: Request, contact_id: str, phone_id: str,
+):
+    templates = request.app.state.templates
+    remove_phone_number(phone_id)
+    phones = get_phone_numbers("contact", contact_id)
+
+    return templates.TemplateResponse(request, "contacts/_phones.html", {
+        "contact": {"id": contact_id},
+        "phones": phones,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Addresses
+# ---------------------------------------------------------------------------
+
+@router.post("/{contact_id}/addresses", response_class=HTMLResponse)
+def contact_add_address(
+    request: Request,
+    contact_id: str,
+    address_type: str = Form("work"),
+    street: str = Form(""),
+    city: str = Form(""),
+    state: str = Form(""),
+    postal_code: str = Form(""),
+    country: str = Form(""),
+):
+    templates = request.app.state.templates
+    add_address(
+        "contact", contact_id,
+        address_type=address_type, street=street, city=city,
+        state=state, postal_code=postal_code, country=country,
+    )
+    addresses = get_addresses("contact", contact_id)
+
+    return templates.TemplateResponse(request, "contacts/_addresses.html", {
+        "contact": {"id": contact_id},
+        "addresses": addresses,
+    })
+
+
+@router.delete("/{contact_id}/addresses/{address_id}", response_class=HTMLResponse)
+def contact_remove_address(
+    request: Request, contact_id: str, address_id: str,
+):
+    templates = request.app.state.templates
+    remove_address(address_id)
+    addresses = get_addresses("contact", contact_id)
+
+    return templates.TemplateResponse(request, "contacts/_addresses.html", {
+        "contact": {"id": contact_id},
+        "addresses": addresses,
     })

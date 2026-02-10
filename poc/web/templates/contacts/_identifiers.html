@@ -1,0 +1,48 @@
+<div id="identifiers-section">
+  <h2>Identifiers ({{ identifiers|length }})</h2>
+  {% if identifiers %}
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Value</th>
+        <th>Label</th>
+        <th>Primary</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ident in identifiers %}
+      <tr>
+        <td>{{ ident.type }}</td>
+        <td>{{ ident.value }}</td>
+        <td>{{ ident.label or '' }}</td>
+        <td>{% if ident.is_primary %}Yes{% endif %}</td>
+        <td>
+          <button hx-delete="/contacts/{{ contact.id }}/identifiers/{{ ident.id }}"
+                  hx-target="#identifiers-section" hx-swap="outerHTML"
+                  hx-confirm="Remove this identifier?" class="outline"
+                  style="padding:4px 10px;font-size:.85em;">Remove</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-state">No identifiers.</p>
+  {% endif %}
+
+  <form hx-post="/contacts/{{ contact.id }}/identifiers"
+        hx-target="#identifiers-section" hx-swap="outerHTML">
+    <fieldset role="group">
+      <select name="type">
+        <option value="email">Email</option>
+        <option value="phone">Phone</option>
+        <option value="linkedin">LinkedIn</option>
+        <option value="other">Other</option>
+      </select>
+      <input type="text" name="value" placeholder="value" required>
+      <button type="submit">Add</button>
+    </fieldset>
+  </form>
+</div>

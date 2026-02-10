@@ -1,0 +1,74 @@
+<div id="addresses-section">
+  <h2>Addresses ({{ addresses|length }})</h2>
+  {% if addresses %}
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>City</th>
+        <th>State</th>
+        <th>Country</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for addr in addresses %}
+      <tr title="{{ addr.street or '' }}{% if addr.street and addr.postal_code %}, {% endif %}{{ addr.postal_code or '' }}">
+        <td>{{ addr.address_type }}</td>
+        <td>{{ addr.city or '' }}</td>
+        <td>{{ addr.state or '' }}</td>
+        <td>{{ addr.country or '' }}</td>
+        <td>
+          <button hx-delete="/contacts/{{ contact.id }}/addresses/{{ addr.id }}"
+                  hx-target="#addresses-section" hx-swap="outerHTML"
+                  hx-confirm="Remove this address?" class="outline"
+                  style="padding:4px 10px;font-size:.85em;">Remove</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-state">No addresses.</p>
+  {% endif %}
+
+  <details>
+    <summary>Add Address</summary>
+    <form hx-post="/contacts/{{ contact.id }}/addresses"
+          hx-target="#addresses-section" hx-swap="outerHTML">
+      <label>
+        Type
+        <select name="address_type">
+          <option value="work">Work</option>
+          <option value="home">Home</option>
+          <option value="headquarters">Headquarters</option>
+        </select>
+      </label>
+      <label>
+        Street
+        <input type="text" name="street" placeholder="123 Main St">
+      </label>
+      <div class="grid">
+        <label>
+          City
+          <input type="text" name="city">
+        </label>
+        <label>
+          State
+          <input type="text" name="state">
+        </label>
+      </div>
+      <div class="grid">
+        <label>
+          Postal Code
+          <input type="text" name="postal_code">
+        </label>
+        <label>
+          Country
+          <input type="text" name="country">
+        </label>
+      </div>
+      <button type="submit">Add</button>
+    </form>
+  </details>
+</div>

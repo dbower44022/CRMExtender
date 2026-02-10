@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ contact.name or 'Contact' }} — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Edit {{ contact.name or 'Contact' }}</h1>
+
+<form method="post" action="/contacts/{{ contact.id }}/edit">
+  <label>
+    Name
+    <input type="text" name="name" value="{{ contact.name or '' }}" required>
+  </label>
+  <label>
+    Company
+    <select name="company_id">
+      <option value="">None</option>
+      {% for co in all_companies %}
+      <option value="{{ co.id }}" {% if contact.company_id == co.id %}selected{% endif %}>{{ co.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    Source
+    <input type="text" name="source" value="{{ contact.source or '' }}">
+  </label>
+  <label>
+    Status
+    <select name="status">
+      {% for st in ["active", "inactive"] %}
+      <option value="{{ st }}" {% if contact.status == st %}selected{% endif %}>{{ st }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <div>
+    <button type="submit">Save Changes</button>
+    <a href="/contacts/{{ contact.id }}" role="button" class="outline">Cancel</a>
+  </div>
+</form>
+{% endblock %}

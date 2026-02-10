@@ -293,6 +293,195 @@ def remove_company_hierarchy(hierarchy_id: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Contacts
+# ---------------------------------------------------------------------------
+
+def update_contact(contact_id: str, **fields) -> dict | None:
+    """Update a contact's fields. Returns updated row dict or None."""
+    allowed = {"name", "company", "company_id", "source", "status"}
+    updates = {k: v for k, v in fields.items() if k in allowed}
+    if not updates:
+        return None
+    now = datetime.now(timezone.utc).isoformat()
+    updates["updated_at"] = now
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [contact_id]
+    with get_connection() as conn:
+        conn.execute(f"UPDATE contacts SET {set_clause} WHERE id = ?", values)
+        row = conn.execute(
+            "SELECT * FROM contacts WHERE id = ?", (contact_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def add_contact_identifier(
+    contact_id: str,
+    type: str,
+    value: str,
+    *,
+    label: str = "",
+    is_primary: bool = False,
+    source: str = "",
+) -> dict:
+    """Add an identifier to a contact. Returns the new row as a dict."""
+    now = datetime.now(timezone.utc).isoformat()
+    row = {
+        "id": str(uuid.uuid4()),
+        "contact_id": contact_id,
+        "type": type,
+        "value": value,
+        "label": label,
+        "is_primary": int(is_primary),
+        "source": source,
+        "created_at": now,
+        "updated_at": now,
+    }
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO contact_identifiers "
+            "(id, contact_id, type, value, label, is_primary, source, created_at, updated_at) "
+            "VALUES (:id, :contact_id, :type, :value, :label, :is_primary, :source, "
+            ":created_at, :updated_at)",
+            row,
+        )
+    return row
+
+
+def get_contact_identifiers(contact_id: str) -> list[dict]:
+    """List all identifiers for a contact."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM contact_identifiers WHERE contact_id = ? "
+            "ORDER BY is_primary DESC, type",
+            (contact_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_contact_identifier(identifier_id: str) -> None:
+    """Delete a contact identifier by its ID."""
+    with get_connection() as conn:
+        conn.execute(
+            "DELETE FROM contact_identifiers WHERE id = ?", (identifier_id,)
+        )
+
+
+# ---------------------------------------------------------------------------
+# Phone Numbers (entity-agnostic)
+# ---------------------------------------------------------------------------
+
+def add_phone_number(
+    entity_type: str,
+    entity_id: str,
+    number: str,
+    *,
+    phone_type: str = "mobile",
+) -> dict:
+    """Add a phone number. Returns the new row as a dict."""
+    now = datetime.now(timezone.utc).isoformat()
+    row = {
+        "id": str(uuid.uuid4()),
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "phone_type": phone_type,
+        "number": number,
+        "is_primary": 0,
+        "source": "",
+        "created_at": now,
+        "updated_at": now,
+    }
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO phone_numbers "
+            "(id, entity_type, entity_id, phone_type, number, is_primary, source, "
+            "created_at, updated_at) "
+            "VALUES (:id, :entity_type, :entity_id, :phone_type, :number, :is_primary, "
+            ":source, :created_at, :updated_at)",
+            row,
+        )
+    return row
+
+
+def get_phone_numbers(entity_type: str, entity_id: str) -> list[dict]:
+    """List all phone numbers for an entity."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM phone_numbers WHERE entity_type = ? AND entity_id = ? "
+            "ORDER BY is_primary DESC, phone_type",
+            (entity_type, entity_id),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_phone_number(phone_id: str) -> None:
+    """Delete a phone number by its ID."""
+    with get_connection() as conn:
+        conn.execute("DELETE FROM phone_numbers WHERE id = ?", (phone_id,))
+
+
+# ---------------------------------------------------------------------------
+# Addresses (entity-agnostic)
+# ---------------------------------------------------------------------------
+
+def add_address(
+    entity_type: str,
+    entity_id: str,
+    *,
+    address_type: str = "work",
+    street: str = "",
+    city: str = "",
+    state: str = "",
+    postal_code: str = "",
+    country: str = "",
+) -> dict:
+    """Add an address. Returns the new row as a dict."""
+    now = datetime.now(timezone.utc).isoformat()
+    row = {
+        "id": str(uuid.uuid4()),
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "address_type": address_type,
+        "street": street,
+        "city": city,
+        "state": state,
+        "postal_code": postal_code,
+        "country": country,
+        "is_primary": 0,
+        "source": "",
+        "created_at": now,
+        "updated_at": now,
+    }
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO addresses "
+            "(id, entity_type, entity_id, address_type, street, city, state, "
+            "postal_code, country, is_primary, source, created_at, updated_at) "
+            "VALUES (:id, :entity_type, :entity_id, :address_type, :street, :city, "
+            ":state, :postal_code, :country, :is_primary, :source, "
+            ":created_at, :updated_at)",
+            row,
+        )
+    return row
+
+
+def get_addresses(entity_type: str, entity_id: str) -> list[dict]:
+    """List all addresses for an entity."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM addresses WHERE entity_type = ? AND entity_id = ? "
+            "ORDER BY is_primary DESC, address_type",
+            (entity_type, entity_id),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_address(address_id: str) -> None:
+    """Delete an address by its ID."""
+    with get_connection() as conn:
+        conn.execute("DELETE FROM addresses WHERE id = ?", (address_id,))
+
+
+# ---------------------------------------------------------------------------
 # Projects
 # ---------------------------------------------------------------------------
 

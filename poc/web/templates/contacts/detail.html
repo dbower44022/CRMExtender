@@ -30,12 +30,22 @@
     {% else %}
     <p class="empty-state">No conversations.</p>
     {% endif %}
+
+    {% include "contacts/_identifiers.html" %}
+
+    {% include "contacts/_phones.html" %}
+
+    {% include "contacts/_addresses.html" %}
   </div>
 
   <div>
     <!-- Sidebar -->
     <article>
-      <header>Contact Info</header>
+      <header>
+        Contact Info
+        <a href="/contacts/{{ contact.id }}/edit" role="button" class="outline"
+           style="float:right;padding:4px 12px;font-size:.85em;">Edit</a>
+      </header>
       <dl class="detail-sidebar">
         {% for ident in contact.identifiers %}
         <dt>{{ ident.type|title }}</dt>
@@ -59,6 +69,19 @@
         <dt>Status</dt>
         <dd>{{ contact.status or 'active' }}</dd>
       </dl>
+
+      {% if social_profiles %}
+      <h6>Social Profiles</h6>
+      <ul>
+        {% for sp in social_profiles %}
+        <li>
+          <strong>{{ sp.platform|title }}</strong>:
+          <a href="{{ sp.profile_url }}" target="_blank" rel="noopener">{{ sp.username or sp.profile_url }}</a>
+          {% if sp.headline %}<br><small>{{ sp.headline }}</small>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
     </article>
 
     {% if relationships %}

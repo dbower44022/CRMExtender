@@ -8,6 +8,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...database import get_connection
+from ...domain_resolver import PUBLIC_DOMAINS
 from ...hierarchy import (
     create_company, delete_company, list_companies, update_company,
     get_company_identifiers, add_company_identifier, remove_company_identifier,
@@ -19,16 +20,6 @@ from ...hierarchy import (
 )
 
 router = APIRouter()
-
-PUBLIC_DOMAINS = {
-    "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.uk",
-    "hotmail.com", "outlook.com", "live.com", "msn.com", "aol.com",
-    "icloud.com", "me.com", "mac.com", "mail.com",
-    "protonmail.com", "pm.me", "zoho.com", "yandex.com",
-    "gmx.com", "fastmail.com", "tutanota.com", "hey.com",
-    "comcast.net", "att.net", "verizon.net", "sbcglobal.net",
-    "cox.net", "charter.net", "earthlink.net",
-}
 
 
 def _find_contacts_by_domain(domain: str) -> list[dict]:
@@ -178,6 +169,18 @@ def company_confirm(
     return RedirectResponse("/companies", status_code=303)
 
 
+@router.post("/resolve-domains", response_class=HTMLResponse)
+def company_resolve_domains(request: Request):
+    from ...domain_resolver import resolve_unlinked_contacts
+
+    result = resolve_unlinked_contacts()
+    return HTMLResponse(
+        f"<p><strong>{result.contacts_linked}</strong> contact(s) linked. "
+        f"({result.contacts_skipped_public} public, "
+        f"{result.contacts_skipped_no_match} no match)</p>"
+    )
+
+
 @router.delete("/{company_id}", response_class=HTMLResponse)
 def company_delete(request: Request, company_id: str):
     delete_company(company_id)
@@ -262,6 +265,9 @@ def company_detail(request: Request, company_id: str):
             ).fetchall()
         ]
 
+    from ...scoring import get_entity_score
+    score_data = get_entity_score("company", company_id)
+
     return templates.TemplateResponse(request, "companies/detail.html", {
         "active_nav": "companies",
         "company": company,
@@ -275,6 +281,35 @@ def company_detail(request: Request, company_id: str):
         "addresses": addresses,
         "emails": emails,
         "social_profiles": social_profiles,
+        "score_data": score_data,
+    })
+
+
+@router.post("/{company_id}/score", response_class=HTMLResponse)
+def company_score(request: Request, company_id: str):
+    from ...scoring import SCORE_TYPE, compute_company_score, get_entity_score, upsert_entity_score
+    templates = request.app.state.templates
+
+    with get_connection() as conn:
+        company = conn.execute(
+            "SELECT * FROM companies WHERE id = ?", (company_id,)
+        ).fetchone()
+        if not company:
+            return HTMLResponse("Company not found", status_code=404)
+        company = dict(company)
+
+        result = compute_company_score(conn, company_id)
+        if result:
+            upsert_entity_score(
+                conn, "company", company_id, SCORE_TYPE,
+                result["score"], result["factors"], triggered_by="web",
+            )
+
+    score_data = get_entity_score("company", company_id)
+
+    return templates.TemplateResponse(request, "companies/_score.html", {
+        "company": company,
+        "score_data": score_data,
     })
 
 

@@ -139,6 +139,7 @@
         <dt>Status</dt>
         <dd>{{ company.status or 'active' }}</dd>
       </dl>
+      {% include "companies/_score.html" %}
       {% if social_profiles %}
       <hr>
       <h3>Social Profiles</h3>

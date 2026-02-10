@@ -1,0 +1,47 @@
+<div id="score-section">
+  {% if score_data %}
+  <hr>
+  <h3 style="margin-bottom:0.5rem;">
+    Relationship Strength
+    <span style="float:right;font-size:1.2em;font-weight:bold;">
+      {{ '%.0f'|format(score_data.score_value * 100) }}%
+    </span>
+  </h3>
+  <div style="background:#e0e0e0;border-radius:4px;height:8px;margin-bottom:0.5rem;">
+    <div style="background:var(--pico-primary-color, #1095c1);height:100%;border-radius:4px;width:{{ (score_data.score_value * 100)|int }}%;"></div>
+  </div>
+  <details>
+    <summary style="font-size:.85em;cursor:pointer;">Factor Breakdown</summary>
+    <table style="font-size:.85em;margin-top:0.5rem;">
+      <tbody>
+        {% for name, value in score_data.factors.items() %}
+        <tr>
+          <td style="text-transform:capitalize;">{{ name }}</td>
+          <td style="width:60%;">
+            <div style="background:#e0e0e0;border-radius:3px;height:6px;">
+              <div style="background:var(--pico-primary-color, #1095c1);height:100%;border-radius:3px;width:{{ (value * 100)|int }}%;"></div>
+            </div>
+          </td>
+          <td style="text-align:right;">{{ '%.0f'|format(value * 100) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </details>
+  <small style="color:var(--pico-muted-color);">
+    Computed {{ score_data.computed_at[:16].replace('T', ' ') }}
+  </small>
+  {% else %}
+  <hr>
+  <h3 style="margin-bottom:0.5rem;">Relationship Strength</h3>
+  <p class="empty-state" style="font-size:.85em;">No score computed yet.</p>
+  {% endif %}
+  <button hx-post="/contacts/{{ contact.id }}/score"
+          hx-target="#score-section" hx-swap="outerHTML"
+          hx-indicator="#score-spinner"
+          class="outline"
+          style="padding:4px 12px;font-size:.85em;margin-top:0.5rem;">
+    Refresh Score
+  </button>
+  <span id="score-spinner" class="htmx-indicator" style="font-size:.85em;">computing...</span>
+</div>

@@ -232,6 +232,106 @@ The typical workflow is:
 5. `auto-assign` — bulk-assign conversations by tag/title matching
 6. `show-hierarchy` — review the result
 
+### `resolve-domains`
+
+```bash
+python3 -m poc resolve-domains [--dry-run]
+```
+
+Links unlinked contacts to companies by matching their email domain against
+known company domains.  Contacts whose `company_id` is NULL are checked
+against both `companies.domain` and `company_identifiers` (multi-domain
+support).  Public email providers (gmail.com, outlook.com, etc.) are
+skipped.
+
+This is useful as a backfill after importing contacts or adding new
+companies with domains.  During normal contact sync, domain resolution
+happens automatically as a fallback when the contact has no Google
+organization set.
+
+**Output:**
+
+| Metric | Description |
+|--------|-------------|
+| Checked | Total unlinked contacts examined |
+| Linked | Contacts successfully matched to a company |
+| Skipped (public) | Contacts with public email domains (gmail, etc.) |
+| Skipped (no match) | Business domains that don't match any known company |
+
+**Flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Preview which contacts would be linked without applying changes.  Shows the same table but does not update the database. |
+
+**Example:**
+
+```bash
+# Preview what would happen
+python3 -m poc resolve-domains --dry-run
+
+# Apply the changes
+python3 -m poc resolve-domains
+```
+
+### `score-companies`
+
+```bash
+python3 -m poc score-companies [--name "Company Name"]
+```
+
+Computes a **relationship strength score** for companies based on
+communication patterns with their contacts.  The score is a weighted
+composite of five factors:
+
+| Factor | Weight | Measures |
+|--------|--------|----------|
+| Recency | 35% | How recently you communicated (linear decay over 365 days) |
+| Frequency | 25% | Communication volume in the last 90 days (outbound weighted 1.0x, inbound 0.6x) |
+| Reciprocity | 20% | Balance between outbound and inbound (balanced = high, one-sided = low) |
+| Breadth | 12% | Number of distinct contacts at the company you interact with |
+| Duration | 8% | Time span from first to last communication (capped at 2 years) |
+
+Without `--name`, scores all active companies and displays a ranked table
+of the top 25.  With `--name`, scores a single company and shows a
+per-factor breakdown with visual bars.
+
+Scores are persisted in the `entity_scores` table and displayed in the
+web UI on company detail pages.
+
+**Example:**
+
+```bash
+# Score all companies
+python3 -m poc score-companies
+
+# Score a single company
+python3 -m poc score-companies --name "Acme Corp"
+```
+
+### `score-contacts`
+
+```bash
+python3 -m poc score-contacts [--contact user@example.com]
+```
+
+Same scoring algorithm applied to individual contacts.  The breadth
+factor measures distinct conversations (instead of distinct contacts for
+companies).
+
+Without `--contact`, scores all active contacts and displays a ranked
+table.  With `--contact`, scores a single contact by email address.
+
+**Example:**
+
+```bash
+# Score all contacts
+python3 -m poc score-contacts
+
+# Score a single contact
+python3 -m poc score-contacts --contact alice@acme.com
+```
+
 ### `enrich-company`
 
 ```bash
@@ -275,11 +375,16 @@ a browser-based interface for all CRM data:
 - **Conversations** — browse, search, filter by status/topic, view
   detail with messages and participants.
 - **Contacts** — search by name/email/company, view detail with
-  conversations and relationships.
+  conversations and relationships.  Relationship strength score
+  displayed in sidebar with factor breakdown; "Refresh Score" button
+  recomputes on demand.
 - **Companies** — create, search, delete, view contacts and
   relationships.  Domain-based contact linking on creation.
   Enrich button on company detail fetches metadata from the
-  company's website.
+  company's website.  Resolve Domains button bulk-links unlinked
+  contacts to companies by email domain.  Relationship strength
+  score displayed in sidebar with expandable factor breakdown;
+  "Refresh Score" button recomputes on demand.
 - **Projects / Topics** — create projects and topics, auto-assign
   conversations by tag/title matching.
 - **Relationships** — browse inferred and manual relationships, run
@@ -306,6 +411,13 @@ Fetches your Google Contacts via the People API and stores them in a
 shared `contacts` table.  These contacts are used later to identify
 which conversation participants are people you know (vs. unknown
 addresses).  Contacts are global -- shared across all accounts.
+
+Company resolution happens in two steps: first, the contact's Google
+organization name is matched against existing company records (auto-
+creating if needed).  If the contact has no organization set, a domain
+fallback checks whether the contact's email domain matches any known
+company domain (via `companies.domain` and `company_identifiers`).
+Public email providers (gmail.com, outlook.com, etc.) are skipped.
 
 ### Stage 3 -- Email Sync
 
@@ -434,9 +546,11 @@ CRMExtender/
     rate_limiter.py               # Token-bucket rate limiter
     relationship_inference.py     # Contact relationship inference
     relationship_types.py         # Relationship type CRUD
+    scoring.py                    # Relationship strength scoring (5-factor composite)
     summarizer.py                 # Claude AI summarization
     sync.py                       # Sync orchestration
     triage.py                     # Heuristic junk filtering
+    domain_resolver.py            # Domain-to-company resolution logic
     website_scraper.py            # Website scraper enrichment provider
     audit_parser.py               # Audit tool: compare old vs new parsing
     migrate_strip_boilerplate.py  # Migration: re-strip stored emails

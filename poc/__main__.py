@@ -10,6 +10,9 @@ Usage:
     python -m poc infer-relationships        # infer contact relationships
     python -m poc show-relationships         # display inferred relationships
     python -m poc auto-assign PROJECT        # bulk assign conversations to topics
+    python -m poc resolve-domains            # link contacts to companies by email domain
+    python -m poc score-companies            # score companies for relationship strength
+    python -m poc score-contacts             # score contacts for relationship strength
 """
 
 from __future__ import annotations
@@ -834,6 +837,213 @@ def cmd_migrate_to_v7(args: argparse.Namespace) -> None:
     migrate(db_path, dry_run=args.dry_run)
 
 
+def cmd_resolve_domains(args: argparse.Namespace) -> None:
+    """Resolve unlinked contacts to companies by email domain."""
+    from .domain_resolver import resolve_unlinked_contacts
+
+    init_db()
+    console.print("\n[bold]Resolving contacts to companies by email domain...[/bold]")
+
+    result = resolve_unlinked_contacts(dry_run=args.dry_run)
+
+    if args.dry_run:
+        console.print("[yellow]DRY RUN — no changes applied.[/yellow]\n")
+
+    if result.details:
+        table = Table(title="Domain Resolution Results")
+        table.add_column("Contact", style="bold")
+        table.add_column("Email")
+        table.add_column("Company")
+
+        for d in result.details:
+            table.add_row(
+                d["contact_name"] or d["contact_id"][:8],
+                d["email"],
+                d["company_name"],
+            )
+
+        console.print(table)
+        console.print()
+
+    console.print(
+        f"  Checked: {result.contacts_checked}\n"
+        f"  [green]Linked: {result.contacts_linked}[/green]\n"
+        f"  Skipped (public): {result.contacts_skipped_public}\n"
+        f"  Skipped (no match): {result.contacts_skipped_no_match}"
+    )
+
+
+def cmd_score_companies(args: argparse.Namespace) -> None:
+    """Score all companies (or one) for relationship strength."""
+    from .scoring import (
+        SCORE_TYPE,
+        compute_company_score,
+        get_entity_score,
+        score_all_companies,
+        upsert_entity_score,
+    )
+
+    init_db()
+
+    if args.name:
+        from .hierarchy import find_company_by_name
+        company = find_company_by_name(args.name)
+        if not company:
+            console.print(f"\n[red]Company not found:[/red] {args.name}")
+            sys.exit(1)
+
+        with get_connection() as conn:
+            result = compute_company_score(conn, company["id"])
+            if result is None:
+                console.print(f"\n[yellow]No communication data for {args.name}.[/yellow]")
+                sys.exit(0)
+            upsert_entity_score(
+                conn, "company", company["id"], SCORE_TYPE,
+                result["score"], result["factors"], triggered_by="cli",
+            )
+
+        console.print(f"\n[bold]{args.name}[/bold]: {result['score']:.0%}")
+        for factor, value in result["factors"].items():
+            bar = "█" * int(value * 20)
+            console.print(f"  {factor:<13} {bar:<20} {value:.0%}")
+        return
+
+    console.print("\n[bold]Scoring all companies...[/bold]")
+    batch = score_all_companies(triggered_by="cli")
+    console.print(
+        f"[green]  Scored: {batch['scored']}[/green], "
+        f"Skipped (no data): {batch['skipped']}"
+    )
+
+    # Display top results
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT es.*, c.name
+               FROM entity_scores es
+               JOIN companies c ON c.id = es.entity_id
+               WHERE es.entity_type = 'company' AND es.score_type = ?
+               ORDER BY es.score_value DESC
+               LIMIT 25""",
+            (SCORE_TYPE,),
+        ).fetchall()
+
+    if rows:
+        table = Table(title="Top Companies by Relationship Strength")
+        table.add_column("Company", style="bold")
+        table.add_column("Score", justify="right")
+        table.add_column("Recency", justify="right")
+        table.add_column("Frequency", justify="right")
+        table.add_column("Reciprocity", justify="right")
+        table.add_column("Breadth", justify="right")
+        table.add_column("Duration", justify="right")
+
+        import json
+        for row in rows:
+            factors = json.loads(row["factors"]) if row["factors"] else {}
+            table.add_row(
+                row["name"],
+                f"{row['score_value']:.0%}",
+                f"{factors.get('recency', 0):.0%}",
+                f"{factors.get('frequency', 0):.0%}",
+                f"{factors.get('reciprocity', 0):.0%}",
+                f"{factors.get('breadth', 0):.0%}",
+                f"{factors.get('duration', 0):.0%}",
+            )
+
+        console.print()
+        console.print(table)
+        console.print()
+
+
+def cmd_score_contacts(args: argparse.Namespace) -> None:
+    """Score all contacts (or one) for relationship strength."""
+    from .scoring import (
+        SCORE_TYPE,
+        compute_contact_score,
+        get_entity_score,
+        score_all_contacts,
+        upsert_entity_score,
+    )
+
+    init_db()
+
+    if args.contact:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT contact_id FROM contact_identifiers WHERE type = 'email' AND value = ?",
+                (args.contact.lower(),),
+            ).fetchone()
+        if not row:
+            console.print(f"\n[red]Contact not found:[/red] {args.contact}")
+            sys.exit(1)
+
+        contact_id = row["contact_id"]
+        with get_connection() as conn:
+            contact = conn.execute(
+                "SELECT name FROM contacts WHERE id = ?", (contact_id,),
+            ).fetchone()
+            result = compute_contact_score(conn, contact_id)
+            if result is None:
+                console.print(f"\n[yellow]No communication data for {args.contact}.[/yellow]")
+                sys.exit(0)
+            upsert_entity_score(
+                conn, "contact", contact_id, SCORE_TYPE,
+                result["score"], result["factors"], triggered_by="cli",
+            )
+
+        name = contact["name"] if contact else args.contact
+        console.print(f"\n[bold]{name}[/bold]: {result['score']:.0%}")
+        for factor, value in result["factors"].items():
+            bar = "█" * int(value * 20)
+            console.print(f"  {factor:<13} {bar:<20} {value:.0%}")
+        return
+
+    console.print("\n[bold]Scoring all contacts...[/bold]")
+    batch = score_all_contacts(triggered_by="cli")
+    console.print(
+        f"[green]  Scored: {batch['scored']}[/green], "
+        f"Skipped (no data): {batch['skipped']}"
+    )
+
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT es.*, c.name
+               FROM entity_scores es
+               JOIN contacts c ON c.id = es.entity_id
+               WHERE es.entity_type = 'contact' AND es.score_type = ?
+               ORDER BY es.score_value DESC
+               LIMIT 25""",
+            (SCORE_TYPE,),
+        ).fetchall()
+
+    if rows:
+        table = Table(title="Top Contacts by Relationship Strength")
+        table.add_column("Contact", style="bold")
+        table.add_column("Score", justify="right")
+        table.add_column("Recency", justify="right")
+        table.add_column("Frequency", justify="right")
+        table.add_column("Reciprocity", justify="right")
+        table.add_column("Breadth", justify="right")
+        table.add_column("Duration", justify="right")
+
+        import json
+        for row in rows:
+            factors = json.loads(row["factors"]) if row["factors"] else {}
+            table.add_row(
+                row["name"] or "(unnamed)",
+                f"{row['score_value']:.0%}",
+                f"{factors.get('recency', 0):.0%}",
+                f"{factors.get('frequency', 0):.0%}",
+                f"{factors.get('reciprocity', 0):.0%}",
+                f"{factors.get('breadth', 0):.0%}",
+                f"{factors.get('duration', 0):.0%}",
+            )
+
+        console.print()
+        console.print(table)
+        console.print()
+
+
 def cmd_enrich_company(args: argparse.Namespace) -> None:
     """Enrich a company using a provider."""
     # Import triggers provider registration
@@ -1001,6 +1211,18 @@ def build_parser() -> argparse.ArgumentParser:
     # list-relationship-types
     sub.add_parser("list-relationship-types", help="List all relationship types")
 
+    # resolve-domains
+    rd = sub.add_parser("resolve-domains", help="Link unlinked contacts to companies by email domain")
+    rd.add_argument("--dry-run", action="store_true", help="Preview without applying")
+
+    # score-companies
+    sc = sub.add_parser("score-companies", help="Score companies for relationship strength")
+    sc.add_argument("--name", help="Score a single company by name")
+
+    # score-contacts
+    sct = sub.add_parser("score-contacts", help="Score contacts for relationship strength")
+    sct.add_argument("--contact", help="Score a single contact by email")
+
     # enrich-company
     ec = sub.add_parser("enrich-company", help="Enrich a company from external sources")
     ec.add_argument("company_id", help="Company ID to enrich")
@@ -1069,7 +1291,10 @@ def main() -> None:
         "auto-assign": cmd_auto_assign,
         "show-hierarchy": cmd_show_hierarchy,
         "list-relationship-types": cmd_list_relationship_types,
+        "resolve-domains": cmd_resolve_domains,
         "enrich-company": cmd_enrich_company,
+        "score-companies": cmd_score_companies,
+        "score-contacts": cmd_score_contacts,
         "migrate-to-v4": cmd_migrate_to_v4,
         "migrate-to-v5": cmd_migrate_to_v5,
         "migrate-to-v6": cmd_migrate_to_v6,

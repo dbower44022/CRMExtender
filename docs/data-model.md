@@ -22,6 +22,8 @@ strategy, and the data flows that populate and query the database.
 | `poc/enrichment_provider.py` | Enrichment provider interface, registry, SourceTier enum |
 | `poc/enrichment_pipeline.py` | Enrichment orchestration, conflict resolution, field apply |
 | `poc/website_scraper.py` | Website scraper enrichment provider (crawl + extract) |
+| `poc/domain_resolver.py` | Domain-to-company resolution (public domain list, bulk backfill) |
+| `poc/scoring.py` | Relationship strength scoring (5-factor composite, per-company/contact) |
 | `poc/migrate_to_v2.py` | Schema migration: v1 (8-table) to v2 (21-table) |
 | `poc/migrate_to_v3.py` | Schema migration: v2 to v3 (companies + audit columns) |
 | `poc/migrate_to_v4.py` | Schema migration: v3 to v4 (relationship types FK) |
@@ -291,7 +293,9 @@ via the CLI.
 
 **Populated by:** `sync._resolve_company_id()` (auto-creates during
 contact sync from Google organization names), `hierarchy.create_company()`
-(manual creation via CLI).
+(manual creation via CLI).  When a company is created with a non-public
+domain, that domain is automatically added to `company_identifiers` via
+`ensure_domain_identifier()`.
 
 **Deleted by:** `hierarchy.delete_company()`.  Contacts with
 `company_id` pointing to the deleted company get `company_id` SET NULL
@@ -870,21 +874,26 @@ Field-level provenance for each value discovered during enrichment.
 
 ### 34. `entity_scores`
 
-Precomputed intelligence scores for entities (e.g., relationship strength,
-engagement level).
+Precomputed intelligence scores for entities.  Currently used for
+relationship strength scoring (`score_type = 'relationship_strength'`).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | TEXT | **PK** | UUID v4. |
 | `entity_type` | TEXT | NOT NULL | CHECK: `company` or `contact`. |
 | `entity_id` | TEXT | NOT NULL | UUID of the entity. |
-| `score_type` | TEXT | NOT NULL | Score category. |
-| `score_value` | REAL | NOT NULL, DEFAULT 0.0 | Numeric score. |
-| `factors` | TEXT | | JSON blob of contributing factors. |
+| `score_type` | TEXT | NOT NULL | Score category (e.g. `'relationship_strength'`). |
+| `score_value` | REAL | NOT NULL, DEFAULT 0.0 | Numeric score (0.0–1.0 for relationship strength). |
+| `factors` | TEXT | | JSON blob of contributing factors (e.g. `{"recency": 0.85, "frequency": 0.42, ...}`). |
 | `computed_at` | TEXT | NOT NULL | When computed. |
-| `triggered_by` | TEXT | | What triggered the computation. |
+| `triggered_by` | TEXT | | What triggered the computation (`'batch'`, `'cli'`, `'web'`, `'manual'`). |
 
 **Unique constraint:** `(entity_type, entity_id, score_type)`.
+
+**Populated by:** `scoring.upsert_entity_score()`, called from
+`score_all_companies()`, `score_all_contacts()` (batch), CLI commands,
+and web UI refresh buttons.  Uses `INSERT ... ON CONFLICT DO UPDATE`
+for idempotent upserts.
 
 ### 35. `monitoring_preferences`
 
@@ -1227,6 +1236,14 @@ sync_contacts(creds)
 |      |   +- if not found: INSERT INTO companies -> new company_id
 |      |   +- return company_id (or None if no company)
 |      |
+|      +- Domain fallback (if company_id is still None):
+|      |   +- resolve_company_for_email(conn, email)
+|      |   |   +- extract domain from email
+|      |   |   +- skip if public domain (gmail.com, outlook.com, etc.)
+|      |   |   +- SELECT * FROM companies WHERE domain = ?
+|      |   |   +- fallback: SELECT via company_identifiers(type='domain')
+|      |   +- if found: company_id = matched company ID
+|      |
 |      +- SELECT contact_id FROM contact_identifiers WHERE type='email' AND value=?
 |      +- if exists:
 |      |   +- UPDATE contacts SET name, company, company_id, updated_at
@@ -1367,6 +1384,98 @@ execute_enrichment("company", company_id, provider_name)
 |  +- return {run_id, status, fields_discovered, fields_applied}
 ```
 
+### Flow 8: Domain Resolution (Bulk Backfill)
+
+```
+resolve_unlinked_contacts(dry_run=False)
+|  +- get_connection()
+|  +- SELECT contacts with company_id IS NULL
+|  |   JOIN contact_identifiers WHERE type='email'
+|  |
+|  +- for each unlinked contact:
+|  |   +- extract_domain(email)
+|  |   +- if is_public_domain(domain): skip (count as public)
+|  |   +- resolve_company_by_domain(conn, domain)
+|  |   |   +- SELECT * FROM companies WHERE domain = ? AND status='active'
+|  |   |   +- fallback: SELECT via company_identifiers(type='domain')
+|  |   +- if found and not dry_run:
+|  |       +- UPDATE contacts SET company_id = ?, company = ?
+|  |
+|  +- return DomainResolveResult(checked, linked, skipped_public, skipped_no_match)
+```
+
+Available via CLI (`python3 -m poc resolve-domains [--dry-run]`) and
+web UI (POST `/companies/resolve-domains`).  The web route returns an
+inline HTML summary of results.
+
+### Flow 9: Relationship Strength Scoring
+
+```
+compute_company_score(conn, company_id, weights=None)
+|  +- Calculate window_start = now - 90 days
+|  +- PARTICIPANTS PATH:
+|  |   SELECT aggregates FROM contacts
+|  |     JOIN contact_identifiers (email)
+|  |     JOIN communication_participants (address match)
+|  |     JOIN communications
+|  |   WHERE contacts.company_id = company_id
+|  |   -> total, outbound, inbound, recent_outbound, recent_inbound,
+|  |      first_ts, last_ts, distinct_contacts
+|  |
+|  +- SENDER PATH:
+|  |   SELECT aggregates FROM contacts
+|  |     JOIN contact_identifiers (email)
+|  |     JOIN communications (sender_address match)
+|  |   WHERE contacts.company_id = company_id
+|  |   -> same aggregates (catches senders not in participants table)
+|  |
+|  +- _merge_stats(participants_row, sender_row)
+|  |   -> sum counts, min/max timestamps, max distinct contacts
+|  |
+|  +- if total_comms == 0: return None
+|  +- Compute 5 factors (each 0.0–1.0):
+|  |   +- recency:     linear decay from last_ts (1.0 at day 0, 0.0 at 365+)
+|  |   +- frequency:   direction-weighted recent counts, log-scaled vs cap=200
+|  |   +- reciprocity: 1.0 - abs(outbound_ratio - 0.5) * 2
+|  |   +- breadth:     log-scaled distinct contacts vs cap=15
+|  |   +- duration:    span first→last in days, capped at 730 days
+|  |
+|  +- score = weighted sum (default: 0.35*recency + 0.25*frequency
+|  |          + 0.20*reciprocity + 0.12*breadth + 0.08*duration)
+|  +- return {"score", "factors", "raw"}
+
+compute_contact_score(conn, contact_id, weights=None)
+|  +- Same dual-path approach but per-contact instead of per-company
+|  +- breadth = distinct conversations (via conversation_participants)
+|     instead of distinct contacts
+
+score_all_companies(triggered_by="batch")
+|  +- get_connection()
+|  +- SELECT all active companies
+|  +- for each company:
+|  |   +- compute_company_score(conn, company_id)
+|  |   +- if result: upsert_entity_score(conn, "company", ...)
+|  +- return {"scored": N, "skipped": M}
+
+upsert_entity_score(conn, entity_type, entity_id, score_type, ...)
+|  +- INSERT INTO entity_scores ...
+|     ON CONFLICT(entity_type, entity_id, score_type)
+|     DO UPDATE SET score_value, factors, computed_at, triggered_by
+```
+
+Available via CLI (`python3 -m poc score-companies [--name NAME]`,
+`python3 -m poc score-contacts [--contact EMAIL]`) and web UI (POST
+`/companies/{id}/score`, POST `/contacts/{id}/score`).
+
+**Direction weighting:** Outbound communications count at 1.0x weight,
+inbound at 0.6x.  This reflects that proactive outreach is a stronger
+engagement signal than receiving messages.
+
+**Normalization:** All factors use logarithmic scaling with fixed caps
+(frequency_cap=200, breadth_cap=15, duration_cap=730 days) rather than
+global-maximum normalization.  This avoids outlier compression and
+ensures scores are stable across different dataset sizes.
+
 The website scraper provider (`website_scraper.py`) crawls up to 3
 pages per domain (homepage, /about, /contact) and extracts metadata,
 social links, and contact information using BeautifulSoup + JSON-LD
@@ -1394,6 +1503,7 @@ with an auto-accept threshold of confidence >= 0.7.
 | `relationships` | `(from_entity_id, to_entity_id, relationship_type)` | `INSERT ... ON CONFLICT DO UPDATE` | Properties refreshed |
 | `company_identifiers` | `(type, value)` | Check-then-insert | Existing row reused |
 | `company_social_profiles` | `(company_id, platform, profile_url)` | `INSERT ... ON CONFLICT DO UPDATE` | Username/source/confidence refreshed |
+| `entity_scores` | `(entity_type, entity_id, score_type)` | `INSERT ... ON CONFLICT DO UPDATE` | Score value, factors, timestamp refreshed |
 
 ---
 

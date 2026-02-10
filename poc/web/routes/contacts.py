@@ -173,6 +173,9 @@ def contact_detail(request: Request, contact_id: str):
     emails = get_email_addresses("contact", contact_id)
     all_companies = list_companies()
 
+    from ...scoring import get_entity_score
+    score_data = get_entity_score("contact", contact_id)
+
     return templates.TemplateResponse(request, "contacts/detail.html", {
         "active_nav": "contacts",
         "contact": contact,
@@ -185,6 +188,35 @@ def contact_detail(request: Request, contact_id: str):
         "emails": emails,
         "social_profiles": social_profiles,
         "all_companies": all_companies,
+        "score_data": score_data,
+    })
+
+
+@router.post("/{contact_id}/score", response_class=HTMLResponse)
+def contact_score(request: Request, contact_id: str):
+    from ...scoring import SCORE_TYPE, compute_contact_score, get_entity_score, upsert_entity_score
+    templates = request.app.state.templates
+
+    with get_connection() as conn:
+        contact = conn.execute(
+            "SELECT * FROM contacts WHERE id = ?", (contact_id,)
+        ).fetchone()
+        if not contact:
+            return HTMLResponse("Contact not found", status_code=404)
+        contact = dict(contact)
+
+        result = compute_contact_score(conn, contact_id)
+        if result:
+            upsert_entity_score(
+                conn, "contact", contact_id, SCORE_TYPE,
+                result["score"], result["factors"], triggered_by="web",
+            )
+
+    score_data = get_entity_score("contact", contact_id)
+
+    return templates.TemplateResponse(request, "contacts/_score.html", {
+        "contact": contact,
+        "score_data": score_data,
     })
 
 

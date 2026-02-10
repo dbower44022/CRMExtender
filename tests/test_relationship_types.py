@@ -66,6 +66,18 @@ class TestSeedTypes:
         names = [t["name"] for t in types]
         assert names.count("KNOWS") == 1
 
+    def test_bidirectional_seed_types(self, tmp_db):
+        """KNOWS, WORKS_WITH, and PARTNER should be bidirectional."""
+        for name in ("KNOWS", "WORKS_WITH", "PARTNER"):
+            rt = get_relationship_type_by_name(name)
+            assert rt is not None
+            assert rt["is_bidirectional"] == 1, f"{name} should be bidirectional"
+
+        for name in ("EMPLOYEE", "REPORTS_TO", "VENDOR"):
+            rt = get_relationship_type_by_name(name)
+            assert rt is not None
+            assert rt["is_bidirectional"] == 0, f"{name} should be unidirectional"
+
 
 # ---------------------------------------------------------------------------
 # CRUD operations
@@ -105,6 +117,19 @@ class TestCreate:
         )
         assert row["from_entity_type"] == "company"
         assert row["to_entity_type"] == "company"
+
+    def test_create_bidirectional_type(self, tmp_db):
+        row = create_relationship_type(
+            "COLLABORATES",
+            forward_label="Collaborates with",
+            reverse_label="Collaborates with",
+            is_bidirectional=True,
+        )
+        assert row["is_bidirectional"] == 1
+
+        rt = get_relationship_type_by_name("COLLABORATES")
+        assert rt is not None
+        assert rt["is_bidirectional"] == 1
 
 
 class TestList:

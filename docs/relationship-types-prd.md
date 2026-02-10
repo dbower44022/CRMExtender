@@ -2,9 +2,9 @@
 
 ## CRMExtender — Typed, Directional Relationship Model
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-02-09
-**Status:** Implemented (v4 schema)
+**Status:** Implemented (v5 schema — bidirectional support)
 **Parent Documents:** [CRMExtender PRD v1.1](PRD.md), [Data Layer PRD](data-layer-prd.md)
 
 ---
@@ -94,6 +94,7 @@ CREATE TABLE relationship_types (
     forward_label    TEXT NOT NULL,
     reverse_label    TEXT NOT NULL,
     is_system        INTEGER NOT NULL DEFAULT 0,
+    is_bidirectional INTEGER NOT NULL DEFAULT 0,
     description      TEXT,
     created_by       TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_by       TEXT REFERENCES users(id) ON DELETE SET NULL,
@@ -110,29 +111,32 @@ Key constraints:
   or `'company'` via CHECK constraints.
 - `is_system` marks types that cannot be deleted (only KNOWS in
   the seed set).
+- `is_bidirectional` indicates that both directions (A→B and B→A) are
+  stored as separate linked rows (see §3.2).
 
-### 3.2 `relationships` Table (v4)
+### 3.2 `relationships` Table (v5)
 
 ```sql
 CREATE TABLE relationships (
-    id                   TEXT PRIMARY KEY,
-    relationship_type_id TEXT NOT NULL
+    id                      TEXT PRIMARY KEY,
+    relationship_type_id    TEXT NOT NULL
         REFERENCES relationship_types(id) ON DELETE RESTRICT,
-    from_entity_type     TEXT NOT NULL DEFAULT 'contact',
-    from_entity_id       TEXT NOT NULL,
-    to_entity_type       TEXT NOT NULL DEFAULT 'contact',
-    to_entity_id         TEXT NOT NULL,
-    source               TEXT NOT NULL DEFAULT 'manual',
-    properties           TEXT,           -- JSON blob
-    created_by           TEXT REFERENCES users(id) ON DELETE SET NULL,
-    updated_by           TEXT REFERENCES users(id) ON DELETE SET NULL,
-    created_at           TEXT NOT NULL,
-    updated_at           TEXT NOT NULL,
+    from_entity_type        TEXT NOT NULL DEFAULT 'contact',
+    from_entity_id          TEXT NOT NULL,
+    to_entity_type          TEXT NOT NULL DEFAULT 'contact',
+    to_entity_id            TEXT NOT NULL,
+    paired_relationship_id  TEXT REFERENCES relationships(id) ON DELETE SET NULL,
+    source                  TEXT NOT NULL DEFAULT 'manual',
+    properties              TEXT,           -- JSON blob
+    created_by              TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by              TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at              TEXT NOT NULL,
+    updated_at              TEXT NOT NULL,
     UNIQUE(from_entity_id, to_entity_id, relationship_type_id)
 );
 ```
 
-Key changes from v3:
+Key changes from v3/v4:
 - `relationship_type` (free text) replaced by `relationship_type_id` (FK
   to `relationship_types`).
 - `ON DELETE RESTRICT` prevents deleting a type that has relationships
@@ -141,6 +145,8 @@ Key changes from v3:
   deletion during re-inference.
 - `properties` is a JSON blob storing inference metrics (strength,
   shared_conversations, shared_messages, interaction dates).
+- `paired_relationship_id` (v5) links the two rows of a bidirectional
+  pair.  For unidirectional types this is NULL.  See §3.5.
 
 ### 3.3 Indexes
 
@@ -149,24 +155,46 @@ CREATE INDEX idx_relationships_from   ON relationships(from_entity_id);
 CREATE INDEX idx_relationships_to     ON relationships(to_entity_id);
 CREATE INDEX idx_relationships_type   ON relationships(relationship_type_id);
 CREATE INDEX idx_relationships_source ON relationships(source);
+CREATE INDEX idx_relationships_paired ON relationships(paired_relationship_id);
 ```
 
 ### 3.4 Data Models (Python)
 
 **`RelationshipType`** (`poc/models.py`):
 - Fields: `name`, `from_entity_type`, `to_entity_type`, `forward_label`,
-  `reverse_label`, `is_system`, `description`
+  `reverse_label`, `is_system`, `is_bidirectional`, `description`
 - `to_row()` / `from_row()` for DB serialization
 
 **`Relationship`** (`poc/models.py`):
 - Fields: `from_entity_id`, `to_entity_id`, `relationship_type_id`,
-  `from_entity_type`, `to_entity_type`, `source`, `strength`,
-  `shared_conversations`, `shared_messages`, `last_interaction`,
-  `first_interaction`
+  `from_entity_type`, `to_entity_type`, `paired_relationship_id`,
+  `source`, `strength`, `shared_conversations`, `shared_messages`,
+  `last_interaction`, `first_interaction`
 - Backward-compatible property aliases: `from_contact_id`,
   `to_contact_id`
 - `properties` JSON contains: `strength`, `shared_conversations`,
   `shared_messages`, `last_interaction`, `first_interaction`
+
+### 3.5 Bidirectional Relationships (v5)
+
+For relationship types with `is_bidirectional=1`, the system stores **two
+rows** per logical relationship: A→B and B→A.  Both rows carry the same
+`properties` and are linked via `paired_relationship_id` (each points at
+the other).
+
+This design means:
+- **Entity-filtered queries** use `WHERE from_entity_id = ?` with a
+  single index hit, always using `forward_label`.  No need for
+  `OR to_entity_id = ?` or directional label resolution.
+- **Unfiltered listings** deduplicate by showing only the row where
+  `from_entity_id < to_entity_id` (or `paired_relationship_id IS NULL`
+  for unidirectional types).
+- The UNIQUE constraint `(from_entity_id, to_entity_id,
+  relationship_type_id)` still works because (A,B,type) and (B,A,type)
+  are distinct tuples.
+
+Bidirectional seed types: KNOWS, WORKS_WITH, PARTNER.
+Unidirectional seed types: EMPLOYEE, REPORTS_TO, VENDOR.
 
 ---
 
@@ -175,14 +203,14 @@ CREATE INDEX idx_relationships_source ON relationships(source);
 Six relationship types are seeded on database initialization and during
 migration.  Their stable IDs are used as constants in the codebase.
 
-| ID | Name | From | To | Forward Label | Reverse Label | System | Description |
-|---|---|---|---|---|---|---|---|
-| `rt-knows` | KNOWS | contact | contact | Knows | Knows | Yes | Auto-inferred co-occurrence |
-| `rt-employee` | EMPLOYEE | company | contact | Employs | Works at | No | Employment relationship |
-| `rt-reports-to` | REPORTS_TO | contact | contact | Has direct report | Reports to | No | Reporting chain |
-| `rt-works-with` | WORKS_WITH | contact | contact | Works with | Works with | No | Peer / collaborator |
-| `rt-partner` | PARTNER | company | company | Partners with | Partners with | No | Business partnership |
-| `rt-vendor` | VENDOR | company | company | Is a vendor of | Is a client of | No | Vendor / client relationship |
+| ID | Name | From | To | Forward Label | Reverse Label | System | Bidirectional | Description |
+|---|---|---|---|---|---|---|---|---|
+| `rt-knows` | KNOWS | contact | contact | Knows | Knows | Yes | Yes | Auto-inferred co-occurrence |
+| `rt-employee` | EMPLOYEE | company | contact | Employs | Works at | No | No | Employment relationship |
+| `rt-reports-to` | REPORTS_TO | contact | contact | Has direct report | Reports to | No | No | Reporting chain |
+| `rt-works-with` | WORKS_WITH | contact | contact | Works with | Works with | No | Yes | Peer / collaborator |
+| `rt-partner` | PARTNER | company | company | Partners with | Partners with | No | Yes | Business partnership |
+| `rt-vendor` | VENDOR | company | company | Is a vendor of | Is a client of | No | No | Vendor / client relationship |
 
 The KNOWS type is the only system type (`is_system=1`).  It is used
 exclusively by the inference engine.  All other seed types are
@@ -219,9 +247,11 @@ KNOWS relationships.
    removes only machine-generated relationships, preserving all
    `source='manual'` rows.
 
-5. **Upsert** — each pair is inserted with `ON CONFLICT(from_entity_id,
-   to_entity_id, relationship_type_id) DO UPDATE SET properties = ...,
-   updated_at = ...`.
+5. **Upsert with pairing** — each pair generates two rows (A→B and
+   B→A) since KNOWS is bidirectional.  Both rows are inserted with
+   `ON CONFLICT ... DO UPDATE`, then linked via
+   `paired_relationship_id`.  The engine reports the count of logical
+   pairs (not raw rows).
 
 ### 5.2 Key Constant
 
@@ -234,11 +264,15 @@ All inferred relationships use this type ID.
 ### 5.3 Load Function
 
 `load_relationships()` supports filtering by:
-- `contact_id` — matches either side (resolved to canonical ID)
+- `contact_id` — matches `from_entity_id` only (bidirectional types
+  store both directions, so `from_entity_id = ?` is sufficient).
+  Resolved to canonical ID.
 - `min_strength` — post-query filter on parsed properties
 - `relationship_type_id` — filter by type
 - `source` — filter by `'inferred'` or `'manual'`
 
+When no `contact_id` is given, bidirectional pairs are deduplicated
+(only the row where `from_entity_id < to_entity_id` is returned).
 Results are JOINed with `relationship_types` to include type name and
 labels.
 
@@ -252,6 +286,11 @@ Users can create and delete manual relationships through the web UI.
 - **Entity type matching** — the relationship type's `from_entity_type`
   and `to_entity_type` determine what the "from" and "to" entities
   represent.
+- **Bidirectional pairing** — when creating a relationship with a
+  bidirectional type, two linked rows are created (A→B and B→A).
+  A duplicate guard checks both directions before inserting.
+- **Delete cascading** — deleting a manual relationship also deletes its
+  `paired_relationship_id` partner (if any).
 - **Delete protection** — only `source='manual'` relationships can be
   deleted through the web UI.  Inferred relationships are managed
   exclusively by the inference engine.
@@ -266,7 +305,7 @@ Users can create and delete manual relationships through the web UI.
 
 | Function | Signature | Description |
 |---|---|---|
-| `create_relationship_type` | `(name, from_entity_type, to_entity_type, forward_label, reverse_label, *, description, created_by) -> dict` | Create a new type. Raises `ValueError` on duplicate name or invalid entity type. |
+| `create_relationship_type` | `(name, from_entity_type, to_entity_type, forward_label, reverse_label, *, is_bidirectional, description, created_by) -> dict` | Create a new type. Raises `ValueError` on duplicate name or invalid entity type. |
 | `list_relationship_types` | `(*, from_entity_type, to_entity_type) -> list[dict]` | List types, optionally filtered by entity types. Ordered by name. |
 | `get_relationship_type` | `(type_id) -> dict or None` | Get a type by ID. |
 | `get_relationship_type_by_name` | `(name) -> dict or None` | Get a type by name. |
@@ -367,9 +406,20 @@ python3 -m poc migrate-to-v4 [--db PATH] [--dry-run]
 
 Migrates a v3 database to v4 schema.  See [Migration Path](#10-migration-path).
 
+### `migrate-to-v5`
+
+```bash
+python3 -m poc migrate-to-v5 [--db PATH] [--dry-run]
+```
+
+Migrates a v4 database to v5 schema (bidirectional support).  See
+[Migration Path](#10-migration-path).
+
 ---
 
 ## 10. Migration Path
+
+### 10.1 v3 to v4
 
 The v3 to v4 migration (`poc/migrate_to_v4.py`) performs five steps:
 
@@ -390,6 +440,33 @@ The v3 to v4 migration (`poc/migrate_to_v4.py`) performs five steps:
 5. **Create indexes and validate** — creates four indexes, re-enables
    foreign keys, runs `PRAGMA foreign_key_check`, and verifies row
    counts match pre-migration.
+
+The `--dry-run` flag applies the migration to the backup copy instead
+of the production database.
+
+### 10.2 v4 to v5
+
+The v4 to v5 migration (`poc/migrate_to_v5.py`) adds bidirectional
+relationship support:
+
+1. **Backup** — copies the database to
+   `{name}.v4-backup-{timestamp}.db`.
+
+2. **Add `is_bidirectional` column** — `ALTER TABLE relationship_types
+   ADD COLUMN is_bidirectional INTEGER NOT NULL DEFAULT 0`.  Sets
+   `is_bidirectional=1` for KNOWS, WORKS_WITH, and PARTNER.
+
+3. **Add `paired_relationship_id` column** — `ALTER TABLE relationships
+   ADD COLUMN paired_relationship_id TEXT REFERENCES relationships(id)
+   ON DELETE SET NULL`.  Creates the `idx_relationships_paired` index.
+
+4. **Create reverse rows** — for each existing relationship of a
+   bidirectional type that lacks a paired row, creates the reverse row
+   (B→A) and links both via `paired_relationship_id`.  If the reverse
+   row already exists, both are linked without creating a duplicate.
+
+5. **Validate** — verifies no orphaned `paired_relationship_id`
+   references and no unpaired bidirectional relationships remain.
 
 The `--dry-run` flag applies the migration to the backup copy instead
 of the production database.
@@ -432,3 +509,21 @@ blob provides flexibility without requiring schema changes.
 Prevents accidentally deleting a type that has active relationships.
 The `delete_relationship_type()` function checks for in-use types and
 returns a clear error message.
+
+### Why two rows for bidirectional relationships instead of a query-time approach?
+
+Storing both A→B and B→A rows (linked via `paired_relationship_id`)
+allows all entity-scoped queries to use a single `WHERE from_entity_id
+= ?` clause, which hits a single index and always uses `forward_label`.
+The alternative — `WHERE from_entity_id = ? OR to_entity_id = ?` —
+defeats index usage and requires CASE expressions to resolve the correct
+label.  The storage cost is one extra row per bidirectional pair, which
+is minimal.  Pairing logic is handled entirely in application code (no
+database triggers).
+
+### Why insert-then-link instead of inserting with `paired_relationship_id` directly?
+
+The `paired_relationship_id` FK references `relationships(id)`.
+Inserting row A with a reference to not-yet-existing row B would violate
+the FK constraint.  Instead, both rows are inserted with NULL paired IDs
+first, then linked via UPDATE statements.

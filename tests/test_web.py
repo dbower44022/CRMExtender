@@ -670,6 +670,7 @@ class TestRelationships:
         assert resp.status_code == 200
 
     def test_create_manual_relationship(self, client, tmp_db):
+        """Creating a bidirectional type (WORKS_WITH) should create two linked rows."""
         with get_connection() as conn:
             _insert_contact(conn, "ct-1", "Alice", "alice@a.com")
             _insert_contact(conn, "ct-2", "Bob", "bob@b.com")
@@ -682,33 +683,61 @@ class TestRelationships:
         assert resp.status_code == 200
 
         with get_connection() as conn:
-            row = conn.execute(
-                "SELECT * FROM relationships WHERE source = 'manual'"
-            ).fetchone()
-        assert row is not None
-        assert row["relationship_type_id"] == "rt-works-with"
+            rows = conn.execute(
+                "SELECT * FROM relationships WHERE source = 'manual' ORDER BY from_entity_id"
+            ).fetchall()
+        assert len(rows) == 2
+        r1, r2 = dict(rows[0]), dict(rows[1])
+        assert r1["relationship_type_id"] == "rt-works-with"
+        assert r1["paired_relationship_id"] == r2["id"]
+        assert r2["paired_relationship_id"] == r1["id"]
+        assert r1["from_entity_id"] == "ct-1"
+        assert r2["from_entity_id"] == "ct-2"
 
     def test_delete_manual_relationship(self, client, tmp_db):
+        """Deleting a bidirectional manual relationship should delete both rows."""
         with get_connection() as conn:
             _insert_contact(conn, "ct-1", "Alice", "alice@a.com")
             _insert_contact(conn, "ct-2", "Bob", "bob@b.com")
+            # Insert both rows first with NULL paired_relationship_id
             conn.execute(
                 """INSERT INTO relationships
                    (id, relationship_type_id, from_entity_type, from_entity_id,
-                    to_entity_type, to_entity_id, source, created_at, updated_at)
+                    to_entity_type, to_entity_id,
+                    source, created_at, updated_at)
                    VALUES ('rel-1', 'rt-works-with', 'contact', 'ct-1',
                            'contact', 'ct-2', 'manual', ?, ?)""",
                 (_NOW, _NOW),
+            )
+            conn.execute(
+                """INSERT INTO relationships
+                   (id, relationship_type_id, from_entity_type, from_entity_id,
+                    to_entity_type, to_entity_id,
+                    source, created_at, updated_at)
+                   VALUES ('rel-2', 'rt-works-with', 'contact', 'ct-2',
+                           'contact', 'ct-1', 'manual', ?, ?)""",
+                (_NOW, _NOW),
+            )
+            # Then link them
+            conn.execute(
+                "UPDATE relationships SET paired_relationship_id = 'rel-2' WHERE id = 'rel-1'"
+            )
+            conn.execute(
+                "UPDATE relationships SET paired_relationship_id = 'rel-1' WHERE id = 'rel-2'"
             )
 
         resp = client.delete("/relationships/rel-1")
         assert resp.status_code == 200
 
         with get_connection() as conn:
-            row = conn.execute(
+            row1 = conn.execute(
                 "SELECT * FROM relationships WHERE id = 'rel-1'"
             ).fetchone()
-        assert row is None
+            row2 = conn.execute(
+                "SELECT * FROM relationships WHERE id = 'rel-2'"
+            ).fetchone()
+        assert row1 is None
+        assert row2 is None
 
     def test_cannot_delete_inferred_relationship(self, client, tmp_db):
         with get_connection() as conn:
@@ -725,6 +754,29 @@ class TestRelationships:
 
         resp = client.delete("/relationships/rel-1")
         assert resp.status_code == 400
+
+    def test_create_unidirectional_relationship(self, client, tmp_db):
+        """Creating a unidirectional type (REPORTS_TO) should create only one row."""
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@a.com")
+            _insert_contact(conn, "ct-2", "Bob", "bob@b.com")
+
+        resp = client.post("/relationships", data={
+            "relationship_type_id": "rt-reports-to",
+            "from_entity_id": "ct-1",
+            "to_entity_id": "ct-2",
+        })
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM relationships WHERE source = 'manual'"
+            ).fetchall()
+        assert len(rows) == 1
+        row = dict(rows[0])
+        assert row["paired_relationship_id"] is None
+        assert row["from_entity_id"] == "ct-1"
+        assert row["to_entity_id"] == "ct-2"
 
 
 # ---------------------------------------------------------------------------

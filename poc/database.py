@@ -283,6 +283,7 @@ CREATE TABLE IF NOT EXISTS relationship_types (
     forward_label    TEXT NOT NULL,
     reverse_label    TEXT NOT NULL,
     is_system        INTEGER NOT NULL DEFAULT 0,
+    is_bidirectional INTEGER NOT NULL DEFAULT 0,
     description      TEXT,
     created_by       TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_by       TEXT REFERENCES users(id) ON DELETE SET NULL,
@@ -294,18 +295,19 @@ CREATE TABLE IF NOT EXISTS relationship_types (
 
 -- Relationships between entities
 CREATE TABLE IF NOT EXISTS relationships (
-    id                   TEXT PRIMARY KEY,
-    relationship_type_id TEXT NOT NULL REFERENCES relationship_types(id) ON DELETE RESTRICT,
-    from_entity_type     TEXT NOT NULL DEFAULT 'contact',
-    from_entity_id       TEXT NOT NULL,
-    to_entity_type       TEXT NOT NULL DEFAULT 'contact',
-    to_entity_id         TEXT NOT NULL,
-    source               TEXT NOT NULL DEFAULT 'manual',
-    properties           TEXT,
-    created_by           TEXT REFERENCES users(id) ON DELETE SET NULL,
-    updated_by           TEXT REFERENCES users(id) ON DELETE SET NULL,
-    created_at           TEXT NOT NULL,
-    updated_at           TEXT NOT NULL,
+    id                      TEXT PRIMARY KEY,
+    relationship_type_id    TEXT NOT NULL REFERENCES relationship_types(id) ON DELETE RESTRICT,
+    from_entity_type        TEXT NOT NULL DEFAULT 'contact',
+    from_entity_id          TEXT NOT NULL,
+    to_entity_type          TEXT NOT NULL DEFAULT 'contact',
+    to_entity_id            TEXT NOT NULL,
+    paired_relationship_id  TEXT REFERENCES relationships(id) ON DELETE SET NULL,
+    source                  TEXT NOT NULL DEFAULT 'manual',
+    properties              TEXT,
+    created_by              TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by              TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at              TEXT NOT NULL,
+    updated_at              TEXT NOT NULL,
     UNIQUE(from_entity_id, to_entity_id, relationship_type_id)
 );
 
@@ -436,20 +438,21 @@ CREATE INDEX IF NOT EXISTS idx_relationships_from   ON relationships(from_entity
 CREATE INDEX IF NOT EXISTS idx_relationships_to     ON relationships(to_entity_id);
 CREATE INDEX IF NOT EXISTS idx_relationships_type   ON relationships(relationship_type_id);
 CREATE INDEX IF NOT EXISTS idx_relationships_source ON relationships(source);
+CREATE INDEX IF NOT EXISTS idx_relationships_paired ON relationships(paired_relationship_id);
 """
 
 
 _SEED_RELATIONSHIP_TYPES_SQL = """\
 INSERT OR IGNORE INTO relationship_types
     (id, name, from_entity_type, to_entity_type, forward_label, reverse_label,
-     is_system, description, created_at, updated_at)
+     is_system, is_bidirectional, description, created_at, updated_at)
 VALUES
-    ('rt-knows',      'KNOWS',      'contact', 'contact', 'Knows',             'Knows',            1, 'Auto-inferred co-occurrence',      '{now}', '{now}'),
-    ('rt-employee',   'EMPLOYEE',   'company', 'contact', 'Employs',           'Works at',         0, 'Employment relationship',           '{now}', '{now}'),
-    ('rt-reports-to', 'REPORTS_TO', 'contact', 'contact', 'Has direct report', 'Reports to',       0, 'Reporting chain',                   '{now}', '{now}'),
-    ('rt-works-with', 'WORKS_WITH', 'contact', 'contact', 'Works with',        'Works with',       0, 'Peer / collaborator',               '{now}', '{now}'),
-    ('rt-partner',    'PARTNER',    'company', 'company', 'Partners with',     'Partners with',    0, 'Business partnership',              '{now}', '{now}'),
-    ('rt-vendor',     'VENDOR',     'company', 'company', 'Is a vendor of',    'Is a client of',   0, 'Vendor / client relationship',      '{now}', '{now}');
+    ('rt-knows',      'KNOWS',      'contact', 'contact', 'Knows',             'Knows',            1, 1, 'Auto-inferred co-occurrence',      '{now}', '{now}'),
+    ('rt-employee',   'EMPLOYEE',   'company', 'contact', 'Employs',           'Works at',         0, 0, 'Employment relationship',           '{now}', '{now}'),
+    ('rt-reports-to', 'REPORTS_TO', 'contact', 'contact', 'Has direct report', 'Reports to',       0, 0, 'Reporting chain',                   '{now}', '{now}'),
+    ('rt-works-with', 'WORKS_WITH', 'contact', 'contact', 'Works with',        'Works with',       0, 1, 'Peer / collaborator',               '{now}', '{now}'),
+    ('rt-partner',    'PARTNER',    'company', 'company', 'Partners with',     'Partners with',    0, 1, 'Business partnership',              '{now}', '{now}'),
+    ('rt-vendor',     'VENDOR',     'company', 'company', 'Is a vendor of',    'Is a client of',   0, 0, 'Vendor / client relationship',      '{now}', '{now}');
 """
 
 

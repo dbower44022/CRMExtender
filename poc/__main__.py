@@ -366,26 +366,35 @@ def cmd_show_relationships(args: argparse.Namespace) -> None:
         min_strength=args.min_strength,
     )
 
-    # Build contact name lookup for display
-    contact_ids = set()
+    # Build entity name lookup for display
+    entity_ids = set()
     for rel in relationships:
-        contact_ids.add(rel.from_contact_id)
-        contact_ids.add(rel.to_contact_id)
+        entity_ids.add(rel.from_entity_id)
+        entity_ids.add(rel.to_entity_id)
 
     contact_names: dict[str, str] = {}
     type_names: dict[str, str] = {}
     with get_connection() as conn:
-        if contact_ids:
-            placeholders = ",".join("?" for _ in contact_ids)
+        if entity_ids:
+            placeholders = ",".join("?" for _ in entity_ids)
+            id_list = list(entity_ids)
+            # Contacts
             rows = conn.execute(
                 f"""SELECT c.id, c.name, ci.value AS email
                     FROM contacts c
                     LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
                     WHERE c.id IN ({placeholders})""",
-                list(contact_ids),
+                id_list,
             ).fetchall()
             for row in rows:
                 contact_names[row["id"]] = row["name"] or row["email"] or row["id"][:8]
+            # Companies
+            rows = conn.execute(
+                f"SELECT id, name FROM companies WHERE id IN ({placeholders})",
+                id_list,
+            ).fetchall()
+            for row in rows:
+                contact_names[row["id"]] = row["name"]
 
         # Build type name lookup
         for row in conn.execute("SELECT id, name FROM relationship_types").fetchall():
@@ -792,6 +801,17 @@ def cmd_migrate_to_v4(args: argparse.Namespace) -> None:
     migrate(db_path, dry_run=args.dry_run)
 
 
+def cmd_migrate_to_v5(args: argparse.Namespace) -> None:
+    """Run the v4 -> v5 migration."""
+    from .migrate_to_v5 import migrate
+
+    db_path = args.db
+    if not db_path:
+        db_path = config.DB_PATH
+
+    migrate(db_path, dry_run=args.dry_run)
+
+
 def cmd_serve(args: argparse.Namespace) -> None:
     """Launch the web UI."""
     import uvicorn
@@ -936,6 +956,12 @@ def build_parser() -> argparse.ArgumentParser:
     m4.add_argument("--dry-run", action="store_true",
                     help="Apply migration to a backup copy instead of the real database")
 
+    # migrate-to-v5
+    m5 = sub.add_parser("migrate-to-v5", help="Migrate database from v4 to v5 (bidirectional relationships)")
+    m5.add_argument("--db", type=Path, help="Path to the SQLite database file")
+    m5.add_argument("--dry-run", action="store_true",
+                    help="Apply migration to a backup copy instead of the real database")
+
     return parser
 
 
@@ -975,6 +1001,7 @@ def main() -> None:
         "show-hierarchy": cmd_show_hierarchy,
         "list-relationship-types": cmd_list_relationship_types,
         "migrate-to-v4": cmd_migrate_to_v4,
+        "migrate-to-v5": cmd_migrate_to_v5,
     }
 
     # Default to "run" when no subcommand given

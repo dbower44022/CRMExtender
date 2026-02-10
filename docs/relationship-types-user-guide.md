@@ -1,8 +1,9 @@
 # Relationship Types User Guide
 
-This guide covers the relationship types system introduced in v4:
-migrating your database, understanding types, managing relationships
-through the web UI, and using the CLI commands.
+This guide covers the relationship types system introduced in v4 and
+updated in v5 (bidirectional support): migrating your database,
+understanding types, managing relationships through the web UI, and
+using the CLI commands.
 
 ---
 
@@ -54,6 +55,44 @@ python3 -m poc migrate-to-v4 --db /path/to/your/database.db --dry-run
 
 ---
 
+## Migrating from v4 to v5
+
+If you have a v4 database, run the migration to add bidirectional
+relationship support.
+
+### Preview with dry run
+
+```bash
+python3 -m poc migrate-to-v5 --dry-run
+```
+
+This creates a backup copy and applies the migration to the backup only.
+Review the output to confirm:
+- The `is_bidirectional` column was added to `relationship_types`.
+- KNOWS, WORKS_WITH, and PARTNER were marked bidirectional.
+- The `paired_relationship_id` column was added to `relationships`.
+- Reverse rows were created for existing bidirectional relationships.
+
+### Run for real
+
+```bash
+python3 -m poc migrate-to-v5
+```
+
+A timestamped backup is created automatically at
+`{database}.v4-backup-{timestamp}.db` before any changes are made.
+
+### What the migration does
+
+1. Adds `is_bidirectional` column to `relationship_types`.
+2. Sets `is_bidirectional=1` for KNOWS, WORKS_WITH, and PARTNER.
+3. Adds `paired_relationship_id` column to `relationships`.
+4. Creates reverse rows (B→A) for each existing bidirectional
+   relationship (A→B) and links them via `paired_relationship_id`.
+5. Validates no orphaned references or unpaired bidirectional rows.
+
+---
+
 ## Understanding Relationship Types
 
 Every relationship in the system has a **type** that defines what it
@@ -63,14 +102,14 @@ means, who it connects, and how it reads in each direction.
 
 The system ships with six built-in types:
 
-| Type | From → To | Forward Label | Reverse Label | Example |
-|---|---|---|---|---|
-| **KNOWS** | contact → contact | Knows | Knows | Alice *knows* Bob |
-| **EMPLOYEE** | company → contact | Employs | Works at | Acme *employs* Bob / Bob *works at* Acme |
-| **REPORTS_TO** | contact → contact | Has direct report | Reports to | Alice *has direct report* Bob / Bob *reports to* Alice |
-| **WORKS_WITH** | contact → contact | Works with | Works with | Alice *works with* Bob |
-| **PARTNER** | company → company | Partners with | Partners with | Acme *partners with* Globex |
-| **VENDOR** | company → company | Is a vendor of | Is a client of | Acme *is a vendor of* Globex / Globex *is a client of* Acme |
+| Type | From → To | Forward Label | Reverse Label | Bidirectional | Example |
+|---|---|---|---|---|---|
+| **KNOWS** | contact → contact | Knows | Knows | Yes | Alice *knows* Bob |
+| **EMPLOYEE** | company → contact | Employs | Works at | No | Acme *employs* Bob / Bob *works at* Acme |
+| **REPORTS_TO** | contact → contact | Has direct report | Reports to | No | Alice *has direct report* Bob / Bob *reports to* Alice |
+| **WORKS_WITH** | contact → contact | Works with | Works with | Yes | Alice *works with* Bob |
+| **PARTNER** | company → company | Partners with | Partners with | Yes | Acme *partners with* Globex |
+| **VENDOR** | company → company | Is a vendor of | Is a client of | No | Acme *is a vendor of* Globex / Globex *is a client of* Acme |
 
 ### Directional labels
 
@@ -90,6 +129,19 @@ regardless of which side you are viewing from.
   inference engine depends on them.
 - **Custom types** can be created by users and deleted when they are no
   longer in use (i.e., no relationships reference them).
+
+### Bidirectional vs. unidirectional
+
+**Bidirectional types** (KNOWS, WORKS_WITH, PARTNER) represent symmetric
+relationships.  When you create "Alice works with Bob", the system
+automatically creates the reverse "Bob works with Alice".  Both entities
+see the relationship on their detail pages.  Deleting either side
+removes both.
+
+**Unidirectional types** (EMPLOYEE, REPORTS_TO, VENDOR) represent
+directional relationships.  "Alice reports to Bob" does *not*
+automatically create "Bob reports to Alice" — the reverse reads as
+"Bob has direct report Alice" (using the reverse_label).
 
 ### Entity types
 
@@ -287,6 +339,25 @@ python3 -m poc migrate-to-v4
 
 # Custom database path
 python3 -m poc migrate-to-v4 --db /path/to/database.db
+```
+
+Options:
+- `--db PATH` — path to the SQLite database.  Defaults to
+  `data/crm_extender.db`.
+- `--dry-run` — apply the migration to an auto-created backup copy
+  instead of the production database.
+
+### `migrate-to-v5`
+
+```bash
+# Dry run (preview on backup)
+python3 -m poc migrate-to-v5 --dry-run
+
+# Apply to production
+python3 -m poc migrate-to-v5
+
+# Custom database path
+python3 -m poc migrate-to-v5 --db /path/to/database.db
 ```
 
 Options:

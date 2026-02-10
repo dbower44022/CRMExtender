@@ -115,7 +115,7 @@ def contact_detail(request: Request, contact_id: str):
         ).fetchall()
         conversations = [dict(r) for r in convs]
 
-        # Relationships
+        # Relationships (bidirectional pairs stored as two rows, so from_entity_id suffices)
         import json
         rels = conn.execute(
             """SELECT r.*, rt.name AS type_name,
@@ -123,13 +123,11 @@ def contact_detail(request: Request, contact_id: str):
                       c.name AS other_name, ci.value AS other_email
                FROM relationships r
                JOIN relationship_types rt ON rt.id = r.relationship_type_id
-               LEFT JOIN contacts c ON c.id = CASE
-                   WHEN r.from_entity_id = ? THEN r.to_entity_id
-                   ELSE r.from_entity_id END
+               LEFT JOIN contacts c ON c.id = r.to_entity_id
                LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
-               WHERE r.from_entity_id = ? OR r.to_entity_id = ?
+               WHERE r.from_entity_id = ?
                ORDER BY r.updated_at DESC""",
-            (contact_id, contact_id, contact_id),
+            (contact_id,),
         ).fetchall()
         relationships = []
         for r in rels:
@@ -141,10 +139,9 @@ def contact_detail(request: Request, contact_id: str):
                     rd["props"] = {}
             else:
                 rd["props"] = {}
-            is_from = rd["from_entity_id"] == contact_id
-            rd["other_id"] = rd["to_entity_id"] if is_from else rd["from_entity_id"]
-            rd["other_entity_type"] = rd["to_entity_type"] if is_from else rd["from_entity_type"]
-            rd["label"] = rd["forward_label"] if is_from else rd["reverse_label"]
+            rd["other_id"] = rd["to_entity_id"]
+            rd["other_entity_type"] = rd["to_entity_type"]
+            rd["label"] = rd["forward_label"]
             # Try to resolve company names for non-contact other entities
             if rd["other_entity_type"] == "company" and not rd.get("other_name"):
                 co = conn.execute(

@@ -351,6 +351,7 @@ class RelationshipType:
     forward_label: str = ""
     reverse_label: str = ""
     is_system: bool = False
+    is_bidirectional: bool = False
     description: str = ""
 
     def to_row(
@@ -369,6 +370,7 @@ class RelationshipType:
             "forward_label": self.forward_label,
             "reverse_label": self.reverse_label,
             "is_system": 1 if self.is_system else 0,
+            "is_bidirectional": 1 if self.is_bidirectional else 0,
             "description": self.description or None,
             "created_by": created_by,
             "updated_by": updated_by,
@@ -386,6 +388,7 @@ class RelationshipType:
             forward_label=r.get("forward_label") or "",
             reverse_label=r.get("reverse_label") or "",
             is_system=bool(r.get("is_system", 0)),
+            is_bidirectional=bool(r.get("is_bidirectional", 0)),
             description=r.get("description") or "",
         )
 
@@ -399,6 +402,7 @@ class Relationship:
     relationship_type_id: str = "rt-knows"
     from_entity_type: str = "contact"
     to_entity_type: str = "contact"
+    paired_relationship_id: str | None = None
     source: str = "inferred"
     strength: float = 0.0
     shared_conversations: int = 0
@@ -438,6 +442,7 @@ class Relationship:
             "from_entity_id": self.from_entity_id,
             "to_entity_type": self.to_entity_type,
             "to_entity_id": self.to_entity_id,
+            "paired_relationship_id": self.paired_relationship_id,
             "source": self.source,
             "properties": properties,
             "created_by": created_by,
@@ -457,6 +462,7 @@ class Relationship:
             relationship_type_id=r.get("relationship_type_id", "rt-knows"),
             from_entity_type=r.get("from_entity_type", "contact"),
             to_entity_type=r.get("to_entity_type", "contact"),
+            paired_relationship_id=r.get("paired_relationship_id"),
             source=r.get("source", "inferred"),
             strength=props.get("strength", 0.0),
             shared_conversations=props.get("shared_conversations", 0),

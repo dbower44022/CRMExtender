@@ -185,16 +185,16 @@ def company_detail(request: Request, company_id: str):
         ).fetchall()
         contacts = [dict(r) for r in contacts]
 
-        # Relationships involving this company
+        # Relationships involving this company (bidirectional pairs stored as two rows)
         import json
         rels = conn.execute(
             """SELECT r.*, rt.name AS type_name,
                       rt.forward_label, rt.reverse_label
                FROM relationships r
                JOIN relationship_types rt ON rt.id = r.relationship_type_id
-               WHERE r.from_entity_id = ? OR r.to_entity_id = ?
+               WHERE r.from_entity_id = ?
                ORDER BY r.updated_at DESC""",
-            (company_id, company_id),
+            (company_id,),
         ).fetchall()
         relationships = []
         for r in rels:
@@ -206,10 +206,9 @@ def company_detail(request: Request, company_id: str):
                     rd["props"] = {}
             else:
                 rd["props"] = {}
-            is_from = rd["from_entity_id"] == company_id
-            rd["other_id"] = rd["to_entity_id"] if is_from else rd["from_entity_id"]
-            rd["other_entity_type"] = rd["to_entity_type"] if is_from else rd["from_entity_type"]
-            rd["label"] = rd["forward_label"] if is_from else rd["reverse_label"]
+            rd["other_id"] = rd["to_entity_id"]
+            rd["other_entity_type"] = rd["to_entity_type"]
+            rd["label"] = rd["forward_label"]
             # Resolve other entity name
             if rd["other_entity_type"] == "contact":
                 ct = conn.execute(

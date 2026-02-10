@@ -16,6 +16,7 @@ def create_relationship_type(
     forward_label: str = "",
     reverse_label: str = "",
     *,
+    is_bidirectional: bool = False,
     description: str = "",
     created_by: str | None = None,
 ) -> dict:
@@ -41,17 +42,18 @@ def create_relationship_type(
             to_entity_type=to_entity_type,
             forward_label=forward_label,
             reverse_label=reverse_label,
+            is_bidirectional=is_bidirectional,
             description=description,
         )
         row = rt.to_row(created_by=created_by, updated_by=created_by)
         conn.execute(
             "INSERT INTO relationship_types "
             "(id, name, from_entity_type, to_entity_type, forward_label, "
-            "reverse_label, is_system, description, created_by, updated_by, "
-            "created_at, updated_at) "
+            "reverse_label, is_system, is_bidirectional, description, "
+            "created_by, updated_by, created_at, updated_at) "
             "VALUES (:id, :name, :from_entity_type, :to_entity_type, "
-            ":forward_label, :reverse_label, :is_system, :description, "
-            ":created_by, :updated_by, :created_at, :updated_at)",
+            ":forward_label, :reverse_label, :is_system, :is_bidirectional, "
+            ":description, :created_by, :updated_by, :created_at, :updated_at)",
             row,
         )
         return row

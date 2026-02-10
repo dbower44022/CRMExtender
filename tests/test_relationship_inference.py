@@ -223,8 +223,9 @@ class TestInferRelationships:
             _seed_scenario(conn, num_contacts=3, num_conversations=3)
 
         count = infer_relationships()
-        assert count == 3  # 3 adjacent pairs: (c-0,c-1), (c-1,c-2), (c-0,c-2)
+        assert count == 3  # 3 logical pairs: (c-0,c-1), (c-1,c-2), (c-0,c-2)
 
+        # load_relationships deduplicates, so still shows 3 logical pairs
         rels = load_relationships()
         assert len(rels) == 3
         for rel in rels:
@@ -232,6 +233,13 @@ class TestInferRelationships:
             assert rel.shared_conversations >= 1
             assert rel.relationship_type_id == KNOWS_TYPE_ID
             assert rel.source == "inferred"
+
+        # But DB should have 6 rows (2 per pair for bidirectional KNOWS)
+        with get_connection() as conn:
+            total = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM relationships WHERE source = 'inferred'"
+            ).fetchone()["cnt"]
+        assert total == 6
 
     def test_no_data_returns_zero(self, tmp_db):
         count = infer_relationships()
@@ -245,9 +253,16 @@ class TestInferRelationships:
         count2 = infer_relationships()
         assert count1 == count2
 
-        # Should still only have one unique relationship
+        # Should still only have one unique logical relationship
         rels = load_relationships()
         assert len(rels) == 1
+
+        # But 2 rows in DB (forward + reverse)
+        with get_connection() as conn:
+            total = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM relationships WHERE source = 'inferred'"
+            ).fetchone()["cnt"]
+        assert total == 2
 
     def test_filtered_by_contact(self, tmp_db):
         with get_connection() as conn:
@@ -255,10 +270,10 @@ class TestInferRelationships:
 
         infer_relationships()
 
-        # Filter to c-0's relationships
+        # Filter to c-0's relationships — only from_entity_id matches
         rels = load_relationships(contact_id="c-0")
         for rel in rels:
-            assert "c-0" in (rel.from_contact_id, rel.to_contact_id)
+            assert rel.from_contact_id == "c-0"
 
     def test_min_strength_filter(self, tmp_db):
         with get_connection() as conn:
@@ -350,3 +365,37 @@ class TestInferRelationships:
         inferred = load_relationships(source="inferred")
         for r in inferred:
             assert r.source == "inferred"
+
+    def test_paired_relationship_ids_linked(self, tmp_db):
+        """Bidirectional inference creates two rows that point at each other."""
+        with get_connection() as conn:
+            _seed_scenario(conn, num_contacts=2, num_conversations=2)
+
+        infer_relationships()
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM relationships WHERE source = 'inferred'"
+            ).fetchall()
+        assert len(rows) == 2
+
+        r1, r2 = dict(rows[0]), dict(rows[1])
+        # They should point at each other
+        assert r1["paired_relationship_id"] == r2["id"]
+        assert r2["paired_relationship_id"] == r1["id"]
+        # They should be A->B and B->A
+        assert r1["from_entity_id"] == r2["to_entity_id"]
+        assert r1["to_entity_id"] == r2["from_entity_id"]
+
+    def test_load_by_contact_only_from(self, tmp_db):
+        """When filtering by contact_id, only from_entity_id is checked."""
+        with get_connection() as conn:
+            _seed_scenario(conn, num_contacts=3, num_conversations=3)
+
+        infer_relationships()
+
+        # c-0 should have relationships from_entity_id = c-0
+        rels = load_relationships(contact_id="c-0")
+        assert len(rels) >= 1
+        for rel in rels:
+            assert rel.from_entity_id == "c-0"

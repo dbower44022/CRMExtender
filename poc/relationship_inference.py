@@ -202,15 +202,22 @@ def infer_relationships() -> int:
                 first_interaction=entry["first_interaction"],
             )
 
-            _upsert_relationship(conn, rel)
+            _upsert_relationship(conn, rel, is_bidirectional=True)
             count += 1
 
         log.info("Upserted %d relationships.", count)
         return count
 
 
-def _upsert_relationship(conn, rel: Relationship) -> None:
-    """Insert or update a relationship row."""
+def _upsert_relationship(
+    conn, rel: Relationship, *, is_bidirectional: bool = False,
+) -> None:
+    """Insert or update relationship row(s).
+
+    For bidirectional types, creates two linked rows (A->B and B->A).
+    Inserts both rows first with NULL paired IDs, then links them
+    (avoids FK violation from referencing a not-yet-inserted row).
+    """
     now = datetime.now(timezone.utc).isoformat()
     properties = json.dumps({
         "strength": rel.strength,
@@ -220,19 +227,22 @@ def _upsert_relationship(conn, rel: Relationship) -> None:
         "first_interaction": rel.first_interaction,
     })
 
+    rel_id_1 = str(uuid.uuid4())
+
+    # Forward row (A -> B)
     conn.execute(
         """\
         INSERT INTO relationships (id, relationship_type_id, from_entity_type,
                                    from_entity_id, to_entity_type, to_entity_id,
-                                   source, properties,
+                                   paired_relationship_id, source, properties,
                                    created_at, updated_at)
-        VALUES (?, ?, 'contact', ?, 'contact', ?, 'inferred', ?, ?, ?)
+        VALUES (?, ?, 'contact', ?, 'contact', ?, NULL, 'inferred', ?, ?, ?)
         ON CONFLICT(from_entity_id, to_entity_id, relationship_type_id) DO UPDATE SET
             properties = excluded.properties,
             updated_at = excluded.updated_at
         """,
         (
-            str(uuid.uuid4()),
+            rel_id_1,
             KNOWS_TYPE_ID,
             rel.from_entity_id,
             rel.to_entity_id,
@@ -241,6 +251,52 @@ def _upsert_relationship(conn, rel: Relationship) -> None:
             now,
         ),
     )
+
+    if is_bidirectional:
+        rel_id_2 = str(uuid.uuid4())
+
+        # Reverse row (B -> A)
+        conn.execute(
+            """\
+            INSERT INTO relationships (id, relationship_type_id, from_entity_type,
+                                       from_entity_id, to_entity_type, to_entity_id,
+                                       paired_relationship_id, source, properties,
+                                       created_at, updated_at)
+            VALUES (?, ?, 'contact', ?, 'contact', ?, NULL, 'inferred', ?, ?, ?)
+            ON CONFLICT(from_entity_id, to_entity_id, relationship_type_id) DO UPDATE SET
+                properties = excluded.properties,
+                updated_at = excluded.updated_at
+            """,
+            (
+                rel_id_2,
+                KNOWS_TYPE_ID,
+                rel.to_entity_id,
+                rel.from_entity_id,
+                properties,
+                now,
+                now,
+            ),
+        )
+
+        # Resolve actual IDs (may differ if ON CONFLICT updated existing rows)
+        fwd = conn.execute(
+            "SELECT id FROM relationships WHERE from_entity_id = ? AND to_entity_id = ? AND relationship_type_id = ?",
+            (rel.from_entity_id, rel.to_entity_id, KNOWS_TYPE_ID),
+        ).fetchone()
+        rev = conn.execute(
+            "SELECT id FROM relationships WHERE from_entity_id = ? AND to_entity_id = ? AND relationship_type_id = ?",
+            (rel.to_entity_id, rel.from_entity_id, KNOWS_TYPE_ID),
+        ).fetchone()
+
+        if fwd and rev:
+            conn.execute(
+                "UPDATE relationships SET paired_relationship_id = ? WHERE id = ?",
+                (rev["id"], fwd["id"]),
+            )
+            conn.execute(
+                "UPDATE relationships SET paired_relationship_id = ? WHERE id = ?",
+                (fwd["id"], rev["id"]),
+            )
 
 
 def load_relationships(
@@ -252,8 +308,12 @@ def load_relationships(
 ) -> list[Relationship]:
     """Load relationships from the database, optionally filtered.
 
-    When contact_id is given, the filter matches relationships where
-    the canonical ID for that contact appears on either side.
+    When contact_id is given, only rows where from_entity_id matches are
+    returned (bidirectional types store both directions as separate rows).
+
+    When no contact_id filter is given, bidirectional pairs are deduplicated
+    by only returning rows where from_entity_id < to_entity_id or
+    paired_relationship_id IS NULL (unidirectional).
     """
     with get_connection() as conn:
         # Resolve contact_id to its canonical ID
@@ -266,8 +326,13 @@ def load_relationships(
         params: list = []
 
         if lookup_id:
-            clauses.append("(r.from_entity_id = ? OR r.to_entity_id = ?)")
-            params.extend([lookup_id, lookup_id])
+            clauses.append("r.from_entity_id = ?")
+            params.append(lookup_id)
+        else:
+            # Deduplicate bidirectional pairs in unfiltered listings
+            clauses.append(
+                "(r.paired_relationship_id IS NULL OR r.from_entity_id < r.to_entity_id)"
+            )
 
         if relationship_type_id:
             clauses.append("r.relationship_type_id = ?")

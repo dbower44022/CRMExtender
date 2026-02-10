@@ -176,11 +176,11 @@ def relationship_create(
     from_entity_id: str = Form(...),
     to_entity_id: str = Form(...),
 ):
-    """Create a manual relationship."""
+    """Create a manual relationship (with paired reverse for bidirectional types)."""
     now = datetime.now(timezone.utc).isoformat()
 
     with get_connection() as conn:
-        # Look up type to get entity types
+        # Look up type to get entity types and bidirectionality
         rt = conn.execute(
             "SELECT * FROM relationship_types WHERE id = ?",
             (relationship_type_id,),
@@ -188,13 +188,32 @@ def relationship_create(
         if not rt:
             return HTMLResponse("Relationship type not found", status_code=400)
 
+        is_bidi = bool(rt["is_bidirectional"])
+
+        # Guard: check neither direction already exists
+        existing = conn.execute(
+            """SELECT id FROM relationships
+               WHERE relationship_type_id = ?
+                 AND ((from_entity_id = ? AND to_entity_id = ?)
+                   OR (from_entity_id = ? AND to_entity_id = ?))""",
+            (relationship_type_id, from_entity_id, to_entity_id,
+             to_entity_id, from_entity_id),
+        ).fetchone()
+        if existing:
+            if request.headers.get("HX-Request") == "true":
+                return HTMLResponse("", headers={"HX-Redirect": "/relationships"})
+            return RedirectResponse("/relationships", status_code=303)
+
+        rel_id_1 = str(uuid.uuid4())
+
         conn.execute(
-            """INSERT OR IGNORE INTO relationships
+            """INSERT INTO relationships
                (id, relationship_type_id, from_entity_type, from_entity_id,
-                to_entity_type, to_entity_id, source, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, 'manual', ?, ?)""",
+                to_entity_type, to_entity_id, paired_relationship_id,
+                source, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, NULL, 'manual', ?, ?)""",
             (
-                str(uuid.uuid4()),
+                rel_id_1,
                 relationship_type_id,
                 rt["from_entity_type"],
                 from_entity_id,
@@ -205,6 +224,35 @@ def relationship_create(
             ),
         )
 
+        if is_bidi:
+            rel_id_2 = str(uuid.uuid4())
+            conn.execute(
+                """INSERT INTO relationships
+                   (id, relationship_type_id, from_entity_type, from_entity_id,
+                    to_entity_type, to_entity_id, paired_relationship_id,
+                    source, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, NULL, 'manual', ?, ?)""",
+                (
+                    rel_id_2,
+                    relationship_type_id,
+                    rt["to_entity_type"],
+                    to_entity_id,
+                    rt["from_entity_type"],
+                    from_entity_id,
+                    now,
+                    now,
+                ),
+            )
+            # Now link them together
+            conn.execute(
+                "UPDATE relationships SET paired_relationship_id = ? WHERE id = ?",
+                (rel_id_2, rel_id_1),
+            )
+            conn.execute(
+                "UPDATE relationships SET paired_relationship_id = ? WHERE id = ?",
+                (rel_id_1, rel_id_2),
+            )
+
     if request.headers.get("HX-Request") == "true":
         return HTMLResponse("", headers={"HX-Redirect": "/relationships"})
     return RedirectResponse("/relationships", status_code=303)
@@ -212,16 +260,22 @@ def relationship_create(
 
 @router.delete("/{relationship_id}", response_class=HTMLResponse)
 def relationship_delete(request: Request, relationship_id: str):
-    """Delete a manual relationship."""
+    """Delete a manual relationship (and its paired reverse if bidirectional)."""
     with get_connection() as conn:
         row = conn.execute(
-            "SELECT source FROM relationships WHERE id = ?", (relationship_id,)
+            "SELECT source, paired_relationship_id FROM relationships WHERE id = ?",
+            (relationship_id,),
         ).fetchone()
         if not row:
             return HTMLResponse("Not found", status_code=404)
         if row["source"] != "manual":
             return HTMLResponse("Cannot delete inferred relationships", status_code=400)
         conn.execute("DELETE FROM relationships WHERE id = ?", (relationship_id,))
+        if row["paired_relationship_id"]:
+            conn.execute(
+                "DELETE FROM relationships WHERE id = ?",
+                (row["paired_relationship_id"],),
+            )
     return HTMLResponse("")
 
 

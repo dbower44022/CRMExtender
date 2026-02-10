@@ -84,8 +84,9 @@ creates several gaps:
 - **Calendar sync implementation** — this PRD defines the data model
   and provider integration points.  The actual Google Calendar API
   client, Outlook sync, etc. are future implementation work.
-- **Web UI for events** — the events browser, creation form, and
-  detail pages will be added in a subsequent iteration.
+- **Web UI for events** — ~~the events browser, creation form, and
+  detail pages will be added in a subsequent iteration.~~
+  **Implemented** — see [Web UI](#web-ui) section below.
 - **Recurring event instance materialization** — the system stores
   RRULE definitions and individual modified instances, but does not
   auto-generate concrete rows for every occurrence.  Instance expansion
@@ -665,15 +666,16 @@ The following items are planned for subsequent iterations:
 
 ### 13.2 Web UI
 
-- **Events browser** — list/filter events by type, date range,
-  contact, company.
-- **Event detail page** — show event details, participants, linked
-  conversations.
-- **Create/edit forms** — manual event creation with participant
-  selection.
+- ~~**Events browser** — list/filter events by type, date range,
+  contact, company.~~ **Done.**
+- ~~**Event detail page** — show event details, participants, linked
+  conversations.~~ **Done.**
+- ~~**Create/edit forms** — manual event creation with participant
+  selection.~~ **Done** (create form; edit and participant selection
+  are future work).
 - **Calendar view** — month/week/day calendar visualization.
-- **Dashboard integration** — "upcoming events" widget on the
-  dashboard.
+- ~~**Dashboard integration** — "upcoming events" widget on the
+  dashboard.~~ **Done** (events count on dashboard).
 
 ### 13.3 Birthday Auto-Generation
 
@@ -702,7 +704,65 @@ The following items are planned for subsequent iterations:
 
 ---
 
-## 14. Design Decisions
+## 14. Web UI
+
+The events web UI was added following the existing patterns used by
+contacts, companies, and relationships.
+
+### Routes (`poc/web/routes/events.py`)
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/events` | List page with search, type filter, pagination (50/page) |
+| GET | `/events/search` | HTMX partial returning `_rows.html` |
+| POST | `/events` | Create a new event (redirects to detail page) |
+| GET | `/events/{event_id}` | Detail page (info sidebar, participants, linked conversations) |
+| DELETE | `/events/{event_id}` | Delete an event and its participant/conversation links |
+
+### Templates (`poc/web/templates/events/`)
+
+| Template | Description |
+|---|---|
+| `list.html` | 2-column grid: search/filter/results + "New Event" form |
+| `_rows.html` | Table partial with title, type, date, location, status, source, delete button |
+| `detail.html` | Grid layout: participants + linked conversations (left), event info sidebar (right) |
+| `_form.html` | Create form with title, type, datetime, location, description, recurrence, status |
+
+### Features
+
+- **Search** — filters events by title or location (HTMX live search
+  with 300ms debounce).
+- **Type filter** — dropdown to filter by event type (meeting,
+  birthday, anniversary, conference, deadline, other).
+- **Pagination** — 50 events per page with previous/next navigation.
+- **Create form** — creates events with `source='manual'`.  Supports
+  all-day toggle, recurrence type, and status selection.
+- **Detail page** — shows event metadata in a sidebar, participants
+  with entity links and roles, and linked conversations.
+- **Delete** — HTMX delete with confirmation dialog.
+- **Dashboard** — events count card added to the dashboard.
+- **Navigation** — "Events" link added to the global nav bar.
+
+### Test Coverage
+
+10 tests in `tests/test_web.py::TestEvents`:
+
+| Test | Coverage |
+|---|---|
+| `test_list_loads` | GET /events returns 200 |
+| `test_list_shows_events` | Inserted events appear in list |
+| `test_search_events` | Search filter works |
+| `test_type_filter` | Event type filter works |
+| `test_create_event` | POST /events creates and redirects |
+| `test_detail_page` | GET /events/{id} shows event info |
+| `test_detail_not_found` | 404 for missing event |
+| `test_detail_shows_participants` | Participants appear on detail |
+| `test_detail_shows_conversations` | Linked conversations appear |
+| `test_delete_event` | DELETE removes event |
+
+---
+
+## 15. Design Decisions
 
 ### Why a simple `event_type` text column instead of an `event_types` table?
 

@@ -1,7 +1,7 @@
 # Data Model & Database Design
 
 This document describes the persistent data layer that backs the CRM
-Extender pipeline.  It covers the SQLite schema (v3, 22 tables), every
+Extender pipeline.  It covers the SQLite schema (v6, 26 tables), every
 table and column, the relationships between entities, the serialization
 layer that maps Python dataclasses to database rows, the indexing
 strategy, and the data flows that populate and query the database.
@@ -18,8 +18,12 @@ strategy, and the data flows that populate and query the database.
 | `poc/contacts_client.py` | Google People API client (names, emails, organizations) |
 | `poc/relationship_inference.py` | Contact relationship inference from co-occurrence data |
 | `poc/config.py` | `DB_PATH` setting (default `data/crm_extender.db`) |
+| `poc/relationship_types.py` | Relationship type CRUD (create, list, get, update, delete) |
 | `poc/migrate_to_v2.py` | Schema migration: v1 (8-table) to v2 (21-table) |
 | `poc/migrate_to_v3.py` | Schema migration: v2 to v3 (companies + audit columns) |
+| `poc/migrate_to_v4.py` | Schema migration: v3 to v4 (relationship types FK) |
+| `poc/migrate_to_v5.py` | Schema migration: v4 to v5 (bidirectional relationships) |
+| `poc/migrate_to_v6.py` | Schema migration: v5 to v6 (events system) |
 
 ---
 
@@ -66,6 +70,9 @@ from DB rows when needed for triage, summarization, or display.
 | v1 | 8 | Original email-only schema: `email_accounts`, `emails`, `email_recipients`, `contacts`, `conversations`, `conversation_participants`, `topics`, `conversation_topics`, `sync_log` |
 | v2 | 21 | Multi-channel design: renamed tables (`provider_accounts`, `communications`, `communication_participants`, `tags`, `conversation_tags`), added `conversation_communications` M:N join, `contact_identifiers`, `users`, `projects`, organizational `topics`, `attachments`, `views`, `alerts`, correction tables, `relationships` |
 | v3 | 22 | Companies + audit tracking: added `companies` table, `company_id` FK on `contacts`, `created_by`/`updated_by` audit columns on `contacts`, `contact_identifiers`, `conversations`, `projects`, `topics`, `companies` |
+| v4 | 23 | Relationship types: added `relationship_types` table with FK from `relationships`, seed types (KNOWS, EMPLOYEE, REPORTS_TO, WORKS_WITH, PARTNER, VENDOR) |
+| v5 | 23 | Bidirectional relationships: added `is_bidirectional` to `relationship_types`, `paired_relationship_id` to `relationships` |
+| v6 | 26 | Events system: added `events`, `event_participants`, `event_conversations` tables for calendar tracking |
 
 ---
 
@@ -188,8 +195,15 @@ from DB rows when needed for triage, summarization, or display.
 | `projects` | `projects` (self) | 1:N | `parent_id` | CASCADE |
 | `projects` | `topics` | 1:N | `project_id` | CASCADE |
 | `topics` | `conversations` | 1:N | `topic_id` | SET NULL |
+| `relationship_types` | `relationships` | 1:N | `relationship_type_id` | RESTRICT |
 | `contacts` | `relationships` (from) | 1:N | `from_entity_id` | *(no FK)* |
 | `contacts` | `relationships` (to) | 1:N | `to_entity_id` | *(no FK)* |
+| `relationships` | `relationships` (pair) | 1:1 | `paired_relationship_id` | SET NULL |
+| `provider_accounts` | `events` | 1:N | `account_id` | SET NULL |
+| `events` | `events` (recurring) | 1:N | `recurring_event_id` | SET NULL |
+| `events` | `event_participants` | 1:N | `event_id` | CASCADE |
+| `events` | `event_conversations` | 1:N | `event_id` | CASCADE |
+| `conversations` | `event_conversations` | 1:N | `conversation_id` | CASCADE |
 
 ---
 
@@ -614,6 +628,90 @@ Four tables for AI learning from user corrections:
 - **`triage_rules`** -- Allow/block rules derived from corrections.
 - **`conversation_corrections`** -- Records conversation-level corrections (splits, merges).
 
+### 23. `relationship_types`
+
+Defines the vocabulary of relationship types.  Each type specifies entity
+types, directional labels, and whether relationships are bidirectional.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | Stable identifier (e.g., `rt-knows`). |
+| `name` | TEXT | NOT NULL, **UNIQUE** | Type name (e.g., `KNOWS`). |
+| `from_entity_type` | TEXT | NOT NULL, DEFAULT `'contact'` | CHECK: `contact` or `company`. |
+| `to_entity_type` | TEXT | NOT NULL, DEFAULT `'contact'` | CHECK: `contact` or `company`. |
+| `forward_label` | TEXT | NOT NULL | Label from "from" entity (e.g., "Knows"). |
+| `reverse_label` | TEXT | NOT NULL | Label from "to" entity (e.g., "Knows"). |
+| `is_system` | INTEGER | NOT NULL, DEFAULT 0 | System types cannot be deleted. |
+| `is_bidirectional` | INTEGER | NOT NULL, DEFAULT 0 | Bidirectional types store paired rows. |
+| `description` | TEXT | | Free-text description. |
+| `created_by` | TEXT | FK -> `users(id)` | ON DELETE SET NULL. |
+| `updated_by` | TEXT | FK -> `users(id)` | ON DELETE SET NULL. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Seed data:** 6 default types are inserted on `init_db()`: KNOWS
+(system, bidirectional), EMPLOYEE, REPORTS_TO, WORKS_WITH
+(bidirectional), PARTNER (bidirectional), VENDOR.
+
+### 24. `events`
+
+Calendar items: meetings, birthdays, anniversaries, conferences,
+deadlines, and other calendar events.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `title` | TEXT | NOT NULL | Event name/summary. |
+| `description` | TEXT | | Extended description. |
+| `event_type` | TEXT | NOT NULL, DEFAULT `'meeting'` | CHECK: `meeting`, `birthday`, `anniversary`, `conference`, `deadline`, `other`. |
+| `start_date` | TEXT | | ISO 8601 date for all-day events. |
+| `start_datetime` | TEXT | | ISO 8601 datetime for timed events. |
+| `end_date` | TEXT | | ISO 8601 date for all-day event end. |
+| `end_datetime` | TEXT | | ISO 8601 datetime for timed event end. |
+| `is_all_day` | INTEGER | DEFAULT 0 | Boolean. |
+| `timezone` | TEXT | | IANA timezone identifier. |
+| `recurrence_rule` | TEXT | | iCalendar RRULE string. |
+| `recurrence_type` | TEXT | DEFAULT `'none'` | CHECK: `none`, `daily`, `weekly`, `monthly`, `yearly`. |
+| `recurring_event_id` | TEXT | FK -> `events(id)` | Self-FK for modified instances. ON DELETE SET NULL. |
+| `location` | TEXT | | Event location. |
+| `provider_event_id` | TEXT | | Provider's native event ID. |
+| `provider_calendar_id` | TEXT | | Provider's calendar ID. |
+| `account_id` | TEXT | FK -> `provider_accounts(id)` | ON DELETE SET NULL. |
+| `source` | TEXT | DEFAULT `'manual'` | Origin: `manual`, `google_calendar`, etc. |
+| `status` | TEXT | DEFAULT `'confirmed'` | CHECK: `confirmed`, `tentative`, `cancelled`. |
+| `created_by` | TEXT | FK -> `users(id)` | ON DELETE SET NULL. |
+| `updated_by` | TEXT | FK -> `users(id)` | ON DELETE SET NULL. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(account_id, provider_event_id)`.
+
+### 25. `event_participants`
+
+Many-to-many join linking events to contacts and companies.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `event_id` | TEXT | NOT NULL, FK -> `events(id)` | ON DELETE CASCADE. |
+| `entity_type` | TEXT | NOT NULL | CHECK: `contact` or `company`. |
+| `entity_id` | TEXT | NOT NULL | UUID of the contact or company. |
+| `role` | TEXT | DEFAULT `'attendee'` | Participant role (free text). |
+| `rsvp_status` | TEXT | | CHECK: NULL or `accepted`, `declined`, `tentative`, `needs_action`. |
+
+**Primary key:** `(event_id, entity_type, entity_id)`.
+
+### 26. `event_conversations`
+
+Many-to-many join linking events to conversations.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `event_id` | TEXT | NOT NULL, FK -> `events(id)` | ON DELETE CASCADE. |
+| `conversation_id` | TEXT | NOT NULL, FK -> `conversations(id)` | ON DELETE CASCADE. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Primary key:** `(event_id, conversation_id)`.
+
 ---
 
 ## Indexes
@@ -683,6 +781,24 @@ All use `CREATE INDEX IF NOT EXISTS` for idempotent creation.
 | `idx_triage_rules_match` | `triage_rules(match_type, match_value)` | Rule lookup. |
 | `idx_relationships_from` | `relationships(from_entity_id)` | Relationships from a contact. |
 | `idx_relationships_to` | `relationships(to_entity_id)` | Relationships to a contact. |
+| `idx_relationships_type` | `relationships(relationship_type_id)` | Relationships by type. |
+| `idx_relationships_source` | `relationships(source)` | Relationships by source. |
+| `idx_relationships_paired` | `relationships(paired_relationship_id)` | Paired row lookup. |
+
+### Events
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_events_type` | `events(event_type)` | Filter by event type. |
+| `idx_events_start_dt` | `events(start_datetime)` | Date-range queries for timed events. |
+| `idx_events_start_date` | `events(start_date)` | Date-range queries for all-day events. |
+| `idx_events_status` | `events(status)` | Filter by status. |
+| `idx_events_account` | `events(account_id)` | Events by provider account. |
+| `idx_events_recurring` | `events(recurring_event_id)` | Instances of a recurring event. |
+| `idx_events_source` | `events(source)` | Filter by source. |
+| `idx_events_provider` | `events(account_id, provider_event_id)` | Provider sync dedup lookup. |
+| `idx_ep_entity` | `event_participants(entity_type, entity_id)` | Events for a contact/company. |
+| `idx_ec_conversation` | `event_conversations(conversation_id)` | Events linked to a conversation. |
 
 ### Correction tables
 
@@ -749,6 +865,13 @@ handle conversion between in-memory objects and database rows.
 |--------|-----------|-------|
 | `to_row(relationship_id=None)` | Object -> `relationships` row | Packs metrics into JSON `properties` blob. |
 | `from_row(row)` | `relationships` row -> Object | Extracts metrics from JSON. |
+
+### `Event`
+
+| Method | Direction | Notes |
+|--------|-----------|-------|
+| `to_row(event_id=None, created_by=None, updated_by=None)` | Object -> `events` row | Generates UUID if not provided.  Empty strings converted to NULL.  Sets `source` and audit columns. |
+| `from_row(row)` | `events` row -> Object | Missing keys default to sensible values.  `is_all_day` converted from int to bool. |
 
 ### `ConversationSummary`
 

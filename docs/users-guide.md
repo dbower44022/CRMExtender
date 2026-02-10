@@ -232,6 +232,30 @@ The typical workflow is:
 5. `auto-assign` — bulk-assign conversations by tag/title matching
 6. `show-hierarchy` — review the result
 
+### `serve`
+
+```bash
+python3 -m poc serve [--host 127.0.0.1] [--port 8000]
+```
+
+Launches the web UI (FastAPI + HTMX + PicoCSS).  The web UI provides
+a browser-based interface for all CRM data:
+
+- **Dashboard** — overview counts (conversations, contacts, companies,
+  projects, topics, events) and recent conversations.
+- **Conversations** — browse, search, filter by status/topic, view
+  detail with messages and participants.
+- **Contacts** — search by name/email/company, view detail with
+  conversations and relationships.
+- **Companies** — create, search, delete, view contacts and
+  relationships.  Domain-based contact linking on creation.
+- **Projects / Topics** — create projects and topics, auto-assign
+  conversations by tag/title matching.
+- **Relationships** — browse inferred and manual relationships, run
+  inference, manage relationship types.
+- **Events** — browse, search, filter by type, create events, view
+  detail with participants and linked conversations.
+
 ---
 
 ## Pipeline Stages
@@ -376,6 +400,7 @@ CRMExtender/
     models.py                     # Core dataclasses
     rate_limiter.py               # Token-bucket rate limiter
     relationship_inference.py     # Contact relationship inference
+    relationship_types.py         # Relationship type CRUD
     summarizer.py                 # Claude AI summarization
     sync.py                       # Sync orchestration
     triage.py                     # Heuristic junk filtering
@@ -384,6 +409,21 @@ CRMExtender/
     migrate_refetch_emails.py     # Migration: re-fetch emails from Gmail
     migrate_to_v2.py              # Migration: v1 to v2 schema
     migrate_to_v3.py              # Migration: v2 to v3 schema (companies + audit)
+    migrate_to_v4.py              # Migration: v3 to v4 (relationship types)
+    migrate_to_v5.py              # Migration: v4 to v5 (bidirectional relationships)
+    migrate_to_v6.py              # Migration: v5 to v6 (events)
+    web/                          # Web UI (FastAPI + HTMX)
+      app.py                      # Application factory
+      routes/                     # Route modules
+        dashboard.py              # Dashboard route
+        conversations.py          # Conversation routes
+        contacts.py               # Contact routes
+        companies.py              # Company routes
+        projects.py               # Project/topic routes
+        relationships.py          # Relationship routes
+        events.py                 # Event routes
+      templates/                  # Jinja2 templates
+      static/                     # CSS and static assets
   .env                            # Environment variables (you create)
   .env.example                    # Template for .env
 ```

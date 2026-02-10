@@ -16,6 +16,14 @@
       <span class="htmx-indicator" aria-busy="true"></span>
     </div>
 
+    <div style="margin-bottom: 1rem;">
+      <button hx-post="/companies/resolve-domains"
+              hx-target="#resolve-result"
+              hx-swap="innerHTML"
+              class="outline">Resolve Domains</button>
+      <span id="resolve-result" style="margin-left: 0.5rem;"></span>
+    </div>
+
     <div id="results">
       {% include "companies/_rows.html" %}
     </div>

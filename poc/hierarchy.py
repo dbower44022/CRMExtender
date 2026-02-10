@@ -90,6 +90,15 @@ def create_company(
             ":status, :created_by, :updated_by, :created_at, :updated_at)",
             row,
         )
+
+        # Auto-add domain to company_identifiers if it's a non-public domain
+        if row.get("domain"):
+            d = row["domain"].strip().lower()
+            if d:
+                from .domain_resolver import ensure_domain_identifier, is_public_domain
+                if not is_public_domain(d):
+                    ensure_domain_identifier(conn, row["id"], d)
+
         return row
 
 
@@ -145,6 +154,16 @@ def find_company_by_domain(domain: str) -> dict | None:
     with get_connection() as conn:
         row = conn.execute(
             "SELECT * FROM companies WHERE domain = ? AND status = 'active'",
+            (domain,),
+        ).fetchone()
+        if row:
+            return dict(row)
+
+        # Fallback: check company_identifiers
+        row = conn.execute(
+            "SELECT c.* FROM companies c "
+            "JOIN company_identifiers ci ON ci.company_id = c.id "
+            "WHERE ci.type = 'domain' AND ci.value = ? AND c.status = 'active'",
             (domain,),
         ).fetchone()
     return dict(row) if row else None

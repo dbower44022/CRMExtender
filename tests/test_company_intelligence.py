@@ -272,14 +272,15 @@ class TestCompanyIdentifiersCRUD:
         create_company("Acme Corp", domain="acme.com")
         with get_connection() as conn:
             co = conn.execute("SELECT id FROM companies WHERE name = 'Acme Corp'").fetchone()
-        row = add_company_identifier(co["id"], "domain", "acme.com", is_primary=True)
+        # acme.com is auto-added by create_company; add a second domain
+        row = add_company_identifier(co["id"], "domain", "acme.co.uk", is_primary=True)
         assert row["type"] == "domain"
-        assert row["value"] == "acme.com"
+        assert row["value"] == "acme.co.uk"
         assert row["is_primary"] == 1
 
     def test_find_by_identifier(self, tmp_db):
         co = create_company("Find Corp", domain="findcorp.com")
-        add_company_identifier(co["id"], "domain", "findcorp.com", is_primary=True)
+        # domain identifier is auto-added by create_company
         found = find_company_by_identifier("domain", "findcorp.com")
         assert found is not None
         assert found["name"] == "Find Corp"
@@ -290,7 +291,7 @@ class TestCompanyIdentifiersCRUD:
 
     def test_duplicate_identifier_raises(self, tmp_db):
         co = create_company("Dup Corp", domain="dup.com")
-        add_company_identifier(co["id"], "domain", "dup.com")
+        # dup.com is auto-added by create_company; adding it again should raise
         with pytest.raises(sqlite3.IntegrityError):
             add_company_identifier(co["id"], "domain", "dup.com")
 

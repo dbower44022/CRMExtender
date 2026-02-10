@@ -33,6 +33,7 @@ from .models import (
     filter_reason_from_db,
     filter_reason_to_db,
 )
+from .domain_resolver import resolve_company_for_email
 from .rate_limiter import RateLimiter
 from .summarizer import summarize_conversation
 from .triage import triage_conversations
@@ -143,6 +144,12 @@ def sync_contacts(
         for kc in contacts:
             email_lower = kc.email.lower()
             company_id = _resolve_company_id(conn, kc.company, now)
+
+            # Domain fallback: if Google org was empty, try matching by email domain
+            if company_id is None:
+                company = resolve_company_for_email(conn, email_lower)
+                if company:
+                    company_id = company["id"]
 
             # Check if identifier already exists
             existing = conn.execute(

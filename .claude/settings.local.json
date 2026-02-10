@@ -46,7 +46,10 @@
       "Bash(ssh-keygen:*)",
       "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender log --oneline)",
       "Bash(xargs:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "Bash(find:*)"
     ]
   }
 }

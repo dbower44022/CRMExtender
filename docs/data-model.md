@@ -1465,7 +1465,11 @@ upsert_entity_score(conn, entity_type, entity_id, score_type, ...)
 
 Available via CLI (`python3 -m poc score-companies [--name NAME]`,
 `python3 -m poc score-contacts [--contact EMAIL]`) and web UI (POST
-`/companies/{id}/score`, POST `/contacts/{id}/score`).
+`/companies/{id}/score`, POST `/contacts/{id}/score`).  Scores are
+displayed in the web UI on three surfaces: the dashboard (top 5
+companies and contacts by score), the list views (inline progress bars
+with sortable Score column), and the detail pages (sidebar with
+expandable factor breakdown).
 
 **Direction weighting:** Outbound communications count at 1.0x weight,
 inbound at 0.6x.  This reflects that proactive outreach is a stronger

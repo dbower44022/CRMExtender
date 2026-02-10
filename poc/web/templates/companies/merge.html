@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Merge {{ company.name }} — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Merge Company</h1>
+
+<nav aria-label="breadcrumb">
+  <ul>
+    <li><a href="/companies">Companies</a></li>
+    <li><a href="/companies/{{ company.id }}">{{ company.name }}</a></li>
+    <li>Merge</li>
+  </ul>
+</nav>
+
+{% if error %}
+<article class="flash-error">
+  <p>{{ error }}</p>
+</article>
+{% endif %}
+
+{% if preview %}
+{# ---- Preview mode: show side-by-side + impact ---- #}
+<div class="grid">
+  <article>
+    <header>{{ preview.surviving.name }} (surviving)</header>
+    <dl class="detail-sidebar">
+      <dt>Domain</dt><dd>{{ preview.surviving.domain or '—' }}</dd>
+      <dt>Industry</dt><dd>{{ preview.surviving.industry or '—' }}</dd>
+      <dt>Description</dt><dd>{{ preview.surviving.description or '—' }}</dd>
+    </dl>
+  </article>
+  <article>
+    <header>{{ preview.absorbed.name }} (will be removed)</header>
+    <dl class="detail-sidebar">
+      <dt>Domain</dt><dd>{{ preview.absorbed.domain or '—' }}</dd>
+      <dt>Industry</dt><dd>{{ preview.absorbed.industry or '—' }}</dd>
+      <dt>Description</dt><dd>{{ preview.absorbed.description or '—' }}</dd>
+    </dl>
+  </article>
+</div>
+
+<article>
+  <header>Merge Impact</header>
+  <table>
+    <tbody>
+      <tr><td>Contacts to reassign</td><td>{{ preview.contacts }}</td></tr>
+      <tr><td>Relationships to reassign</td><td>{{ preview.relationships }}</td></tr>
+      <tr><td>Event participations to reassign</td><td>{{ preview.events }}</td></tr>
+      <tr><td>Identifiers to transfer</td><td>{{ preview.identifiers }}</td></tr>
+      <tr><td>Hierarchy links to transfer</td><td>{{ preview.hierarchy }}</td></tr>
+      <tr><td>Phone numbers to transfer</td><td>{{ preview.phones }}</td></tr>
+      <tr><td>Addresses to transfer</td><td>{{ preview.addresses }}</td></tr>
+      <tr><td>Email addresses to transfer</td><td>{{ preview.emails }}</td></tr>
+      <tr><td>Social profiles to transfer</td><td>{{ preview.social_profiles }}</td></tr>
+      {% if preview.duplicate_relationships %}
+      <tr><td>Duplicate relationships (will be deduplicated)</td>
+          <td>{{ preview.duplicate_relationships }}</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</article>
+
+<form method="post" action="/companies/{{ company.id }}/merge/confirm">
+  <fieldset>
+    <legend>Choose surviving company</legend>
+    <label>
+      <input type="radio" name="surviving_id" value="{{ preview.surviving.id }}" checked>
+      Keep <strong>{{ preview.surviving.name }}</strong> (absorb {{ preview.absorbed.name }})
+    </label>
+    <label>
+      <input type="radio" name="surviving_id" value="{{ preview.absorbed.id }}">
+      Keep <strong>{{ preview.absorbed.name }}</strong> (absorb {{ preview.surviving.name }})
+    </label>
+    <input type="hidden" name="company_a" value="{{ preview.surviving.id }}">
+    <input type="hidden" name="company_b" value="{{ preview.absorbed.id }}">
+  </fieldset>
+  <button type="submit" class="contrast">Confirm Merge</button>
+  <a href="/companies/{{ company.id }}" role="button" class="outline" style="margin-left:.5rem;">Cancel</a>
+</form>
+
+{% else %}
+{# ---- Select target mode ---- #}
+<article>
+  <header>Select company to merge with {{ company.name }}</header>
+  <form method="post" action="/companies/{{ company.id }}/merge">
+    <label for="target_id">Merge with:</label>
+    <select name="target_id" id="target_id" required>
+      <option value="">— select a company —</option>
+      {% for c in all_companies %}
+      {% if c.id != company.id %}
+      <option value="{{ c.id }}">{{ c.name }}{% if c.domain %} ({{ c.domain }}){% endif %}</option>
+      {% endif %}
+      {% endfor %}
+    </select>
+    <button type="submit">Preview Merge</button>
+  </form>
+</article>
+{% endif %}
+
+{% endblock %}

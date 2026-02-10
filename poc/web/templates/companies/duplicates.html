@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Duplicate Companies — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Duplicate Company Scan</h1>
+
+<nav aria-label="breadcrumb">
+  <ul>
+    <li><a href="/companies">Companies</a></li>
+    <li>Duplicates</li>
+  </ul>
+</nav>
+
+{% if groups %}
+<p><strong>{{ groups|length }}</strong> duplicate group(s) found.</p>
+
+{% for group in groups %}
+<article>
+  <header>Domain: <strong>{{ group.domain }}</strong> ({{ group.companies|length }} companies)</header>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Domain</th>
+        <th>Industry</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in group.companies %}
+      <tr>
+        <td><a href="/companies/{{ c.id }}">{{ c.name }}</a></td>
+        <td>{{ c.domain or '—' }}</td>
+        <td>{{ c.industry or '—' }}</td>
+        <td><a href="/companies/{{ c.id }}/merge" role="button" class="outline"
+               style="padding:4px 12px;font-size:.85em;">Merge</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</article>
+{% endfor %}
+
+{% else %}
+<p>No duplicate companies found.</p>
+{% endif %}
+
+<a href="/companies" role="button" class="outline">Back to Companies</a>
+{% endblock %}

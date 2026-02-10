@@ -13,6 +13,8 @@ Usage:
     python -m poc resolve-domains            # link contacts to companies by email domain
     python -m poc score-companies            # score companies for relationship strength
     python -m poc score-contacts             # score contacts for relationship strength
+    python -m poc scan-duplicates            # scan for duplicate companies by domain
+    python -m poc merge-companies ID1 ID2    # merge two companies
 """
 
 from __future__ import annotations
@@ -1044,6 +1046,96 @@ def cmd_score_contacts(args: argparse.Namespace) -> None:
         console.print()
 
 
+def cmd_scan_duplicates(args: argparse.Namespace) -> None:
+    """Scan for duplicate companies by domain."""
+    from .company_merge import detect_all_duplicates
+
+    init_db()
+    console.print("\n[bold]Scanning for duplicate companies...[/bold]")
+
+    groups = detect_all_duplicates()
+    if not groups:
+        console.print("[green]No duplicate companies found.[/green]")
+        return
+
+    console.print(f"\n[yellow]{len(groups)} duplicate group(s) found.[/yellow]\n")
+
+    for group in groups:
+        table = Table(title=f"Domain: {group['domain']}")
+        table.add_column("ID", style="dim")
+        table.add_column("Name", style="bold")
+        table.add_column("Domain")
+        table.add_column("Industry")
+
+        for c in group["companies"]:
+            table.add_row(
+                c["id"][:8] + "...",
+                c["name"],
+                c.get("domain") or "",
+                c.get("industry") or "",
+            )
+
+        console.print(table)
+        console.print()
+
+
+def cmd_merge_companies(args: argparse.Namespace) -> None:
+    """Merge two companies."""
+    from .company_merge import get_merge_preview, merge_companies
+
+    init_db()
+
+    if args.dry_run:
+        console.print("\n[bold]Merge Preview (dry run)[/bold]")
+        try:
+            preview = get_merge_preview(args.surviving_id, args.absorbed_id)
+        except ValueError as exc:
+            console.print(f"\n[red]Error:[/red] {exc}")
+            sys.exit(1)
+
+        console.print(
+            f"\n  Surviving: [bold]{preview['surviving']['name']}[/bold]"
+            f" ({preview['surviving']['id'][:8]}...)"
+        )
+        console.print(
+            f"  Absorbed:  [bold]{preview['absorbed']['name']}[/bold]"
+            f" ({preview['absorbed']['id'][:8]}...)"
+        )
+
+        table = Table(title="Impact")
+        table.add_column("Entity")
+        table.add_column("Count", justify="right")
+        table.add_row("Contacts", str(preview["contacts"]))
+        table.add_row("Relationships", str(preview["relationships"]))
+        table.add_row("Events", str(preview["events"]))
+        table.add_row("Identifiers", str(preview["identifiers"]))
+        table.add_row("Hierarchy links", str(preview["hierarchy"]))
+        table.add_row("Phone numbers", str(preview["phones"]))
+        table.add_row("Addresses", str(preview["addresses"]))
+        table.add_row("Email addresses", str(preview["emails"]))
+        table.add_row("Social profiles", str(preview["social_profiles"]))
+        if preview["duplicate_relationships"]:
+            table.add_row("Duplicate rels (to dedup)", str(preview["duplicate_relationships"]))
+        console.print()
+        console.print(table)
+        console.print("\n[yellow]DRY RUN — no changes applied.[/yellow]")
+        return
+
+    console.print("\n[bold]Merging companies...[/bold]")
+    try:
+        result = merge_companies(args.surviving_id, args.absorbed_id)
+    except ValueError as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(f"\n[bold green]Merge complete.[/bold green]")
+    console.print(f"  Contacts reassigned: {result['contacts_reassigned']}")
+    console.print(f"  Relationships reassigned: {result['relationships_reassigned']}")
+    console.print(f"  Events reassigned: {result['events_reassigned']}")
+    console.print(f"  Relationships deduplicated: {result['relationships_deduplicated']}")
+    console.print(f"  Merge ID: {result['merge_id']}")
+
+
 def cmd_enrich_company(args: argparse.Namespace) -> None:
     """Enrich a company using a provider."""
     # Import triggers provider registration
@@ -1223,6 +1315,15 @@ def build_parser() -> argparse.ArgumentParser:
     sct = sub.add_parser("score-contacts", help="Score contacts for relationship strength")
     sct.add_argument("--contact", help="Score a single contact by email")
 
+    # scan-duplicates
+    sub.add_parser("scan-duplicates", help="Scan for duplicate companies by domain")
+
+    # merge-companies
+    mc = sub.add_parser("merge-companies", help="Merge two companies")
+    mc.add_argument("surviving_id", help="ID of the company to keep")
+    mc.add_argument("absorbed_id", help="ID of the company to absorb and delete")
+    mc.add_argument("--dry-run", action="store_true", help="Preview without applying")
+
     # enrich-company
     ec = sub.add_parser("enrich-company", help="Enrich a company from external sources")
     ec.add_argument("company_id", help="Company ID to enrich")
@@ -1293,6 +1394,8 @@ def main() -> None:
         "list-relationship-types": cmd_list_relationship_types,
         "resolve-domains": cmd_resolve_domains,
         "enrich-company": cmd_enrich_company,
+        "scan-duplicates": cmd_scan_duplicates,
+        "merge-companies": cmd_merge_companies,
         "score-companies": cmd_score_companies,
         "score-contacts": cmd_score_contacts,
         "migrate-to-v4": cmd_migrate_to_v4,

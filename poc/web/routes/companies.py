@@ -1,4 +1,4 @@
-"""Company routes — list, search, create, delete, detail."""
+"""Company routes — list, search, create, delete, detail, merge, duplicates."""
 
 from __future__ import annotations
 
@@ -7,6 +7,12 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from ...company_merge import (
+    detect_all_duplicates,
+    find_duplicates_for_domain,
+    get_merge_preview,
+    merge_companies,
+)
 from ...database import get_connection
 from ...domain_resolver import PUBLIC_DOMAINS
 from ...hierarchy import (
@@ -120,6 +126,24 @@ def company_create(
     templates = request.app.state.templates
     domain_clean = domain.strip().lower()
 
+    # Check for existing companies with the same domain (duplicate warning)
+    if domain_clean and domain_clean not in PUBLIC_DOMAINS:
+        existing = find_duplicates_for_domain(domain_clean)
+        if existing:
+            ctx = {
+                "active_nav": "companies",
+                "name": name,
+                "domain": domain,
+                "industry": industry,
+                "description": description,
+                "website": website,
+                "headquarters_location": headquarters_location,
+                "existing_companies": existing,
+            }
+            template = ("companies/_duplicate_warning.html" if _is_htmx(request)
+                        else "companies/duplicate_warning.html")
+            return templates.TemplateResponse(request, template, ctx)
+
     # Check if we should show a confirmation preview
     if domain_clean and domain_clean not in PUBLIC_DOMAINS:
         matches = _find_contacts_by_domain(domain_clean)
@@ -201,6 +225,16 @@ def company_resolve_domains(request: Request):
         f"({result.contacts_skipped_public} public, "
         f"{result.contacts_skipped_no_match} no match)</p>"
     )
+
+
+@router.get("/duplicates", response_class=HTMLResponse)
+def company_duplicates(request: Request):
+    templates = request.app.state.templates
+    groups = detect_all_duplicates()
+    return templates.TemplateResponse(request, "companies/duplicates.html", {
+        "active_nav": "companies",
+        "groups": groups,
+    })
 
 
 @router.delete("/{company_id}", response_class=HTMLResponse)
@@ -345,6 +379,93 @@ def company_enrich(request: Request, company_id: str):
     if _is_htmx(request):
         return HTMLResponse("", headers={"HX-Redirect": f"/companies/{company_id}"})
     return RedirectResponse(f"/companies/{company_id}", status_code=303)
+
+
+@router.get("/{company_id}/merge", response_class=HTMLResponse)
+def company_merge_page(request: Request, company_id: str):
+    templates = request.app.state.templates
+    with get_connection() as conn:
+        company = conn.execute(
+            "SELECT * FROM companies WHERE id = ?", (company_id,)
+        ).fetchone()
+        if not company:
+            return HTMLResponse("Company not found", status_code=404)
+        company = dict(company)
+
+    all_companies = list_companies()
+    return templates.TemplateResponse(request, "companies/merge.html", {
+        "active_nav": "companies",
+        "company": company,
+        "all_companies": all_companies,
+    })
+
+
+@router.post("/{company_id}/merge", response_class=HTMLResponse)
+def company_merge_preview(
+    request: Request,
+    company_id: str,
+    target_id: str = Form(...),
+):
+    templates = request.app.state.templates
+    with get_connection() as conn:
+        company = conn.execute(
+            "SELECT * FROM companies WHERE id = ?", (company_id,)
+        ).fetchone()
+        if not company:
+            return HTMLResponse("Company not found", status_code=404)
+        company = dict(company)
+
+    try:
+        preview = get_merge_preview(company_id, target_id)
+    except ValueError as exc:
+        all_companies = list_companies()
+        return templates.TemplateResponse(request, "companies/merge.html", {
+            "active_nav": "companies",
+            "company": company,
+            "all_companies": all_companies,
+            "error": str(exc),
+        })
+
+    all_companies = list_companies()
+    return templates.TemplateResponse(request, "companies/merge.html", {
+        "active_nav": "companies",
+        "company": company,
+        "all_companies": all_companies,
+        "preview": preview,
+    })
+
+
+@router.post("/{company_id}/merge/confirm", response_class=HTMLResponse)
+def company_merge_execute(
+    request: Request,
+    company_id: str,
+    surviving_id: str = Form(...),
+    company_a: str = Form(...),
+    company_b: str = Form(...),
+):
+    # Determine which is absorbed based on surviving_id choice
+    absorbed_id = company_b if surviving_id == company_a else company_a
+
+    try:
+        merge_companies(surviving_id, absorbed_id)
+    except ValueError as exc:
+        templates = request.app.state.templates
+        with get_connection() as conn:
+            company = conn.execute(
+                "SELECT * FROM companies WHERE id = ?", (company_id,)
+            ).fetchone()
+            company = dict(company) if company else {"id": company_id, "name": "Unknown"}
+        all_companies = list_companies()
+        return templates.TemplateResponse(request, "companies/merge.html", {
+            "active_nav": "companies",
+            "company": company,
+            "all_companies": all_companies,
+            "error": str(exc),
+        })
+
+    if _is_htmx(request):
+        return HTMLResponse("", headers={"HX-Redirect": f"/companies/{surviving_id}"})
+    return RedirectResponse(f"/companies/{surviving_id}", status_code=303)
 
 
 @router.get("/{company_id}/edit", response_class=HTMLResponse)

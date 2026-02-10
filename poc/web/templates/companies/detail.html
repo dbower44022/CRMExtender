@@ -83,6 +83,8 @@
           </button>
           <span id="enrich-spinner" class="htmx-indicator" style="font-size:.85em;">enriching...</span>
           {% endif %}
+          <a href="/companies/{{ company.id }}/merge" role="button" class="outline"
+             style="padding:4px 12px;font-size:.85em;margin-right:4px;">Merge</a>
           <a href="/companies/{{ company.id }}/edit" role="button" class="outline"
              style="padding:4px 12px;font-size:.85em;">Edit</a>
         </span>

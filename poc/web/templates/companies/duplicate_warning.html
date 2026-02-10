@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Duplicate Warning — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Create Company</h1>
+<div id="company-form-area">
+  {% include "companies/_duplicate_warning.html" %}
+</div>
+{% endblock %}

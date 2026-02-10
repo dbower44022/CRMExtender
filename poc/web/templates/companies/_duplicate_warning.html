@@ -1,0 +1,35 @@
+<article>
+  <header>Possible duplicate detected</header>
+  <p>A company with the domain <strong>{{ domain }}</strong> already exists:</p>
+  <table role="grid">
+    <thead>
+      <tr><th>Name</th><th>Domain</th></tr>
+    </thead>
+    <tbody>
+      {% for c in existing_companies %}
+      <tr>
+        <td><a href="/companies/{{ c.id }}">{{ c.name }}</a></td>
+        <td>{{ c.domain or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="grid">
+    <form method="post" action="/companies/confirm"
+          hx-post="/companies/confirm" hx-target="#company-form-area">
+      <input type="hidden" name="name" value="{{ name }}">
+      <input type="hidden" name="domain" value="{{ domain }}">
+      <input type="hidden" name="industry" value="{{ industry }}">
+      <input type="hidden" name="description" value="{{ description }}">
+      <input type="hidden" name="website" value="{{ website }}">
+      <input type="hidden" name="headquarters_location" value="{{ headquarters_location }}">
+      <input type="hidden" name="link" value="false">
+      <button type="submit" class="secondary">Create Anyway</button>
+    </form>
+    <div>
+      <a href="/companies/{{ existing_companies[0].id }}" role="button" class="outline">View Existing</a>
+    </div>
+  </div>
+  <p><a href="/companies">Cancel</a></p>
+</article>

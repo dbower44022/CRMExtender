@@ -11,6 +11,7 @@ from ...hierarchy import (
     add_contact_identifier, get_contact_identifiers, remove_contact_identifier,
     add_phone_number, get_phone_numbers, remove_phone_number,
     add_address, get_addresses, remove_address,
+    add_email_address, get_email_addresses, remove_email_address,
 )
 
 router = APIRouter()
@@ -169,6 +170,7 @@ def contact_detail(request: Request, contact_id: str):
 
     phones = get_phone_numbers("contact", contact_id)
     addresses = get_addresses("contact", contact_id)
+    emails = get_email_addresses("contact", contact_id)
     all_companies = list_companies()
 
     return templates.TemplateResponse(request, "contacts/detail.html", {
@@ -180,6 +182,7 @@ def contact_detail(request: Request, contact_id: str):
         "identifiers": contact["identifiers"],
         "phones": phones,
         "addresses": addresses,
+        "emails": emails,
         "social_profiles": social_profiles,
         "all_companies": all_companies,
     })
@@ -337,4 +340,39 @@ def contact_remove_address(
     return templates.TemplateResponse(request, "contacts/_addresses.html", {
         "contact": {"id": contact_id},
         "addresses": addresses,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Email Addresses
+# ---------------------------------------------------------------------------
+
+@router.post("/{contact_id}/emails", response_class=HTMLResponse)
+def contact_add_email(
+    request: Request,
+    contact_id: str,
+    email_type: str = Form("general"),
+    address: str = Form(...),
+):
+    templates = request.app.state.templates
+    add_email_address("contact", contact_id, address, email_type=email_type)
+    emails = get_email_addresses("contact", contact_id)
+
+    return templates.TemplateResponse(request, "contacts/_emails.html", {
+        "contact": {"id": contact_id},
+        "emails": emails,
+    })
+
+
+@router.delete("/{contact_id}/emails/{email_id}", response_class=HTMLResponse)
+def contact_remove_email(
+    request: Request, contact_id: str, email_id: str,
+):
+    templates = request.app.state.templates
+    remove_email_address(email_id)
+    emails = get_email_addresses("contact", contact_id)
+
+    return templates.TemplateResponse(request, "contacts/_emails.html", {
+        "contact": {"id": contact_id},
+        "emails": emails,
     })

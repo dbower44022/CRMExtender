@@ -743,6 +743,170 @@ class TestCompanyDetail:
             ).fetchall()
         assert len(rows) == 0
 
+    def test_detail_shows_phones(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+            _insert_phone_number(conn, "ph-1", "company", "co-1",
+                                  "+1-555-0100", phone_type="main")
+
+        resp = client.get("/companies/co-1")
+        assert resp.status_code == 200
+        assert "Phone Numbers (1)" in resp.text
+        assert "+1-555-0100" in resp.text
+
+    def test_detail_shows_addresses(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+            _insert_address(conn, "ad-1", "company", "co-1",
+                            city="New York", state="NY", country="US",
+                            address_type="headquarters")
+
+        resp = client.get("/companies/co-1")
+        assert resp.status_code == 200
+        assert "Addresses (1)" in resp.text
+        assert "New York" in resp.text
+        assert "headquarters" in resp.text
+
+    def test_detail_shows_social_profiles(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+            _insert_company_social_profile(
+                conn, "sp-1", "co-1", "linkedin",
+                "https://linkedin.com/company/acme", username="acme",
+            )
+
+        resp = client.get("/companies/co-1")
+        assert resp.status_code == 200
+        assert "Social Profiles" in resp.text
+        assert "linkedin" in resp.text
+        assert "https://linkedin.com/company/acme" in resp.text
+
+    def test_detail_no_social_profiles(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+
+        resp = client.get("/companies/co-1")
+        assert resp.status_code == 200
+        assert "Social Profiles" not in resp.text
+
+    def test_add_phone_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+
+        resp = client.post("/companies/co-1/phones", data={
+            "phone_type": "main",
+            "number": "+1-555-0200",
+        })
+        assert resp.status_code == 200
+        assert "+1-555-0200" in resp.text
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM phone_numbers "
+                "WHERE entity_type = 'company' AND entity_id = 'co-1'"
+            ).fetchall()
+        assert len(rows) == 1
+        assert rows[0]["number"] == "+1-555-0200"
+
+    def test_remove_phone_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+            _insert_phone_number(conn, "ph-1", "company", "co-1", "+1-555-0100")
+
+        resp = client.delete("/companies/co-1/phones/ph-1")
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM phone_numbers "
+                "WHERE entity_type = 'company' AND entity_id = 'co-1'"
+            ).fetchall()
+        assert len(rows) == 0
+
+    def test_add_address_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+
+        resp = client.post("/companies/co-1/addresses", data={
+            "address_type": "headquarters",
+            "street": "100 Tech Blvd",
+            "city": "San Francisco",
+            "state": "CA",
+            "postal_code": "94105",
+            "country": "US",
+        })
+        assert resp.status_code == 200
+        assert "San Francisco" in resp.text
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM addresses "
+                "WHERE entity_type = 'company' AND entity_id = 'co-1'"
+            ).fetchall()
+        assert len(rows) == 1
+        assert rows[0]["city"] == "San Francisco"
+
+    def test_remove_address_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+            _insert_address(conn, "ad-1", "company", "co-1", city="Boston")
+
+        resp = client.delete("/companies/co-1/addresses/ad-1")
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM addresses "
+                "WHERE entity_type = 'company' AND entity_id = 'co-1'"
+            ).fetchall()
+        assert len(rows) == 0
+
+    def test_detail_shows_emails(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+            _insert_email_address(conn, "em-1", "company", "co-1",
+                                  "info@acme.com", email_type="general")
+
+        resp = client.get("/companies/co-1")
+        assert resp.status_code == 200
+        assert "info@acme.com" in resp.text
+        assert "Email Addresses" in resp.text
+
+    def test_add_email_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+
+        resp = client.post("/companies/co-1/emails", data={
+            "email_type": "support",
+            "address": "support@acme.com",
+        })
+        assert resp.status_code == 200
+        assert "support@acme.com" in resp.text
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM email_addresses "
+                "WHERE entity_type = 'company' AND entity_id = 'co-1'"
+            ).fetchall()
+        assert len(rows) == 1
+        assert rows[0]["address"] == "support@acme.com"
+
+    def test_remove_email_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+            _insert_email_address(conn, "em-1", "company", "co-1",
+                                  "info@acme.com")
+
+        resp = client.delete("/companies/co-1/emails/em-1")
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM email_addresses "
+                "WHERE entity_type = 'company' AND entity_id = 'co-1'"
+            ).fetchall()
+        assert len(rows) == 0
+
 
 # ---------------------------------------------------------------------------
 # Projects & Topics
@@ -1267,6 +1431,17 @@ def _insert_address(conn, address_id, entity_type, entity_id, city="",
     )
 
 
+def _insert_email_address(conn, email_id, entity_type, entity_id, address,
+                          email_type="general"):
+    conn.execute(
+        "INSERT OR IGNORE INTO email_addresses "
+        "(id, entity_type, entity_id, email_type, address, is_primary, source, "
+        "created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, 0, '', ?, ?)",
+        (email_id, entity_type, entity_id, email_type, address, _NOW, _NOW),
+    )
+
+
 def _insert_social_profile(conn, profile_id, contact_id, platform, profile_url,
                              username=""):
     conn.execute(
@@ -1274,6 +1449,16 @@ def _insert_social_profile(conn, profile_id, contact_id, platform, profile_url,
         "(id, contact_id, platform, profile_url, username, created_at, updated_at) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
         (profile_id, contact_id, platform, profile_url, username, _NOW, _NOW),
+    )
+
+
+def _insert_company_social_profile(conn, profile_id, company_id, platform,
+                                    profile_url, username=""):
+    conn.execute(
+        "INSERT OR IGNORE INTO company_social_profiles "
+        "(id, company_id, platform, profile_url, username, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (profile_id, company_id, platform, profile_url, username, _NOW, _NOW),
     )
 
 
@@ -1453,5 +1638,49 @@ class TestContactDetail:
         with get_connection() as conn:
             rows = conn.execute(
                 "SELECT * FROM addresses WHERE entity_id = 'ct-1'"
+            ).fetchall()
+        assert len(rows) == 0
+
+    def test_detail_shows_emails(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@example.com")
+            _insert_email_address(conn, "em-1", "contact", "ct-1",
+                                  "alice@work.com", email_type="work")
+
+        resp = client.get("/contacts/ct-1")
+        assert resp.status_code == 200
+        assert "alice@work.com" in resp.text
+        assert "Email Addresses" in resp.text
+
+    def test_add_email_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@example.com")
+
+        resp = client.post("/contacts/ct-1/emails", data={
+            "email_type": "work",
+            "address": "alice@corp.com",
+        })
+        assert resp.status_code == 200
+        assert "alice@corp.com" in resp.text
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM email_addresses WHERE entity_id = 'ct-1'"
+            ).fetchall()
+        assert len(rows) == 1
+        assert rows[0]["address"] == "alice@corp.com"
+
+    def test_remove_email_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@example.com")
+            _insert_email_address(conn, "em-1", "contact", "ct-1",
+                                  "alice@work.com")
+
+        resp = client.delete("/contacts/ct-1/emails/em-1")
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM email_addresses WHERE entity_id = 'ct-1'"
             ).fetchall()
         assert len(rows) == 0

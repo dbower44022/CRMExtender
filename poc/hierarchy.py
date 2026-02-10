@@ -482,6 +482,59 @@ def remove_address(address_id: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Email Addresses (entity-agnostic)
+# ---------------------------------------------------------------------------
+
+def add_email_address(
+    entity_type: str,
+    entity_id: str,
+    address: str,
+    *,
+    email_type: str = "general",
+) -> dict:
+    """Add an email address. Returns the new row as a dict."""
+    now = datetime.now(timezone.utc).isoformat()
+    row = {
+        "id": str(uuid.uuid4()),
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "email_type": email_type,
+        "address": address,
+        "is_primary": 0,
+        "source": "",
+        "created_at": now,
+        "updated_at": now,
+    }
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO email_addresses "
+            "(id, entity_type, entity_id, email_type, address, is_primary, source, "
+            "created_at, updated_at) "
+            "VALUES (:id, :entity_type, :entity_id, :email_type, :address, :is_primary, "
+            ":source, :created_at, :updated_at)",
+            row,
+        )
+    return row
+
+
+def get_email_addresses(entity_type: str, entity_id: str) -> list[dict]:
+    """List all email addresses for an entity."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM email_addresses WHERE entity_type = ? AND entity_id = ? "
+            "ORDER BY is_primary DESC, email_type",
+            (entity_type, entity_id),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_email_address(email_id: str) -> None:
+    """Delete an email address by its ID."""
+    with get_connection() as conn:
+        conn.execute("DELETE FROM email_addresses WHERE id = ?", (email_id,))
+
+
+# ---------------------------------------------------------------------------
 # Projects
 # ---------------------------------------------------------------------------
 

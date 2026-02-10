@@ -61,6 +61,12 @@
     {% include "companies/_identifiers.html" %}
 
     {% include "companies/_hierarchy.html" %}
+
+    {% include "companies/_phones.html" %}
+
+    {% include "companies/_emails.html" %}
+
+    {% include "companies/_addresses.html" %}
   </div>
 
   <div>
@@ -122,6 +128,18 @@
         <dt>Status</dt>
         <dd>{{ company.status or 'active' }}</dd>
       </dl>
+      {% if social_profiles %}
+      <hr>
+      <h3>Social Profiles</h3>
+      <ul>
+        {% for sp in social_profiles %}
+        <li>
+          <strong>{{ sp.platform }}</strong>:
+          <a href="{{ sp.profile_url }}" target="_blank" rel="noopener">{{ sp.username or sp.profile_url }}</a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
     </article>
   </div>
 </div>

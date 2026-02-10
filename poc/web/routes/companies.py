@@ -13,6 +13,9 @@ from ...hierarchy import (
     get_company_identifiers, add_company_identifier, remove_company_identifier,
     get_parent_companies, get_child_companies, add_company_hierarchy,
     remove_company_hierarchy,
+    get_phone_numbers, add_phone_number, remove_phone_number,
+    get_addresses, add_address, remove_address,
+    add_email_address, get_email_addresses, remove_email_address,
 )
 
 router = APIRouter()
@@ -247,6 +250,17 @@ def company_detail(request: Request, company_id: str):
     parents = get_parent_companies(company_id)
     children = get_child_companies(company_id)
     all_companies = list_companies()
+    phones = get_phone_numbers("company", company_id)
+    addresses = get_addresses("company", company_id)
+    emails = get_email_addresses("company", company_id)
+
+    with get_connection() as conn:
+        social_profiles = [
+            dict(r) for r in conn.execute(
+                "SELECT * FROM company_social_profiles WHERE company_id = ? ORDER BY platform",
+                (company_id,),
+            ).fetchall()
+        ]
 
     return templates.TemplateResponse(request, "companies/detail.html", {
         "active_nav": "companies",
@@ -257,6 +271,10 @@ def company_detail(request: Request, company_id: str):
         "parents": parents,
         "children": children,
         "all_companies": all_companies,
+        "phones": phones,
+        "addresses": addresses,
+        "emails": emails,
+        "social_profiles": social_profiles,
     })
 
 
@@ -409,4 +427,117 @@ def company_remove_hierarchy(
         "parents": parents,
         "children": children,
         "all_companies": all_companies,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Phone numbers
+# ---------------------------------------------------------------------------
+
+@router.post("/{company_id}/phones", response_class=HTMLResponse)
+def company_add_phone(
+    request: Request,
+    company_id: str,
+    phone_type: str = Form("main"),
+    number: str = Form(...),
+):
+    templates = request.app.state.templates
+    add_phone_number("company", company_id, number, phone_type=phone_type)
+    phones = get_phone_numbers("company", company_id)
+
+    return templates.TemplateResponse(request, "companies/_phones.html", {
+        "company": {"id": company_id},
+        "phones": phones,
+    })
+
+
+@router.delete("/{company_id}/phones/{phone_id}", response_class=HTMLResponse)
+def company_remove_phone(
+    request: Request, company_id: str, phone_id: str,
+):
+    templates = request.app.state.templates
+    remove_phone_number(phone_id)
+    phones = get_phone_numbers("company", company_id)
+
+    return templates.TemplateResponse(request, "companies/_phones.html", {
+        "company": {"id": company_id},
+        "phones": phones,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Addresses
+# ---------------------------------------------------------------------------
+
+@router.post("/{company_id}/addresses", response_class=HTMLResponse)
+def company_add_address(
+    request: Request,
+    company_id: str,
+    address_type: str = Form("work"),
+    street: str = Form(""),
+    city: str = Form(""),
+    state: str = Form(""),
+    postal_code: str = Form(""),
+    country: str = Form(""),
+):
+    templates = request.app.state.templates
+    add_address(
+        "company", company_id,
+        address_type=address_type, street=street, city=city,
+        state=state, postal_code=postal_code, country=country,
+    )
+    addresses = get_addresses("company", company_id)
+
+    return templates.TemplateResponse(request, "companies/_addresses.html", {
+        "company": {"id": company_id},
+        "addresses": addresses,
+    })
+
+
+@router.delete("/{company_id}/addresses/{address_id}", response_class=HTMLResponse)
+def company_remove_address(
+    request: Request, company_id: str, address_id: str,
+):
+    templates = request.app.state.templates
+    remove_address(address_id)
+    addresses = get_addresses("company", company_id)
+
+    return templates.TemplateResponse(request, "companies/_addresses.html", {
+        "company": {"id": company_id},
+        "addresses": addresses,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Email Addresses
+# ---------------------------------------------------------------------------
+
+@router.post("/{company_id}/emails", response_class=HTMLResponse)
+def company_add_email(
+    request: Request,
+    company_id: str,
+    email_type: str = Form("general"),
+    address: str = Form(...),
+):
+    templates = request.app.state.templates
+    add_email_address("company", company_id, address, email_type=email_type)
+    emails = get_email_addresses("company", company_id)
+
+    return templates.TemplateResponse(request, "companies/_emails.html", {
+        "company": {"id": company_id},
+        "emails": emails,
+    })
+
+
+@router.delete("/{company_id}/emails/{email_id}", response_class=HTMLResponse)
+def company_remove_email(
+    request: Request, company_id: str, email_id: str,
+):
+    templates = request.app.state.templates
+    remove_email_address(email_id)
+    emails = get_email_addresses("company", company_id)
+
+    return templates.TemplateResponse(request, "companies/_emails.html", {
+        "company": {"id": company_id},
+        "emails": emails,
     })

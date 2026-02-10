@@ -1,0 +1,44 @@
+<div id="phones-section">
+  <h2>Phone Numbers ({{ phones|length }})</h2>
+  {% if phones %}
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Number</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for phone in phones %}
+      <tr>
+        <td>{{ phone.phone_type }}</td>
+        <td>{{ phone.number }}</td>
+        <td>
+          <button hx-delete="/companies/{{ company.id }}/phones/{{ phone.id }}"
+                  hx-target="#phones-section" hx-swap="outerHTML"
+                  hx-confirm="Remove this phone number?" class="outline"
+                  style="padding:4px 10px;font-size:.85em;">Remove</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-state">No phone numbers.</p>
+  {% endif %}
+
+  <form hx-post="/companies/{{ company.id }}/phones"
+        hx-target="#phones-section" hx-swap="outerHTML">
+    <fieldset role="group">
+      <select name="phone_type">
+        <option value="main">Main</option>
+        <option value="work">Work</option>
+        <option value="mobile">Mobile</option>
+        <option value="fax">Fax</option>
+      </select>
+      <input type="text" name="number" placeholder="+1 555-0100" required>
+      <button type="submit">Add</button>
+    </fieldset>
+  </form>
+</div>

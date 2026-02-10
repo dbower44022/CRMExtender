@@ -1,11 +1,21 @@
+{% set q_enc = q|default('', true)|urlencode %}
+{% set s = sort|default('name', true) %}
 {% if companies %}
 <table>
   <thead>
     <tr>
-      <th>Name</th>
-      <th>Domain</th>
-      <th>Industry</th>
-      <th>Score</th>
+      <th><a hx-get="/companies/search?q={{ q_enc }}&sort={% if s == 'name' %}-name{% else %}name{% endif %}"
+             hx-target="#results" href="/companies?q={{ q_enc }}&sort={% if s == 'name' %}-name{% else %}name{% endif %}"
+             style="text-decoration:none;color:inherit;cursor:pointer;">Name{% if s == 'name' %} &#9650;{% elif s == '-name' %} &#9660;{% endif %}</a></th>
+      <th><a hx-get="/companies/search?q={{ q_enc }}&sort={% if s == 'domain' %}-domain{% else %}domain{% endif %}"
+             hx-target="#results" href="/companies?q={{ q_enc }}&sort={% if s == 'domain' %}-domain{% else %}domain{% endif %}"
+             style="text-decoration:none;color:inherit;cursor:pointer;">Domain{% if s == 'domain' %} &#9650;{% elif s == '-domain' %} &#9660;{% endif %}</a></th>
+      <th><a hx-get="/companies/search?q={{ q_enc }}&sort={% if s == 'industry' %}-industry{% else %}industry{% endif %}"
+             hx-target="#results" href="/companies?q={{ q_enc }}&sort={% if s == 'industry' %}-industry{% else %}industry{% endif %}"
+             style="text-decoration:none;color:inherit;cursor:pointer;">Industry{% if s == 'industry' %} &#9650;{% elif s == '-industry' %} &#9660;{% endif %}</a></th>
+      <th><a hx-get="/companies/search?q={{ q_enc }}&sort={% if s == '-score' %}score{% else %}-score{% endif %}"
+             hx-target="#results" href="/companies?q={{ q_enc }}&sort={% if s == '-score' %}score{% else %}-score{% endif %}"
+             style="text-decoration:none;color:inherit;cursor:pointer;">Score{% if s == '-score' %} &#9660;{% elif s == 'score' %} &#9650;{% endif %}</a></th>
       <th>Status</th>
       <th></th>
     </tr>

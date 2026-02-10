@@ -37,54 +37,69 @@ def _find_contacts_by_domain(domain: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def _list_companies_with_scores(q: str = "") -> list[dict]:
+_COMPANY_SORT_MAP = {
+    "name": "c.name", "domain": "c.domain",
+    "industry": "c.industry", "score": "es.score_value",
+}
+
+
+def _list_companies_with_scores(q: str = "", sort: str = "name") -> list[dict]:
     """Return companies with their relationship strength scores."""
+    desc = sort.startswith("-")
+    key = sort.lstrip("-")
+    col = _COMPANY_SORT_MAP.get(key, "c.name")
+    direction = "DESC" if desc else "ASC"
+    order = f"{col} IS NULL, {col} {direction}" if key == "score" else f"{col} {direction}"
+
     with get_connection() as conn:
         if q:
             rows = conn.execute(
-                """SELECT c.*, es.score_value AS score
+                f"""SELECT c.*, es.score_value AS score
                    FROM companies c
                    LEFT JOIN entity_scores es
                      ON es.entity_type = 'company'
                     AND es.entity_id = c.id
                     AND es.score_type = 'relationship_strength'
                    WHERE c.status = 'active' AND (c.name LIKE ? OR c.domain LIKE ?)
-                   ORDER BY c.name""",
+                   ORDER BY {order}""",
                 (f"%{q}%", f"%{q}%"),
             ).fetchall()
         else:
             rows = conn.execute(
-                """SELECT c.*, es.score_value AS score
+                f"""SELECT c.*, es.score_value AS score
                    FROM companies c
                    LEFT JOIN entity_scores es
                      ON es.entity_type = 'company'
                     AND es.entity_id = c.id
                     AND es.score_type = 'relationship_strength'
                    WHERE c.status = 'active'
-                   ORDER BY c.name""",
+                   ORDER BY {order}""",
             ).fetchall()
     return [dict(r) for r in rows]
 
 
 @router.get("", response_class=HTMLResponse)
-def company_list(request: Request, q: str = ""):
+def company_list(request: Request, q: str = "", sort: str = "name"):
     templates = request.app.state.templates
-    companies = _list_companies_with_scores(q)
+    companies = _list_companies_with_scores(q, sort)
 
     return templates.TemplateResponse(request, "companies/list.html", {
         "active_nav": "companies",
         "companies": companies,
         "q": q,
+        "sort": sort,
     })
 
 
 @router.get("/search", response_class=HTMLResponse)
-def company_search(request: Request, q: str = ""):
+def company_search(request: Request, q: str = "", sort: str = "name"):
     templates = request.app.state.templates
-    companies = _list_companies_with_scores(q)
+    companies = _list_companies_with_scores(q, sort)
 
     return templates.TemplateResponse(request, "companies/_rows.html", {
         "companies": companies,
+        "q": q,
+        "sort": sort,
     })
 
 

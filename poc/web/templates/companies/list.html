@@ -12,6 +12,7 @@
              hx-get="/companies/search"
              hx-trigger="input changed delay:300ms, search"
              hx-target="#results"
+             hx-vals='{"sort": "{{ sort|default('name', true) }}"}'
              hx-push-url="/companies">
       <span class="htmx-indicator" aria-busy="true"></span>
     </div>

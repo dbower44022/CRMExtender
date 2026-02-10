@@ -1,11 +1,21 @@
+{% set q_enc = q|default('', true)|urlencode %}
+{% set s = sort|default('name', true) %}
 {% if contacts %}
 <table>
   <thead>
     <tr>
-      <th>Name</th>
-      <th>Email</th>
-      <th>Company</th>
-      <th>Score</th>
+      <th><a hx-get="/contacts/search?q={{ q_enc }}&sort={% if s == 'name' %}-name{% else %}name{% endif %}"
+             hx-target="#results" href="/contacts?q={{ q_enc }}&sort={% if s == 'name' %}-name{% else %}name{% endif %}"
+             style="text-decoration:none;color:inherit;cursor:pointer;">Name{% if s == 'name' %} &#9650;{% elif s == '-name' %} &#9660;{% endif %}</a></th>
+      <th><a hx-get="/contacts/search?q={{ q_enc }}&sort={% if s == 'email' %}-email{% else %}email{% endif %}"
+             hx-target="#results" href="/contacts?q={{ q_enc }}&sort={% if s == 'email' %}-email{% else %}email{% endif %}"
+             style="text-decoration:none;color:inherit;cursor:pointer;">Email{% if s == 'email' %} &#9650;{% elif s == '-email' %} &#9660;{% endif %}</a></th>
+      <th><a hx-get="/contacts/search?q={{ q_enc }}&sort={% if s == 'company' %}-company{% else %}company{% endif %}"
+             hx-target="#results" href="/contacts?q={{ q_enc }}&sort={% if s == 'company' %}-company{% else %}company{% endif %}"
+             style="text-decoration:none;color:inherit;cursor:pointer;">Company{% if s == 'company' %} &#9650;{% elif s == '-company' %} &#9660;{% endif %}</a></th>
+      <th><a hx-get="/contacts/search?q={{ q_enc }}&sort={% if s == '-score' %}score{% else %}-score{% endif %}"
+             hx-target="#results" href="/contacts?q={{ q_enc }}&sort={% if s == '-score' %}score{% else %}-score{% endif %}"
+             style="text-decoration:none;color:inherit;cursor:pointer;">Score{% if s == '-score' %} &#9660;{% elif s == 'score' %} &#9650;{% endif %}</a></th>
       <th>Source</th>
     </tr>
   </thead>
@@ -42,11 +52,11 @@
 <nav>
   <ul>
     {% if page > 1 %}
-    <li><a href="/contacts?q={{ q }}&page={{ page - 1 }}">Previous</a></li>
+    <li><a href="/contacts?q={{ q_enc }}&sort={{ s }}&page={{ page - 1 }}">Previous</a></li>
     {% endif %}
     <li>Page {{ page }} of {{ total_pages }}</li>
     {% if page < total_pages %}
-    <li><a href="/contacts?q={{ q }}&page={{ page + 1 }}">Next</a></li>
+    <li><a href="/contacts?q={{ q_enc }}&sort={{ s }}&page={{ page + 1 }}">Next</a></li>
     {% endif %}
   </ul>
 </nav>

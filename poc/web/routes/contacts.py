@@ -21,7 +21,14 @@ def _is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request") == "true"
 
 
-def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50):
+_CONTACT_SORT_MAP = {
+    "name": "c.name", "email": "ci.value",
+    "company": "co.name", "score": "es.score_value",
+}
+
+
+def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
+                   sort: str = "name"):
     clauses = []
     params: list = []
 
@@ -30,6 +37,12 @@ def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50):
         params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
+    desc = sort.startswith("-")
+    key = sort.lstrip("-")
+    col = _CONTACT_SORT_MAP.get(key, "c.name")
+    direction = "DESC" if desc else "ASC"
+    order = f"{col} IS NULL, {col} {direction}" if key == "score" else f"{col} {direction}"
 
     with get_connection() as conn:
         total = conn.execute(
@@ -53,7 +66,7 @@ def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50):
                  AND es.entity_id = c.id
                  AND es.score_type = 'relationship_strength'
                 {where}
-                ORDER BY c.name
+                ORDER BY {order}
                 LIMIT ? OFFSET ?""",
             params + [per_page, offset],
         ).fetchall()
@@ -62,9 +75,9 @@ def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50):
 
 
 @router.get("", response_class=HTMLResponse)
-def contact_list(request: Request, q: str = "", page: int = 1):
+def contact_list(request: Request, q: str = "", page: int = 1, sort: str = "name"):
     templates = request.app.state.templates
-    contacts, total = _list_contacts(search=q, page=page)
+    contacts, total = _list_contacts(search=q, page=page, sort=sort)
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "contacts/list.html", {
@@ -74,13 +87,14 @@ def contact_list(request: Request, q: str = "", page: int = 1):
         "page": page,
         "total_pages": total_pages,
         "q": q,
+        "sort": sort,
     })
 
 
 @router.get("/search", response_class=HTMLResponse)
-def contact_search(request: Request, q: str = "", page: int = 1):
+def contact_search(request: Request, q: str = "", page: int = 1, sort: str = "name"):
     templates = request.app.state.templates
-    contacts, total = _list_contacts(search=q, page=page)
+    contacts, total = _list_contacts(search=q, page=page, sort=sort)
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "contacts/_rows.html", {
@@ -89,6 +103,7 @@ def contact_search(request: Request, q: str = "", page: int = 1):
         "page": page,
         "total_pages": total_pages,
         "q": q,
+        "sort": sort,
     })
 
 

@@ -535,6 +535,60 @@ def remove_email_address(email_id: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Company Social Profiles
+# ---------------------------------------------------------------------------
+
+def add_company_social_profile(
+    company_id: str,
+    platform: str,
+    profile_url: str,
+    *,
+    username: str = "",
+    source: str = "",
+    confidence: float | None = None,
+) -> dict:
+    """Add or update a social profile for a company. Returns the row as a dict."""
+    now = datetime.now(timezone.utc).isoformat()
+    row_id = str(uuid.uuid4())
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO company_social_profiles "
+            "(id, company_id, platform, profile_url, username, source, confidence, "
+            "created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(company_id, platform, profile_url) DO UPDATE SET "
+            "username = excluded.username, source = excluded.source, "
+            "confidence = excluded.confidence, updated_at = excluded.updated_at",
+            (row_id, company_id, platform, profile_url, username, source,
+             confidence, now, now),
+        )
+        row = conn.execute(
+            "SELECT * FROM company_social_profiles "
+            "WHERE company_id = ? AND platform = ? AND profile_url = ?",
+            (company_id, platform, profile_url),
+        ).fetchone()
+    return dict(row) if row else {}
+
+
+def get_company_social_profiles(company_id: str) -> list[dict]:
+    """List all social profiles for a company."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM company_social_profiles WHERE company_id = ? ORDER BY platform",
+            (company_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_company_social_profile(profile_id: str) -> None:
+    """Delete a company social profile by its ID."""
+    with get_connection() as conn:
+        conn.execute(
+            "DELETE FROM company_social_profiles WHERE id = ?", (profile_id,)
+        )
+
+
+# ---------------------------------------------------------------------------
 # Projects
 # ---------------------------------------------------------------------------
 

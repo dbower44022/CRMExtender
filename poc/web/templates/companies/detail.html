@@ -73,8 +73,19 @@
     <article>
       <header>
         Company Info
-        <a href="/companies/{{ company.id }}/edit" role="button" class="outline"
-           style="float:right;padding:4px 12px;font-size:.85em;">Edit</a>
+        <span style="float:right;">
+          {% if company.domain or company.website %}
+          <button hx-post="/companies/{{ company.id }}/enrich"
+                  hx-indicator="#enrich-spinner"
+                  class="outline"
+                  style="padding:4px 12px;font-size:.85em;margin-right:4px;">
+            Enrich
+          </button>
+          <span id="enrich-spinner" class="htmx-indicator" style="font-size:.85em;">enriching...</span>
+          {% endif %}
+          <a href="/companies/{{ company.id }}/edit" role="button" class="outline"
+             style="padding:4px 12px;font-size:.85em;">Edit</a>
+        </span>
       </header>
       <dl class="detail-sidebar">
         {% if company.domain %}

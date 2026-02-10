@@ -278,6 +278,18 @@ def company_detail(request: Request, company_id: str):
     })
 
 
+@router.post("/{company_id}/enrich", response_class=HTMLResponse)
+def company_enrich(request: Request, company_id: str):
+    # Import triggers provider registration
+    from ...website_scraper import _provider  # noqa: F401
+    from ...enrichment_pipeline import execute_enrichment
+
+    result = execute_enrichment("company", company_id, "website_scraper")
+    if _is_htmx(request):
+        return HTMLResponse("", headers={"HX-Redirect": f"/companies/{company_id}"})
+    return RedirectResponse(f"/companies/{company_id}", status_code=303)
+
+
 @router.get("/{company_id}/edit", response_class=HTMLResponse)
 def company_edit_form(request: Request, company_id: str):
     templates = request.app.state.templates

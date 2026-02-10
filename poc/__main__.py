@@ -834,6 +834,35 @@ def cmd_migrate_to_v7(args: argparse.Namespace) -> None:
     migrate(db_path, dry_run=args.dry_run)
 
 
+def cmd_enrich_company(args: argparse.Namespace) -> None:
+    """Enrich a company using a provider."""
+    # Import triggers provider registration
+    from . import website_scraper  # noqa: F401
+    from .enrichment_pipeline import execute_enrichment
+    from .hierarchy import get_company
+
+    init_db()
+    company = get_company(args.company_id)
+    if not company:
+        console.print(f"\n[red]Company not found:[/red] {args.company_id}")
+        sys.exit(1)
+
+    console.print(f"\n[bold]Enriching company:[/bold] {company['name']}")
+    console.print(f"  Provider: {args.provider}")
+
+    result = execute_enrichment("company", args.company_id, args.provider)
+
+    if result["status"] == "completed":
+        console.print(
+            f"\n[bold green]Enrichment complete.[/bold green]\n"
+            f"  Fields discovered: {result['fields_discovered']}\n"
+            f"  Fields applied: {result['fields_applied']}"
+        )
+    else:
+        console.print(f"\n[red]Enrichment failed:[/red] {result.get('error', 'unknown')}")
+        sys.exit(1)
+
+
 def cmd_serve(args: argparse.Namespace) -> None:
     """Launch the web UI."""
     import uvicorn
@@ -972,6 +1001,12 @@ def build_parser() -> argparse.ArgumentParser:
     # list-relationship-types
     sub.add_parser("list-relationship-types", help="List all relationship types")
 
+    # enrich-company
+    ec = sub.add_parser("enrich-company", help="Enrich a company from external sources")
+    ec.add_argument("company_id", help="Company ID to enrich")
+    ec.add_argument("--provider", default="website_scraper",
+                    help="Enrichment provider (default: website_scraper)")
+
     # migrate-to-v4
     m4 = sub.add_parser("migrate-to-v4", help="Migrate database from v3 to v4")
     m4.add_argument("--db", type=Path, help="Path to the SQLite database file")
@@ -1034,6 +1069,7 @@ def main() -> None:
         "auto-assign": cmd_auto_assign,
         "show-hierarchy": cmd_show_hierarchy,
         "list-relationship-types": cmd_list_relationship_types,
+        "enrich-company": cmd_enrich_company,
         "migrate-to-v4": cmd_migrate_to_v4,
         "migrate-to-v5": cmd_migrate_to_v5,
         "migrate-to-v6": cmd_migrate_to_v6,

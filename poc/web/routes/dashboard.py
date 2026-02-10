@@ -46,8 +46,43 @@ def dashboard(request: Request):
         ).fetchall()
         recent_conversations = [dict(r) for r in recent]
 
+        top_companies = [dict(r) for r in conn.execute(
+            """SELECT c.id, c.name, c.domain, es.score_value AS score
+               FROM entity_scores es
+               JOIN companies c ON c.id = es.entity_id
+               WHERE es.entity_type = 'company'
+                 AND es.score_type = 'relationship_strength'
+               ORDER BY es.score_value DESC
+               LIMIT 5""",
+        ).fetchall()]
+
+        top_contacts = [dict(r) for r in conn.execute(
+            """SELECT ct.id, ct.name, ci.value AS email,
+                      co.name AS company_name, es.score_value AS score
+               FROM entity_scores es
+               JOIN contacts ct ON ct.id = es.entity_id
+               LEFT JOIN contact_identifiers ci
+                 ON ci.contact_id = ct.id AND ci.type = 'email'
+               LEFT JOIN companies co ON co.id = ct.company_id
+               WHERE es.entity_type = 'contact'
+                 AND es.score_type = 'relationship_strength'
+               ORDER BY es.score_value DESC
+               LIMIT 5""",
+        ).fetchall()]
+
+        counts["scored_companies"] = conn.execute(
+            """SELECT COUNT(*) AS c FROM entity_scores
+               WHERE entity_type = 'company' AND score_type = 'relationship_strength'"""
+        ).fetchone()["c"]
+        counts["scored_contacts"] = conn.execute(
+            """SELECT COUNT(*) AS c FROM entity_scores
+               WHERE entity_type = 'contact' AND score_type = 'relationship_strength'"""
+        ).fetchone()["c"]
+
     return templates.TemplateResponse(request, "dashboard.html", {
         "active_nav": "dashboard",
         "counts": counts,
         "recent_conversations": recent_conversations,
+        "top_companies": top_companies,
+        "top_contacts": top_contacts,
     })

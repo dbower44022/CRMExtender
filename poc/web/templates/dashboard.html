@@ -28,6 +28,63 @@
   </article>
 </div>
 
+{% if top_companies or top_contacts %}
+<div class="grid">
+  {% if top_companies %}
+  <article>
+    <header>Top Companies <small>({{ counts.scored_companies }} scored)</small></header>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Score</th></tr>
+      </thead>
+      <tbody>
+        {% for c in top_companies %}
+        <tr>
+          <td><a href="/companies/{{ c.id }}">{{ c.name }}</a></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="background:#e0e0e0;border-radius:3px;height:6px;width:60px;">
+                <div style="background:var(--pico-primary-color, #1095c1);height:100%;border-radius:3px;width:{{ (c.score * 100)|int }}%;"></div>
+              </div>
+              <small>{{ '%.0f'|format(c.score * 100) }}%</small>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <footer><a href="/companies?sort=-score">View all &rarr;</a></footer>
+  </article>
+  {% endif %}
+  {% if top_contacts %}
+  <article>
+    <header>Top Contacts <small>({{ counts.scored_contacts }} scored)</small></header>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Score</th></tr>
+      </thead>
+      <tbody>
+        {% for c in top_contacts %}
+        <tr>
+          <td><a href="/contacts/{{ c.id }}">{{ c.name or c.email or '(unnamed)' }}</a></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="background:#e0e0e0;border-radius:3px;height:6px;width:60px;">
+                <div style="background:var(--pico-primary-color, #1095c1);height:100%;border-radius:3px;width:{{ (c.score * 100)|int }}%;"></div>
+              </div>
+              <small>{{ '%.0f'|format(c.score * 100) }}%</small>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <footer><a href="/contacts?sort=-score">View all &rarr;</a></footer>
+  </article>
+  {% endif %}
+</div>
+{% endif %}
+
 {% if recent_conversations %}
 <h2>Recent Conversations</h2>
 <table>

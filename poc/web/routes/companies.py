@@ -37,21 +37,39 @@ def _find_contacts_by_domain(domain: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def _list_companies_with_scores(q: str = "") -> list[dict]:
+    """Return companies with their relationship strength scores."""
+    with get_connection() as conn:
+        if q:
+            rows = conn.execute(
+                """SELECT c.*, es.score_value AS score
+                   FROM companies c
+                   LEFT JOIN entity_scores es
+                     ON es.entity_type = 'company'
+                    AND es.entity_id = c.id
+                    AND es.score_type = 'relationship_strength'
+                   WHERE c.status = 'active' AND (c.name LIKE ? OR c.domain LIKE ?)
+                   ORDER BY c.name""",
+                (f"%{q}%", f"%{q}%"),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT c.*, es.score_value AS score
+                   FROM companies c
+                   LEFT JOIN entity_scores es
+                     ON es.entity_type = 'company'
+                    AND es.entity_id = c.id
+                    AND es.score_type = 'relationship_strength'
+                   WHERE c.status = 'active'
+                   ORDER BY c.name""",
+            ).fetchall()
+    return [dict(r) for r in rows]
+
+
 @router.get("", response_class=HTMLResponse)
 def company_list(request: Request, q: str = ""):
     templates = request.app.state.templates
-
-    if q:
-        with get_connection() as conn:
-            rows = conn.execute(
-                """SELECT * FROM companies
-                   WHERE status = 'active' AND (name LIKE ? OR domain LIKE ?)
-                   ORDER BY name""",
-                (f"%{q}%", f"%{q}%"),
-            ).fetchall()
-        companies = [dict(r) for r in rows]
-    else:
-        companies = list_companies()
+    companies = _list_companies_with_scores(q)
 
     return templates.TemplateResponse(request, "companies/list.html", {
         "active_nav": "companies",
@@ -63,18 +81,7 @@ def company_list(request: Request, q: str = ""):
 @router.get("/search", response_class=HTMLResponse)
 def company_search(request: Request, q: str = ""):
     templates = request.app.state.templates
-
-    if q:
-        with get_connection() as conn:
-            rows = conn.execute(
-                """SELECT * FROM companies
-                   WHERE status = 'active' AND (name LIKE ? OR domain LIKE ?)
-                   ORDER BY name""",
-                (f"%{q}%", f"%{q}%"),
-            ).fetchall()
-        companies = [dict(r) for r in rows]
-    else:
-        companies = list_companies()
+    companies = _list_companies_with_scores(q)
 
     return templates.TemplateResponse(request, "companies/_rows.html", {
         "companies": companies,

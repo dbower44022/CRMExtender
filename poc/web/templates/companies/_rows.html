@@ -5,6 +5,7 @@
       <th>Name</th>
       <th>Domain</th>
       <th>Industry</th>
+      <th>Score</th>
       <th>Status</th>
       <th></th>
     </tr>
@@ -15,6 +16,18 @@
       <td><a href="/companies/{{ c.id }}">{{ c.name }}</a></td>
       <td>{{ c.domain or '' }}</td>
       <td>{{ c.industry or '' }}</td>
+      <td>
+        {% if c.score is not none %}
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="background:#e0e0e0;border-radius:3px;height:6px;width:60px;">
+            <div style="background:var(--pico-primary-color, #1095c1);height:100%;border-radius:3px;width:{{ (c.score * 100)|int }}%;"></div>
+          </div>
+          <small>{{ '%.0f'|format(c.score * 100) }}%</small>
+        </div>
+        {% else %}
+        <small style="color:var(--pico-muted-color);">&mdash;</small>
+        {% endif %}
+      </td>
       <td>{{ c.status or 'active' }}</td>
       <td>
         <button class="outline secondary"

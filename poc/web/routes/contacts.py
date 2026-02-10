@@ -43,10 +43,15 @@ def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50):
 
         offset = (page - 1) * per_page
         rows = conn.execute(
-            f"""SELECT c.*, ci.value AS email, co.name AS company_name
+            f"""SELECT c.*, ci.value AS email, co.name AS company_name,
+                       es.score_value AS score
                 FROM contacts c
                 LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
                 LEFT JOIN companies co ON co.id = c.company_id
+                LEFT JOIN entity_scores es
+                  ON es.entity_type = 'contact'
+                 AND es.entity_id = c.id
+                 AND es.score_type = 'relationship_strength'
                 {where}
                 ORDER BY c.name
                 LIMIT ? OFFSET ?""",

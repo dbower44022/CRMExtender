@@ -1,7 +1,7 @@
 # Data Model & Database Design
 
 This document describes the persistent data layer that backs the CRM
-Extender pipeline.  It covers the SQLite schema (v6, 26 tables), every
+Extender pipeline.  It covers the SQLite schema (v7, 39 tables), every
 table and column, the relationships between entities, the serialization
 layer that maps Python dataclasses to database rows, the indexing
 strategy, and the data flows that populate and query the database.
@@ -19,11 +19,15 @@ strategy, and the data flows that populate and query the database.
 | `poc/relationship_inference.py` | Contact relationship inference from co-occurrence data |
 | `poc/config.py` | `DB_PATH` setting (default `data/crm_extender.db`) |
 | `poc/relationship_types.py` | Relationship type CRUD (create, list, get, update, delete) |
+| `poc/enrichment_provider.py` | Enrichment provider interface, registry, SourceTier enum |
+| `poc/enrichment_pipeline.py` | Enrichment orchestration, conflict resolution, field apply |
+| `poc/website_scraper.py` | Website scraper enrichment provider (crawl + extract) |
 | `poc/migrate_to_v2.py` | Schema migration: v1 (8-table) to v2 (21-table) |
 | `poc/migrate_to_v3.py` | Schema migration: v2 to v3 (companies + audit columns) |
 | `poc/migrate_to_v4.py` | Schema migration: v3 to v4 (relationship types FK) |
 | `poc/migrate_to_v5.py` | Schema migration: v4 to v5 (bidirectional relationships) |
 | `poc/migrate_to_v6.py` | Schema migration: v5 to v6 (events system) |
+| `poc/migrate_to_v7.py` | Schema migration: v6 to v7 (company intelligence) |
 
 ---
 
@@ -73,6 +77,7 @@ from DB rows when needed for triage, summarization, or display.
 | v4 | 23 | Relationship types: added `relationship_types` table with FK from `relationships`, seed types (KNOWS, EMPLOYEE, REPORTS_TO, WORKS_WITH, PARTNER, VENDOR) |
 | v5 | 23 | Bidirectional relationships: added `is_bidirectional` to `relationship_types`, `paired_relationship_id` to `relationships` |
 | v6 | 26 | Events system: added `events`, `event_participants`, `event_conversations` tables for calendar tracking |
+| v7 | 39 | Company intelligence: added `company_identifiers`, `company_hierarchy`, `company_merges`, `company_social_profiles`, `contact_social_profiles`, `enrichment_runs`, `enrichment_field_values`, `entity_scores`, `monitoring_preferences`, `entity_assets`, `addresses`, `phone_numbers`, `email_addresses`.  New columns on `companies`: `website`, `stock_symbol`, `size_range`, `employee_count`, `founded_year`, `revenue_range`, `funding_total`, `funding_stage`, `headquarters_location`. |
 
 ---
 
@@ -204,6 +209,12 @@ from DB rows when needed for triage, summarization, or display.
 | `events` | `event_participants` | 1:N | `event_id` | CASCADE |
 | `events` | `event_conversations` | 1:N | `event_id` | CASCADE |
 | `conversations` | `event_conversations` | 1:N | `conversation_id` | CASCADE |
+| `companies` | `company_identifiers` | 1:N | `company_id` | CASCADE |
+| `companies` | `company_hierarchy` (parent) | 1:N | `parent_company_id` | CASCADE |
+| `companies` | `company_hierarchy` (child) | 1:N | `child_company_id` | CASCADE |
+| `companies` | `company_social_profiles` | 1:N | `company_id` | CASCADE |
+| `contacts` | `contact_social_profiles` | 1:N | `contact_id` | CASCADE |
+| `enrichment_runs` | `enrichment_field_values` | 1:N | `enrichment_run_id` | CASCADE |
 
 ---
 
@@ -263,6 +274,15 @@ via the CLI.
 | `domain` | TEXT | | Company domain (e.g. `'acme.com'`). |
 | `industry` | TEXT | | Industry classification. |
 | `description` | TEXT | | Free-text description. |
+| `website` | TEXT | | Full website URL (v7). |
+| `stock_symbol` | TEXT | | Stock ticker symbol (v7). |
+| `size_range` | TEXT | | Employee size range, e.g. `'51-200'` (v7). |
+| `employee_count` | INTEGER | | Exact employee count (v7). |
+| `founded_year` | INTEGER | | Year the company was founded (v7). |
+| `revenue_range` | TEXT | | Revenue range, e.g. `'$10M-$50M'` (v7). |
+| `funding_total` | TEXT | | Total funding raised (v7). |
+| `funding_stage` | TEXT | | Funding stage, e.g. `'Series B'` (v7). |
+| `headquarters_location` | TEXT | | HQ location string (v7). |
 | `status` | TEXT | DEFAULT `'active'` | Company status. |
 | `created_by` | TEXT | FK -> `users(id)` | User who created this record.  ON DELETE SET NULL. |
 | `updated_by` | TEXT | FK -> `users(id)` | User who last updated this record.  ON DELETE SET NULL. |
@@ -712,6 +732,248 @@ Many-to-many join linking events to conversations.
 
 **Primary key:** `(event_id, conversation_id)`.
 
+### 27. `company_identifiers`
+
+Multi-domain and multi-identifier support for companies.  Allows a
+company to be found by any of its known domains or identifiers.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `company_id` | TEXT | NOT NULL, FK -> `companies(id)` | ON DELETE CASCADE. |
+| `type` | TEXT | NOT NULL, DEFAULT `'domain'` | Identifier type. |
+| `value` | TEXT | NOT NULL | The identifier value. |
+| `is_primary` | INTEGER | DEFAULT 0 | Boolean. |
+| `source` | TEXT | | Origin of this identifier. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(type, value)`.
+
+### 28. `company_hierarchy`
+
+Parent/child organizational structure between companies.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `parent_company_id` | TEXT | NOT NULL, FK -> `companies(id)` | ON DELETE CASCADE. |
+| `child_company_id` | TEXT | NOT NULL, FK -> `companies(id)` | ON DELETE CASCADE. |
+| `hierarchy_type` | TEXT | NOT NULL | CHECK: `subsidiary`, `division`, `acquisition`, `spinoff`. |
+| `effective_date` | TEXT | | When the relationship started. |
+| `end_date` | TEXT | | When the relationship ended. |
+| `metadata` | TEXT | | JSON blob. |
+| `created_by` | TEXT | FK -> `users(id)` | ON DELETE SET NULL. |
+| `updated_by` | TEXT | FK -> `users(id)` | ON DELETE SET NULL. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**CHECK constraint:** `parent_company_id != child_company_id`.
+
+### 29. `company_merges`
+
+Audit log for company merge operations.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `surviving_company_id` | TEXT | NOT NULL, FK -> `companies(id)` | Company that survives the merge. |
+| `absorbed_company_id` | TEXT | NOT NULL | Company that was absorbed (may no longer exist). |
+| `absorbed_company_snapshot` | TEXT | NOT NULL | JSON snapshot of the absorbed company at merge time. |
+| `contacts_reassigned` | INTEGER | DEFAULT 0 | Count of contacts moved. |
+| `relationships_reassigned` | INTEGER | DEFAULT 0 | Count of relationships moved. |
+| `events_reassigned` | INTEGER | DEFAULT 0 | Count of events moved. |
+| `relationships_deduplicated` | INTEGER | DEFAULT 0 | Duplicate relationships removed. |
+| `merged_by` | TEXT | FK -> `users(id)` | ON DELETE SET NULL. |
+| `merged_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+### 30. `company_social_profiles`
+
+Social media profiles linked to companies.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `company_id` | TEXT | NOT NULL, FK -> `companies(id)` | ON DELETE CASCADE. |
+| `platform` | TEXT | NOT NULL | Platform name (e.g. `'linkedin'`, `'twitter'`). |
+| `profile_url` | TEXT | NOT NULL | Full URL to profile. |
+| `username` | TEXT | | Username/handle. |
+| `verified` | INTEGER | DEFAULT 0 | Boolean. |
+| `follower_count` | INTEGER | | Follower count. |
+| `bio` | TEXT | | Profile bio. |
+| `last_scanned_at` | TEXT | | Last enrichment scan. |
+| `last_post_at` | TEXT | | Last post timestamp. |
+| `source` | TEXT | | How discovered. |
+| `confidence` | REAL | | Confidence score. |
+| `status` | TEXT | DEFAULT `'active'` | Profile status. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(company_id, platform, profile_url)`.
+
+### 31. `contact_social_profiles`
+
+Social media profiles linked to contacts.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `contact_id` | TEXT | NOT NULL, FK -> `contacts(id)` | ON DELETE CASCADE. |
+| `platform` | TEXT | NOT NULL | Platform name. |
+| `profile_url` | TEXT | NOT NULL | Full URL to profile. |
+| `username` | TEXT | | Username/handle. |
+| `headline` | TEXT | | Profile headline. |
+| `connection_degree` | INTEGER | | LinkedIn connection degree. |
+| `mutual_connections` | INTEGER | | Mutual connection count. |
+| `verified` | INTEGER | DEFAULT 0 | Boolean. |
+| `follower_count` | INTEGER | | Follower count. |
+| `bio` | TEXT | | Profile bio. |
+| `last_scanned_at` | TEXT | | Last enrichment scan. |
+| `last_post_at` | TEXT | | Last post timestamp. |
+| `source` | TEXT | | How discovered. |
+| `confidence` | REAL | | Confidence score. |
+| `status` | TEXT | DEFAULT `'active'` | Profile status. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(contact_id, platform, profile_url)`.
+
+### 32. `enrichment_runs`
+
+Tracks each enrichment operation (entity-agnostic).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `entity_type` | TEXT | NOT NULL | CHECK: `company` or `contact`. |
+| `entity_id` | TEXT | NOT NULL | UUID of the entity being enriched. |
+| `provider` | TEXT | NOT NULL | Provider name (e.g. `'website_scraper'`). |
+| `status` | TEXT | NOT NULL, DEFAULT `'pending'` | CHECK: `pending`, `running`, `completed`, `failed`. |
+| `started_at` | TEXT | | When the run started. |
+| `completed_at` | TEXT | | When the run completed. |
+| `error_message` | TEXT | | Error message if failed. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+### 33. `enrichment_field_values`
+
+Field-level provenance for each value discovered during enrichment.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `enrichment_run_id` | TEXT | NOT NULL, FK -> `enrichment_runs(id)` | ON DELETE CASCADE. |
+| `field_name` | TEXT | NOT NULL | The field this value applies to. |
+| `field_value` | TEXT | | The discovered value. |
+| `confidence` | REAL | NOT NULL, DEFAULT 0.0 | Confidence score (0.0-1.0). |
+| `is_accepted` | INTEGER | DEFAULT 0 | Whether this value was applied. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+### 34. `entity_scores`
+
+Precomputed intelligence scores for entities (e.g., relationship strength,
+engagement level).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `entity_type` | TEXT | NOT NULL | CHECK: `company` or `contact`. |
+| `entity_id` | TEXT | NOT NULL | UUID of the entity. |
+| `score_type` | TEXT | NOT NULL | Score category. |
+| `score_value` | REAL | NOT NULL, DEFAULT 0.0 | Numeric score. |
+| `factors` | TEXT | | JSON blob of contributing factors. |
+| `computed_at` | TEXT | NOT NULL | When computed. |
+| `triggered_by` | TEXT | | What triggered the computation. |
+
+**Unique constraint:** `(entity_type, entity_id, score_type)`.
+
+### 35. `monitoring_preferences`
+
+Per-entity monitoring tier configuration.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `entity_type` | TEXT | NOT NULL | CHECK: `company` or `contact`. |
+| `entity_id` | TEXT | NOT NULL | UUID of the entity. |
+| `monitoring_tier` | TEXT | NOT NULL, DEFAULT `'standard'` | CHECK: `high`, `standard`, `low`, `none`. |
+| `tier_source` | TEXT | NOT NULL, DEFAULT `'default'` | CHECK: `manual`, `auto_suggested`, `default`. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(entity_type, entity_id)`.
+
+### 36. `entity_assets`
+
+Content-addressable storage references for entity assets (logos,
+headshots, banners).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `entity_type` | TEXT | NOT NULL | CHECK: `company` or `contact`. |
+| `entity_id` | TEXT | NOT NULL | UUID of the entity. |
+| `asset_type` | TEXT | NOT NULL | CHECK: `logo`, `headshot`, `banner`. |
+| `hash` | TEXT | NOT NULL | Content hash for deduplication. |
+| `mime_type` | TEXT | NOT NULL | MIME type of the asset. |
+| `file_ext` | TEXT | NOT NULL | File extension. |
+| `source` | TEXT | | How the asset was obtained. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+### 37. `addresses`
+
+Entity-agnostic multi-value addresses for companies and contacts.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `entity_type` | TEXT | NOT NULL | CHECK: `company` or `contact`. |
+| `entity_id` | TEXT | NOT NULL | UUID of the entity. |
+| `address_type` | TEXT | NOT NULL, DEFAULT `'headquarters'` | Address category. |
+| `street` | TEXT | | Street address. |
+| `city` | TEXT | | City. |
+| `state` | TEXT | | State/province. |
+| `postal_code` | TEXT | | Postal/ZIP code. |
+| `country` | TEXT | | Country. |
+| `is_primary` | INTEGER | DEFAULT 0 | Boolean. |
+| `source` | TEXT | | How discovered. |
+| `confidence` | REAL | | Confidence score. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+### 38. `phone_numbers`
+
+Entity-agnostic multi-value phone numbers for companies and contacts.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `entity_type` | TEXT | NOT NULL | CHECK: `company` or `contact`. |
+| `entity_id` | TEXT | NOT NULL | UUID of the entity. |
+| `phone_type` | TEXT | NOT NULL, DEFAULT `'main'` | Phone category. |
+| `number` | TEXT | NOT NULL | Phone number. |
+| `is_primary` | INTEGER | DEFAULT 0 | Boolean. |
+| `source` | TEXT | | How discovered. |
+| `confidence` | REAL | | Confidence score. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+### 39. `email_addresses`
+
+Entity-agnostic multi-value email addresses for companies and contacts.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `entity_type` | TEXT | NOT NULL | CHECK: `company` or `contact`. |
+| `entity_id` | TEXT | NOT NULL | UUID of the entity. |
+| `email_type` | TEXT | NOT NULL, DEFAULT `'general'` | Email category. |
+| `address` | TEXT | NOT NULL | Email address. |
+| `is_primary` | INTEGER | DEFAULT 0 | Boolean. |
+| `source` | TEXT | | How discovered. |
+| `confidence` | REAL | | Confidence score. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
 ---
 
 ## Indexes
@@ -808,6 +1070,64 @@ All use `CREATE INDEX IF NOT EXISTS` for idempotent creation.
 | `idx_tc_communication` | `triage_corrections(communication_id)` | Triage corrections. |
 | `idx_tc_sender_domain` | `triage_corrections(sender_domain)` | Domain-based triage patterns. |
 | `idx_cc_conversation` | `conversation_corrections(conversation_id)` | Conversation corrections. |
+
+### Company identifiers
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_coid_company` | `company_identifiers(company_id)` | All identifiers for a company. |
+| `idx_coid_lookup` | `company_identifiers(type, value)` | Find company by identifier. |
+
+### Company hierarchy
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_ch_parent` | `company_hierarchy(parent_company_id)` | Children of a company. |
+| `idx_ch_child` | `company_hierarchy(child_company_id)` | Parents of a company. |
+| `idx_ch_type` | `company_hierarchy(hierarchy_type)` | Filter by hierarchy type. |
+
+### Company merges
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_cm_surviving` | `company_merges(surviving_company_id)` | Merge history for a company. |
+| `idx_cm_absorbed` | `company_merges(absorbed_company_id)` | Find merges that absorbed a company. |
+
+### Social profiles
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_csp_company` | `company_social_profiles(company_id)` | All social profiles for a company. |
+| `idx_csp_platform` | `company_social_profiles(platform)` | Filter by platform. |
+| `idx_ctsp_contact` | `contact_social_profiles(contact_id)` | All social profiles for a contact. |
+| `idx_ctsp_platform` | `contact_social_profiles(platform)` | Filter by platform. |
+
+### Enrichment
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_er_entity` | `enrichment_runs(entity_type, entity_id)` | Enrichment history for an entity. |
+| `idx_er_provider` | `enrichment_runs(provider)` | Filter by provider. |
+| `idx_er_status` | `enrichment_runs(status)` | Filter by run status. |
+| `idx_efv_run` | `enrichment_field_values(enrichment_run_id)` | All field values for a run. |
+| `idx_efv_field` | `enrichment_field_values(field_name, is_accepted)` | Accepted values for a field. |
+
+### Entity scores and assets
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_es_entity_score` | `entity_scores(entity_type, entity_id, score_type)` UNIQUE | Score lookup (also enforces uniqueness). |
+| `idx_es_score` | `entity_scores(score_type, score_value)` | Ranking by score type. |
+| `idx_ea_entity` | `entity_assets(entity_type, entity_id)` | Assets for an entity. |
+| `idx_ea_hash` | `entity_assets(hash)` | Content-addressable dedup. |
+
+### Addresses, phones, emails
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_addr_entity` | `addresses(entity_type, entity_id)` | Addresses for an entity. |
+| `idx_phone_entity` | `phone_numbers(entity_type, entity_id)` | Phone numbers for an entity. |
+| `idx_email_entity` | `email_addresses(entity_type, entity_id)` | Email addresses for an entity. |
 
 ---
 
@@ -1015,6 +1335,45 @@ auto_assign.apply_assignments(assignments)
 |  +- UPDATE conversations SET topic_id = ? WHERE id = ?
 ```
 
+### Flow 7: Company Enrichment
+
+```
+execute_enrichment("company", company_id, provider_name)
+|  +- get_provider(provider_name)
+|  +- create_enrichment_run(entity_type, entity_id, provider)
+|  +- _update_run_status(run_id, "running")
+|  +- Load entity: get_company(company_id)
+|  +- provider.enrich(entity) -> list[FieldValue]
+|  +- _store_field_values(run_id, field_values)
+|  |   +- INSERT INTO enrichment_field_values
+|  |
+|  +- For each field_value with _should_accept(confidence >= 0.7):
+|  |   +- Direct fields (description, industry, website, ...):
+|  |   |   +- UPDATE companies SET field = value
+|  |   +- phone_* fields:
+|  |   |   +- Check existing phone_numbers for dedup
+|  |   |   +- add_phone_number() if new
+|  |   +- email_* fields:
+|  |   |   +- Check existing email_addresses for dedup
+|  |   |   +- add_email_address() if new
+|  |   +- address_* fields:
+|  |   |   +- Check existing addresses for dedup
+|  |   |   +- add_address() if new
+|  |   +- social_* fields:
+|  |       +- add_company_social_profile() (upsert via ON CONFLICT)
+|  |
+|  +- UPDATE enrichment_field_values SET is_accepted=1 WHERE applied
+|  +- _update_run_status(run_id, "completed")
+|  +- return {run_id, status, fields_discovered, fields_applied}
+```
+
+The website scraper provider (`website_scraper.py`) crawls up to 3
+pages per domain (homepage, /about, /contact) and extracts metadata,
+social links, and contact information using BeautifulSoup + JSON-LD
+parsing.  Conflict resolution uses tier-based precedence (manual >
+paid_api > free_api > website_scrape > email_signature > inferred)
+with an auto-accept threshold of confidence >= 0.7.
+
 ---
 
 ## UPSERT and Idempotency Patterns
@@ -1033,6 +1392,8 @@ auto_assign.apply_assignments(assignments)
 | `tags` | `name` | `INSERT ... ON CONFLICT(name) DO NOTHING` | Existing row reused |
 | `conversation_tags` | `(conversation_id, tag_id)` | `INSERT OR IGNORE` | Silently skipped |
 | `relationships` | `(from_entity_id, to_entity_id, relationship_type)` | `INSERT ... ON CONFLICT DO UPDATE` | Properties refreshed |
+| `company_identifiers` | `(type, value)` | Check-then-insert | Existing row reused |
+| `company_social_profiles` | `(company_id, platform, profile_url)` | `INSERT ... ON CONFLICT DO UPDATE` | Username/source/confidence refreshed |
 
 ---
 

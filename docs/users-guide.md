@@ -232,6 +232,35 @@ The typical workflow is:
 5. `auto-assign` — bulk-assign conversations by tag/title matching
 6. `show-hierarchy` — review the result
 
+### `enrich-company`
+
+```bash
+python3 -m poc enrich-company COMPANY_ID [--provider website_scraper]
+```
+
+Enriches a company record by scraping its website for metadata.  Requires
+the company to have a `domain` or `website` set.
+
+The scraper crawls up to three pages (homepage, /about, /contact) and
+extracts:
+
+- **Meta tags** — description from `<meta>` and Open Graph tags
+- **Schema.org JSON-LD** — description, founding date, employee count,
+  address, social links
+- **Social profiles** — LinkedIn, Twitter/X, Facebook, Instagram, YouTube,
+  GitHub
+- **Contact info** — phone numbers, email addresses
+
+Discovered fields are stored in the `enrichment_runs` / `enrichment_field_values`
+audit trail, then applied to the company record if confidence >= 0.7.  Existing
+values at a higher trust tier (e.g., manual edits) are not overwritten.
+
+**Flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--provider NAME` | Provider to use (default: `website_scraper`).  Currently the only available provider. |
+
 ### `serve`
 
 ```bash
@@ -249,6 +278,8 @@ a browser-based interface for all CRM data:
   conversations and relationships.
 - **Companies** — create, search, delete, view contacts and
   relationships.  Domain-based contact linking on creation.
+  Enrich button on company detail fetches metadata from the
+  company's website.
 - **Projects / Topics** — create projects and topics, auto-assign
   conversations by tag/title matching.
 - **Relationships** — browse inferred and manual relationships, run
@@ -396,7 +427,9 @@ CRMExtender/
     email_parser.py               # Quote/signature stripping (plain-text track)
     html_email_parser.py          # HTML-aware quote/signature stripping
     gmail_client.py               # Gmail API client
-    hierarchy.py                  # Project/topic/assignment data access
+    enrichment_provider.py        # Enrichment provider interface and registry
+    enrichment_pipeline.py        # Enrichment orchestration and conflict resolution
+    hierarchy.py                  # Company/project/topic/assignment data access
     models.py                     # Core dataclasses
     rate_limiter.py               # Token-bucket rate limiter
     relationship_inference.py     # Contact relationship inference
@@ -404,6 +437,7 @@ CRMExtender/
     summarizer.py                 # Claude AI summarization
     sync.py                       # Sync orchestration
     triage.py                     # Heuristic junk filtering
+    website_scraper.py            # Website scraper enrichment provider
     audit_parser.py               # Audit tool: compare old vs new parsing
     migrate_strip_boilerplate.py  # Migration: re-strip stored emails
     migrate_refetch_emails.py     # Migration: re-fetch emails from Gmail
@@ -412,6 +446,7 @@ CRMExtender/
     migrate_to_v4.py              # Migration: v3 to v4 (relationship types)
     migrate_to_v5.py              # Migration: v4 to v5 (bidirectional relationships)
     migrate_to_v6.py              # Migration: v5 to v6 (events)
+    migrate_to_v7.py              # Migration: v6 to v7 (company intelligence)
     web/                          # Web UI (FastAPI + HTMX)
       app.py                      # Application factory
       routes/                     # Route modules
@@ -581,7 +616,55 @@ python3 -m poc.migrate_to_v3 --dry-run   # Preview on a backup copy
 python3 -m poc.migrate_to_v3              # Apply to production
 ```
 
-Both migration scripts create a timestamped backup before making changes
+### Migration: v3 to v4 Schema
+
+Adds the `relationship_types` table with a foreign key from `relationships`,
+and seeds 6 default types (KNOWS, EMPLOYEE, REPORTS_TO, WORKS_WITH, PARTNER,
+VENDOR).
+
+```bash
+python3 -m poc.migrate_to_v4 --dry-run
+python3 -m poc.migrate_to_v4
+```
+
+### Migration: v4 to v5 Schema
+
+Adds `is_bidirectional` to `relationship_types` and
+`paired_relationship_id` to `relationships` for bidirectional relationship
+support.
+
+```bash
+python3 -m poc.migrate_to_v5 --dry-run
+python3 -m poc.migrate_to_v5
+```
+
+### Migration: v5 to v6 Schema
+
+Adds the events system: `events`, `event_participants`, and
+`event_conversations` tables for calendar tracking.
+
+```bash
+python3 -m poc.migrate_to_v6 --dry-run
+python3 -m poc.migrate_to_v6
+```
+
+### Migration: v6 to v7 Schema
+
+Adds company intelligence tables: `company_identifiers`,
+`company_hierarchy`, `company_merges`, `company_social_profiles`,
+`contact_social_profiles`, `enrichment_runs`, `enrichment_field_values`,
+`entity_scores`, `monitoring_preferences`, `entity_assets`, `addresses`,
+`phone_numbers`, `email_addresses`.  Also adds new columns to
+`companies` (website, stock_symbol, size_range, employee_count,
+founded_year, revenue_range, funding_total, funding_stage,
+headquarters_location).
+
+```bash
+python3 -m poc.migrate_to_v7 --dry-run
+python3 -m poc.migrate_to_v7
+```
+
+All migration scripts create a timestamped backup before making changes
 and support `--db PATH` to target a specific database file.
 
 ---

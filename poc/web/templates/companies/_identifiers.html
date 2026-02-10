@@ -1,0 +1,45 @@
+<div id="identifiers-section">
+  <h2>Identifiers ({{ identifiers|length }})</h2>
+  {% if identifiers %}
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Value</th>
+        <th>Primary</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ident in identifiers %}
+      <tr>
+        <td>{{ ident.type }}</td>
+        <td>{{ ident.value }}</td>
+        <td>{% if ident.is_primary %}Yes{% endif %}</td>
+        <td>
+          <button hx-delete="/companies/{{ company.id }}/identifiers/{{ ident.id }}"
+                  hx-target="#identifiers-section" hx-swap="outerHTML"
+                  hx-confirm="Remove this identifier?" class="outline"
+                  style="padding:4px 10px;font-size:.85em;">Remove</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-state">No identifiers.</p>
+  {% endif %}
+
+  <form hx-post="/companies/{{ company.id }}/identifiers"
+        hx-target="#identifiers-section" hx-swap="outerHTML">
+    <fieldset role="group">
+      <select name="type">
+        <option value="domain">Domain</option>
+        <option value="ticker">Ticker</option>
+        <option value="duns">DUNS</option>
+      </select>
+      <input type="text" name="value" placeholder="example.com" required>
+      <button type="submit">Add</button>
+    </fieldset>
+  </form>
+</div>

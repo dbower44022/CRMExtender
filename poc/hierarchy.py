@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from .database import get_connection
-from .models import Company, Project, Topic, User
+from .models import Company, CompanyHierarchy, CompanyIdentifier, Project, Topic, User
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +110,29 @@ def get_company(company_id: str) -> dict | None:
     return dict(row) if row else None
 
 
+def update_company(company_id: str, **fields) -> dict | None:
+    """Update a company's fields. Returns updated row dict or None."""
+    allowed = {
+        "name", "domain", "industry", "description", "status",
+        "website", "stock_symbol", "size_range", "employee_count",
+        "founded_year", "revenue_range", "funding_total", "funding_stage",
+        "headquarters_location",
+    }
+    updates = {k: v for k, v in fields.items() if k in allowed}
+    if not updates:
+        return None
+    now = datetime.now(timezone.utc).isoformat()
+    updates["updated_at"] = now
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [company_id]
+    with get_connection() as conn:
+        conn.execute(f"UPDATE companies SET {set_clause} WHERE id = ?", values)
+        row = conn.execute(
+            "SELECT * FROM companies WHERE id = ?", (company_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
 def find_company_by_name(name: str) -> dict | None:
     with get_connection() as conn:
         row = conn.execute(
@@ -136,6 +159,137 @@ def delete_company(company_id: str) -> dict:
         ).fetchone()["cnt"]
         conn.execute("DELETE FROM companies WHERE id = ?", (company_id,))
     return {"contacts_unlinked": contact_count}
+
+
+# ---------------------------------------------------------------------------
+# Company Identifiers
+# ---------------------------------------------------------------------------
+
+def add_company_identifier(
+    company_id: str,
+    type: str,
+    value: str,
+    *,
+    is_primary: bool = False,
+    source: str = "",
+) -> dict:
+    """Add an identifier (domain, etc.) to a company. Returns the new row as a dict."""
+    ci = CompanyIdentifier(
+        company_id=company_id, type=type, value=value,
+        is_primary=is_primary, source=source,
+    )
+    row = ci.to_row()
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO company_identifiers "
+            "(id, company_id, type, value, is_primary, source, created_at, updated_at) "
+            "VALUES (:id, :company_id, :type, :value, :is_primary, :source, "
+            ":created_at, :updated_at)",
+            row,
+        )
+    return row
+
+
+def get_company_identifiers(company_id: str) -> list[dict]:
+    """List all identifiers for a company."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM company_identifiers WHERE company_id = ? ORDER BY is_primary DESC, type",
+            (company_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def find_company_by_identifier(type: str, value: str) -> dict | None:
+    """Look up a company by identifier type and value. Returns company dict or None."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT c.* FROM companies c "
+            "JOIN company_identifiers ci ON ci.company_id = c.id "
+            "WHERE ci.type = ? AND ci.value = ? AND c.status = 'active'",
+            (type, value),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def remove_company_identifier(identifier_id: str) -> None:
+    """Delete a company identifier by its ID."""
+    with get_connection() as conn:
+        conn.execute(
+            "DELETE FROM company_identifiers WHERE id = ?", (identifier_id,)
+        )
+
+
+# ---------------------------------------------------------------------------
+# Company Hierarchy
+# ---------------------------------------------------------------------------
+
+def add_company_hierarchy(
+    parent_company_id: str,
+    child_company_id: str,
+    hierarchy_type: str,
+    *,
+    effective_date: str = "",
+    metadata: str = "",
+    created_by: str | None = None,
+) -> dict:
+    """Create a parent/child hierarchy relationship. Returns the new row as a dict."""
+    ch = CompanyHierarchy(
+        parent_company_id=parent_company_id,
+        child_company_id=child_company_id,
+        hierarchy_type=hierarchy_type,
+        effective_date=effective_date,
+        metadata=metadata,
+    )
+    row = ch.to_row(created_by=created_by, updated_by=created_by)
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO company_hierarchy "
+            "(id, parent_company_id, child_company_id, hierarchy_type, "
+            "effective_date, end_date, metadata, "
+            "created_by, updated_by, created_at, updated_at) "
+            "VALUES (:id, :parent_company_id, :child_company_id, :hierarchy_type, "
+            ":effective_date, :end_date, :metadata, "
+            ":created_by, :updated_by, :created_at, :updated_at)",
+            row,
+        )
+    return row
+
+
+def get_parent_companies(company_id: str) -> list[dict]:
+    """Get parent companies for a given child company."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT ch.*, c.name AS parent_name "
+            "FROM company_hierarchy ch "
+            "JOIN companies c ON c.id = ch.parent_company_id "
+            "WHERE ch.child_company_id = ? "
+            "ORDER BY ch.effective_date DESC",
+            (company_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_child_companies(company_id: str) -> list[dict]:
+    """Get child/subsidiary companies for a given parent company."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT ch.*, c.name AS child_name "
+            "FROM company_hierarchy ch "
+            "JOIN companies c ON c.id = ch.child_company_id "
+            "WHERE ch.parent_company_id = ? "
+            "ORDER BY ch.effective_date DESC",
+            (company_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_company_hierarchy(hierarchy_id: str) -> None:
+    """Delete a company hierarchy relationship by its ID."""
+    with get_connection() as conn:
+        conn.execute(
+            "DELETE FROM company_hierarchy WHERE id = ?", (hierarchy_id,)
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -823,6 +823,17 @@ def cmd_migrate_to_v6(args: argparse.Namespace) -> None:
     migrate(db_path, dry_run=args.dry_run)
 
 
+def cmd_migrate_to_v7(args: argparse.Namespace) -> None:
+    """Run the v6 -> v7 migration."""
+    from .migrate_to_v7 import migrate
+
+    db_path = args.db
+    if not db_path:
+        db_path = config.DB_PATH
+
+    migrate(db_path, dry_run=args.dry_run)
+
+
 def cmd_serve(args: argparse.Namespace) -> None:
     """Launch the web UI."""
     import uvicorn
@@ -979,6 +990,12 @@ def build_parser() -> argparse.ArgumentParser:
     m6.add_argument("--dry-run", action="store_true",
                     help="Apply migration to a backup copy instead of the real database")
 
+    # migrate-to-v7
+    m7 = sub.add_parser("migrate-to-v7", help="Migrate database from v6 to v7 (company intelligence)")
+    m7.add_argument("--db", type=Path, help="Path to the SQLite database file")
+    m7.add_argument("--dry-run", action="store_true",
+                    help="Apply migration to a backup copy instead of the real database")
+
     return parser
 
 
@@ -1020,6 +1037,7 @@ def main() -> None:
         "migrate-to-v4": cmd_migrate_to_v4,
         "migrate-to-v5": cmd_migrate_to_v5,
         "migrate-to-v6": cmd_migrate_to_v6,
+        "migrate-to-v7": cmd_migrate_to_v7,
     }
 
     # Default to "run" when no subcommand given

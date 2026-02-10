@@ -595,6 +595,15 @@ class Company:
     domain: str = ""
     industry: str = ""
     description: str = ""
+    website: str = ""
+    stock_symbol: str = ""
+    size_range: str = ""
+    employee_count: int | None = None
+    founded_year: int | None = None
+    revenue_range: str = ""
+    funding_total: str = ""
+    funding_stage: str = ""
+    headquarters_location: str = ""
     status: str = "active"
 
     def to_row(
@@ -611,6 +620,15 @@ class Company:
             "domain": self.domain or None,
             "industry": self.industry or None,
             "description": self.description or None,
+            "website": self.website or None,
+            "stock_symbol": self.stock_symbol or None,
+            "size_range": self.size_range or None,
+            "employee_count": self.employee_count,
+            "founded_year": self.founded_year,
+            "revenue_range": self.revenue_range or None,
+            "funding_total": self.funding_total or None,
+            "funding_stage": self.funding_stage or None,
+            "headquarters_location": self.headquarters_location or None,
             "status": self.status,
             "created_by": created_by,
             "updated_by": updated_by,
@@ -626,7 +644,97 @@ class Company:
             domain=r.get("domain") or "",
             industry=r.get("industry") or "",
             description=r.get("description") or "",
+            website=r.get("website") or "",
+            stock_symbol=r.get("stock_symbol") or "",
+            size_range=r.get("size_range") or "",
+            employee_count=r.get("employee_count"),
+            founded_year=r.get("founded_year"),
+            revenue_range=r.get("revenue_range") or "",
+            funding_total=r.get("funding_total") or "",
+            funding_stage=r.get("funding_stage") or "",
+            headquarters_location=r.get("headquarters_location") or "",
             status=r.get("status") or "active",
+        )
+
+
+@dataclass
+class CompanyIdentifier:
+    """A company identifier (domain, etc.)."""
+
+    company_id: str
+    type: str = "domain"
+    value: str = ""
+    is_primary: bool = False
+    source: str = ""
+
+    def to_row(self, *, identifier_id: str | None = None) -> dict:
+        now = _now_iso()
+        return {
+            "id": identifier_id or str(uuid.uuid4()),
+            "company_id": self.company_id,
+            "type": self.type,
+            "value": self.value,
+            "is_primary": 1 if self.is_primary else 0,
+            "source": self.source or None,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> CompanyIdentifier:
+        r = dict(row)
+        return cls(
+            company_id=r["company_id"],
+            type=r.get("type") or "domain",
+            value=r.get("value") or "",
+            is_primary=bool(r.get("is_primary", 0)),
+            source=r.get("source") or "",
+        )
+
+
+@dataclass
+class CompanyHierarchy:
+    """A parent/child organizational relationship between companies."""
+
+    parent_company_id: str
+    child_company_id: str
+    hierarchy_type: str = "subsidiary"
+    effective_date: str = ""
+    end_date: str = ""
+    metadata: str = ""
+
+    def to_row(
+        self,
+        *,
+        hierarchy_id: str | None = None,
+        created_by: str | None = None,
+        updated_by: str | None = None,
+    ) -> dict:
+        now = _now_iso()
+        return {
+            "id": hierarchy_id or str(uuid.uuid4()),
+            "parent_company_id": self.parent_company_id,
+            "child_company_id": self.child_company_id,
+            "hierarchy_type": self.hierarchy_type,
+            "effective_date": self.effective_date or None,
+            "end_date": self.end_date or None,
+            "metadata": self.metadata or None,
+            "created_by": created_by,
+            "updated_by": updated_by,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> CompanyHierarchy:
+        r = dict(row)
+        return cls(
+            parent_company_id=r["parent_company_id"],
+            child_company_id=r["child_company_id"],
+            hierarchy_type=r.get("hierarchy_type") or "subsidiary",
+            effective_date=r.get("effective_date") or "",
+            end_date=r.get("end_date") or "",
+            metadata=r.get("metadata") or "",
         )
 
 

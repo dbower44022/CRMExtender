@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ company.name }} — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Edit {{ company.name }}</h1>
+
+<form method="post" action="/companies/{{ company.id }}/edit">
+  <div class="grid">
+    <div>
+      <label>
+        Name
+        <input type="text" name="name" value="{{ company.name or '' }}" required>
+      </label>
+      <label>
+        Domain
+        <input type="text" name="domain" value="{{ company.domain or '' }}" placeholder="example.com">
+      </label>
+      <label>
+        Industry
+        <input type="text" name="industry" value="{{ company.industry or '' }}">
+      </label>
+      <label>
+        Description
+        <textarea name="description" rows="3">{{ company.description or '' }}</textarea>
+      </label>
+      <label>
+        Website
+        <input type="url" name="website" value="{{ company.website or '' }}" placeholder="https://example.com">
+      </label>
+      <label>
+        Headquarters Location
+        <input type="text" name="headquarters_location" value="{{ company.headquarters_location or '' }}">
+      </label>
+    </div>
+    <div>
+      <label>
+        Stock Symbol
+        <input type="text" name="stock_symbol" value="{{ company.stock_symbol or '' }}">
+      </label>
+      <label>
+        Size Range
+        <select name="size_range">
+          <option value="">—</option>
+          {% for sr in ["1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5001-10000", "10001+"] %}
+          <option value="{{ sr }}" {% if company.size_range == sr %}selected{% endif %}>{{ sr }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Employee Count
+        <input type="number" name="employee_count" value="{{ company.employee_count or '' }}">
+      </label>
+      <label>
+        Founded Year
+        <input type="number" name="founded_year" value="{{ company.founded_year or '' }}" min="1800" max="2030">
+      </label>
+      <label>
+        Revenue Range
+        <input type="text" name="revenue_range" value="{{ company.revenue_range or '' }}">
+      </label>
+      <label>
+        Funding Total
+        <input type="text" name="funding_total" value="{{ company.funding_total or '' }}">
+      </label>
+      <label>
+        Funding Stage
+        <select name="funding_stage">
+          <option value="">—</option>
+          {% for fs in ["seed", "series-a", "series-b", "series-c", "series-d+", "ipo", "bootstrapped"] %}
+          <option value="{{ fs }}" {% if company.funding_stage == fs %}selected{% endif %}>{{ fs }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Status
+        <select name="status">
+          {% for st in ["active", "inactive", "acquired", "merged"] %}
+          <option value="{{ st }}" {% if company.status == st %}selected{% endif %}>{{ st }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+  </div>
+  <div>
+    <button type="submit">Save Changes</button>
+    <a href="/companies/{{ company.id }}" role="button" class="outline">Cancel</a>
+  </div>
+</form>
+{% endblock %}

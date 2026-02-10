@@ -8,7 +8,12 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...database import get_connection
-from ...hierarchy import create_company, delete_company, list_companies
+from ...hierarchy import (
+    create_company, delete_company, list_companies, update_company,
+    get_company_identifiers, add_company_identifier, remove_company_identifier,
+    get_parent_companies, get_child_companies, add_company_hierarchy,
+    remove_company_hierarchy,
+)
 
 router = APIRouter()
 
@@ -93,6 +98,8 @@ def company_create(
     domain: str = Form(""),
     industry: str = Form(""),
     description: str = Form(""),
+    website: str = Form(""),
+    headquarters_location: str = Form(""),
 ):
     templates = request.app.state.templates
     domain_clean = domain.strip().lower()
@@ -107,6 +114,8 @@ def company_create(
                 "domain": domain,
                 "industry": industry,
                 "description": description,
+                "website": website,
+                "headquarters_location": headquarters_location,
                 "contacts": matches,
             }
             template = ("companies/_confirm_link.html" if _is_htmx(request)
@@ -115,7 +124,11 @@ def company_create(
 
     # No preview needed — create directly
     try:
-        create_company(name, domain=domain, industry=industry, description=description)
+        row = create_company(name, domain=domain, industry=industry,
+                             description=description)
+        if website or headquarters_location:
+            update_company(row["id"], website=website,
+                           headquarters_location=headquarters_location)
     except ValueError:
         pass
     if _is_htmx(request):
@@ -130,12 +143,17 @@ def company_confirm(
     domain: str = Form(""),
     industry: str = Form(""),
     description: str = Form(""),
+    website: str = Form(""),
+    headquarters_location: str = Form(""),
     link: str = Form("false"),
 ):
     try:
         row = create_company(
             name, domain=domain, industry=industry, description=description,
         )
+        if website or headquarters_location:
+            update_company(row["id"], website=website,
+                           headquarters_location=headquarters_location)
     except ValueError:
         if _is_htmx(request):
             return HTMLResponse("", headers={"HX-Redirect": "/companies"})
@@ -225,9 +243,170 @@ def company_detail(request: Request, company_id: str):
                 rd["other_name"] = co["name"] if co else rd["other_id"][:8]
             relationships.append(rd)
 
+    identifiers = get_company_identifiers(company_id)
+    parents = get_parent_companies(company_id)
+    children = get_child_companies(company_id)
+    all_companies = list_companies()
+
     return templates.TemplateResponse(request, "companies/detail.html", {
         "active_nav": "companies",
         "company": company,
         "contacts": contacts,
         "relationships": relationships,
+        "identifiers": identifiers,
+        "parents": parents,
+        "children": children,
+        "all_companies": all_companies,
+    })
+
+
+@router.get("/{company_id}/edit", response_class=HTMLResponse)
+def company_edit_form(request: Request, company_id: str):
+    templates = request.app.state.templates
+
+    with get_connection() as conn:
+        company = conn.execute(
+            "SELECT * FROM companies WHERE id = ?", (company_id,)
+        ).fetchone()
+        if not company:
+            return HTMLResponse("Company not found", status_code=404)
+        company = dict(company)
+
+    return templates.TemplateResponse(request, "companies/edit.html", {
+        "active_nav": "companies",
+        "company": company,
+    })
+
+
+@router.post("/{company_id}/edit", response_class=HTMLResponse)
+def company_edit(
+    request: Request,
+    company_id: str,
+    name: str = Form(...),
+    domain: str = Form(""),
+    industry: str = Form(""),
+    description: str = Form(""),
+    website: str = Form(""),
+    stock_symbol: str = Form(""),
+    size_range: str = Form(""),
+    employee_count: str = Form(""),
+    founded_year: str = Form(""),
+    revenue_range: str = Form(""),
+    funding_total: str = Form(""),
+    funding_stage: str = Form(""),
+    headquarters_location: str = Form(""),
+    status: str = Form("active"),
+):
+    fields = dict(
+        name=name, domain=domain, industry=industry, description=description,
+        website=website, stock_symbol=stock_symbol, size_range=size_range,
+        employee_count=int(employee_count) if employee_count else None,
+        founded_year=int(founded_year) if founded_year else None,
+        revenue_range=revenue_range, funding_total=funding_total,
+        funding_stage=funding_stage, headquarters_location=headquarters_location,
+        status=status,
+    )
+    update_company(company_id, **fields)
+    if _is_htmx(request):
+        return HTMLResponse("", headers={"HX-Redirect": f"/companies/{company_id}"})
+    return RedirectResponse(f"/companies/{company_id}", status_code=303)
+
+
+@router.post("/{company_id}/identifiers", response_class=HTMLResponse)
+def company_add_identifier(
+    request: Request,
+    company_id: str,
+    type: str = Form("domain"),
+    value: str = Form(...),
+):
+    templates = request.app.state.templates
+    add_company_identifier(company_id, type, value)
+    identifiers = get_company_identifiers(company_id)
+
+    with get_connection() as conn:
+        company = conn.execute(
+            "SELECT * FROM companies WHERE id = ?", (company_id,)
+        ).fetchone()
+        company = dict(company)
+
+    return templates.TemplateResponse(request, "companies/_identifiers.html", {
+        "company": company,
+        "identifiers": identifiers,
+    })
+
+
+@router.delete("/{company_id}/identifiers/{identifier_id}", response_class=HTMLResponse)
+def company_remove_identifier(
+    request: Request, company_id: str, identifier_id: str,
+):
+    templates = request.app.state.templates
+    remove_company_identifier(identifier_id)
+    identifiers = get_company_identifiers(company_id)
+
+    with get_connection() as conn:
+        company = conn.execute(
+            "SELECT * FROM companies WHERE id = ?", (company_id,)
+        ).fetchone()
+        company = dict(company)
+
+    return templates.TemplateResponse(request, "companies/_identifiers.html", {
+        "company": company,
+        "identifiers": identifiers,
+    })
+
+
+@router.post("/{company_id}/hierarchy", response_class=HTMLResponse)
+def company_add_hierarchy(
+    request: Request,
+    company_id: str,
+    related_company_id: str = Form(...),
+    direction: str = Form("parent"),
+    hierarchy_type: str = Form("subsidiary"),
+):
+    templates = request.app.state.templates
+    if direction == "parent":
+        add_company_hierarchy(related_company_id, company_id, hierarchy_type)
+    else:
+        add_company_hierarchy(company_id, related_company_id, hierarchy_type)
+
+    parents = get_parent_companies(company_id)
+    children = get_child_companies(company_id)
+    all_companies = list_companies()
+
+    with get_connection() as conn:
+        company = conn.execute(
+            "SELECT * FROM companies WHERE id = ?", (company_id,)
+        ).fetchone()
+        company = dict(company)
+
+    return templates.TemplateResponse(request, "companies/_hierarchy.html", {
+        "company": company,
+        "parents": parents,
+        "children": children,
+        "all_companies": all_companies,
+    })
+
+
+@router.delete("/{company_id}/hierarchy/{hierarchy_id}", response_class=HTMLResponse)
+def company_remove_hierarchy(
+    request: Request, company_id: str, hierarchy_id: str,
+):
+    templates = request.app.state.templates
+    remove_company_hierarchy(hierarchy_id)
+
+    parents = get_parent_companies(company_id)
+    children = get_child_companies(company_id)
+    all_companies = list_companies()
+
+    with get_connection() as conn:
+        company = conn.execute(
+            "SELECT * FROM companies WHERE id = ?", (company_id,)
+        ).fetchone()
+        company = dict(company)
+
+    return templates.TemplateResponse(request, "companies/_hierarchy.html", {
+        "company": company,
+        "parents": parents,
+        "children": children,
+        "all_companies": all_companies,
     })

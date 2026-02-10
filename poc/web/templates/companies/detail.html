@@ -57,15 +57,27 @@
       </tbody>
     </table>
     {% endif %}
+
+    {% include "companies/_identifiers.html" %}
+
+    {% include "companies/_hierarchy.html" %}
   </div>
 
   <div>
     <article>
-      <header>Company Info</header>
+      <header>
+        Company Info
+        <a href="/companies/{{ company.id }}/edit" role="button" class="outline"
+           style="float:right;padding:4px 12px;font-size:.85em;">Edit</a>
+      </header>
       <dl class="detail-sidebar">
         {% if company.domain %}
         <dt>Domain</dt>
         <dd>{{ company.domain }}</dd>
+        {% endif %}
+        {% if company.website %}
+        <dt>Website</dt>
+        <dd><a href="{{ company.website }}" target="_blank" rel="noopener">{{ company.website }}</a></dd>
         {% endif %}
         {% if company.industry %}
         <dt>Industry</dt>
@@ -74,6 +86,38 @@
         {% if company.description %}
         <dt>Description</dt>
         <dd>{{ company.description }}</dd>
+        {% endif %}
+        {% if company.stock_symbol %}
+        <dt>Stock Symbol</dt>
+        <dd>{{ company.stock_symbol }}</dd>
+        {% endif %}
+        {% if company.headquarters_location %}
+        <dt>Headquarters</dt>
+        <dd>{{ company.headquarters_location }}</dd>
+        {% endif %}
+        {% if company.size_range %}
+        <dt>Size Range</dt>
+        <dd>{{ company.size_range }}</dd>
+        {% endif %}
+        {% if company.employee_count %}
+        <dt>Employee Count</dt>
+        <dd>{{ company.employee_count }}</dd>
+        {% endif %}
+        {% if company.founded_year %}
+        <dt>Founded</dt>
+        <dd>{{ company.founded_year }}</dd>
+        {% endif %}
+        {% if company.revenue_range %}
+        <dt>Revenue Range</dt>
+        <dd>{{ company.revenue_range }}</dd>
+        {% endif %}
+        {% if company.funding_total %}
+        <dt>Funding Total</dt>
+        <dd>{{ company.funding_total }}</dd>
+        {% endif %}
+        {% if company.funding_stage %}
+        <dt>Funding Stage</dt>
+        <dd>{{ company.funding_stage }}</dd>
         {% endif %}
         <dt>Status</dt>
         <dd>{{ company.status or 'active' }}</dd>

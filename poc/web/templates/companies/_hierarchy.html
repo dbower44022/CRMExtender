@@ -1,0 +1,88 @@
+<div id="hierarchy-section">
+  <h2>Hierarchy</h2>
+
+  {% if parents %}
+  <h3>Parent Companies</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Parent</th>
+        <th>Type</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in parents %}
+      <tr>
+        <td><a href="/companies/{{ p.parent_company_id }}">{{ p.parent_name }}</a></td>
+        <td>{{ p.hierarchy_type }}</td>
+        <td>
+          <button hx-delete="/companies/{{ company.id }}/hierarchy/{{ p.id }}"
+                  hx-target="#hierarchy-section" hx-swap="outerHTML"
+                  hx-confirm="Remove this hierarchy link?" class="outline"
+                  style="padding:4px 10px;font-size:.85em;">Remove</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if children %}
+  <h3>Subsidiaries</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Type</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in children %}
+      <tr>
+        <td><a href="/companies/{{ c.child_company_id }}">{{ c.child_name }}</a></td>
+        <td>{{ c.hierarchy_type }}</td>
+        <td>
+          <button hx-delete="/companies/{{ company.id }}/hierarchy/{{ c.id }}"
+                  hx-target="#hierarchy-section" hx-swap="outerHTML"
+                  hx-confirm="Remove this hierarchy link?" class="outline"
+                  style="padding:4px 10px;font-size:.85em;">Remove</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <details>
+    <summary>Add Hierarchy Link</summary>
+    <form hx-post="/companies/{{ company.id }}/hierarchy"
+          hx-target="#hierarchy-section" hx-swap="outerHTML">
+      <label>Direction
+        <select name="direction">
+          <option value="parent">This is a child of...</option>
+          <option value="child">This is the parent of...</option>
+        </select>
+      </label>
+      <label>Company
+        <select name="related_company_id">
+          {% for co in all_companies %}
+          {% if co.id != company.id %}
+          <option value="{{ co.id }}">{{ co.name }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </label>
+      <label>Type
+        <select name="hierarchy_type">
+          <option value="subsidiary">Subsidiary</option>
+          <option value="division">Division</option>
+          <option value="acquisition">Acquisition</option>
+          <option value="spinoff">Spinoff</option>
+        </select>
+      </label>
+      <button type="submit">Add</button>
+    </form>
+  </details>
+</div>

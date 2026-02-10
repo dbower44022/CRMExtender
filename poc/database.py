@@ -46,16 +46,25 @@ CREATE TABLE IF NOT EXISTS provider_accounts (
 
 -- Companies
 CREATE TABLE IF NOT EXISTS companies (
-    id          TEXT PRIMARY KEY,
-    name        TEXT NOT NULL,
-    domain      TEXT,
-    industry    TEXT,
-    description TEXT,
-    status      TEXT DEFAULT 'active',
-    created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
-    updated_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
-    created_at  TEXT NOT NULL,
-    updated_at  TEXT NOT NULL
+    id                     TEXT PRIMARY KEY,
+    name                   TEXT NOT NULL,
+    domain                 TEXT,
+    industry               TEXT,
+    description            TEXT,
+    website                TEXT,
+    stock_symbol           TEXT,
+    size_range             TEXT,
+    employee_count         INTEGER,
+    founded_year           INTEGER,
+    revenue_range          TEXT,
+    funding_total          TEXT,
+    funding_stage          TEXT,
+    headquarters_location  TEXT,
+    status                 TEXT DEFAULT 'active',
+    created_by             TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by             TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at             TEXT NOT NULL,
+    updated_at             TEXT NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_companies_name ON companies(name);
 
@@ -432,6 +441,211 @@ CREATE TABLE IF NOT EXISTS conversation_corrections (
     corrected_by            TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at              TEXT NOT NULL
 );
+
+-- Company identifiers (multi-domain per company)
+CREATE TABLE IF NOT EXISTS company_identifiers (
+    id          TEXT PRIMARY KEY,
+    company_id  TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    type        TEXT NOT NULL DEFAULT 'domain',
+    value       TEXT NOT NULL,
+    is_primary  INTEGER DEFAULT 0,
+    source      TEXT,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    UNIQUE(type, value)
+);
+
+-- Company hierarchy (parent/child organizational structure)
+CREATE TABLE IF NOT EXISTS company_hierarchy (
+    id                TEXT PRIMARY KEY,
+    parent_company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    child_company_id  TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    hierarchy_type    TEXT NOT NULL,
+    effective_date    TEXT,
+    end_date          TEXT,
+    metadata          TEXT,
+    created_by        TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by        TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at        TEXT NOT NULL,
+    updated_at        TEXT NOT NULL,
+    CHECK (hierarchy_type IN ('subsidiary', 'division', 'acquisition', 'spinoff')),
+    CHECK (parent_company_id != child_company_id)
+);
+
+-- Company merges audit log
+CREATE TABLE IF NOT EXISTS company_merges (
+    id                         TEXT PRIMARY KEY,
+    surviving_company_id       TEXT NOT NULL REFERENCES companies(id),
+    absorbed_company_id        TEXT NOT NULL,
+    absorbed_company_snapshot  TEXT NOT NULL,
+    contacts_reassigned        INTEGER DEFAULT 0,
+    relationships_reassigned   INTEGER DEFAULT 0,
+    events_reassigned          INTEGER DEFAULT 0,
+    relationships_deduplicated INTEGER DEFAULT 0,
+    merged_by                  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    merged_at                  TEXT NOT NULL
+);
+
+-- Company social profiles
+CREATE TABLE IF NOT EXISTS company_social_profiles (
+    id              TEXT PRIMARY KEY,
+    company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    platform        TEXT NOT NULL,
+    profile_url     TEXT NOT NULL,
+    username        TEXT,
+    verified        INTEGER DEFAULT 0,
+    follower_count  INTEGER,
+    bio             TEXT,
+    last_scanned_at TEXT,
+    last_post_at    TEXT,
+    source          TEXT,
+    confidence      REAL,
+    status          TEXT DEFAULT 'active',
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL,
+    UNIQUE(company_id, platform, profile_url)
+);
+
+-- Contact social profiles
+CREATE TABLE IF NOT EXISTS contact_social_profiles (
+    id                 TEXT PRIMARY KEY,
+    contact_id         TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    platform           TEXT NOT NULL,
+    profile_url        TEXT NOT NULL,
+    username           TEXT,
+    headline           TEXT,
+    connection_degree  INTEGER,
+    mutual_connections INTEGER,
+    verified           INTEGER DEFAULT 0,
+    follower_count     INTEGER,
+    bio                TEXT,
+    last_scanned_at    TEXT,
+    last_post_at       TEXT,
+    source             TEXT,
+    confidence         REAL,
+    status             TEXT DEFAULT 'active',
+    created_at         TEXT NOT NULL,
+    updated_at         TEXT NOT NULL,
+    UNIQUE(contact_id, platform, profile_url)
+);
+
+-- Enrichment runs (entity-agnostic)
+CREATE TABLE IF NOT EXISTS enrichment_runs (
+    id            TEXT PRIMARY KEY,
+    entity_type   TEXT NOT NULL,
+    entity_id     TEXT NOT NULL,
+    provider      TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'pending',
+    started_at    TEXT,
+    completed_at  TEXT,
+    error_message TEXT,
+    created_at    TEXT NOT NULL,
+    CHECK (entity_type IN ('company', 'contact')),
+    CHECK (status IN ('pending', 'running', 'completed', 'failed'))
+);
+
+-- Enrichment field values (field-level provenance)
+CREATE TABLE IF NOT EXISTS enrichment_field_values (
+    id                TEXT PRIMARY KEY,
+    enrichment_run_id TEXT NOT NULL REFERENCES enrichment_runs(id) ON DELETE CASCADE,
+    field_name        TEXT NOT NULL,
+    field_value       TEXT,
+    confidence        REAL NOT NULL DEFAULT 0.0,
+    is_accepted       INTEGER DEFAULT 0,
+    created_at        TEXT NOT NULL
+);
+
+-- Entity scores (precomputed intelligence)
+CREATE TABLE IF NOT EXISTS entity_scores (
+    id           TEXT PRIMARY KEY,
+    entity_type  TEXT NOT NULL,
+    entity_id    TEXT NOT NULL,
+    score_type   TEXT NOT NULL,
+    score_value  REAL NOT NULL DEFAULT 0.0,
+    factors      TEXT,
+    computed_at  TEXT NOT NULL,
+    triggered_by TEXT,
+    CHECK (entity_type IN ('company', 'contact'))
+);
+
+-- Monitoring preferences (per-entity tier)
+CREATE TABLE IF NOT EXISTS monitoring_preferences (
+    id              TEXT PRIMARY KEY,
+    entity_type     TEXT NOT NULL,
+    entity_id       TEXT NOT NULL,
+    monitoring_tier TEXT NOT NULL DEFAULT 'standard',
+    tier_source     TEXT NOT NULL DEFAULT 'default',
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL,
+    CHECK (entity_type IN ('company', 'contact')),
+    CHECK (monitoring_tier IN ('high', 'standard', 'low', 'none')),
+    CHECK (tier_source IN ('manual', 'auto_suggested', 'default')),
+    UNIQUE(entity_type, entity_id)
+);
+
+-- Entity assets (content-addressable storage)
+CREATE TABLE IF NOT EXISTS entity_assets (
+    id          TEXT PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id   TEXT NOT NULL,
+    asset_type  TEXT NOT NULL,
+    hash        TEXT NOT NULL,
+    mime_type   TEXT NOT NULL,
+    file_ext    TEXT NOT NULL,
+    source      TEXT,
+    created_at  TEXT NOT NULL,
+    CHECK (entity_type IN ('company', 'contact')),
+    CHECK (asset_type IN ('logo', 'headshot', 'banner'))
+);
+
+-- Addresses (entity-agnostic multi-value)
+CREATE TABLE IF NOT EXISTS addresses (
+    id           TEXT PRIMARY KEY,
+    entity_type  TEXT NOT NULL,
+    entity_id    TEXT NOT NULL,
+    address_type TEXT NOT NULL DEFAULT 'headquarters',
+    street       TEXT,
+    city         TEXT,
+    state        TEXT,
+    postal_code  TEXT,
+    country      TEXT,
+    is_primary   INTEGER DEFAULT 0,
+    source       TEXT,
+    confidence   REAL,
+    created_at   TEXT NOT NULL,
+    updated_at   TEXT NOT NULL,
+    CHECK (entity_type IN ('company', 'contact'))
+);
+
+-- Phone numbers (entity-agnostic multi-value)
+CREATE TABLE IF NOT EXISTS phone_numbers (
+    id          TEXT PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id   TEXT NOT NULL,
+    phone_type  TEXT NOT NULL DEFAULT 'main',
+    number      TEXT NOT NULL,
+    is_primary  INTEGER DEFAULT 0,
+    source      TEXT,
+    confidence  REAL,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    CHECK (entity_type IN ('company', 'contact'))
+);
+
+-- Email addresses (entity-agnostic multi-value)
+CREATE TABLE IF NOT EXISTS email_addresses (
+    id          TEXT PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id   TEXT NOT NULL,
+    email_type  TEXT NOT NULL DEFAULT 'general',
+    address     TEXT NOT NULL,
+    is_primary  INTEGER DEFAULT 0,
+    source      TEXT,
+    confidence  REAL,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    CHECK (entity_type IN ('company', 'contact'))
+);
 """
 
 _INDEX_SQL = """\
@@ -502,6 +716,47 @@ CREATE INDEX IF NOT EXISTS idx_relationships_to     ON relationships(to_entity_i
 CREATE INDEX IF NOT EXISTS idx_relationships_type   ON relationships(relationship_type_id);
 CREATE INDEX IF NOT EXISTS idx_relationships_source ON relationships(source);
 CREATE INDEX IF NOT EXISTS idx_relationships_paired ON relationships(paired_relationship_id);
+
+-- Company identifiers
+CREATE INDEX IF NOT EXISTS idx_coid_company         ON company_identifiers(company_id);
+CREATE INDEX IF NOT EXISTS idx_coid_lookup           ON company_identifiers(type, value);
+
+-- Company hierarchy
+CREATE INDEX IF NOT EXISTS idx_ch_parent             ON company_hierarchy(parent_company_id);
+CREATE INDEX IF NOT EXISTS idx_ch_child              ON company_hierarchy(child_company_id);
+CREATE INDEX IF NOT EXISTS idx_ch_type               ON company_hierarchy(hierarchy_type);
+
+-- Company merges
+CREATE INDEX IF NOT EXISTS idx_cm_surviving          ON company_merges(surviving_company_id);
+CREATE INDEX IF NOT EXISTS idx_cm_absorbed           ON company_merges(absorbed_company_id);
+
+-- Company social profiles
+CREATE INDEX IF NOT EXISTS idx_csp_company           ON company_social_profiles(company_id);
+CREATE INDEX IF NOT EXISTS idx_csp_platform          ON company_social_profiles(platform);
+
+-- Contact social profiles
+CREATE INDEX IF NOT EXISTS idx_ctsp_contact          ON contact_social_profiles(contact_id);
+CREATE INDEX IF NOT EXISTS idx_ctsp_platform         ON contact_social_profiles(platform);
+
+-- Enrichment
+CREATE INDEX IF NOT EXISTS idx_er_entity             ON enrichment_runs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_er_provider           ON enrichment_runs(provider);
+CREATE INDEX IF NOT EXISTS idx_er_status             ON enrichment_runs(status);
+CREATE INDEX IF NOT EXISTS idx_efv_run               ON enrichment_field_values(enrichment_run_id);
+CREATE INDEX IF NOT EXISTS idx_efv_field             ON enrichment_field_values(field_name, is_accepted);
+
+-- Entity scores
+CREATE UNIQUE INDEX IF NOT EXISTS idx_es_entity_score ON entity_scores(entity_type, entity_id, score_type);
+CREATE INDEX IF NOT EXISTS idx_es_score              ON entity_scores(score_type, score_value);
+
+-- Entity assets
+CREATE INDEX IF NOT EXISTS idx_ea_entity             ON entity_assets(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_ea_hash               ON entity_assets(hash);
+
+-- Addresses, phone numbers, email addresses
+CREATE INDEX IF NOT EXISTS idx_addr_entity           ON addresses(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_phone_entity          ON phone_numbers(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_email_entity          ON email_addresses(entity_type, entity_id);
 """
 
 

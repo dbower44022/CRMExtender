@@ -499,6 +499,252 @@ class TestCompanies:
 
 
 # ---------------------------------------------------------------------------
+# Company Detail (Phase 2)
+# ---------------------------------------------------------------------------
+
+def _insert_company_full(conn, company_id, name="Acme Corp", domain="acme.com",
+                          **kwargs):
+    """Insert a company with optional v7 fields."""
+    defaults = {
+        "website": None, "stock_symbol": None, "size_range": None,
+        "employee_count": None, "founded_year": None, "revenue_range": None,
+        "funding_total": None, "funding_stage": None,
+        "headquarters_location": None,
+    }
+    defaults.update(kwargs)
+    conn.execute(
+        "INSERT OR IGNORE INTO companies "
+        "(id, name, domain, status, website, stock_symbol, size_range, "
+        "employee_count, founded_year, revenue_range, funding_total, "
+        "funding_stage, headquarters_location, created_at, updated_at) "
+        "VALUES (?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (company_id, name, domain,
+         defaults["website"], defaults["stock_symbol"], defaults["size_range"],
+         defaults["employee_count"], defaults["founded_year"],
+         defaults["revenue_range"], defaults["funding_total"],
+         defaults["funding_stage"], defaults["headquarters_location"],
+         _NOW, _NOW),
+    )
+
+
+def _insert_company_identifier(conn, ident_id, company_id, type="domain",
+                                 value="acme.com", is_primary=0):
+    conn.execute(
+        "INSERT OR IGNORE INTO company_identifiers "
+        "(id, company_id, type, value, is_primary, source, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, '', ?, ?)",
+        (ident_id, company_id, type, value, is_primary, _NOW, _NOW),
+    )
+
+
+def _insert_company_hierarchy(conn, hier_id, parent_id, child_id,
+                                hierarchy_type="subsidiary"):
+    conn.execute(
+        "INSERT OR IGNORE INTO company_hierarchy "
+        "(id, parent_company_id, child_company_id, hierarchy_type, "
+        "effective_date, end_date, metadata, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, '', '', '', ?, ?)",
+        (hier_id, parent_id, child_id, hierarchy_type, _NOW, _NOW),
+    )
+
+
+class TestCompanyDetail:
+    def test_detail_shows_new_fields(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company_full(
+                conn, "co-1", "Acme Corp", "acme.com",
+                website="https://acme.com", stock_symbol="ACME",
+                headquarters_location="New York, NY",
+                size_range="201-500", employee_count=350,
+                founded_year=1999, revenue_range="$10M-$50M",
+                funding_total="$25M", funding_stage="series-b",
+            )
+
+        resp = client.get("/companies/co-1")
+        assert resp.status_code == 200
+        assert "https://acme.com" in resp.text
+        assert "ACME" in resp.text
+        assert "New York, NY" in resp.text
+        assert "201-500" in resp.text
+        assert "350" in resp.text
+        assert "1999" in resp.text
+        assert "$10M-$50M" in resp.text
+        assert "$25M" in resp.text
+        assert "series-b" in resp.text
+
+    def test_detail_shows_identifiers(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+            _insert_company_identifier(conn, "ci-1", "co-1", "domain", "acme.com")
+            _insert_company_identifier(conn, "ci-2", "co-1", "ticker", "ACME")
+
+        resp = client.get("/companies/co-1")
+        assert resp.status_code == 200
+        assert "Identifiers (2)" in resp.text
+        assert "acme.com" in resp.text
+        assert "ACME" in resp.text
+
+    def test_detail_shows_hierarchy(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-parent", "MegaCorp", "megacorp.com")
+            _insert_company(conn, "co-1", "Acme Corp", "acme.com")
+            _insert_company(conn, "co-child", "Sub Inc", "sub.com")
+            _insert_company_hierarchy(conn, "h-1", "co-parent", "co-1")
+            _insert_company_hierarchy(conn, "h-2", "co-1", "co-child")
+
+        resp = client.get("/companies/co-1")
+        assert resp.status_code == 200
+        assert "MegaCorp" in resp.text
+        assert "Sub Inc" in resp.text
+        assert "Parent Companies" in resp.text
+        assert "Subsidiaries" in resp.text
+
+    def test_edit_page_renders(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company_full(
+                conn, "co-1", "Acme Corp", "acme.com",
+                website="https://acme.com", industry="Tech",
+            )
+
+        resp = client.get("/companies/co-1/edit")
+        assert resp.status_code == 200
+        assert "Edit Acme Corp" in resp.text
+        assert "https://acme.com" in resp.text
+
+    def test_edit_updates_fields(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+
+        resp = client.post("/companies/co-1/edit", data={
+            "name": "Acme Renamed",
+            "domain": "acme.com",
+            "industry": "Finance",
+            "description": "Updated desc",
+            "website": "https://new.acme.com",
+            "stock_symbol": "ACMR",
+            "size_range": "51-200",
+            "employee_count": "150",
+            "founded_year": "2001",
+            "revenue_range": "$5M-$10M",
+            "funding_total": "$10M",
+            "funding_stage": "series-a",
+            "headquarters_location": "Boston, MA",
+            "status": "active",
+        })
+        assert resp.status_code in (200, 303)
+
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM companies WHERE id = 'co-1'"
+            ).fetchone()
+        assert row["name"] == "Acme Renamed"
+        assert row["industry"] == "Finance"
+        assert row["website"] == "https://new.acme.com"
+        assert row["stock_symbol"] == "ACMR"
+        assert row["employee_count"] == 150
+        assert row["founded_year"] == 2001
+        assert row["headquarters_location"] == "Boston, MA"
+
+    def test_edit_integer_fields_empty(self, client, tmp_db):
+        """Empty employee_count and founded_year should store as NULL."""
+        with get_connection() as conn:
+            _insert_company_full(conn, "co-1", "Acme Corp", employee_count=100,
+                                  founded_year=2000)
+
+        resp = client.post("/companies/co-1/edit", data={
+            "name": "Acme Corp",
+            "domain": "",
+            "industry": "",
+            "description": "",
+            "website": "",
+            "stock_symbol": "",
+            "size_range": "",
+            "employee_count": "",
+            "founded_year": "",
+            "revenue_range": "",
+            "funding_total": "",
+            "funding_stage": "",
+            "headquarters_location": "",
+            "status": "active",
+        })
+        assert resp.status_code in (200, 303)
+
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM companies WHERE id = 'co-1'"
+            ).fetchone()
+        assert row["employee_count"] is None
+        assert row["founded_year"] is None
+
+    def test_add_identifier_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+
+        resp = client.post("/companies/co-1/identifiers", data={
+            "type": "domain",
+            "value": "acme.org",
+        })
+        assert resp.status_code == 200
+        assert "acme.org" in resp.text
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM company_identifiers WHERE company_id = 'co-1'"
+            ).fetchall()
+        assert len(rows) == 1
+        assert rows[0]["value"] == "acme.org"
+
+    def test_remove_identifier_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+            _insert_company_identifier(conn, "ci-1", "co-1", "domain", "acme.com")
+
+        resp = client.delete("/companies/co-1/identifiers/ci-1")
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM company_identifiers WHERE company_id = 'co-1'"
+            ).fetchall()
+        assert len(rows) == 0
+
+    def test_add_hierarchy_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+            _insert_company(conn, "co-2", "ParentCo", "parentco.com")
+
+        resp = client.post("/companies/co-1/hierarchy", data={
+            "related_company_id": "co-2",
+            "direction": "parent",
+            "hierarchy_type": "subsidiary",
+        })
+        assert resp.status_code == 200
+        assert "ParentCo" in resp.text
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM company_hierarchy WHERE child_company_id = 'co-1'"
+            ).fetchall()
+        assert len(rows) == 1
+        assert rows[0]["parent_company_id"] == "co-2"
+
+    def test_remove_hierarchy_via_web(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_company(conn, "co-1", "Acme Corp")
+            _insert_company(conn, "co-2", "ParentCo", "parentco.com")
+            _insert_company_hierarchy(conn, "h-1", "co-2", "co-1")
+
+        resp = client.delete("/companies/co-1/hierarchy/h-1")
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM company_hierarchy WHERE child_company_id = 'co-1'"
+            ).fetchall()
+        assert len(rows) == 0
+
+
+# ---------------------------------------------------------------------------
 # Projects & Topics
 # ---------------------------------------------------------------------------
 

@@ -1,0 +1,56 @@
+<form method="post" action="/events"
+      hx-post="/events" hx-target="#event-form-area">
+  <label>
+    Title
+    <input type="text" name="title" required>
+  </label>
+  <label>
+    Type
+    <select name="event_type">
+      <option value="meeting">Meeting</option>
+      <option value="birthday">Birthday</option>
+      <option value="anniversary">Anniversary</option>
+      <option value="conference">Conference</option>
+      <option value="deadline">Deadline</option>
+      <option value="other">Other</option>
+    </select>
+  </label>
+  <label>
+    <input type="checkbox" name="is_all_day" value="1"> All-day event
+  </label>
+  <label>
+    Start date/time
+    <input type="datetime-local" name="start_datetime">
+  </label>
+  <label>
+    End date/time
+    <input type="datetime-local" name="end_datetime">
+  </label>
+  <label>
+    Location
+    <input type="text" name="location">
+  </label>
+  <label>
+    Description
+    <textarea name="description" rows="2"></textarea>
+  </label>
+  <label>
+    Recurrence
+    <select name="recurrence_type">
+      <option value="none">None</option>
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
+      <option value="yearly">Yearly</option>
+    </select>
+  </label>
+  <label>
+    Status
+    <select name="status">
+      <option value="confirmed">Confirmed</option>
+      <option value="tentative">Tentative</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+  </label>
+  <button type="submit">Create</button>
+</form>

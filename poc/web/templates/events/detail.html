@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }} — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>{{ event.title }}</h1>
+
+<div class="grid">
+  <div>
+    <!-- Participants -->
+    <h2>Participants ({{ participants|length }})</h2>
+    {% if participants %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Role</th>
+          <th>RSVP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in participants %}
+        <tr>
+          <td>
+            {% if p.entity_type == 'contact' %}
+            <a href="/contacts/{{ p.entity_id }}">{{ p.entity_name }}</a>
+            {% else %}
+            <a href="/companies/{{ p.entity_id }}">{{ p.entity_name }}</a>
+            {% endif %}
+          </td>
+          <td>{{ p.entity_type }}</td>
+          <td>{{ p.role or 'attendee' }}</td>
+          <td>{{ p.rsvp_status or '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">No participants.</p>
+    {% endif %}
+
+    <!-- Linked conversations -->
+    <h2>Linked Conversations ({{ conversations|length }})</h2>
+    {% if conversations %}
+    <table>
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Status</th>
+          <th>Last Activity</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for conv in conversations %}
+        <tr>
+          <td><a href="/conversations/{{ conv.id }}">{{ conv.title or '(no subject)' }}</a></td>
+          <td>{{ conv.ai_status or conv.status or 'active' }}</td>
+          <td>{{ conv.last_activity_at[:16] if conv.last_activity_at else '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">No linked conversations.</p>
+    {% endif %}
+  </div>
+
+  <div>
+    <article>
+      <header>Event Info</header>
+      <dl class="detail-sidebar">
+        <dt>Type</dt>
+        <dd>{{ event.event_type }}</dd>
+
+        {% if event.start_datetime %}
+        <dt>Start</dt>
+        <dd>{{ event.start_datetime[:16] }}</dd>
+        {% elif event.start_date %}
+        <dt>Start Date</dt>
+        <dd>{{ event.start_date }}</dd>
+        {% endif %}
+
+        {% if event.end_datetime %}
+        <dt>End</dt>
+        <dd>{{ event.end_datetime[:16] }}</dd>
+        {% elif event.end_date %}
+        <dt>End Date</dt>
+        <dd>{{ event.end_date }}</dd>
+        {% endif %}
+
+        {% if event.is_all_day %}
+        <dt>All Day</dt>
+        <dd>Yes</dd>
+        {% endif %}
+
+        {% if event.location %}
+        <dt>Location</dt>
+        <dd>{{ event.location }}</dd>
+        {% endif %}
+
+        {% if event.description %}
+        <dt>Description</dt>
+        <dd>{{ event.description }}</dd>
+        {% endif %}
+
+        {% if event.recurrence_type and event.recurrence_type != 'none' %}
+        <dt>Recurrence</dt>
+        <dd>{{ event.recurrence_type }}</dd>
+        {% endif %}
+
+        <dt>Source</dt>
+        <dd>{{ event.source or 'manual' }}</dd>
+
+        <dt>Status</dt>
+        <dd>{{ event.status or 'confirmed' }}</dd>
+      </dl>
+    </article>
+  </div>
+</div>
+{% endblock %}

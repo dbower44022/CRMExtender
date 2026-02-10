@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Events — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Events <small>({{ total }})</small></h1>
+
+<div class="grid">
+  <div>
+    <div class="search-bar">
+      <input type="search" name="q" value="{{ q }}"
+             placeholder="Search title or location..."
+             hx-get="/events/search"
+             hx-trigger="input changed delay:300ms, search"
+             hx-target="#results"
+             hx-include="[name='event_type']"
+             hx-push-url="/events">
+      <select name="event_type"
+              hx-get="/events/search"
+              hx-trigger="change"
+              hx-target="#results"
+              hx-include=".search-bar">
+        <option value="">All types</option>
+        <option value="meeting" {% if event_type == 'meeting' %}selected{% endif %}>Meeting</option>
+        <option value="birthday" {% if event_type == 'birthday' %}selected{% endif %}>Birthday</option>
+        <option value="anniversary" {% if event_type == 'anniversary' %}selected{% endif %}>Anniversary</option>
+        <option value="conference" {% if event_type == 'conference' %}selected{% endif %}>Conference</option>
+        <option value="deadline" {% if event_type == 'deadline' %}selected{% endif %}>Deadline</option>
+        <option value="other" {% if event_type == 'other' %}selected{% endif %}>Other</option>
+      </select>
+      <span class="htmx-indicator" aria-busy="true"></span>
+    </div>
+
+    <div id="results">
+      {% include "events/_rows.html" %}
+    </div>
+  </div>
+
+  <div id="event-form-area">
+    <article>
+      <header>New Event</header>
+      {% include "events/_form.html" %}
+    </article>
+  </div>
+</div>
+{% endblock %}

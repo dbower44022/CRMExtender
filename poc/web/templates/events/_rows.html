@@ -1,0 +1,50 @@
+{% if events %}
+<table>
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Type</th>
+      <th>Date</th>
+      <th>Location</th>
+      <th>Status</th>
+      <th>Source</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in events %}
+    <tr id="event-{{ e.id }}">
+      <td><a href="/events/{{ e.id }}">{{ e.title }}</a></td>
+      <td>{{ e.event_type }}</td>
+      <td>{{ e.start_datetime[:16] if e.start_datetime else (e.start_date or '') }}</td>
+      <td>{{ e.location or '' }}</td>
+      <td>{{ e.status or 'confirmed' }}</td>
+      <td>{{ e.source or '' }}</td>
+      <td>
+        <button class="outline secondary"
+                style="padding:0.2rem 0.5rem;font-size:0.75rem"
+                hx-delete="/events/{{ e.id }}"
+                hx-target="#event-{{ e.id }}"
+                hx-swap="outerHTML"
+                hx-confirm="Delete event '{{ e.title }}'?">Delete</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if total_pages > 1 %}
+<nav>
+  <ul>
+    {% if page > 1 %}
+    <li><a href="/events?q={{ q }}&event_type={{ event_type }}&page={{ page - 1 }}">Previous</a></li>
+    {% endif %}
+    <li>Page {{ page }} of {{ total_pages }}</li>
+    {% if page < total_pages %}
+    <li><a href="/events?q={{ q }}&event_type={{ event_type }}&page={{ page + 1 }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% else %}
+<p class="empty-state">No events found.</p>
+{% endif %}

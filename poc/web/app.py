@@ -44,6 +44,7 @@ def create_app() -> FastAPI:
         contacts,
         conversations,
         dashboard,
+        events,
         projects,
         relationships,
     )
@@ -54,5 +55,6 @@ def create_app() -> FastAPI:
     app.include_router(companies.router, prefix="/companies")
     app.include_router(projects.router, prefix="/projects")
     app.include_router(relationships.router, prefix="/relationships")
+    app.include_router(events.router, prefix="/events")
 
     return app

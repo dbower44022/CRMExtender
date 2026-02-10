@@ -862,3 +862,132 @@ class TestAssignment:
                 "SELECT topic_id FROM conversations WHERE id = 'conv-1'"
             ).fetchone()
         assert row["topic_id"] is None
+
+
+# ---------------------------------------------------------------------------
+# Events
+# ---------------------------------------------------------------------------
+
+def _insert_event(conn, event_id, title="Team Standup", event_type="meeting",
+                  start_datetime="2026-03-01T10:00:00", location=None,
+                  status="confirmed", source="manual"):
+    conn.execute(
+        "INSERT OR IGNORE INTO events "
+        "(id, title, event_type, start_datetime, location, status, source, "
+        "created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (event_id, title, event_type, start_datetime, location, status,
+         source, _NOW, _NOW),
+    )
+
+
+class TestEvents:
+    def test_list_loads(self, client, tmp_db):
+        resp = client.get("/events")
+        assert resp.status_code == 200
+        assert "Events" in resp.text
+
+    def test_list_shows_events(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_event(conn, "ev-1", "Team Standup")
+            _insert_event(conn, "ev-2", "Board Meeting", event_type="meeting")
+
+        resp = client.get("/events")
+        assert "Team Standup" in resp.text
+        assert "Board Meeting" in resp.text
+
+    def test_search_events(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_event(conn, "ev-1", "Team Standup")
+            _insert_event(conn, "ev-2", "Board Meeting")
+
+        resp = client.get("/events/search?q=Board")
+        assert resp.status_code == 200
+        assert "Board Meeting" in resp.text
+        assert "Team Standup" not in resp.text
+
+    def test_type_filter(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_event(conn, "ev-1", "Team Standup", event_type="meeting")
+            _insert_event(conn, "ev-2", "Jane Birthday", event_type="birthday")
+
+        resp = client.get("/events/search?event_type=birthday")
+        assert "Jane Birthday" in resp.text
+        assert "Team Standup" not in resp.text
+
+    def test_create_event(self, client, tmp_db):
+        resp = client.post("/events", data={
+            "title": "New Standup",
+            "event_type": "meeting",
+            "start_datetime": "2026-03-15T09:00",
+            "end_datetime": "",
+            "start_date": "",
+            "end_date": "",
+            "is_all_day": "",
+            "location": "Room 42",
+            "description": "Daily standup",
+            "recurrence_type": "daily",
+            "status": "confirmed",
+        })
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM events WHERE title = 'New Standup'"
+            ).fetchone()
+        assert row is not None
+        assert row["location"] == "Room 42"
+        assert row["recurrence_type"] == "daily"
+
+    def test_detail_page(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_event(conn, "ev-1", "Design Review",
+                          location="Conference Room A")
+
+        resp = client.get("/events/ev-1")
+        assert resp.status_code == 200
+        assert "Design Review" in resp.text
+        assert "Conference Room A" in resp.text
+
+    def test_detail_not_found(self, client, tmp_db):
+        resp = client.get("/events/nonexistent")
+        assert resp.status_code == 404
+
+    def test_detail_shows_participants(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_event(conn, "ev-1", "Design Review")
+            _insert_contact(conn, "ct-1", "Alice", "alice@a.com")
+            conn.execute(
+                "INSERT INTO event_participants (event_id, entity_type, entity_id, role) "
+                "VALUES ('ev-1', 'contact', 'ct-1', 'organizer')",
+            )
+
+        resp = client.get("/events/ev-1")
+        assert "Alice" in resp.text
+        assert "organizer" in resp.text
+
+    def test_detail_shows_conversations(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_event(conn, "ev-1", "Sprint Planning")
+            _insert_conversation(conn, "conv-1", "Planning Notes")
+            conn.execute(
+                "INSERT INTO event_conversations (event_id, conversation_id, created_at) "
+                "VALUES ('ev-1', 'conv-1', ?)",
+                (_NOW,),
+            )
+
+        resp = client.get("/events/ev-1")
+        assert "Planning Notes" in resp.text
+
+    def test_delete_event(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_event(conn, "ev-1", "Doomed Event")
+
+        resp = client.delete("/events/ev-1")
+        assert resp.status_code == 200
+
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM events WHERE id = 'ev-1'"
+            ).fetchone()
+        assert row is None

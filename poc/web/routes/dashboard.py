@@ -36,6 +36,9 @@ def dashboard(request: Request):
             "topics": conn.execute(
                 "SELECT COUNT(*) AS c FROM topics"
             ).fetchone()["c"],
+            "events": conn.execute(
+                "SELECT COUNT(*) AS c FROM events"
+            ).fetchone()["c"],
         }
 
         recent = conn.execute(

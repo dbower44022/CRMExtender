@@ -371,7 +371,9 @@ Launches the web UI (FastAPI + HTMX + PicoCSS).  The web UI provides
 a browser-based interface for all CRM data:
 
 - **Dashboard** — overview counts (conversations, contacts, companies,
-  projects, topics, events) and recent conversations.
+  projects, topics, events), top 5 companies and contacts by
+  relationship strength score with inline bars, and recent
+  conversations.
 - **Conversations** — browse, search, filter by status/topic, view
   detail with messages and participants.
 - **Contacts** — search by name/email/company, view detail with

@@ -630,5 +630,87 @@ class Company:
         )
 
 
+@dataclass
+class Event:
+    """A calendar event (meeting, birthday, anniversary, etc.)."""
+
+    title: str
+    event_type: str = "meeting"
+    description: str = ""
+    start_date: str = ""
+    start_datetime: str = ""
+    end_date: str = ""
+    end_datetime: str = ""
+    is_all_day: bool = False
+    timezone: str = ""
+    recurrence_rule: str = ""
+    recurrence_type: str = "none"
+    recurring_event_id: str | None = None
+    location: str = ""
+    provider_event_id: str = ""
+    provider_calendar_id: str = ""
+    account_id: str | None = None
+    source: str = "manual"
+    status: str = "confirmed"
+
+    def to_row(
+        self,
+        *,
+        event_id: str | None = None,
+        created_by: str | None = None,
+        updated_by: str | None = None,
+    ) -> dict:
+        now = _now_iso()
+        return {
+            "id": event_id or str(uuid.uuid4()),
+            "title": self.title,
+            "description": self.description or None,
+            "event_type": self.event_type,
+            "start_date": self.start_date or None,
+            "start_datetime": self.start_datetime or None,
+            "end_date": self.end_date or None,
+            "end_datetime": self.end_datetime or None,
+            "is_all_day": 1 if self.is_all_day else 0,
+            "timezone": self.timezone or None,
+            "recurrence_rule": self.recurrence_rule or None,
+            "recurrence_type": self.recurrence_type,
+            "recurring_event_id": self.recurring_event_id,
+            "location": self.location or None,
+            "provider_event_id": self.provider_event_id or None,
+            "provider_calendar_id": self.provider_calendar_id or None,
+            "account_id": self.account_id,
+            "source": self.source,
+            "status": self.status,
+            "created_by": created_by,
+            "updated_by": updated_by,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> Event:
+        r = dict(row)
+        return cls(
+            title=r.get("title") or "",
+            event_type=r.get("event_type") or "meeting",
+            description=r.get("description") or "",
+            start_date=r.get("start_date") or "",
+            start_datetime=r.get("start_datetime") or "",
+            end_date=r.get("end_date") or "",
+            end_datetime=r.get("end_datetime") or "",
+            is_all_day=bool(r.get("is_all_day", 0)),
+            timezone=r.get("timezone") or "",
+            recurrence_rule=r.get("recurrence_rule") or "",
+            recurrence_type=r.get("recurrence_type") or "none",
+            recurring_event_id=r.get("recurring_event_id"),
+            location=r.get("location") or "",
+            provider_event_id=r.get("provider_event_id") or "",
+            provider_calendar_id=r.get("provider_calendar_id") or "",
+            account_id=r.get("account_id"),
+            source=r.get("source") or "manual",
+            status=r.get("status") or "confirmed",
+        )
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()

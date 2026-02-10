@@ -311,6 +311,57 @@ CREATE TABLE IF NOT EXISTS relationships (
     UNIQUE(from_entity_id, to_entity_id, relationship_type_id)
 );
 
+-- Events (calendar items: meetings, birthdays, anniversaries, etc.)
+CREATE TABLE IF NOT EXISTS events (
+    id                   TEXT PRIMARY KEY,
+    title                TEXT NOT NULL,
+    description          TEXT,
+    event_type           TEXT NOT NULL DEFAULT 'meeting',
+    start_date           TEXT,
+    start_datetime       TEXT,
+    end_date             TEXT,
+    end_datetime         TEXT,
+    is_all_day           INTEGER DEFAULT 0,
+    timezone             TEXT,
+    recurrence_rule      TEXT,
+    recurrence_type      TEXT DEFAULT 'none',
+    recurring_event_id   TEXT REFERENCES events(id) ON DELETE SET NULL,
+    location             TEXT,
+    provider_event_id    TEXT,
+    provider_calendar_id TEXT,
+    account_id           TEXT REFERENCES provider_accounts(id) ON DELETE SET NULL,
+    source               TEXT DEFAULT 'manual',
+    status               TEXT DEFAULT 'confirmed',
+    created_by           TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by           TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at           TEXT NOT NULL,
+    updated_at           TEXT NOT NULL,
+    UNIQUE(account_id, provider_event_id),
+    CHECK (event_type IN ('meeting','birthday','anniversary','conference','deadline','other')),
+    CHECK (recurrence_type IN ('none','daily','weekly','monthly','yearly')),
+    CHECK (status IN ('confirmed','tentative','cancelled'))
+);
+
+-- Event participants (contacts or companies linked to an event)
+CREATE TABLE IF NOT EXISTS event_participants (
+    event_id    TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    entity_type TEXT NOT NULL,
+    entity_id   TEXT NOT NULL,
+    role        TEXT DEFAULT 'attendee',
+    rsvp_status TEXT,
+    PRIMARY KEY (event_id, entity_type, entity_id),
+    CHECK (entity_type IN ('contact', 'company')),
+    CHECK (rsvp_status IS NULL OR rsvp_status IN ('accepted','declined','tentative','needs_action'))
+);
+
+-- Event <-> Conversation M:N join
+CREATE TABLE IF NOT EXISTS event_conversations (
+    event_id        TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    created_at      TEXT NOT NULL,
+    PRIMARY KEY (event_id, conversation_id)
+);
+
 -- Sync audit log
 CREATE TABLE IF NOT EXISTS sync_log (
     id                    TEXT PRIMARY KEY,
@@ -432,6 +483,18 @@ CREATE INDEX IF NOT EXISTS idx_ac_communication    ON assignment_corrections(com
 CREATE INDEX IF NOT EXISTS idx_tc_communication    ON triage_corrections(communication_id);
 CREATE INDEX IF NOT EXISTS idx_tc_sender_domain    ON triage_corrections(sender_domain);
 CREATE INDEX IF NOT EXISTS idx_cc_conversation     ON conversation_corrections(conversation_id);
+
+-- Events
+CREATE INDEX IF NOT EXISTS idx_events_type          ON events(event_type);
+CREATE INDEX IF NOT EXISTS idx_events_start_dt      ON events(start_datetime);
+CREATE INDEX IF NOT EXISTS idx_events_start_date    ON events(start_date);
+CREATE INDEX IF NOT EXISTS idx_events_status        ON events(status);
+CREATE INDEX IF NOT EXISTS idx_events_account       ON events(account_id);
+CREATE INDEX IF NOT EXISTS idx_events_recurring     ON events(recurring_event_id);
+CREATE INDEX IF NOT EXISTS idx_events_source        ON events(source);
+CREATE INDEX IF NOT EXISTS idx_events_provider      ON events(account_id, provider_event_id);
+CREATE INDEX IF NOT EXISTS idx_ep_entity            ON event_participants(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_ec_conversation      ON event_conversations(conversation_id);
 
 -- Relationships
 CREATE INDEX IF NOT EXISTS idx_relationships_from   ON relationships(from_entity_id);

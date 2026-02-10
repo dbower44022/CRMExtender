@@ -375,16 +375,17 @@ a browser-based interface for all CRM data:
 - **Conversations** — browse, search, filter by status/topic, view
   detail with messages and participants.
 - **Contacts** — search by name/email/company, view detail with
-  conversations and relationships.  Relationship strength score
-  displayed in sidebar with factor breakdown; "Refresh Score" button
-  recomputes on demand.
+  conversations and relationships.  Relationship strength scores
+  shown as inline bars in the list grid and in the detail sidebar
+  with factor breakdown; "Refresh Score" button recomputes on demand.
 - **Companies** — create, search, delete, view contacts and
   relationships.  Domain-based contact linking on creation.
   Enrich button on company detail fetches metadata from the
   company's website.  Resolve Domains button bulk-links unlinked
   contacts to companies by email domain.  Relationship strength
-  score displayed in sidebar with expandable factor breakdown;
-  "Refresh Score" button recomputes on demand.
+  scores shown as inline bars in the list grid and in the detail
+  sidebar with expandable factor breakdown; "Refresh Score" button
+  recomputes on demand.
 - **Projects / Topics** — create projects and topics, auto-assign
   conversations by tag/title matching.
 - **Relationships** — browse inferred and manual relationships, run

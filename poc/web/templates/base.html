@@ -23,6 +23,16 @@
       <li><a href="/relationships" {% if active_nav == 'relationships' %}class="active"{% endif %}>Relationships</a></li>
       <li><a href="/events" {% if active_nav == 'events' %}class="active"{% endif %}>Events</a></li>
     </ul>
+    {% if user %}
+    <ul>
+      <li><small>{{ user.name or user.email }}</small></li>
+      <li>
+        <form method="post" action="/logout" style="margin:0;">
+          <button type="submit" class="outline secondary" style="padding:0.25rem 0.5rem; margin:0; font-size:0.8rem;">Logout</button>
+        </form>
+      </li>
+    </ul>
+    {% endif %}
   </nav>
 
   <main class="container">

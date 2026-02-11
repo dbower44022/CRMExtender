@@ -28,7 +28,24 @@ _NOW = datetime.now(timezone.utc).isoformat()
 def tmp_db(tmp_path, monkeypatch):
     db_file = tmp_path / "test.db"
     monkeypatch.setattr("poc.config.DB_PATH", db_file)
+    monkeypatch.setattr("poc.config.CRM_AUTH_ENABLED", False)
     init_db(db_file)
+
+    # Seed customer + user for auth bypass mode
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO customers (id, name, slug, is_active, created_at, updated_at) "
+            "VALUES ('cust-test', 'Test Org', 'test', 1, ?, ?)",
+            (_NOW, _NOW),
+        )
+        conn.execute(
+            "INSERT INTO users "
+            "(id, customer_id, email, name, role, is_active, created_at, updated_at) "
+            "VALUES ('user-test', 'cust-test', 'test@example.com', 'Test User', "
+            "'admin', 1, ?, ?)",
+            (_NOW, _NOW),
+        )
+
     return db_file
 
 

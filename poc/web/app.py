@@ -18,6 +18,18 @@ _HERE = Path(__file__).resolve().parent
 log = logging.getLogger(__name__)
 
 
+class AuthTemplates(Jinja2Templates):
+    """Jinja2Templates subclass that auto-injects request.state.user."""
+
+    def TemplateResponse(self, request, name, context=None, **kwargs):
+        if context is None:
+            context = {}
+        context.setdefault("request", request)
+        user = getattr(getattr(request, "state", None), "user", None)
+        context.setdefault("user", user)
+        return super().TemplateResponse(request, name, context, **kwargs)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -36,7 +48,7 @@ def create_app() -> FastAPI:
         name="static",
     )
 
-    templates = Jinja2Templates(directory=_HERE / "templates")
+    templates = AuthTemplates(directory=_HERE / "templates")
 
     from .filters import register_filters
     register_filters(templates)
@@ -44,7 +56,12 @@ def create_app() -> FastAPI:
 
     app.state.templates = templates
 
+    # Auth middleware
+    from .middleware import AuthMiddleware
+    app.add_middleware(AuthMiddleware)
+
     from .routes import (
+        auth_routes,
         companies,
         contacts,
         conversations,
@@ -54,6 +71,7 @@ def create_app() -> FastAPI:
         relationships,
     )
 
+    app.include_router(auth_routes.router)
     app.include_router(dashboard.router)
     app.include_router(conversations.router, prefix="/conversations")
     app.include_router(contacts.router, prefix="/contacts")

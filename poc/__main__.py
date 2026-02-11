@@ -417,8 +417,17 @@ def cmd_bootstrap_user(args: argparse.Namespace) -> None:
     from .hierarchy import bootstrap_user
 
     init_db()
+
+    password = getattr(args, "password", None)
+    if password is None and getattr(args, "set_password", False):
+        import getpass
+        password = getpass.getpass("Password: ")
+        if not password:
+            console.print("[red]Password cannot be empty.[/red]")
+            sys.exit(1)
+
     try:
-        result = bootstrap_user()
+        result = bootstrap_user(password=password)
     except ValueError as exc:
         console.print(f"\n[red]Error:[/red] {exc}")
         sys.exit(1)
@@ -427,6 +436,35 @@ def cmd_bootstrap_user(args: argparse.Namespace) -> None:
         console.print(f"\n[bold green]User created:[/bold green] {result['email']}")
     else:
         console.print(f"\n[yellow]User already exists:[/yellow] {result['email']}")
+
+    if password:
+        console.print("[green]  Password set.[/green]")
+
+
+def cmd_set_password(args: argparse.Namespace) -> None:
+    """Set a user's password."""
+    from .hierarchy import get_user_by_email, set_user_password
+
+    init_db()
+    user = get_user_by_email(args.email)
+    if not user:
+        console.print(f"\n[red]User not found:[/red] {args.email}")
+        sys.exit(1)
+
+    password = args.password
+    if not password:
+        import getpass
+        password = getpass.getpass("Password: ")
+        confirm = getpass.getpass("Confirm password: ")
+        if password != confirm:
+            console.print("[red]Passwords do not match.[/red]")
+            sys.exit(1)
+        if not password:
+            console.print("[red]Password cannot be empty.[/red]")
+            sys.exit(1)
+
+    set_user_password(user["id"], password)
+    console.print(f"\n[bold green]Password set for {args.email}.[/bold green]")
 
 
 # ---------------------------------------------------------------------------
@@ -1241,7 +1279,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # bootstrap-user
-    sub.add_parser("bootstrap-user", help="Auto-create user from provider account")
+    bu = sub.add_parser("bootstrap-user", help="Auto-create user from provider account")
+    bu.add_argument("--password", help="Set initial password for the user")
+    bu.add_argument("--set-password", action="store_true",
+                    help="Prompt for a password interactively")
+
+    # set-password
+    sp_cmd = sub.add_parser("set-password", help="Set a user's password")
+    sp_cmd.add_argument("email", help="User email address")
+    sp_cmd.add_argument("--password", help="Password (prompts if not given)")
 
     # create-company
     cc = sub.add_parser("create-company", help="Create a new company")
@@ -1394,6 +1440,7 @@ def main() -> None:
         "infer-relationships": cmd_infer_relationships,
         "show-relationships": cmd_show_relationships,
         "bootstrap-user": cmd_bootstrap_user,
+        "set-password": cmd_set_password,
         "create-company": cmd_create_company,
         "list-companies": cmd_list_companies,
         "delete-company": cmd_delete_company,

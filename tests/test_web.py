@@ -21,11 +21,28 @@ def tmp_db(tmp_path, monkeypatch):
     db_file = tmp_path / "test.db"
     monkeypatch.setattr("poc.config.DB_PATH", db_file)
     init_db(db_file)
+
+    # Seed customer + user so auth bypass mode has a valid user
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO customers (id, name, slug, is_active, created_at, updated_at) "
+            "VALUES ('cust-test', 'Test Org', 'test', 1, ?, ?)",
+            (_NOW, _NOW),
+        )
+        conn.execute(
+            "INSERT INTO users "
+            "(id, customer_id, email, name, role, is_active, created_at, updated_at) "
+            "VALUES ('user-test', 'cust-test', 'test@example.com', 'Test User', "
+            "'admin', 1, ?, ?)",
+            (_NOW, _NOW),
+        )
+
     return db_file
 
 
 @pytest.fixture()
-def client(tmp_db):
+def client(tmp_db, monkeypatch):
+    monkeypatch.setattr("poc.config.CRM_AUTH_ENABLED", False)
     from poc.web.app import create_app
     app = create_app()
     return TestClient(app, raise_server_exceptions=False)

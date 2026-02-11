@@ -33,17 +33,25 @@ def _ensure_default_customer(conn) -> str:
     return DEFAULT_CUSTOMER_ID
 
 
-def bootstrap_user() -> dict:
+def bootstrap_user(*, password: str | None = None) -> dict:
     """Auto-create a user from the first provider_accounts email.
 
     Idempotent — returns the existing user if one already exists.
     Returns a dict with 'id', 'email', 'name', 'customer_id', 'created' (bool).
+    If *password* is given, the user's password_hash is set.
     """
     with get_connection() as conn:
         existing = conn.execute(
             "SELECT * FROM users WHERE is_active = 1 ORDER BY created_at LIMIT 1"
         ).fetchone()
         if existing:
+            if password:
+                from .passwords import hash_password
+                now = datetime.now(timezone.utc).isoformat()
+                conn.execute(
+                    "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
+                    (hash_password(password), now, existing["id"]),
+                )
             return {"id": existing["id"], "email": existing["email"],
                     "name": existing["name"],
                     "customer_id": existing["customer_id"],
@@ -58,11 +66,17 @@ def bootstrap_user() -> dict:
 
         customer_id = _ensure_default_customer(conn)
 
+        pw_hash = ""
+        if password:
+            from .passwords import hash_password
+            pw_hash = hash_password(password)
+
         user = User(
             email=account["email_address"],
             name=account["display_name"] or "",
             customer_id=customer_id,
             role="admin",
+            password_hash=pw_hash,
         )
         row = user.to_row()
         conn.execute(
@@ -88,6 +102,30 @@ def get_current_user() -> dict | None:
             "SELECT * FROM users WHERE is_active = 1 ORDER BY created_at LIMIT 1"
         ).fetchone()
     return dict(row) if row else None
+
+
+def get_user_by_email(email: str) -> dict | None:
+    """Look up an active user by email address. Returns dict or None."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE email = ? AND is_active = 1",
+            (email,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def set_user_password(user_id: str, password: str) -> bool:
+    """Set a user's password. Returns True if user was found and updated."""
+    from .passwords import hash_password
+
+    now = datetime.now(timezone.utc).isoformat()
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
+            (hash_password(password), now, user_id),
+        )
+        changed = conn.execute("SELECT changes()").fetchone()[0]
+    return changed > 0
 
 
 # ---------------------------------------------------------------------------

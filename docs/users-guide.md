@@ -398,6 +398,12 @@ a browser-based interface for all CRM data:
 - **Events** — browse, search, filter by type, create events, view
   detail with participants and linked conversations.
 
+All dates and timestamps are stored in UTC and converted to the
+configured `CRM_TIMEZONE` for display.  The conversion happens
+client-side via `Intl.DateTimeFormat`, so times are formatted in the
+browser's locale (e.g. "Feb 10, 2026, 9:23 AM").  Without JavaScript,
+a readable `YYYY-MM-DD HH:MM` fallback is shown.
+
 ---
 
 ## Pipeline Stages
@@ -520,6 +526,7 @@ All settings are loaded from environment variables.  Place them in the
 | `POC_CLAUDE_RATE_LIMIT`      | `2`                        | Claude API requests per second                  |
 | `POC_MAX_CONVERSATION_CHARS` | `6000`                     | Max conversation characters sent to Claude      |
 | `POC_DB_PATH`                | `data/crm_extender.db`     | SQLite database location                        |
+| `CRM_TIMEZONE`               | `UTC`                      | IANA timezone for date display (e.g. `America/New_York`) |
 
 ---
 
@@ -569,6 +576,7 @@ CRMExtender/
     migrate_to_v7.py              # Migration: v6 to v7 (company intelligence)
     web/                          # Web UI (FastAPI + HTMX)
       app.py                      # Application factory
+      filters.py                  # Jinja2 date/time filters (|datetime, |dateonly)
       routes/                     # Route modules
         dashboard.py              # Dashboard route
         conversations.py          # Conversation routes
@@ -578,7 +586,8 @@ CRMExtender/
         relationships.py          # Relationship routes
         events.py                 # Event routes
       templates/                  # Jinja2 templates
-      static/                     # CSS and static assets
+      static/                     # CSS, JS, and static assets
+        dates.js                  # Client-side timezone formatting
   .env                            # Environment variables (you create)
   .env.example                    # Template for .env
 ```

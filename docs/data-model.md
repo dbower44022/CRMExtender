@@ -17,7 +17,7 @@ strategy, and the data flows that populate and query the database.
 | `poc/auto_assign.py` | Bulk auto-assign conversations to topics by tag/title matching |
 | `poc/contacts_client.py` | Google People API client (names, emails, organizations) |
 | `poc/relationship_inference.py` | Contact relationship inference from co-occurrence data |
-| `poc/config.py` | `DB_PATH` setting (default `data/crm_extender.db`) |
+| `poc/config.py` | `DB_PATH` and `CRM_TIMEZONE` settings |
 | `poc/relationship_types.py` | Relationship type CRUD (create, list, get, update, delete) |
 | `poc/enrichment_provider.py` | Enrichment provider interface, registry, SourceTier enum |
 | `poc/enrichment_pipeline.py` | Enrichment orchestration, conflict resolution, field apply |
@@ -1516,6 +1516,7 @@ with an auto-accept threshold of confidence >= 0.7.
 | Setting | Env variable | Default | Description |
 |---------|-------------|---------|-------------|
 | `DB_PATH` | `POC_DB_PATH` | `data/crm_extender.db` | Path to the SQLite database file.  Parent directories are created automatically by `init_db()`. |
+| `CRM_TIMEZONE` | `CRM_TIMEZONE` | `UTC` | IANA timezone for display-layer date conversion.  All storage remains UTC; this setting only affects web UI rendering via `Intl.DateTimeFormat`.  Invalid values log a warning and fall back to UTC. |
 
 The database file and its WAL/SHM companions are excluded from version
 control via `.gitignore` (`data/` directory).

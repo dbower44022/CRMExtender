@@ -4,7 +4,7 @@
 
 **Version:** 1.0
 **Date:** 2026-02-10
-**Status:** Phase 2 Implemented (authentication)
+**Status:** Phase 3 Implemented (route filtering & data scoping)
 **Parent Documents:** [CRMExtender PRD v1.1](PRD.md), [Data Layer PRD](data-layer-prd.md)
 
 ---
@@ -95,11 +95,10 @@ completely open.  This creates several problems:
   (tenant) with the schema designed for future multi-tenant.  Customer
   management UI, per-customer billing, and cross-customer isolation are
   out of scope.
-- **OAuth login flow** — authentication routes (`/login`, `/auth/*`)
-  are Phase 2.  Phase 1 establishes the data layer only.
-- **Route-level filtering** — scoping web UI queries by user/customer
-  is Phase 3.  Phase 1 provides the query helpers but does not wire
-  them into routes.
+- ~~**OAuth login flow**~~ — password-based authentication implemented
+  in Phase 2.  Google OAuth login remains deferred.
+- ~~**Route-level filtering**~~ — implemented in Phase 3.  All web UI
+  queries are now scoped by customer and user visibility.
 - **RBAC beyond admin/user** — two roles are sufficient for Phase 1.
   Fine-grained permissions (e.g., "can view but not edit companies")
   are future work.
@@ -692,8 +691,14 @@ Sets or updates the login password for an existing user.
 |------|-------|----------|
 | `tests/test_auth.py` | 18 | Passwords (hash/verify, salts), login (success, wrong password, unknown email, no password hash, redirect if authed), logout (clears session), middleware (redirect, static public, valid session, invalid cookie, user in nav), bypass mode (access without login, user context), admin dependency (401/403) |
 
-Total test suite: **670 tests** (595 pre-existing + 57 Phase 1 + 18
-Phase 2), all passing.
+### Phase 3 tests (24 new)
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `tests/test_scoping.py` | 24 | Contact scoping (all/mine, public/private visibility, cross-customer 404), company scoping (all/mine, cross-customer 404), conversation scoping (via account access, via share, cross-customer invisible), dashboard scoping (counts, recent conversations), detail access checks (cross-customer 404), sync scoping (user_contacts/user_companies creation), project scoping (customer_id on create/list) |
+
+Total test suite: **694 tests** (595 pre-existing + 57 Phase 1 + 18
+Phase 2 + 24 Phase 3), all passing.
 
 ---
 
@@ -725,14 +730,32 @@ Phase 2), all passing.
 - `CRM_AUTH_ENABLED=false` bypass for development
 - 18 tests in `tests/test_auth.py`
 
-### Phase 3: Route Filtering & Data Scoping (Planned)
+### Phase 3: Route Filtering & Data Scoping (Implemented)
 
-- All 7 route files scoped to customer + user visibility
-- "All / My Contacts" and "All / My Companies" toggles
-- Conversation filtering by provider account access + shares
-- Dashboard counts scoped to user's visible data
-- Sync pipeline creates `user_contacts`/`user_companies` rows
-- `created_by`/`updated_by` populated from authenticated user
+- All 7 route files scoped to `customer_id` + user visibility via
+  `poc/access.py` query helpers
+- "All / My" toggles on Contacts and Companies list pages (query
+  param `scope=all|mine`, preserved across search and pagination)
+- Conversation filtering via `visible_conversations_query` — checks
+  provider account access (`user_provider_accounts`) and explicit
+  shares (`conversation_shares`)
+- Dashboard counts, top companies/contacts, and recent conversations
+  all filtered by `customer_id`
+- "Sync Now" filters accounts to user's own via `user_provider_accounts`
+- Sync pipeline threads `customer_id` and `user_id` through:
+  - `sync_contacts()` creates `user_contacts` row on new contact INSERT
+  - `_resolve_company_id()` creates `user_companies` row on auto-create
+  - `_store_thread()` includes `customer_id` and `created_by` in
+    conversation INSERT
+- Detail pages verify `customer_id` matches — returns 404 for
+  cross-customer access
+- Table alias conventions: `c.` contacts, `co.` companies, `conv.`
+  conversations (matching `access.py` WHERE fragments)
+- `hierarchy.py` CRUD functions accept optional `customer_id` param
+  (`create_company`, `list_companies`, `create_project`, `list_projects`)
+- `list_relationship_types()` returns customer-specific + system types
+- Events scoped via `account_id` subquery (manual events visible to all)
+- 24 tests in `tests/test_scoping.py`
 
 ### Phase 4: Settings UI (Planned)
 

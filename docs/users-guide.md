@@ -374,23 +374,33 @@ python3 -m poc serve [--host 127.0.0.1] [--port 8000]
 Launches the web UI (FastAPI + HTMX + PicoCSS).  By default,
 authentication is enabled — users must log in with email and password.
 Set `CRM_AUTH_ENABLED=false` in `.env` to bypass login during
-development.  The web UI provides a browser-based interface for all
-CRM data:
+development.  All data is scoped to the authenticated user's
+organization (customer).  Contacts and companies are further filtered
+by user visibility — only public entries and the user's own private
+entries are shown.  The web UI provides a browser-based interface for
+all CRM data:
 
 - **Dashboard** — overview counts (conversations, contacts, companies,
-  projects, topics, events), top 5 companies and contacts by
-  relationship strength score with inline bars, and recent
-  conversations.
+  projects, topics, events) scoped to the user's organization, top 5
+  companies and contacts by relationship strength score with inline
+  bars, and recent conversations.  "Sync Now" syncs only the user's
+  own provider accounts.
 - **Conversations** — browse, search, filter by status/topic, view
-  detail with messages and participants.
+  detail with messages and participants.  Only conversations from
+  the user's provider accounts or explicitly shared conversations
+  are visible.
 - **Contacts** — search by name/email/company, view detail with
-  conversations and relationships.  Relationship strength scores
-  shown as inline bars in the list grid and in the detail sidebar
-  with factor breakdown; "Refresh Score" button recomputes on demand.
-  Column headers (Name, Email, Company, Score) are clickable to sort;
-  click again to reverse direction.
+  conversations and relationships.  **All / My** toggle filters
+  between all visible contacts (public + your private) and only
+  contacts you own.  Relationship strength scores shown as inline
+  bars in the list grid and in the detail sidebar with factor
+  breakdown; "Refresh Score" button recomputes on demand.  Column
+  headers (Name, Email, Company, Score) are clickable to sort; click
+  again to reverse direction.
 - **Companies** — create, search, delete, view contacts and
-  relationships.  Domain-based contact linking on creation.
+  relationships.  **All / My** toggle filters between all visible
+  companies and only companies you own.  Domain-based contact linking
+  on creation.
   Enrich button on company detail fetches metadata from the
   company's website.  Resolve Domains button bulk-links unlinked
   contacts to companies by email domain.  Relationship strength

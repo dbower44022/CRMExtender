@@ -647,3 +647,85 @@ class TestMergeWebRoutes:
         assert resp.status_code == 200
         # Should show a warning about existing company
         assert "Acme Corp" in resp.text or "already" in resp.text.lower() or "existing" in resp.text.lower()
+
+
+# ---------------------------------------------------------------------------
+# Sync duplicate detection (domain-aware _resolve_company_id)
+# ---------------------------------------------------------------------------
+
+class TestSyncDuplicateDetection:
+    """Verify that _resolve_company_id uses domain matching to prevent duplicates."""
+
+    def test_domain_match_prevents_duplicate(self, tmp_db):
+        """Company exists with domain acme.com — contact with different org name
+        but same email domain should resolve to existing company, not create a new one."""
+        from poc.sync import _resolve_company_id
+
+        with get_connection() as conn:
+            _insert_company(conn, "c1", "Acme Corp", "acme.com")
+            _insert_identifier(conn, "c1", "acme.com")
+
+            result = _resolve_company_id(conn, "Acme Inc", "bob@acme.com", _NOW)
+
+        assert result == "c1"
+        # No new company should have been created
+        with get_connection() as conn:
+            count = conn.execute("SELECT COUNT(*) FROM companies").fetchone()[0]
+        assert count == 1
+
+    def test_auto_create_adds_domain_identifier(self, tmp_db):
+        """When a new company is auto-created, its email domain should be
+        registered in company_identifiers for future lookups."""
+        from poc.sync import _resolve_company_id
+
+        with get_connection() as conn:
+            company_id = _resolve_company_id(conn, "NewCo", "alice@newco.io", _NOW)
+
+        assert company_id is not None
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM company_identifiers WHERE company_id = ? AND type = 'domain'",
+                (company_id,),
+            ).fetchone()
+        assert row is not None
+        assert row["value"] == "newco.io"
+
+    def test_public_domain_no_identifier(self, tmp_db):
+        """Contact with a public domain email (gmail.com) should NOT get a
+        domain identifier added to the newly created company."""
+        from poc.sync import _resolve_company_id
+
+        with get_connection() as conn:
+            company_id = _resolve_company_id(conn, "SomeCo", "user@gmail.com", _NOW)
+
+        assert company_id is not None
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM company_identifiers WHERE company_id = ?",
+                (company_id,),
+            ).fetchone()
+        assert row is None
+
+    def test_exact_name_match_still_preferred(self, tmp_db):
+        """When the company name matches exactly, that company is returned even
+        if the domain could match a different company."""
+        from poc.sync import _resolve_company_id
+
+        with get_connection() as conn:
+            _insert_company(conn, "c1", "Alpha LLC", "alpha.com")
+            _insert_identifier(conn, "c1", "alpha.com")
+            _insert_company(conn, "c2", "Beta Inc", "beta.com")
+
+            # Name matches c2 exactly, even though email domain matches c1
+            result = _resolve_company_id(conn, "Beta Inc", "info@alpha.com", _NOW)
+
+        assert result == "c2"
+
+    def test_empty_company_name_returns_none(self, tmp_db):
+        """Empty company name should return None (existing behaviour)."""
+        from poc.sync import _resolve_company_id
+
+        with get_connection() as conn:
+            result = _resolve_company_id(conn, "", "user@example.com", _NOW)
+
+        assert result is None

@@ -4,6 +4,16 @@
 {% block content %}
 <h1>Dashboard</h1>
 
+<div style="margin-bottom: 1rem;">
+  <button hx-post="/sync"
+          hx-target="#sync-result"
+          hx-swap="innerHTML"
+          hx-indicator="#sync-spinner"
+          class="outline">Sync Now</button>
+  <span id="sync-spinner" class="htmx-indicator" style="font-size:.85em;">syncing...</span>
+  <span id="sync-result" style="margin-left: 0.5rem;"></span>
+</div>
+
 <div class="grid">
   <article>
     <header>Conversations</header>

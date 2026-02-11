@@ -33,7 +33,13 @@ from .models import (
     filter_reason_from_db,
     filter_reason_to_db,
 )
-from .domain_resolver import resolve_company_for_email
+from .domain_resolver import (
+    ensure_domain_identifier,
+    extract_domain,
+    is_public_domain,
+    resolve_company_by_domain,
+    resolve_company_for_email,
+)
 from .rate_limiter import RateLimiter
 from .summarizer import summarize_conversation
 from .triage import triage_conversations
@@ -107,8 +113,14 @@ def get_all_accounts() -> list[dict]:
 # Contact sync
 # ---------------------------------------------------------------------------
 
-def _resolve_company_id(conn, company_name: str, now: str) -> str | None:
-    """Look up or auto-create a company by name. Returns company_id or None."""
+def _resolve_company_id(conn, company_name: str, email: str, now: str) -> str | None:
+    """Look up or auto-create a company by name. Returns company_id or None.
+
+    Resolution order:
+    1. Exact name match in ``companies.name``
+    2. Domain match via ``resolve_company_by_domain`` (prevents duplicates)
+    3. Auto-create and register domain identifier
+    """
     if not company_name:
         return None
 
@@ -118,6 +130,18 @@ def _resolve_company_id(conn, company_name: str, now: str) -> str | None:
     if row:
         return row["id"]
 
+    # Try domain match before auto-creating (prevents duplicates like
+    # "Acme Corp" vs "Acme Inc" when both share acme.com).
+    domain = extract_domain(email) if email else None
+    if domain and not is_public_domain(domain):
+        company = resolve_company_by_domain(conn, domain)
+        if company:
+            log.info(
+                "Domain match: contact org %r matched existing company %r via %s",
+                company_name, company["name"], domain,
+            )
+            return company["id"]
+
     # Auto-create
     company_id = str(uuid.uuid4())
     conn.execute(
@@ -125,6 +149,11 @@ def _resolve_company_id(conn, company_name: str, now: str) -> str | None:
            VALUES (?, ?, 'active', ?, ?)""",
         (company_id, company_name, now, now),
     )
+
+    # Register email domain so future contacts with the same domain resolve here.
+    if domain and not is_public_domain(domain):
+        ensure_domain_identifier(conn, company_id, domain)
+
     return company_id
 
 
@@ -143,7 +172,7 @@ def sync_contacts(
     with get_connection() as conn:
         for kc in contacts:
             email_lower = kc.email.lower()
-            company_id = _resolve_company_id(conn, kc.company, now)
+            company_id = _resolve_company_id(conn, kc.company, kc.email, now)
 
             # Domain fallback: if Google org was empty, try matching by email domain
             if company_id is None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from unittest.mock import patch as _patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -1684,3 +1685,107 @@ class TestContactDetail:
                 "SELECT * FROM email_addresses WHERE entity_id = 'ct-1'"
             ).fetchall()
         assert len(rows) == 0
+
+
+# ---------------------------------------------------------------------------
+# Sync Now
+# ---------------------------------------------------------------------------
+
+class TestSync:
+    """Tests for POST /sync endpoint."""
+
+    def _insert_account_with_token(self, conn, account_id="acct-1",
+                                   email="test@example.com",
+                                   token_path="/tmp/token.json",
+                                   initial_sync_done=1):
+        conn.execute(
+            "INSERT OR IGNORE INTO provider_accounts "
+            "(id, provider, account_type, email_address, auth_token_path, "
+            "initial_sync_done, created_at, updated_at) "
+            "VALUES (?, 'gmail', 'email', ?, ?, ?, ?, ?)",
+            (account_id, email, token_path, initial_sync_done, _NOW, _NOW),
+        )
+
+    def test_sync_no_accounts(self, client, tmp_db):
+        resp = client.post("/sync")
+        assert resp.status_code == 200
+        assert "No accounts registered" in resp.text
+
+    def test_sync_success(self, client, tmp_db):
+        with get_connection() as conn:
+            self._insert_account_with_token(conn)
+
+        with (
+            _patch("poc.auth.get_credentials_for_account") as mock_creds,
+            _patch("poc.gmail_client.get_user_email", return_value="test@example.com"),
+            _patch("poc.sync.sync_contacts", return_value=42),
+            _patch("poc.sync.incremental_sync",
+                   return_value={"messages_fetched": 10, "messages_stored": 8,
+                                 "conversations_created": 3, "conversations_updated": 5}),
+            _patch("poc.sync.process_conversations",
+                   return_value=(4, 2, 6)),
+        ):
+            mock_creds.return_value = "fake-creds"
+            resp = client.post("/sync")
+
+        assert resp.status_code == 200
+        assert "Synced 1 account(s)" in resp.text
+        assert "42 contacts" in resp.text
+        assert "10 emails fetched" in resp.text
+        assert "4 triaged" in resp.text
+        assert "2 summarized" in resp.text
+
+    def test_sync_initial_sync_path(self, client, tmp_db):
+        """Account with initial_sync_done=0 takes the initial_sync path."""
+        with get_connection() as conn:
+            self._insert_account_with_token(conn, initial_sync_done=0)
+
+        with (
+            _patch("poc.auth.get_credentials_for_account",
+                   return_value="fake-creds"),
+            _patch("poc.gmail_client.get_user_email", return_value="test@example.com"),
+            _patch("poc.sync.sync_contacts", return_value=5),
+            _patch("poc.sync.initial_sync",
+                   return_value={"messages_fetched": 20, "messages_stored": 18,
+                                 "conversations_created": 10}) as mock_initial,
+            _patch("poc.sync.process_conversations",
+                   return_value=(0, 0, 0)),
+        ):
+            resp = client.post("/sync")
+
+        assert resp.status_code == 200
+        mock_initial.assert_called_once()
+        assert "20 emails fetched" in resp.text
+
+    def test_sync_partial_failure(self, client, tmp_db):
+        with get_connection() as conn:
+            self._insert_account_with_token(conn)
+
+        with (
+            _patch("poc.auth.get_credentials_for_account",
+                   return_value="fake-creds"),
+            _patch("poc.gmail_client.get_user_email", return_value="test@example.com"),
+            _patch("poc.sync.sync_contacts",
+                   side_effect=RuntimeError("API error")),
+            _patch("poc.sync.incremental_sync",
+                   return_value={"messages_fetched": 5, "messages_stored": 5,
+                                 "conversations_created": 1, "conversations_updated": 2}),
+            _patch("poc.sync.process_conversations",
+                   return_value=(1, 0, 0)),
+        ):
+            resp = client.post("/sync")
+
+        assert resp.status_code == 200
+        assert "Synced 1 account(s)" in resp.text
+        assert "contact sync failed" in resp.text
+
+    def test_sync_auth_failure(self, client, tmp_db):
+        with get_connection() as conn:
+            self._insert_account_with_token(conn)
+
+        with _patch("poc.auth.get_credentials_for_account",
+                     side_effect=RuntimeError("bad token")):
+            resp = client.post("/sync")
+
+        assert resp.status_code == 200
+        assert "auth failed" in resp.text

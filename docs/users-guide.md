@@ -187,6 +187,10 @@ conversations.
 ```bash
 # User setup (auto-creates from first provider account, default customer, admin role)
 python -m poc bootstrap-user
+python -m poc bootstrap-user --password secret    # With password for web login
+
+# Set or change a user's login password
+python -m poc set-password user@example.com
 
 # Companies
 python -m poc create-company "Company Name" [--domain example.com] [--industry Tech] [--description "..."]
@@ -367,8 +371,11 @@ values at a higher trust tier (e.g., manual edits) are not overwritten.
 python3 -m poc serve [--host 127.0.0.1] [--port 8000]
 ```
 
-Launches the web UI (FastAPI + HTMX + PicoCSS).  The web UI provides
-a browser-based interface for all CRM data:
+Launches the web UI (FastAPI + HTMX + PicoCSS).  By default,
+authentication is enabled — users must log in with email and password.
+Set `CRM_AUTH_ENABLED=false` in `.env` to bypass login during
+development.  The web UI provides a browser-based interface for all
+CRM data:
 
 - **Dashboard** — overview counts (conversations, contacts, companies,
   projects, topics, events), top 5 companies and contacts by
@@ -558,6 +565,7 @@ CRMExtender/
     enrichment_provider.py        # Enrichment provider interface and registry
     enrichment_pipeline.py        # Enrichment orchestration and conflict resolution
     hierarchy.py                  # Company/project/topic/assignment data access
+    passwords.py                  # Password hashing (bcrypt) and verification
     models.py                     # Core dataclasses
     rate_limiter.py               # Token-bucket rate limiter
     relationship_inference.py     # Contact relationship inference
@@ -582,9 +590,12 @@ CRMExtender/
     migrate_to_v7.py              # Migration: v6 to v7 (company intelligence)
     migrate_to_v8.py              # Migration: v7 to v8 (multi-user)
     web/                          # Web UI (FastAPI + HTMX)
-      app.py                      # Application factory
+      app.py                      # Application factory (AuthTemplates, middleware)
+      middleware.py               # AuthMiddleware (session validation, bypass mode)
+      dependencies.py             # FastAPI dependencies (get_current_user, require_admin)
       filters.py                  # Jinja2 date/time filters (|datetime, |dateonly)
       routes/                     # Route modules
+        auth_routes.py            # Login/logout routes
         dashboard.py              # Dashboard route
         conversations.py          # Conversation routes
         contacts.py               # Contact routes
@@ -593,6 +604,7 @@ CRMExtender/
         relationships.py          # Relationship routes
         events.py                 # Event routes
       templates/                  # Jinja2 templates
+        login.html                # Standalone login page
       static/                     # CSS, JS, and static assets
         dates.js                  # Client-side timezone formatting
   .env                            # Environment variables (you create)

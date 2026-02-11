@@ -34,6 +34,10 @@ strategy, and the data flows that populate and query the database.
 | `poc/session.py` | Session CRUD (create, get, delete, cleanup) |
 | `poc/settings.py` | Settings CRUD with 4-level cascade resolution |
 | `poc/access.py` | Tenant-scoped query helpers (visible contacts/companies/conversations) |
+| `poc/passwords.py` | Password hashing (`hash_password`) and verification (`verify_password`) using bcrypt |
+| `poc/web/middleware.py` | `AuthMiddleware` — session cookie validation, bypass mode, user context injection |
+| `poc/web/routes/auth_routes.py` | Login/logout routes: `GET/POST /login`, `POST /logout` |
+| `poc/web/dependencies.py` | FastAPI dependencies: `get_current_user` (401), `require_admin` (403) |
 
 ---
 

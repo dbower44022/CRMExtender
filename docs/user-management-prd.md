@@ -4,7 +4,7 @@
 
 **Version:** 1.0
 **Date:** 2026-02-10
-**Status:** Phase 1 Implemented (v8 schema — data layer)
+**Status:** Phase 2 Implemented (authentication)
 **Parent Documents:** [CRMExtender PRD v1.1](PRD.md), [Data Layer PRD](data-layer-prd.md)
 
 ---
@@ -367,33 +367,79 @@ User B syncs or adds an email that matches User A's private contact:
 
 ## 6. Authentication
 
-### 6.1 Two login methods (Phase 2)
+### 6.1 Two login methods
 
-1. **Google OAuth** — separate from the existing Gmail API OAuth.  Uses
-   `openid email profile` scopes for identity only.  Matches user by
-   `google_sub` or `email` within customer.
-2. **Username/Password** — bcrypt-hashed password stored in
-   `users.password_hash`.  Fallback for non-Google users.
+1. **Username/Password** (Implemented) — bcrypt-hashed password stored
+   in `users.password_hash`.  Managed via CLI
+   (`set-password`, `bootstrap-user --password`).
+2. **Google OAuth** (Deferred) — separate from the existing Gmail API
+   OAuth.  Uses `openid email profile` scopes for identity only.
+   Matches user by `google_sub` or `email` within customer.
 
 ### 6.2 Session management
 
 - Server-side `sessions` table with UUID session ID.
-- Cookie: `crm_session` = session UUID (signed with `itsdangerous`).
+- Cookie: `crm_session` (httponly, samesite=lax) = session UUID.
 - Default TTL: 30 days (configurable via `SESSION_TTL_HOURS`).
-- Session lookup on every request via middleware.
+- Session lookup on every request via `AuthMiddleware`.
 - Expired sessions are automatically cleaned up on access and via
   `cleanup_expired_sessions()`.
 
-### 6.3 AuthMiddleware (Phase 2)
+### 6.3 AuthMiddleware (Implemented)
 
-- Intercepts all requests except `/login`, `/auth/*`, `/static/*`.
-- Validates session cookie -> looks up session -> attaches
+Implementation: `poc/web/middleware.py`
+
+**Auth enabled mode** (`CRM_AUTH_ENABLED=true`, default):
+- Static files (`/static/*`) pass through without auth.
+- For all other paths, resolves session from `crm_session` cookie.
+- `/login` passes through even without a valid session (but still
+  resolves the session so the login page can redirect
+  already-authenticated users).
+- All other paths redirect to `/login` if no valid session exists.
+- Valid sessions populate `request.state.user` with id, email, name,
+  role, and customer_id.
+
+**Bypass mode** (`CRM_AUTH_ENABLED=false`):
+- Injects the first active user from the database as
   `request.state.user`.
-- Invalid/missing session -> redirect to `/login`.
-- `CRM_AUTH_ENABLED` env var (default `true`) allows disabling during
-  development.
+- Falls back to a synthetic admin user if no users exist (empty DB).
+- All routes are accessible without login.
 
-### 6.4 Configuration
+### 6.4 Auth routes (Implemented)
+
+Implementation: `poc/web/routes/auth_routes.py`
+
+- **`GET /login`** — renders standalone login form; redirects to `/`
+  if already authenticated.
+- **`POST /login`** — validates email + password, creates session,
+  sets `crm_session` cookie, redirects 303 to `/`.  Error messages
+  are generic ("Invalid email or password") to prevent email
+  enumeration.
+- **`POST /logout`** — deletes session, clears cookie, redirects 303
+  to `/login`.
+
+### 6.5 Dependencies (Implemented)
+
+Implementation: `poc/web/dependencies.py`
+
+- **`get_current_user(request)`** — returns `request.state.user` or
+  raises HTTP 401.
+- **`require_admin(request)`** — returns user if `role='admin'` or
+  raises HTTP 403.
+
+For use as `Depends()` in admin-only routes (Phase 3+).
+
+### 6.6 Template integration (Implemented)
+
+- **`AuthTemplates`** (in `poc/web/app.py`) — subclass of
+  `Jinja2Templates` that auto-injects `request.state.user` as `user`
+  into all template contexts.
+- **`base.html`** — nav bar shows user name + logout button when
+  `user` is set.
+- **`login.html`** — standalone page (no base.html nav), PicoCSS
+  styled.
+
+### 6.7 Configuration
 
 | Setting | Env variable | Default | Description |
 |---------|-------------|---------|-------------|
@@ -469,18 +515,30 @@ value instead of the global.
 | `poc/access.py` | Tenant-scoped query helpers: `visible_contacts_query`, `my_contacts_query`, `visible_companies_query`, `my_companies_query`, `visible_conversations_query`, plus `get_visible_*`/`get_my_*` convenience functions |
 | `poc/migrate_to_v8.py` | Schema migration v7 -> v8 (17 steps, backup, validation, `--dry-run`) |
 
-### 9.2 Modified modules
+### 9.2 Phase 2 modules (authentication)
+
+| File | Role |
+|------|------|
+| `poc/passwords.py` | Password hashing (`hash_password`) and verification (`verify_password`) using bcrypt |
+| `poc/web/middleware.py` | `AuthMiddleware` — session cookie validation, bypass mode, user context injection |
+| `poc/web/routes/auth_routes.py` | Login/logout routes: `GET/POST /login`, `POST /logout` |
+| `poc/web/dependencies.py` | FastAPI dependencies: `get_current_user` (401), `require_admin` (403) |
+
+### 9.3 Modified modules
 
 | File | Changes |
 |------|---------|
 | `poc/database.py` | Added `customers` table, updated `users` schema, added `customer_id` to 7 tables, added 6 new table CREATE statements, added indexes, added `_SETTINGS_INDEX_SQL` for partial unique indexes |
 | `poc/models.py` | Updated `User` dataclass (added `customer_id`, `password_hash`, `google_sub`, changed default role to `'user'`).  Added `Customer`, `Session`, `Setting` dataclasses with `to_row()`/`from_row()` |
-| `poc/hierarchy.py` | Updated `bootstrap_user()` to auto-create default customer and set `role='admin'`.  Added `_ensure_default_customer()` helper.  Added `DEFAULT_CUSTOMER_ID = "cust-default"` constant |
+| `poc/hierarchy.py` | Updated `bootstrap_user(password=)` to auto-create default customer, set `role='admin'`, and optionally hash a password.  Added `get_user_by_email()`, `set_user_password()`, `_ensure_default_customer()`.  Added `DEFAULT_CUSTOMER_ID = "cust-default"` constant |
 | `poc/config.py` | Added `CRM_AUTH_ENABLED`, `SESSION_SECRET_KEY`, `SESSION_TTL_HOURS` |
-| `poc/__main__.py` | Added `migrate-to-v8` CLI subcommand |
+| `poc/__main__.py` | Added `migrate-to-v8`, `set-password` CLI subcommands; added `--password`/`--set-password` to `bootstrap-user` |
+| `poc/web/app.py` | Added `AuthTemplates` subclass (auto-injects user into templates), registered `AuthMiddleware`, included auth router |
+| `poc/web/templates/base.html` | Added user name + logout button to nav bar |
+| `poc/web/templates/login.html` | New standalone login page |
 | `pyproject.toml` | Added `bcrypt>=4.0.0`, `itsdangerous>=2.1.0` dependencies |
 
-### 9.3 Dataclasses
+### 9.4 Dataclasses
 
 **`Customer`** — `name`, `slug`, `is_active`
 
@@ -495,7 +553,7 @@ value instead of the global.
 
 All dataclasses follow the established `to_row()` / `from_row()` pattern.
 
-### 9.4 Session API
+### 9.5 Session API
 
 ```python
 from poc.session import (
@@ -512,7 +570,7 @@ from poc.session import (
 2. Session has not expired (auto-deletes if expired).
 3. Associated user is active (`is_active = 1`).
 
-### 9.5 Settings API
+### 9.6 Settings API
 
 ```python
 from poc.settings import (
@@ -594,11 +652,32 @@ python3 -m poc migrate-to-v8 --db /path/to.db    # Target specific database
 Creates a timestamped backup (`*.v7-backup-YYYYMMDD_HHMMSS.db`) before
 making any changes.
 
+### `bootstrap-user`
+
+```bash
+python3 -m poc bootstrap-user                     # Create user from first provider account
+python3 -m poc bootstrap-user --password secret    # Create user with password
+python3 -m poc bootstrap-user --set-password       # Create user, prompt for password
+```
+
+Creates the default customer and admin user from the first provider
+account.  If the user already exists and `--password` or `--set-password`
+is given, updates the password hash.
+
+### `set-password`
+
+```bash
+python3 -m poc set-password user@example.com                # Prompt for password
+python3 -m poc set-password user@example.com --password pw   # Set directly
+```
+
+Sets or updates the login password for an existing user.
+
 ---
 
 ## 12. Test Coverage
 
-Phase 1 adds 57 new tests across four test files:
+### Phase 1 tests (57 new)
 
 | File | Tests | Coverage |
 |------|-------|----------|
@@ -607,8 +686,14 @@ Phase 1 adds 57 new tests across four test files:
 | `tests/test_settings.py` | 16 | Set/get system and user settings, upsert, cascade resolution (4 levels), cross-user isolation, null value fallthrough, list/seed |
 | `tests/test_access.py` | 13 | Visible vs my contacts/companies, public/private visibility, conversation visibility via provider accounts and explicit shares |
 
-Total test suite: **652 tests** (595 pre-existing + 57 new), all
-passing.
+### Phase 2 tests (18 new)
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `tests/test_auth.py` | 18 | Passwords (hash/verify, salts), login (success, wrong password, unknown email, no password hash, redirect if authed), logout (clears session), middleware (redirect, static public, valid session, invalid cookie, user in nav), bypass mode (access without login, user context), admin dependency (401/403) |
+
+Total test suite: **670 tests** (595 pre-existing + 57 Phase 1 + 18
+Phase 2), all passing.
 
 ---
 
@@ -626,14 +711,19 @@ passing.
 - Tenant-scoped query helpers (`poc/access.py`)
 - 57 tests
 
-### Phase 2: Authentication (Planned)
+### Phase 2: Authentication (Implemented)
 
-- `poc/web/auth_routes.py` — login/logout/Google OAuth routes
-- `poc/web/dependencies.py` — `get_current_user`, `require_admin`
-- `poc/web/templates/login.html` — login page
-- AuthMiddleware in `poc/web/app.py`
+- `poc/passwords.py` — bcrypt password hashing/verification
+- `poc/web/middleware.py` — `AuthMiddleware` (session validation + bypass mode)
+- `poc/web/routes/auth_routes.py` — `GET/POST /login`, `POST /logout`
+- `poc/web/dependencies.py` — `get_current_user` (401), `require_admin` (403)
+- `poc/web/templates/login.html` — standalone login page
+- `poc/web/app.py` — `AuthTemplates` subclass, middleware registration
+- `poc/web/templates/base.html` — user name + logout button in nav
+- `poc/hierarchy.py` — `get_user_by_email()`, `set_user_password()`
+- `poc/__main__.py` — `set-password` command, `--password` on `bootstrap-user`
 - `CRM_AUTH_ENABLED=false` bypass for development
-- `base.html` user info in nav, logout link
+- 18 tests in `tests/test_auth.py`
 
 ### Phase 3: Route Filtering & Data Scoping (Planned)
 

@@ -139,6 +139,7 @@ def create_company(
     industry: str = "",
     description: str = "",
     created_by: str | None = None,
+    customer_id: str | None = None,
 ) -> dict:
     """Create a company. Returns the new row as a dict.
 
@@ -154,11 +155,12 @@ def create_company(
         company = Company(name=name, domain=domain, industry=industry,
                           description=description)
         row = company.to_row(created_by=created_by, updated_by=created_by)
+        row["customer_id"] = customer_id
         conn.execute(
             "INSERT INTO companies (id, name, domain, industry, description, "
-            "status, created_by, updated_by, created_at, updated_at) "
+            "status, customer_id, created_by, updated_by, created_at, updated_at) "
             "VALUES (:id, :name, :domain, :industry, :description, "
-            ":status, :created_by, :updated_by, :created_at, :updated_at)",
+            ":status, :customer_id, :created_by, :updated_by, :created_at, :updated_at)",
             row,
         )
 
@@ -173,12 +175,24 @@ def create_company(
         return row
 
 
-def list_companies() -> list[dict]:
-    """Return all active companies ordered by name."""
-    with get_connection() as conn:
-        rows = conn.execute(
-            "SELECT * FROM companies WHERE status = 'active' ORDER BY name"
-        ).fetchall()
+def list_companies(*, customer_id: str | None = None) -> list[dict]:
+    """Return all active companies ordered by name.
+
+    When *customer_id* is given, only companies belonging to that customer
+    are returned.  With ``None`` (the default) all companies are returned
+    for backward-compatibility with CLI callers.
+    """
+    if customer_id:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM companies WHERE status = 'active' AND customer_id = ? ORDER BY name",
+                (customer_id,),
+            ).fetchall()
+    else:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM companies WHERE status = 'active' ORDER BY name"
+            ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -688,6 +702,7 @@ def create_project(
     parent_name: str | None = None,
     owner_id: str | None = None,
     created_by: str | None = None,
+    customer_id: str | None = None,
 ) -> dict:
     """Create a project. Returns the new row as a dict.
 
@@ -714,22 +729,30 @@ def create_project(
         proj = Project(name=name, description=description,
                        parent_id=parent_id, owner_id=owner_id)
         row = proj.to_row(created_by=created_by, updated_by=created_by)
+        row["customer_id"] = customer_id
         conn.execute(
             "INSERT INTO projects (id, parent_id, name, description, status, "
-            "owner_id, created_by, updated_by, created_at, updated_at) "
+            "customer_id, owner_id, created_by, updated_by, created_at, updated_at) "
             "VALUES (:id, :parent_id, :name, :description, :status, "
-            ":owner_id, :created_by, :updated_by, :created_at, :updated_at)",
+            ":customer_id, :owner_id, :created_by, :updated_by, :created_at, :updated_at)",
             row,
         )
         return row
 
 
-def list_projects() -> list[dict]:
+def list_projects(*, customer_id: str | None = None) -> list[dict]:
     """Return all active projects ordered by name."""
-    with get_connection() as conn:
-        rows = conn.execute(
-            "SELECT * FROM projects WHERE status = 'active' ORDER BY name"
-        ).fetchall()
+    if customer_id:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM projects WHERE status = 'active' AND customer_id = ? ORDER BY name",
+                (customer_id,),
+            ).fetchall()
+    else:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM projects WHERE status = 'active' ORDER BY name"
+            ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -907,23 +930,37 @@ def unassign_conversation(conversation_id: str) -> None:
 # Stats
 # ---------------------------------------------------------------------------
 
-def get_hierarchy_stats() -> list[dict]:
+def get_hierarchy_stats(*, customer_id: str | None = None) -> list[dict]:
     """Return projects with topic and conversation counts for tree view.
 
     Each dict: {id, name, parent_id, description, topic_count, conversation_count}
     """
-    with get_connection() as conn:
-        rows = conn.execute("""\
-            SELECT p.id, p.name, p.parent_id, p.description,
-                   COUNT(DISTINCT t.id) AS topic_count,
-                   COUNT(DISTINCT c.id) AS conversation_count
-            FROM projects p
-            LEFT JOIN topics t ON t.project_id = p.id
-            LEFT JOIN conversations c ON c.topic_id = t.id
-            WHERE p.status = 'active'
-            GROUP BY p.id
-            ORDER BY p.name
-        """).fetchall()
+    if customer_id:
+        with get_connection() as conn:
+            rows = conn.execute("""\
+                SELECT p.id, p.name, p.parent_id, p.description,
+                       COUNT(DISTINCT t.id) AS topic_count,
+                       COUNT(DISTINCT c.id) AS conversation_count
+                FROM projects p
+                LEFT JOIN topics t ON t.project_id = p.id
+                LEFT JOIN conversations c ON c.topic_id = t.id
+                WHERE p.status = 'active' AND p.customer_id = ?
+                GROUP BY p.id
+                ORDER BY p.name
+            """, (customer_id,)).fetchall()
+    else:
+        with get_connection() as conn:
+            rows = conn.execute("""\
+                SELECT p.id, p.name, p.parent_id, p.description,
+                       COUNT(DISTINCT t.id) AS topic_count,
+                       COUNT(DISTINCT c.id) AS conversation_count
+                FROM projects p
+                LEFT JOIN topics t ON t.project_id = p.id
+                LEFT JOIN conversations c ON c.topic_id = t.id
+                WHERE p.status = 'active'
+                GROUP BY p.id
+                ORDER BY p.name
+            """).fetchall()
     return [dict(r) for r in rows]
 
 

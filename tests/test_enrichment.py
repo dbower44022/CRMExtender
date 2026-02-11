@@ -78,7 +78,16 @@ def tmp_db(tmp_path, monkeypatch):
 @pytest.fixture()
 def sample_company(tmp_db):
     """Create a test company and return its dict."""
-    row = create_company("Acme Corp", domain="acme.com", description="")
+    row = create_company("Acme Corp", domain="acme.com", description="",
+                         customer_id="cust-test")
+    # Link to test user for web visibility
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO user_companies "
+            "(id, user_id, company_id, visibility, is_owner, created_at, updated_at) "
+            "VALUES (?, 'user-test', ?, 'public', 1, ?, ?)",
+            (f"uco-{row['id']}", row["id"], _NOW, _NOW),
+        )
     return row
 
 

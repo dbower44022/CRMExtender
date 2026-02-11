@@ -14,9 +14,19 @@ router = APIRouter()
 
 
 def _list_events(*, search: str = "", event_type: str = "",
-                 page: int = 1, per_page: int = 50):
+                 page: int = 1, per_page: int = 50,
+                 customer_id: str = ""):
     clauses = []
     params: list = []
+
+    # Scope events: synced events via provider_accounts.customer_id,
+    # manual events (account_id IS NULL) are visible to all.
+    if customer_id:
+        clauses.append(
+            "(e.account_id IS NULL OR e.account_id IN "
+            "(SELECT id FROM provider_accounts WHERE customer_id = ?))"
+        )
+        params.append(customer_id)
 
     if search:
         clauses.append("(e.title LIKE ? OR e.location LIKE ?)")
@@ -50,7 +60,10 @@ def _list_events(*, search: str = "", event_type: str = "",
 def event_list(request: Request, q: str = "", event_type: str = "",
                page: int = 1):
     templates = request.app.state.templates
-    events, total = _list_events(search=q, event_type=event_type, page=page)
+    cid = request.state.customer_id
+    events, total = _list_events(
+        search=q, event_type=event_type, page=page, customer_id=cid,
+    )
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "events/list.html", {
@@ -68,7 +81,10 @@ def event_list(request: Request, q: str = "", event_type: str = "",
 def event_search(request: Request, q: str = "", event_type: str = "",
                  page: int = 1):
     templates = request.app.state.templates
-    events, total = _list_events(search=q, event_type=event_type, page=page)
+    cid = request.state.customer_id
+    events, total = _list_events(
+        search=q, event_type=event_type, page=page, customer_id=cid,
+    )
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "events/_rows.html", {
@@ -96,6 +112,7 @@ def event_create(
     recurrence_type: str = Form("none"),
     status: str = Form("confirmed"),
 ):
+    user = request.state.user
     now = datetime.now(timezone.utc).isoformat()
     event_id = str(uuid.uuid4())
     all_day = 1 if is_all_day else 0
@@ -106,14 +123,14 @@ def event_create(
                (id, title, description, event_type,
                 start_date, start_datetime, end_date, end_datetime,
                 is_all_day, location, recurrence_type, status,
-                source, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?)""",
+                source, created_by, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?, ?)""",
             (
                 event_id, title, description or None, event_type,
                 start_date or None, start_datetime or None,
                 end_date or None, end_datetime or None,
                 all_day, location or None, recurrence_type, status,
-                now, now,
+                user["id"], now, now,
             ),
         )
 

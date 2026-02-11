@@ -63,8 +63,13 @@ def list_relationship_types(
     *,
     from_entity_type: str | None = None,
     to_entity_type: str | None = None,
+    customer_id: str | None = None,
 ) -> list[dict]:
-    """Return relationship types, optionally filtered by entity types."""
+    """Return relationship types, optionally filtered by entity types.
+
+    When *customer_id* is given, returns types belonging to that customer
+    plus system types (``customer_id IS NULL``).
+    """
     clauses = []
     params: list = []
 
@@ -74,6 +79,9 @@ def list_relationship_types(
     if to_entity_type:
         clauses.append("to_entity_type = ?")
         params.append(to_entity_type)
+    if customer_id:
+        clauses.append("(customer_id = ? OR customer_id IS NULL)")
+        params.append(customer_id)
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
 

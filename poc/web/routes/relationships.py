@@ -122,13 +122,14 @@ def relationship_list(
     source: str = "",
 ):
     templates = request.app.state.templates
+    cid = request.state.customer_id
     rels = _get_relationships(
         contact_id=contact_id,
         min_strength=min_strength,
         type_id=type_id,
         source=source,
     )
-    rel_types = list_relationship_types()
+    rel_types = list_relationship_types(customer_id=cid)
 
     return templates.TemplateResponse(request, "relationships/list.html", {
         "active_nav": "relationships",
@@ -286,7 +287,8 @@ def relationship_delete(request: Request, relationship_id: str):
 @router.get("/types", response_class=HTMLResponse)
 def relationship_type_list(request: Request):
     templates = request.app.state.templates
-    types = list_relationship_types()
+    cid = request.state.customer_id
+    types = list_relationship_types(customer_id=cid)
 
     return templates.TemplateResponse(request, "relationships/types.html", {
         "active_nav": "relationships",

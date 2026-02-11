@@ -113,7 +113,10 @@ def get_all_accounts() -> list[dict]:
 # Contact sync
 # ---------------------------------------------------------------------------
 
-def _resolve_company_id(conn, company_name: str, email: str, now: str) -> str | None:
+def _resolve_company_id(
+    conn, company_name: str, email: str, now: str,
+    *, customer_id: str | None = None, user_id: str | None = None,
+) -> str | None:
     """Look up or auto-create a company by name. Returns company_id or None.
 
     Resolution order:
@@ -145,10 +148,19 @@ def _resolve_company_id(conn, company_name: str, email: str, now: str) -> str | 
     # Auto-create
     company_id = str(uuid.uuid4())
     conn.execute(
-        """INSERT INTO companies (id, name, status, created_at, updated_at)
-           VALUES (?, ?, 'active', ?, ?)""",
-        (company_id, company_name, now, now),
+        """INSERT INTO companies (id, name, status, customer_id, created_at, updated_at)
+           VALUES (?, ?, 'active', ?, ?, ?)""",
+        (company_id, company_name, customer_id, now, now),
     )
+
+    # Create user_companies linkage
+    if user_id:
+        conn.execute(
+            """INSERT OR IGNORE INTO user_companies
+               (id, user_id, company_id, visibility, is_owner, created_at, updated_at)
+               VALUES (?, ?, ?, 'public', 1, ?, ?)""",
+            (str(uuid.uuid4()), user_id, company_id, now, now),
+        )
 
     # Register email domain so future contacts with the same domain resolve here.
     if domain and not is_public_domain(domain):
@@ -160,6 +172,9 @@ def _resolve_company_id(conn, company_name: str, email: str, now: str) -> str | 
 def sync_contacts(
     creds: Credentials,
     rate_limiter: RateLimiter | None = None,
+    *,
+    customer_id: str | None = None,
+    user_id: str | None = None,
 ) -> int:
     """Fetch contacts from Google People API and UPSERT into contacts + contact_identifiers.
 
@@ -172,7 +187,10 @@ def sync_contacts(
     with get_connection() as conn:
         for kc in contacts:
             email_lower = kc.email.lower()
-            company_id = _resolve_company_id(conn, kc.company, kc.email, now)
+            company_id = _resolve_company_id(
+                conn, kc.company, kc.email, now,
+                customer_id=customer_id, user_id=user_id,
+            )
 
             # Domain fallback: if Google org was empty, try matching by email domain
             if company_id is None:
@@ -196,9 +214,11 @@ def sync_contacts(
                 # Insert new contact + identifier
                 contact_id = str(uuid.uuid4())
                 conn.execute(
-                    """INSERT INTO contacts (id, name, email, company, company_id, source, status, created_at, updated_at)
-                       VALUES (?, ?, ?, ?, ?, 'google_contacts', 'active', ?, ?)""",
-                    (contact_id, kc.name, email_lower, kc.company, company_id, now, now),
+                    """INSERT INTO contacts (id, name, company, company_id, source, status,
+                       customer_id, created_by, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, 'google_contacts', 'active', ?, ?, ?, ?)""",
+                    (contact_id, kc.name, kc.company, company_id,
+                     customer_id, user_id, now, now),
                 )
                 conn.execute(
                     """INSERT INTO contact_identifiers
@@ -206,6 +226,14 @@ def sync_contacts(
                        VALUES (?, ?, 'email', ?, 1, 'active', 'google_contacts', 1, ?, ?)""",
                     (str(uuid.uuid4()), contact_id, email_lower, now, now),
                 )
+                # Create user_contacts linkage
+                if user_id:
+                    conn.execute(
+                        """INSERT OR IGNORE INTO user_contacts
+                           (id, user_id, contact_id, visibility, is_owner, created_at, updated_at)
+                           VALUES (?, ?, ?, 'public', 1, ?, ?)""",
+                        (str(uuid.uuid4()), user_id, contact_id, now, now),
+                    )
             count += 1
 
     log.info("Synced %d contacts to database", count)
@@ -246,6 +274,9 @@ def _store_thread(
     account_email: str,
     thread_emails: list[ParsedEmail],
     contact_index: dict[str, KnownContact],
+    *,
+    customer_id: str | None = None,
+    created_by: str | None = None,
 ) -> tuple[bool, bool]:
     """Store a single thread's conversation and communications.
 
@@ -288,11 +319,12 @@ def _store_thread(
                (id, account_id, title, subject, status,
                 communication_count, message_count, participant_count,
                 first_activity_at, last_activity_at, first_message_at, last_message_at,
-                dismissed, created_at, updated_at)
-               VALUES (?, ?, ?, ?, 'active', ?, ?, 0, ?, ?, ?, ?, 0, ?, ?)""",
+                dismissed, customer_id, created_by, created_at, updated_at)
+               VALUES (?, ?, ?, ?, 'active', ?, ?, 0, ?, ?, ?, ?, 0, ?, ?, ?, ?)""",
             (conv_id, account_id, subject, subject,
              len(thread_emails), len(thread_emails),
-             first_dt, last_dt, first_dt, last_dt, now, now),
+             first_dt, last_dt, first_dt, last_dt,
+             customer_id, created_by, now, now),
         )
         conversation_created = True
 
@@ -447,6 +479,9 @@ def initial_sync(
     account_id: str,
     creds: Credentials,
     rate_limiter: RateLimiter | None = None,
+    *,
+    customer_id: str | None = None,
+    user_id: str | None = None,
 ) -> dict:
     """Run the initial full sync for an account.
 
@@ -497,6 +532,7 @@ def initial_sync(
                 messages_fetched += len(thread_emails)
                 created, updated = _store_thread(
                     conn, account_id, account_email, thread_emails, contact_index,
+                    customer_id=customer_id, created_by=user_id,
                 )
                 if created:
                     conversations_created += 1
@@ -558,6 +594,9 @@ def incremental_sync(
     account_id: str,
     creds: Credentials,
     rate_limiter: RateLimiter | None = None,
+    *,
+    customer_id: str | None = None,
+    user_id: str | None = None,
 ) -> dict:
     """Run an incremental sync using Gmail historyId.
 
@@ -614,6 +653,7 @@ def incremental_sync(
                 )
                 created, updated = _store_thread(
                     conn, account_id, account_email, thread_emails, contact_index,
+                    customer_id=customer_id, created_by=user_id,
                 )
                 if created:
                     conversations_created += 1

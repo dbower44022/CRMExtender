@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from ...access import my_contacts_query, visible_contacts_query
 from ...database import get_connection
 from ...hierarchy import (
     update_contact, list_companies,
@@ -28,9 +29,21 @@ _CONTACT_SORT_MAP = {
 
 
 def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
-                   sort: str = "name"):
-    clauses = []
+                   sort: str = "name",
+                   customer_id: str = "", user_id: str = "",
+                   scope: str = "all"):
+    clauses: list[str] = []
     params: list = []
+
+    # Visibility scoping
+    if scope == "mine" and customer_id and user_id:
+        my_where, my_params = my_contacts_query(customer_id, user_id)
+        clauses.append(my_where)
+        params.extend(my_params)
+    elif customer_id and user_id:
+        vis_where, vis_params = visible_contacts_query(customer_id, user_id)
+        clauses.append(vis_where)
+        params.extend(vis_params)
 
     if search:
         clauses.append("(c.name LIKE ? OR ci.value LIKE ? OR co.name LIKE ?)")
@@ -44,10 +57,16 @@ def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
     direction = "DESC" if desc else "ASC"
     order = f"{col} IS NULL, {col} {direction}" if key == "score" else f"{col} {direction}"
 
+    # Extra JOIN for "mine" scope
+    mine_join = ""
+    if scope == "mine" and customer_id and user_id:
+        mine_join = "JOIN user_contacts uc ON uc.contact_id = c.id"
+
     with get_connection() as conn:
         total = conn.execute(
             f"""SELECT COUNT(DISTINCT c.id) AS cnt
                 FROM contacts c
+                {mine_join}
                 LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
                 LEFT JOIN companies co ON co.id = c.company_id
                 {where}""",
@@ -59,6 +78,7 @@ def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
             f"""SELECT c.*, ci.value AS email, co.name AS company_name,
                        es.score_value AS score
                 FROM contacts c
+                {mine_join}
                 LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
                 LEFT JOIN companies co ON co.id = c.company_id
                 LEFT JOIN entity_scores es
@@ -75,9 +95,15 @@ def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
 
 
 @router.get("", response_class=HTMLResponse)
-def contact_list(request: Request, q: str = "", page: int = 1, sort: str = "name"):
+def contact_list(request: Request, q: str = "", page: int = 1,
+                 sort: str = "name", scope: str = "all"):
     templates = request.app.state.templates
-    contacts, total = _list_contacts(search=q, page=page, sort=sort)
+    user = request.state.user
+    cid = request.state.customer_id
+    contacts, total = _list_contacts(
+        search=q, page=page, sort=sort,
+        customer_id=cid, user_id=user["id"], scope=scope,
+    )
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "contacts/list.html", {
@@ -88,13 +114,20 @@ def contact_list(request: Request, q: str = "", page: int = 1, sort: str = "name
         "total_pages": total_pages,
         "q": q,
         "sort": sort,
+        "scope": scope,
     })
 
 
 @router.get("/search", response_class=HTMLResponse)
-def contact_search(request: Request, q: str = "", page: int = 1, sort: str = "name"):
+def contact_search(request: Request, q: str = "", page: int = 1,
+                   sort: str = "name", scope: str = "all"):
     templates = request.app.state.templates
-    contacts, total = _list_contacts(search=q, page=page, sort=sort)
+    user = request.state.user
+    cid = request.state.customer_id
+    contacts, total = _list_contacts(
+        search=q, page=page, sort=sort,
+        customer_id=cid, user_id=user["id"], scope=scope,
+    )
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "contacts/_rows.html", {
@@ -104,12 +137,14 @@ def contact_search(request: Request, q: str = "", page: int = 1, sort: str = "na
         "total_pages": total_pages,
         "q": q,
         "sort": sort,
+        "scope": scope,
     })
 
 
 @router.get("/{contact_id}", response_class=HTMLResponse)
 def contact_detail(request: Request, contact_id: str):
     templates = request.app.state.templates
+    cid = request.state.customer_id
 
     with get_connection() as conn:
         contact = conn.execute(
@@ -118,6 +153,10 @@ def contact_detail(request: Request, contact_id: str):
         if not contact:
             return HTMLResponse("Contact not found", status_code=404)
         contact = dict(contact)
+
+        # Cross-customer access check
+        if contact.get("customer_id") and contact["customer_id"] != cid:
+            return HTMLResponse("Contact not found", status_code=404)
 
         # Identifiers
         identifiers = conn.execute(
@@ -191,7 +230,7 @@ def contact_detail(request: Request, contact_id: str):
     phones = get_phone_numbers("contact", contact_id)
     addresses = get_addresses("contact", contact_id)
     emails = get_email_addresses("contact", contact_id)
-    all_companies = list_companies()
+    all_companies = list_companies(customer_id=cid)
 
     from ...scoring import get_entity_score
     score_data = get_entity_score("contact", contact_id)
@@ -243,6 +282,7 @@ def contact_score(request: Request, contact_id: str):
 @router.get("/{contact_id}/edit", response_class=HTMLResponse)
 def contact_edit_form(request: Request, contact_id: str):
     templates = request.app.state.templates
+    cid = request.state.customer_id
 
     with get_connection() as conn:
         contact = conn.execute(
@@ -252,7 +292,7 @@ def contact_edit_form(request: Request, contact_id: str):
             return HTMLResponse("Contact not found", status_code=404)
         contact = dict(contact)
 
-    all_companies = list_companies()
+    all_companies = list_companies(customer_id=cid)
 
     return templates.TemplateResponse(request, "contacts/edit.html", {
         "active_nav": "contacts",

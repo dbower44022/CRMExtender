@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from ...access import my_companies_query, visible_companies_query
 from ...company_merge import (
     detect_all_duplicates,
     find_duplicates_for_domain,
@@ -28,84 +30,117 @@ from ...hierarchy import (
 router = APIRouter()
 
 
-def _find_contacts_by_domain(domain: str) -> list[dict]:
+def _find_contacts_by_domain(domain: str, *, customer_id: str | None = None) -> list[dict]:
     """Return unlinked contacts whose email matches *@domain*."""
+    clauses = ["ci.value LIKE ?", "c.company_id IS NULL"]
+    params: list = [f"%@{domain}"]
+    if customer_id:
+        clauses.append("c.customer_id = ?")
+        params.append(customer_id)
+    where = " AND ".join(clauses)
     with get_connection() as conn:
         rows = conn.execute(
-            """SELECT c.id, c.name, ci.value AS email
+            f"""SELECT c.id, c.name, ci.value AS email
                FROM contacts c
                JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
-               WHERE ci.value LIKE ?
-                 AND c.company_id IS NULL
+               WHERE {where}
                ORDER BY c.name""",
-            (f"%@{domain}",),
+            params,
         ).fetchall()
     return [dict(r) for r in rows]
 
 
 _COMPANY_SORT_MAP = {
-    "name": "c.name", "domain": "c.domain",
-    "industry": "c.industry", "score": "es.score_value",
+    "name": "co.name", "domain": "co.domain",
+    "industry": "co.industry", "score": "es.score_value",
 }
 
 
-def _list_companies_with_scores(q: str = "", sort: str = "name") -> list[dict]:
+def _list_companies_with_scores(
+    q: str = "", sort: str = "name",
+    *, customer_id: str = "", user_id: str = "", scope: str = "all",
+) -> list[dict]:
     """Return companies with their relationship strength scores."""
     desc = sort.startswith("-")
     key = sort.lstrip("-")
-    col = _COMPANY_SORT_MAP.get(key, "c.name")
+    col = _COMPANY_SORT_MAP.get(key, "co.name")
     direction = "DESC" if desc else "ASC"
     order = f"{col} IS NULL, {col} {direction}" if key == "score" else f"{col} {direction}"
 
+    clauses: list[str] = ["co.status = 'active'"]
+    params: list = []
+
+    # Visibility scoping
+    if scope == "mine" and customer_id and user_id:
+        my_where, my_params = my_companies_query(customer_id, user_id)
+        clauses.append(my_where)
+        params.extend(my_params)
+    elif customer_id and user_id:
+        vis_where, vis_params = visible_companies_query(customer_id, user_id)
+        clauses.append(vis_where)
+        params.extend(vis_params)
+
+    if q:
+        clauses.append("(co.name LIKE ? OR co.domain LIKE ?)")
+        params.extend([f"%{q}%", f"%{q}%"])
+
+    where = f"WHERE {' AND '.join(clauses)}"
+
+    # Extra JOIN for "mine" scope
+    mine_join = ""
+    if scope == "mine" and customer_id and user_id:
+        mine_join = "JOIN user_companies uco ON uco.company_id = co.id"
+
     with get_connection() as conn:
-        if q:
-            rows = conn.execute(
-                f"""SELECT c.*, es.score_value AS score
-                   FROM companies c
-                   LEFT JOIN entity_scores es
-                     ON es.entity_type = 'company'
-                    AND es.entity_id = c.id
-                    AND es.score_type = 'relationship_strength'
-                   WHERE c.status = 'active' AND (c.name LIKE ? OR c.domain LIKE ?)
-                   ORDER BY {order}""",
-                (f"%{q}%", f"%{q}%"),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                f"""SELECT c.*, es.score_value AS score
-                   FROM companies c
-                   LEFT JOIN entity_scores es
-                     ON es.entity_type = 'company'
-                    AND es.entity_id = c.id
-                    AND es.score_type = 'relationship_strength'
-                   WHERE c.status = 'active'
-                   ORDER BY {order}""",
-            ).fetchall()
+        rows = conn.execute(
+            f"""SELECT co.*, es.score_value AS score
+               FROM companies co
+               {mine_join}
+               LEFT JOIN entity_scores es
+                 ON es.entity_type = 'company'
+                AND es.entity_id = co.id
+                AND es.score_type = 'relationship_strength'
+               {where}
+               ORDER BY {order}""",
+            params,
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
 @router.get("", response_class=HTMLResponse)
-def company_list(request: Request, q: str = "", sort: str = "name"):
+def company_list(request: Request, q: str = "", sort: str = "name",
+                 scope: str = "all"):
     templates = request.app.state.templates
-    companies = _list_companies_with_scores(q, sort)
+    user = request.state.user
+    cid = request.state.customer_id
+    companies = _list_companies_with_scores(
+        q, sort, customer_id=cid, user_id=user["id"], scope=scope,
+    )
 
     return templates.TemplateResponse(request, "companies/list.html", {
         "active_nav": "companies",
         "companies": companies,
         "q": q,
         "sort": sort,
+        "scope": scope,
     })
 
 
 @router.get("/search", response_class=HTMLResponse)
-def company_search(request: Request, q: str = "", sort: str = "name"):
+def company_search(request: Request, q: str = "", sort: str = "name",
+                   scope: str = "all"):
     templates = request.app.state.templates
-    companies = _list_companies_with_scores(q, sort)
+    user = request.state.user
+    cid = request.state.customer_id
+    companies = _list_companies_with_scores(
+        q, sort, customer_id=cid, user_id=user["id"], scope=scope,
+    )
 
     return templates.TemplateResponse(request, "companies/_rows.html", {
         "companies": companies,
         "q": q,
         "sort": sort,
+        "scope": scope,
     })
 
 
@@ -125,6 +160,8 @@ def company_create(
 ):
     templates = request.app.state.templates
     domain_clean = domain.strip().lower()
+    user = request.state.user
+    cid = request.state.customer_id
 
     # Check for existing companies with the same domain (duplicate warning)
     if domain_clean and domain_clean not in PUBLIC_DOMAINS:
@@ -146,7 +183,7 @@ def company_create(
 
     # Check if we should show a confirmation preview
     if domain_clean and domain_clean not in PUBLIC_DOMAINS:
-        matches = _find_contacts_by_domain(domain_clean)
+        matches = _find_contacts_by_domain(domain_clean, customer_id=cid)
         if matches:
             ctx = {
                 "active_nav": "companies",
@@ -164,16 +201,33 @@ def company_create(
 
     # No preview needed — create directly
     try:
-        row = create_company(name, domain=domain, industry=industry,
-                             description=description)
+        row = create_company(
+            name, domain=domain, industry=industry,
+            description=description,
+            customer_id=cid, created_by=user["id"],
+        )
         if website or headquarters_location:
             update_company(row["id"], website=website,
                            headquarters_location=headquarters_location)
+        # Link user to company
+        _link_user_to_company(user["id"], row["id"])
     except ValueError:
         pass
     if _is_htmx(request):
         return HTMLResponse("", headers={"HX-Redirect": "/companies"})
     return RedirectResponse("/companies", status_code=303)
+
+
+def _link_user_to_company(user_id: str, company_id: str) -> None:
+    """Create a user_companies row linking the user to the company."""
+    now = datetime.now(timezone.utc).isoformat()
+    with get_connection() as conn:
+        conn.execute(
+            """INSERT OR IGNORE INTO user_companies
+               (id, user_id, company_id, visibility, is_owner, created_at, updated_at)
+               VALUES (?, ?, ?, 'public', 1, ?, ?)""",
+            (str(uuid.uuid4()), user_id, company_id, now, now),
+        )
 
 
 @router.post("/confirm", response_class=HTMLResponse)
@@ -187,13 +241,18 @@ def company_confirm(
     headquarters_location: str = Form(""),
     link: str = Form("false"),
 ):
+    user = request.state.user
+    cid = request.state.customer_id
+
     try:
         row = create_company(
             name, domain=domain, industry=industry, description=description,
+            customer_id=cid, created_by=user["id"],
         )
         if website or headquarters_location:
             update_company(row["id"], website=website,
                            headquarters_location=headquarters_location)
+        _link_user_to_company(user["id"], row["id"])
     except ValueError:
         if _is_htmx(request):
             return HTMLResponse("", headers={"HX-Redirect": "/companies"})
@@ -201,7 +260,7 @@ def company_confirm(
 
     if link == "true" and domain.strip():
         domain_clean = domain.strip().lower()
-        contacts = _find_contacts_by_domain(domain_clean)
+        contacts = _find_contacts_by_domain(domain_clean, customer_id=cid)
         if contacts:
             now = datetime.now(timezone.utc).isoformat()
             with get_connection() as conn:
@@ -246,6 +305,7 @@ def company_delete(request: Request, company_id: str):
 @router.get("/{company_id}", response_class=HTMLResponse)
 def company_detail(request: Request, company_id: str):
     templates = request.app.state.templates
+    cid = request.state.customer_id
 
     with get_connection() as conn:
         company = conn.execute(
@@ -254,6 +314,10 @@ def company_detail(request: Request, company_id: str):
         if not company:
             return HTMLResponse("Company not found", status_code=404)
         company = dict(company)
+
+        # Cross-customer access check
+        if company.get("customer_id") and company["customer_id"] != cid:
+            return HTMLResponse("Company not found", status_code=404)
 
         contacts = conn.execute(
             """SELECT c.*, ci.value AS email
@@ -308,7 +372,7 @@ def company_detail(request: Request, company_id: str):
     identifiers = get_company_identifiers(company_id)
     parents = get_parent_companies(company_id)
     children = get_child_companies(company_id)
-    all_companies = list_companies()
+    all_companies = list_companies(customer_id=cid)
     phones = get_phone_numbers("company", company_id)
     addresses = get_addresses("company", company_id)
     emails = get_email_addresses("company", company_id)
@@ -384,6 +448,7 @@ def company_enrich(request: Request, company_id: str):
 @router.get("/{company_id}/merge", response_class=HTMLResponse)
 def company_merge_page(request: Request, company_id: str):
     templates = request.app.state.templates
+    cid = request.state.customer_id
     with get_connection() as conn:
         company = conn.execute(
             "SELECT * FROM companies WHERE id = ?", (company_id,)
@@ -392,7 +457,7 @@ def company_merge_page(request: Request, company_id: str):
             return HTMLResponse("Company not found", status_code=404)
         company = dict(company)
 
-    all_companies = list_companies()
+    all_companies = list_companies(customer_id=cid)
     return templates.TemplateResponse(request, "companies/merge.html", {
         "active_nav": "companies",
         "company": company,
@@ -407,6 +472,7 @@ def company_merge_preview(
     target_id: str = Form(...),
 ):
     templates = request.app.state.templates
+    cid = request.state.customer_id
     with get_connection() as conn:
         company = conn.execute(
             "SELECT * FROM companies WHERE id = ?", (company_id,)
@@ -418,7 +484,7 @@ def company_merge_preview(
     try:
         preview = get_merge_preview(company_id, target_id)
     except ValueError as exc:
-        all_companies = list_companies()
+        all_companies = list_companies(customer_id=cid)
         return templates.TemplateResponse(request, "companies/merge.html", {
             "active_nav": "companies",
             "company": company,
@@ -426,7 +492,7 @@ def company_merge_preview(
             "error": str(exc),
         })
 
-    all_companies = list_companies()
+    all_companies = list_companies(customer_id=cid)
     return templates.TemplateResponse(request, "companies/merge.html", {
         "active_nav": "companies",
         "company": company,
@@ -443,6 +509,7 @@ def company_merge_execute(
     company_a: str = Form(...),
     company_b: str = Form(...),
 ):
+    cid = request.state.customer_id
     # Determine which is absorbed based on surviving_id choice
     absorbed_id = company_b if surviving_id == company_a else company_a
 
@@ -455,7 +522,7 @@ def company_merge_execute(
                 "SELECT * FROM companies WHERE id = ?", (company_id,)
             ).fetchone()
             company = dict(company) if company else {"id": company_id, "name": "Unknown"}
-        all_companies = list_companies()
+        all_companies = list_companies(customer_id=cid)
         return templates.TemplateResponse(request, "companies/merge.html", {
             "active_nav": "companies",
             "company": company,
@@ -572,6 +639,7 @@ def company_add_hierarchy(
     hierarchy_type: str = Form("subsidiary"),
 ):
     templates = request.app.state.templates
+    cid = request.state.customer_id
     if direction == "parent":
         add_company_hierarchy(related_company_id, company_id, hierarchy_type)
     else:
@@ -579,7 +647,7 @@ def company_add_hierarchy(
 
     parents = get_parent_companies(company_id)
     children = get_child_companies(company_id)
-    all_companies = list_companies()
+    all_companies = list_companies(customer_id=cid)
 
     with get_connection() as conn:
         company = conn.execute(
@@ -600,11 +668,12 @@ def company_remove_hierarchy(
     request: Request, company_id: str, hierarchy_id: str,
 ):
     templates = request.app.state.templates
+    cid = request.state.customer_id
     remove_company_hierarchy(hierarchy_id)
 
     parents = get_parent_companies(company_id)
     children = get_child_companies(company_id)
-    all_companies = list_companies()
+    all_companies = list_companies(customer_id=cid)
 
     with get_connection() as conn:
         company = conn.execute(

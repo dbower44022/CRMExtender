@@ -17,29 +17,44 @@ log = logging.getLogger(__name__)
 @router.get("/")
 def dashboard(request: Request):
     templates = request.app.state.templates
+    user = request.state.user
+    cid = request.state.customer_id
 
     with get_connection() as conn:
         counts = {
             "conversations_total": conn.execute(
-                "SELECT COUNT(*) AS c FROM conversations"
+                "SELECT COUNT(*) AS c FROM conversations WHERE customer_id = ?",
+                (cid,),
             ).fetchone()["c"],
             "conversations_open": conn.execute(
-                "SELECT COUNT(*) AS c FROM conversations WHERE triage_result IS NULL AND dismissed = 0"
+                "SELECT COUNT(*) AS c FROM conversations "
+                "WHERE customer_id = ? AND triage_result IS NULL AND dismissed = 0",
+                (cid,),
             ).fetchone()["c"],
             "conversations_closed": conn.execute(
-                "SELECT COUNT(*) AS c FROM conversations WHERE dismissed = 1"
+                "SELECT COUNT(*) AS c FROM conversations "
+                "WHERE customer_id = ? AND dismissed = 1",
+                (cid,),
             ).fetchone()["c"],
             "contacts": conn.execute(
-                "SELECT COUNT(*) AS c FROM contacts"
+                "SELECT COUNT(*) AS c FROM contacts WHERE customer_id = ?",
+                (cid,),
             ).fetchone()["c"],
             "companies": conn.execute(
-                "SELECT COUNT(*) AS c FROM companies WHERE status = 'active'"
+                "SELECT COUNT(*) AS c FROM companies "
+                "WHERE customer_id = ? AND status = 'active'",
+                (cid,),
             ).fetchone()["c"],
             "projects": conn.execute(
-                "SELECT COUNT(*) AS c FROM projects WHERE status = 'active'"
+                "SELECT COUNT(*) AS c FROM projects "
+                "WHERE customer_id = ? AND status = 'active'",
+                (cid,),
             ).fetchone()["c"],
             "topics": conn.execute(
-                "SELECT COUNT(*) AS c FROM topics"
+                "SELECT COUNT(*) AS c FROM topics t "
+                "JOIN projects p ON p.id = t.project_id "
+                "WHERE p.customer_id = ?",
+                (cid,),
             ).fetchone()["c"],
             "events": conn.execute(
                 "SELECT COUNT(*) AS c FROM events"
@@ -47,7 +62,9 @@ def dashboard(request: Request):
         }
 
         recent = conn.execute(
-            "SELECT * FROM conversations ORDER BY last_activity_at DESC LIMIT 10"
+            "SELECT * FROM conversations WHERE customer_id = ? "
+            "ORDER BY last_activity_at DESC LIMIT 10",
+            (cid,),
         ).fetchall()
         recent_conversations = [dict(r) for r in recent]
 
@@ -57,8 +74,10 @@ def dashboard(request: Request):
                JOIN companies c ON c.id = es.entity_id
                WHERE es.entity_type = 'company'
                  AND es.score_type = 'relationship_strength'
+                 AND c.customer_id = ?
                ORDER BY es.score_value DESC
                LIMIT 5""",
+            (cid,),
         ).fetchall()]
 
         top_contacts = [dict(r) for r in conn.execute(
@@ -71,17 +90,27 @@ def dashboard(request: Request):
                LEFT JOIN companies co ON co.id = ct.company_id
                WHERE es.entity_type = 'contact'
                  AND es.score_type = 'relationship_strength'
+                 AND ct.customer_id = ?
                ORDER BY es.score_value DESC
                LIMIT 5""",
+            (cid,),
         ).fetchall()]
 
         counts["scored_companies"] = conn.execute(
-            """SELECT COUNT(*) AS c FROM entity_scores
-               WHERE entity_type = 'company' AND score_type = 'relationship_strength'"""
+            """SELECT COUNT(*) AS c FROM entity_scores es
+               JOIN companies co ON co.id = es.entity_id
+               WHERE es.entity_type = 'company'
+                 AND es.score_type = 'relationship_strength'
+                 AND co.customer_id = ?""",
+            (cid,),
         ).fetchone()["c"]
         counts["scored_contacts"] = conn.execute(
-            """SELECT COUNT(*) AS c FROM entity_scores
-               WHERE entity_type = 'contact' AND score_type = 'relationship_strength'"""
+            """SELECT COUNT(*) AS c FROM entity_scores es
+               JOIN contacts ct ON ct.id = es.entity_id
+               WHERE es.entity_type = 'contact'
+                 AND es.score_type = 'relationship_strength'
+                 AND ct.customer_id = ?""",
+            (cid,),
         ).fetchone()["c"]
 
     return templates.TemplateResponse(request, "dashboard.html", {
@@ -95,12 +124,11 @@ def dashboard(request: Request):
 
 @router.post("/sync", response_class=HTMLResponse)
 def sync_now(request: Request):
-    """Run the full sync pipeline for all registered accounts."""
+    """Run the full sync pipeline for the current user's accounts."""
     from ...auth import get_credentials_for_account
     from ...gmail_client import get_user_email
     from ...rate_limiter import RateLimiter
     from ...sync import (
-        get_all_accounts,
         incremental_sync,
         initial_sync,
         process_conversations,
@@ -108,7 +136,30 @@ def sync_now(request: Request):
     )
     from ... import config
 
-    accounts = get_all_accounts()
+    user = request.state.user
+    uid = user["id"]
+    cid = request.state.customer_id
+
+    # Only sync accounts the user has access to
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT pa.* FROM provider_accounts pa
+               JOIN user_provider_accounts upa ON upa.account_id = pa.id
+               WHERE upa.user_id = ?
+               ORDER BY pa.created_at""",
+            (uid,),
+        ).fetchall()
+        accounts = [dict(a) for a in rows]
+
+    if not accounts:
+        # Fallback: if no user_provider_accounts rows, use customer's accounts
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM provider_accounts WHERE customer_id = ? ORDER BY created_at",
+                (cid,),
+            ).fetchall()
+            accounts = [dict(a) for a in rows]
+
     if not accounts:
         return HTMLResponse("No accounts registered.")
 
@@ -137,7 +188,10 @@ def sync_now(request: Request):
 
         # Sync contacts
         try:
-            total_contacts += sync_contacts(creds, rate_limiter=gmail_limiter)
+            total_contacts += sync_contacts(
+                creds, rate_limiter=gmail_limiter,
+                customer_id=cid, user_id=uid,
+            )
         except Exception as exc:
             log.warning("Contact sync failed for %s: %s", email_addr, exc)
             errors.append(f"{email_addr}: contact sync failed ({exc})")
@@ -145,10 +199,16 @@ def sync_now(request: Request):
         # Sync emails
         try:
             if account["initial_sync_done"]:
-                result = incremental_sync(account_id, creds, rate_limiter=gmail_limiter)
+                result = incremental_sync(
+                    account_id, creds, rate_limiter=gmail_limiter,
+                    customer_id=cid, user_id=uid,
+                )
                 total_fetched += result.get("messages_fetched", 0)
             else:
-                result = initial_sync(account_id, creds, rate_limiter=gmail_limiter)
+                result = initial_sync(
+                    account_id, creds, rate_limiter=gmail_limiter,
+                    customer_id=cid, user_id=uid,
+                )
                 total_fetched += result.get("messages_fetched", 0)
         except Exception as exc:
             log.warning("Email sync failed for %s: %s", email_addr, exc)

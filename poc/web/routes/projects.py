@@ -22,7 +22,8 @@ router = APIRouter()
 @router.get("", response_class=HTMLResponse)
 def project_list(request: Request):
     templates = request.app.state.templates
-    stats = get_hierarchy_stats()
+    cid = request.state.customer_id
+    stats = get_hierarchy_stats(customer_id=cid)
 
     # Attach topic stats to each project
     for proj in stats:
@@ -40,8 +41,13 @@ def project_create(
     name: str = Form(...),
     description: str = Form(""),
 ):
+    user = request.state.user
+    cid = request.state.customer_id
     try:
-        create_project(name=name, description=description)
+        create_project(
+            name=name, description=description,
+            customer_id=cid, created_by=user["id"],
+        )
     except ValueError:
         pass
     return RedirectResponse("/projects", status_code=303)
@@ -77,8 +83,12 @@ def topic_create(
     name: str = Form(...),
     description: str = Form(""),
 ):
+    user = request.state.user
     try:
-        create_topic(project_id=project_id, name=name, description=description)
+        create_topic(
+            project_id=project_id, name=name, description=description,
+            created_by=user["id"],
+        )
     except ValueError:
         pass
     return RedirectResponse(f"/projects/{project_id}", status_code=303)

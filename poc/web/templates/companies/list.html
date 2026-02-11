@@ -6,13 +6,25 @@
 
 <div class="grid">
   <div>
+    {% set sc = scope|default('all', true) %}
+    <div style="margin-bottom: 1rem;">
+      <div class="grid" style="max-width: 200px;">
+        <a href="/companies?scope=all" role="button"
+           class="{{ 'secondary' if sc == 'mine' else '' }}"
+           style="padding: .4rem .8rem; font-size: .85rem;">All</a>
+        <a href="/companies?scope=mine" role="button"
+           class="{{ 'secondary' if sc != 'mine' else '' }}"
+           style="padding: .4rem .8rem; font-size: .85rem;">Mine</a>
+      </div>
+    </div>
+
     <div class="search-bar">
       <input type="search" name="q" value="{{ q }}"
              placeholder="Search name or domain..."
              hx-get="/companies/search"
              hx-trigger="input changed delay:300ms, search"
              hx-target="#results"
-             hx-vals='{"sort": "{{ sort|default('name', true) }}"}'
+             hx-vals='{"sort": "{{ sort|default('name', true) }}", "scope": "{{ sc }}"}'
              hx-push-url="/companies">
       <span class="htmx-indicator" aria-busy="true"></span>
     </div>

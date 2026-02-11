@@ -53,12 +53,19 @@ def tmp_db(tmp_path, monkeypatch):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _insert_company(conn, company_id, name="Acme Corp", domain="acme.com"):
+def _insert_company(conn, company_id, name="Acme Corp", domain="acme.com",
+                    customer_id="cust-test"):
     conn.execute(
         "INSERT OR IGNORE INTO companies "
-        "(id, name, domain, status, created_at, updated_at) "
-        "VALUES (?, ?, ?, 'active', ?, ?)",
-        (company_id, name, domain, _NOW, _NOW),
+        "(id, name, domain, status, customer_id, created_at, updated_at) "
+        "VALUES (?, ?, ?, 'active', ?, ?, ?)",
+        (company_id, name, domain, customer_id, _NOW, _NOW),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO user_companies "
+        "(id, user_id, company_id, visibility, is_owner, created_at, updated_at) "
+        "VALUES (?, 'user-test', ?, 'public', 1, ?, ?)",
+        (f"uco-{company_id}", company_id, _NOW, _NOW),
     )
 
 

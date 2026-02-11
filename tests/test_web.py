@@ -55,25 +55,42 @@ def client(tmp_db, monkeypatch):
 _NOW = datetime.now(timezone.utc).isoformat()
 
 
-def _insert_account(conn, account_id="acct-1", email="test@example.com"):
+def _insert_account(conn, account_id="acct-1", email="test@example.com",
+                    customer_id="cust-test"):
     conn.execute(
         "INSERT OR IGNORE INTO provider_accounts "
-        "(id, provider, account_type, email_address, created_at, updated_at) "
-        "VALUES (?, 'gmail', 'email', ?, ?, ?)",
-        (account_id, email, _NOW, _NOW),
+        "(id, provider, account_type, email_address, customer_id, created_at, updated_at) "
+        "VALUES (?, 'gmail', 'email', ?, ?, ?, ?)",
+        (account_id, email, customer_id, _NOW, _NOW),
+    )
+    # Link to test user for visibility
+    conn.execute(
+        "INSERT OR IGNORE INTO user_provider_accounts "
+        "(id, user_id, account_id, role, created_at) "
+        "VALUES (?, 'user-test', ?, 'owner', ?)",
+        (f"upa-{account_id}", account_id, _NOW),
     )
 
 
 def _insert_conversation(conn, conv_id, title="Test subject", topic_id=None,
                           triage_result=None, status="active",
-                          communication_count=1, dismissed=0):
+                          communication_count=1, dismissed=0,
+                          customer_id="cust-test"):
     conn.execute(
         "INSERT OR IGNORE INTO conversations "
         "(id, topic_id, title, status, triage_result, dismissed, "
-        "communication_count, participant_count, last_activity_at, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)",
+        "communication_count, participant_count, last_activity_at, "
+        "customer_id, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)",
         (conv_id, topic_id, title, status, triage_result, dismissed,
-         communication_count, _NOW, _NOW, _NOW),
+         communication_count, _NOW, customer_id, _NOW, _NOW),
+    )
+    # Share with test user for visibility
+    conn.execute(
+        "INSERT OR IGNORE INTO conversation_shares "
+        "(id, conversation_id, user_id, shared_by, created_at) "
+        "VALUES (?, ?, 'user-test', 'user-test', ?)",
+        (f"cs-{conv_id}", conv_id, _NOW),
     )
 
 
@@ -99,11 +116,12 @@ def _link_comm_to_conv(conn, conv_id, comm_id):
 
 
 def _insert_contact(conn, contact_id, name="Alice", email="alice@example.com",
-                     company_id=None):
+                     company_id=None, customer_id="cust-test"):
     conn.execute(
         "INSERT OR IGNORE INTO contacts "
-        "(id, name, company_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-        (contact_id, name, company_id, _NOW, _NOW),
+        "(id, name, company_id, customer_id, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (contact_id, name, company_id, customer_id, _NOW, _NOW),
     )
     conn.execute(
         "INSERT OR IGNORE INTO contact_identifiers "
@@ -111,22 +129,39 @@ def _insert_contact(conn, contact_id, name="Alice", email="alice@example.com",
         "VALUES (?, ?, 'email', ?, ?, ?)",
         (f"ci-{contact_id}", contact_id, email, _NOW, _NOW),
     )
-
-
-def _insert_company(conn, company_id, name="Acme Corp", domain="acme.com"):
+    # Create user_contacts for visibility
     conn.execute(
-        "INSERT OR IGNORE INTO companies "
-        "(id, name, domain, status, created_at, updated_at) "
-        "VALUES (?, ?, ?, 'active', ?, ?)",
-        (company_id, name, domain, _NOW, _NOW),
+        "INSERT OR IGNORE INTO user_contacts "
+        "(id, user_id, contact_id, visibility, is_owner, created_at, updated_at) "
+        "VALUES (?, 'user-test', ?, 'public', 1, ?, ?)",
+        (f"uc-{contact_id}", contact_id, _NOW, _NOW),
     )
 
 
-def _insert_project(conn, project_id, name="My Project"):
+def _insert_company(conn, company_id, name="Acme Corp", domain="acme.com",
+                    customer_id="cust-test"):
+    conn.execute(
+        "INSERT OR IGNORE INTO companies "
+        "(id, name, domain, status, customer_id, created_at, updated_at) "
+        "VALUES (?, ?, ?, 'active', ?, ?, ?)",
+        (company_id, name, domain, customer_id, _NOW, _NOW),
+    )
+    # Create user_companies for visibility
+    conn.execute(
+        "INSERT OR IGNORE INTO user_companies "
+        "(id, user_id, company_id, visibility, is_owner, created_at, updated_at) "
+        "VALUES (?, 'user-test', ?, 'public', 1, ?, ?)",
+        (f"uco-{company_id}", company_id, _NOW, _NOW),
+    )
+
+
+def _insert_project(conn, project_id, name="My Project",
+                    customer_id="cust-test"):
     conn.execute(
         "INSERT OR IGNORE INTO projects "
-        "(id, name, status, created_at, updated_at) VALUES (?, ?, 'active', ?, ?)",
-        (project_id, name, _NOW, _NOW),
+        "(id, name, status, customer_id, created_at, updated_at) "
+        "VALUES (?, ?, 'active', ?, ?, ?)",
+        (project_id, name, customer_id, _NOW, _NOW),
     )
 
 
@@ -1718,9 +1753,15 @@ class TestSync:
         conn.execute(
             "INSERT OR IGNORE INTO provider_accounts "
             "(id, provider, account_type, email_address, auth_token_path, "
-            "initial_sync_done, created_at, updated_at) "
-            "VALUES (?, 'gmail', 'email', ?, ?, ?, ?, ?)",
+            "initial_sync_done, customer_id, created_at, updated_at) "
+            "VALUES (?, 'gmail', 'email', ?, ?, ?, 'cust-test', ?, ?)",
             (account_id, email, token_path, initial_sync_done, _NOW, _NOW),
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO user_provider_accounts "
+            "(id, user_id, account_id, role, created_at) "
+            "VALUES (?, 'user-test', ?, 'owner', ?)",
+            (f"upa-{account_id}", account_id, _NOW),
         )
 
     def test_sync_no_accounts(self, client, tmp_db):

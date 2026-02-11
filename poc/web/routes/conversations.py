@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from ...access import visible_conversations_query
 from ...database import get_connection
 
 router = APIRouter()
@@ -17,40 +18,48 @@ def _list_conversations(
     search: str = "",
     page: int = 1,
     per_page: int = 50,
+    customer_id: str = "",
+    user_id: str = "",
 ) -> tuple[list[dict], int]:
     """Query conversations with filters. Returns (rows, total_count)."""
-    clauses = []
+    clauses: list[str] = []
     params: list = []
 
+    # Visibility scoping
+    if customer_id and user_id:
+        vis_where, vis_params = visible_conversations_query(customer_id, user_id)
+        clauses.append(vis_where)
+        params.extend(vis_params)
+
     if status_filter == "open":
-        clauses.append("c.triage_result IS NULL AND c.dismissed = 0")
+        clauses.append("conv.triage_result IS NULL AND conv.dismissed = 0")
     elif status_filter == "closed":
-        clauses.append("c.dismissed = 1")
+        clauses.append("conv.dismissed = 1")
     elif status_filter == "triaged":
-        clauses.append("c.triage_result IS NOT NULL")
+        clauses.append("conv.triage_result IS NOT NULL")
 
     if topic_id:
-        clauses.append("c.topic_id = ?")
+        clauses.append("conv.topic_id = ?")
         params.append(topic_id)
 
     if search:
-        clauses.append("c.title LIKE ?")
+        clauses.append("conv.title LIKE ?")
         params.append(f"%{search}%")
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
 
     with get_connection() as conn:
         total = conn.execute(
-            f"SELECT COUNT(*) AS c FROM conversations c {where}", params
-        ).fetchone()["c"]
+            f"SELECT COUNT(*) AS cnt FROM conversations conv {where}", params
+        ).fetchone()["cnt"]
 
         offset = (page - 1) * per_page
         rows = conn.execute(
-            f"""SELECT c.*, t.name AS topic_name
-                FROM conversations c
-                LEFT JOIN topics t ON t.id = c.topic_id
+            f"""SELECT conv.*, t.name AS topic_name
+                FROM conversations conv
+                LEFT JOIN topics t ON t.id = conv.topic_id
                 {where}
-                ORDER BY c.last_activity_at DESC
+                ORDER BY conv.last_activity_at DESC
                 LIMIT ? OFFSET ?""",
             params + [per_page, offset],
         ).fetchall()
@@ -79,8 +88,11 @@ def conversation_list(
     page: int = 1,
 ):
     templates = request.app.state.templates
+    user = request.state.user
+    cid = request.state.customer_id
     conversations, total = _list_conversations(
         status_filter=status, topic_id=topic_id, search=q, page=page,
+        customer_id=cid, user_id=user["id"],
     )
     topics = _get_topics_for_filter()
     total_pages = max(1, (total + 49) // 50)
@@ -108,8 +120,11 @@ def conversation_search(
 ):
     """HTMX partial — returns just the table rows."""
     templates = request.app.state.templates
+    user = request.state.user
+    cid = request.state.customer_id
     conversations, total = _list_conversations(
         status_filter=status, topic_id=topic_id, search=q, page=page,
+        customer_id=cid, user_id=user["id"],
     )
     total_pages = max(1, (total + 49) // 50)
 
@@ -127,6 +142,7 @@ def conversation_search(
 @router.get("/{conversation_id}", response_class=HTMLResponse)
 def conversation_detail(request: Request, conversation_id: str):
     templates = request.app.state.templates
+    cid = request.state.customer_id
 
     with get_connection() as conn:
         conv = conn.execute(
@@ -135,6 +151,10 @@ def conversation_detail(request: Request, conversation_id: str):
         if not conv:
             return HTMLResponse("Conversation not found", status_code=404)
         conv = dict(conv)
+
+        # Cross-customer access check
+        if conv.get("customer_id") and conv["customer_id"] != cid:
+            return HTMLResponse("Conversation not found", status_code=404)
 
         # Topic info
         topic = None

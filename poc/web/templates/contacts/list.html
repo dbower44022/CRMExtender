@@ -4,13 +4,25 @@
 {% block content %}
 <h1>Contacts <small>({{ total }})</small></h1>
 
+{% set sc = scope|default('all', true) %}
+<div style="margin-bottom: 1rem;">
+  <div class="grid" style="max-width: 200px;">
+    <a href="/contacts?scope=all" role="button"
+       class="{{ 'secondary' if sc == 'mine' else '' }}"
+       style="padding: .4rem .8rem; font-size: .85rem;">All</a>
+    <a href="/contacts?scope=mine" role="button"
+       class="{{ 'secondary' if sc != 'mine' else '' }}"
+       style="padding: .4rem .8rem; font-size: .85rem;">Mine</a>
+  </div>
+</div>
+
 <div class="search-bar">
   <input type="search" name="q" value="{{ q }}"
          placeholder="Search name, email, or company..."
          hx-get="/contacts/search"
          hx-trigger="input changed delay:300ms, search"
          hx-target="#results"
-         hx-vals='{"sort": "{{ sort|default('name', true) }}"}'
+         hx-vals='{"sort": "{{ sort|default('name', true) }}", "scope": "{{ sc }}"}'
          hx-push-url="/contacts">
   <span class="htmx-indicator" aria-busy="true"></span>
 </div>

@@ -515,8 +515,13 @@ class TestMergeExecution:
     def test_creates_audit_log(self, tmp_db):
         with get_connection() as conn:
             conn.execute(
-                "INSERT INTO users (id, email, name, created_at, updated_at) "
-                "VALUES ('user-1', 'user@test.com', 'Test User', ?, ?)",
+                "INSERT OR IGNORE INTO customers (id, name, slug, is_active, created_at, updated_at) "
+                "VALUES ('cust-test', 'Test', 'test', 1, ?, ?)",
+                (_NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO users (id, customer_id, email, name, created_at, updated_at) "
+                "VALUES ('user-1', 'cust-test', 'user@test.com', 'Test User', ?, ?)",
                 (_NOW, _NOW),
             )
             _insert_company(conn, "surv", "Surviving", "acme.com")

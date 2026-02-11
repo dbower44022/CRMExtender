@@ -839,6 +839,17 @@ def cmd_migrate_to_v7(args: argparse.Namespace) -> None:
     migrate(db_path, dry_run=args.dry_run)
 
 
+def cmd_migrate_to_v8(args: argparse.Namespace) -> None:
+    """Run the v7 -> v8 migration."""
+    from .migrate_to_v8 import migrate
+
+    db_path = args.db
+    if not db_path:
+        db_path = config.DB_PATH
+
+    migrate(db_path, dry_run=args.dry_run)
+
+
 def cmd_resolve_domains(args: argparse.Namespace) -> None:
     """Resolve unlinked contacts to companies by email domain."""
     from .domain_resolver import resolve_unlinked_contacts
@@ -1354,6 +1365,12 @@ def build_parser() -> argparse.ArgumentParser:
     m7.add_argument("--dry-run", action="store_true",
                     help="Apply migration to a backup copy instead of the real database")
 
+    # migrate-to-v8
+    m8 = sub.add_parser("migrate-to-v8", help="Migrate database from v7 to v8 (multi-user)")
+    m8.add_argument("--db", type=Path, help="Path to the SQLite database file")
+    m8.add_argument("--dry-run", action="store_true",
+                    help="Apply migration to a backup copy instead of the real database")
+
     return parser
 
 
@@ -1402,6 +1419,7 @@ def main() -> None:
         "migrate-to-v5": cmd_migrate_to_v5,
         "migrate-to-v6": cmd_migrate_to_v6,
         "migrate-to-v7": cmd_migrate_to_v7,
+        "migrate-to-v8": cmd_migrate_to_v8,
     }
 
     # Default to "run" when no subcommand given

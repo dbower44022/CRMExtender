@@ -84,7 +84,7 @@ class TestUserModel:
     def test_defaults(self):
         user = User(email="bob@example.com")
         assert user.name == ""
-        assert user.role == "member"
+        assert user.role == "user"
         assert user.is_active is True
 
 

@@ -473,22 +473,57 @@ class Relationship:
 
 
 @dataclass
+class Customer:
+    """A tenant (organization) in the CRM."""
+
+    name: str
+    slug: str = ""
+    is_active: bool = True
+
+    def to_row(self, *, customer_id: str | None = None) -> dict:
+        now = _now_iso()
+        return {
+            "id": customer_id or str(uuid.uuid4()),
+            "name": self.name,
+            "slug": self.slug or self.name.lower().replace(" ", "-"),
+            "is_active": 1 if self.is_active else 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> Customer:
+        r = dict(row)
+        return cls(
+            name=r["name"],
+            slug=r.get("slug") or "",
+            is_active=bool(r.get("is_active", 1)),
+        )
+
+
+@dataclass
 class User:
     """A CRM user (owner of projects, dismisser of conversations)."""
 
     email: str
+    customer_id: str = ""
     name: str = ""
-    role: str = "member"
+    role: str = "user"
     is_active: bool = True
+    password_hash: str = ""
+    google_sub: str = ""
 
     def to_row(self, *, user_id: str | None = None) -> dict:
         now = _now_iso()
         return {
             "id": user_id or str(uuid.uuid4()),
+            "customer_id": self.customer_id,
             "email": self.email,
             "name": self.name or None,
             "role": self.role,
             "is_active": 1 if self.is_active else 0,
+            "password_hash": self.password_hash or None,
+            "google_sub": self.google_sub or None,
             "created_at": now,
             "updated_at": now,
         }
@@ -498,9 +533,87 @@ class User:
         r = dict(row)
         return cls(
             email=r["email"],
+            customer_id=r.get("customer_id") or "",
             name=r.get("name") or "",
-            role=r.get("role") or "member",
+            role=r.get("role") or "user",
             is_active=bool(r.get("is_active", 1)),
+            password_hash=r.get("password_hash") or "",
+            google_sub=r.get("google_sub") or "",
+        )
+
+
+@dataclass
+class Session:
+    """A server-side user session."""
+
+    user_id: str
+    customer_id: str
+    expires_at: str
+    ip_address: str = ""
+    user_agent: str = ""
+
+    def to_row(self, *, session_id: str | None = None) -> dict:
+        now = _now_iso()
+        return {
+            "id": session_id or str(uuid.uuid4()),
+            "user_id": self.user_id,
+            "customer_id": self.customer_id,
+            "created_at": now,
+            "expires_at": self.expires_at,
+            "ip_address": self.ip_address or None,
+            "user_agent": self.user_agent or None,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> Session:
+        r = dict(row)
+        return cls(
+            user_id=r["user_id"],
+            customer_id=r["customer_id"],
+            expires_at=r["expires_at"],
+            ip_address=r.get("ip_address") or "",
+            user_agent=r.get("user_agent") or "",
+        )
+
+
+@dataclass
+class Setting:
+    """A system or user setting."""
+
+    customer_id: str
+    scope: str
+    setting_name: str
+    setting_value: str = ""
+    user_id: str = ""
+    setting_description: str = ""
+    setting_default: str = ""
+
+    def to_row(self, *, setting_id: str | None = None) -> dict:
+        now = _now_iso()
+        return {
+            "id": setting_id or str(uuid.uuid4()),
+            "customer_id": self.customer_id,
+            "user_id": self.user_id or None,
+            "scope": self.scope,
+            "setting_name": self.setting_name,
+            "setting_value": self.setting_value or None,
+            "setting_description": self.setting_description or None,
+            "setting_default": self.setting_default or None,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    @classmethod
+    def from_row(cls, row) -> Setting:
+        r = dict(row)
+        return cls(
+            customer_id=r["customer_id"],
+            scope=r["scope"],
+            setting_name=r["setting_name"],
+            setting_value=r.get("setting_value") or "",
+            user_id=r.get("user_id") or "",
+            setting_description=r.get("setting_description") or "",
+            setting_default=r.get("setting_default") or "",
         )
 
 

@@ -34,8 +34,14 @@ def tmp_db(tmp_path, monkeypatch):
 def _insert_user(conn, user_id="user-1", email="admin@example.com"):
     now = datetime.now(timezone.utc).isoformat()
     conn.execute(
-        "INSERT OR IGNORE INTO users (id, email, name, role, is_active, created_at, updated_at) "
-        "VALUES (?, ?, 'Admin', 'admin', 1, ?, ?)",
+        "INSERT OR IGNORE INTO customers (id, name, slug, is_active, created_at, updated_at) "
+        "VALUES ('cust-test', 'Test', 'test', 1, ?, ?)",
+        (now, now),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO users "
+        "(id, customer_id, email, name, role, is_active, created_at, updated_at) "
+        "VALUES (?, 'cust-test', ?, 'Admin', 'admin', 1, ?, ?)",
         (user_id, email, now, now),
     )
 

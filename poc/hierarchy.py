@@ -13,11 +13,31 @@ from .models import Company, CompanyHierarchy, CompanyIdentifier, Project, Topic
 # Users
 # ---------------------------------------------------------------------------
 
+DEFAULT_CUSTOMER_ID = "cust-default"
+
+
+def _ensure_default_customer(conn) -> str:
+    """Ensure the default customer exists. Returns the customer_id."""
+    existing = conn.execute(
+        "SELECT id FROM customers WHERE id = ?", (DEFAULT_CUSTOMER_ID,)
+    ).fetchone()
+    if existing:
+        return DEFAULT_CUSTOMER_ID
+    from .models import Customer
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        "INSERT INTO customers (id, name, slug, is_active, created_at, updated_at) "
+        "VALUES (?, ?, ?, 1, ?, ?)",
+        (DEFAULT_CUSTOMER_ID, "Default Organization", "default", now, now),
+    )
+    return DEFAULT_CUSTOMER_ID
+
+
 def bootstrap_user() -> dict:
     """Auto-create a user from the first provider_accounts email.
 
     Idempotent — returns the existing user if one already exists.
-    Returns a dict with 'id', 'email', 'name', 'created' (bool).
+    Returns a dict with 'id', 'email', 'name', 'customer_id', 'created' (bool).
     """
     with get_connection() as conn:
         existing = conn.execute(
@@ -25,7 +45,9 @@ def bootstrap_user() -> dict:
         ).fetchone()
         if existing:
             return {"id": existing["id"], "email": existing["email"],
-                    "name": existing["name"], "created": False}
+                    "name": existing["name"],
+                    "customer_id": existing["customer_id"],
+                    "created": False}
 
         account = conn.execute(
             "SELECT email_address, display_name FROM provider_accounts "
@@ -34,22 +56,33 @@ def bootstrap_user() -> dict:
         if not account:
             raise ValueError("No provider accounts found. Add an account first.")
 
+        customer_id = _ensure_default_customer(conn)
+
         user = User(
             email=account["email_address"],
             name=account["display_name"] or "",
+            customer_id=customer_id,
+            role="admin",
         )
         row = user.to_row()
         conn.execute(
-            "INSERT INTO users (id, email, name, role, is_active, created_at, updated_at) "
-            "VALUES (:id, :email, :name, :role, :is_active, :created_at, :updated_at)",
+            "INSERT INTO users "
+            "(id, customer_id, email, name, role, is_active, "
+            "password_hash, google_sub, created_at, updated_at) "
+            "VALUES (:id, :customer_id, :email, :name, :role, :is_active, "
+            ":password_hash, :google_sub, :created_at, :updated_at)",
             row,
         )
         return {"id": row["id"], "email": row["email"],
-                "name": row["name"], "created": True}
+                "name": row["name"], "customer_id": row["customer_id"],
+                "created": True}
 
 
 def get_current_user() -> dict | None:
-    """Return the first active user row, or None."""
+    """Return the first active user row, or None.
+
+    For CLI usage where there's no session context.
+    """
     with get_connection() as conn:
         row = conn.execute(
             "SELECT * FROM users WHERE is_active = 1 ORDER BY created_at LIMIT 1"

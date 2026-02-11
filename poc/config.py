@@ -65,5 +65,10 @@ except (KeyError, Exception):
     )
     CRM_TIMEZONE = "UTC"
 
+# Authentication
+CRM_AUTH_ENABLED = _env("CRM_AUTH_ENABLED", "true").lower() in ("true", "1", "yes")
+SESSION_SECRET_KEY = _env("SESSION_SECRET_KEY", "change-me-in-production")
+SESSION_TTL_HOURS = int(_env("SESSION_TTL_HOURS", "720"))
+
 # Summarization
 MAX_CONVERSATION_CHARS = int(_env("POC_MAX_CONVERSATION_CHARS", "6000"))

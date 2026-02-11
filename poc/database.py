@@ -14,20 +14,35 @@ from . import config
 log = logging.getLogger(__name__)
 
 _SCHEMA_SQL = """\
--- Users (minimal; FK target for ownership/audit columns)
-CREATE TABLE IF NOT EXISTS users (
+-- Customers (tenant)
+CREATE TABLE IF NOT EXISTS customers (
     id         TEXT PRIMARY KEY,
-    email      TEXT NOT NULL UNIQUE,
-    name       TEXT,
-    role       TEXT DEFAULT 'member',
+    name       TEXT NOT NULL,
+    slug       TEXT NOT NULL UNIQUE,
     is_active  INTEGER DEFAULT 1,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
 
+-- Users (multi-tenant, authentication-ready)
+CREATE TABLE IF NOT EXISTS users (
+    id            TEXT PRIMARY KEY,
+    customer_id   TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    email         TEXT NOT NULL,
+    name          TEXT,
+    role          TEXT DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+    is_active     INTEGER DEFAULT 1,
+    password_hash TEXT,
+    google_sub    TEXT,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL,
+    UNIQUE(customer_id, email)
+);
+
 -- Provider accounts and sync state (multi-channel)
 CREATE TABLE IF NOT EXISTS provider_accounts (
     id                TEXT PRIMARY KEY,
+    customer_id       TEXT REFERENCES customers(id) ON DELETE CASCADE,
     provider          TEXT NOT NULL,
     account_type      TEXT NOT NULL DEFAULT 'email',
     email_address     TEXT,
@@ -47,6 +62,7 @@ CREATE TABLE IF NOT EXISTS provider_accounts (
 -- Companies
 CREATE TABLE IF NOT EXISTS companies (
     id                     TEXT PRIMARY KEY,
+    customer_id            TEXT REFERENCES customers(id) ON DELETE CASCADE,
     name                   TEXT NOT NULL,
     domain                 TEXT,
     industry               TEXT,
@@ -71,6 +87,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_companies_name ON companies(name);
 -- Known contacts (identity resolved via contact_identifiers)
 CREATE TABLE IF NOT EXISTS contacts (
     id         TEXT PRIMARY KEY,
+    customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
     name       TEXT,
     company    TEXT,
     company_id TEXT REFERENCES companies(id) ON DELETE SET NULL,
@@ -103,6 +120,7 @@ CREATE TABLE IF NOT EXISTS contact_identifiers (
 -- Projects (organizational hierarchy, adjacency list)
 CREATE TABLE IF NOT EXISTS projects (
     id          TEXT PRIMARY KEY,
+    customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
     parent_id   TEXT REFERENCES projects(id) ON DELETE CASCADE,
     name        TEXT NOT NULL,
     description TEXT,
@@ -130,6 +148,7 @@ CREATE TABLE IF NOT EXISTS topics (
 -- Threaded conversations (account-independent)
 CREATE TABLE IF NOT EXISTS conversations (
     id                  TEXT PRIMARY KEY,
+    customer_id         TEXT REFERENCES customers(id) ON DELETE CASCADE,
     topic_id            TEXT REFERENCES topics(id) ON DELETE SET NULL,
     title               TEXT,
     status              TEXT DEFAULT 'active',
@@ -242,6 +261,7 @@ CREATE TABLE IF NOT EXISTS attachments (
 -- Tags (AI-extracted keyword phrases; distinct from hierarchy topics)
 CREATE TABLE IF NOT EXISTS tags (
     id         TEXT PRIMARY KEY,
+    customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
     name       TEXT NOT NULL UNIQUE,
     source     TEXT DEFAULT 'ai',
     created_at TEXT NOT NULL
@@ -286,6 +306,7 @@ CREATE TABLE IF NOT EXISTS alerts (
 -- Relationship type definitions
 CREATE TABLE IF NOT EXISTS relationship_types (
     id               TEXT PRIMARY KEY,
+    customer_id      TEXT REFERENCES customers(id) ON DELETE CASCADE,
     name             TEXT NOT NULL UNIQUE,
     from_entity_type TEXT NOT NULL DEFAULT 'contact',
     to_entity_type   TEXT NOT NULL DEFAULT 'contact',
@@ -646,6 +667,78 @@ CREATE TABLE IF NOT EXISTS email_addresses (
     updated_at  TEXT NOT NULL,
     CHECK (entity_type IN ('company', 'contact'))
 );
+
+-- Sessions (server-side session store)
+CREATE TABLE IF NOT EXISTS sessions (
+    id          TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    created_at  TEXT NOT NULL,
+    expires_at  TEXT NOT NULL,
+    ip_address  TEXT,
+    user_agent  TEXT
+);
+
+-- User contacts (per-user contact visibility)
+CREATE TABLE IF NOT EXISTS user_contacts (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    visibility TEXT NOT NULL DEFAULT 'public'
+        CHECK (visibility IN ('public', 'private')),
+    is_owner   INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(user_id, contact_id)
+);
+
+-- User companies (per-user company visibility)
+CREATE TABLE IF NOT EXISTS user_companies (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    visibility TEXT NOT NULL DEFAULT 'public'
+        CHECK (visibility IN ('public', 'private')),
+    is_owner   INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(user_id, company_id)
+);
+
+-- User provider accounts (shared account access)
+CREATE TABLE IF NOT EXISTS user_provider_accounts (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id TEXT NOT NULL REFERENCES provider_accounts(id) ON DELETE CASCADE,
+    role       TEXT NOT NULL DEFAULT 'owner'
+        CHECK (role IN ('owner', 'shared')),
+    created_at TEXT NOT NULL,
+    UNIQUE(user_id, account_id)
+);
+
+-- Conversation shares (explicit sharing)
+CREATE TABLE IF NOT EXISTS conversation_shares (
+    id              TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    shared_by       TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at      TEXT NOT NULL,
+    UNIQUE(conversation_id, user_id)
+);
+
+-- Settings (unified key-value, system + user)
+CREATE TABLE IF NOT EXISTS settings (
+    id                  TEXT PRIMARY KEY,
+    customer_id         TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    user_id             TEXT REFERENCES users(id) ON DELETE CASCADE,
+    scope               TEXT NOT NULL CHECK (scope IN ('system', 'user')),
+    setting_name        TEXT NOT NULL,
+    setting_value       TEXT,
+    setting_description TEXT,
+    setting_default     TEXT,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL
+);
 """
 
 _INDEX_SQL = """\
@@ -757,6 +850,46 @@ CREATE INDEX IF NOT EXISTS idx_ea_hash               ON entity_assets(hash);
 CREATE INDEX IF NOT EXISTS idx_addr_entity           ON addresses(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_phone_entity          ON phone_numbers(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_email_entity          ON email_addresses(entity_type, entity_id);
+
+-- Sessions
+CREATE INDEX IF NOT EXISTS idx_sessions_user         ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_customer     ON sessions(customer_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires      ON sessions(expires_at);
+
+-- User contacts / companies / provider accounts
+CREATE INDEX IF NOT EXISTS idx_user_contacts_user       ON user_contacts(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_contacts_contact    ON user_contacts(contact_id);
+CREATE INDEX IF NOT EXISTS idx_user_contacts_visibility ON user_contacts(visibility);
+CREATE INDEX IF NOT EXISTS idx_user_companies_user      ON user_companies(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_companies_company   ON user_companies(company_id);
+CREATE INDEX IF NOT EXISTS idx_user_companies_visibility ON user_companies(visibility);
+CREATE INDEX IF NOT EXISTS idx_upa_user                 ON user_provider_accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_upa_account              ON user_provider_accounts(account_id);
+
+-- Conversation shares
+CREATE INDEX IF NOT EXISTS idx_cs_conversation       ON conversation_shares(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_cs_user               ON conversation_shares(user_id);
+
+-- Settings
+CREATE INDEX IF NOT EXISTS idx_settings_customer     ON settings(customer_id);
+CREATE INDEX IF NOT EXISTS idx_settings_user         ON settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_settings_name         ON settings(setting_name);
+
+-- Tenant isolation (customer_id)
+CREATE INDEX IF NOT EXISTS idx_users_customer            ON users(customer_id);
+CREATE INDEX IF NOT EXISTS idx_provider_accounts_customer ON provider_accounts(customer_id);
+CREATE INDEX IF NOT EXISTS idx_contacts_customer         ON contacts(customer_id);
+CREATE INDEX IF NOT EXISTS idx_companies_customer        ON companies(customer_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_customer    ON conversations(customer_id);
+CREATE INDEX IF NOT EXISTS idx_projects_customer         ON projects(customer_id);
+CREATE INDEX IF NOT EXISTS idx_tags_customer             ON tags(customer_id);
+"""
+
+_SETTINGS_INDEX_SQL = """\
+CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_system_unique
+    ON settings(customer_id, setting_name) WHERE scope = 'system';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_user_unique
+    ON settings(customer_id, user_id, setting_name) WHERE scope = 'user';
 """
 
 
@@ -789,6 +922,7 @@ def init_db(db_path: Path | None = None) -> None:
         conn.execute("PRAGMA foreign_keys=ON;")
         conn.executescript(_SCHEMA_SQL)
         conn.executescript(_INDEX_SQL)
+        conn.executescript(_SETTINGS_INDEX_SQL)
         now = datetime.now(timezone.utc).isoformat()
         conn.executescript(_SEED_RELATIONSHIP_TYPES_SQL.format(now=now))
         conn.commit()

@@ -16,7 +16,7 @@
       <td>{{ conv.ai_status or conv.status or 'active' }}</td>
       <td>{{ conv.topic_name or '' }}</td>
       <td>{{ conv.communication_count }}</td>
-      <td>{{ conv.last_activity_at[:16] if conv.last_activity_at else '' }}</td>
+      <td>{{ conv.last_activity_at|datetime }}</td>
     </tr>
     {% endfor %}
   </tbody>

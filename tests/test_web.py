@@ -1789,3 +1789,96 @@ class TestSync:
 
         assert resp.status_code == 200
         assert "auth failed" in resp.text
+
+
+# ---------------------------------------------------------------------------
+# Date Display
+# ---------------------------------------------------------------------------
+
+class TestDateDisplay:
+    """Verify that <time> elements and timezone infrastructure are rendered."""
+
+    def test_dashboard_has_timezone_meta(self, client, tmp_db):
+        resp = client.get("/")
+        assert '<meta name="crm-timezone"' in resp.text
+
+    def test_dashboard_has_dates_js(self, client, tmp_db):
+        resp = client.get("/")
+        assert 'src="/static/dates.js"' in resp.text
+
+    def test_dashboard_recent_has_time_element(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_conversation(conn, "conv-1", "Thread")
+
+        resp = client.get("/")
+        assert "<time " in resp.text
+        assert 'data-format="datetime"' in resp.text
+
+    def test_conversation_list_has_time_element(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_conversation(conn, "conv-1", "Thread")
+
+        resp = client.get("/conversations")
+        assert "<time " in resp.text
+        assert 'data-format="datetime"' in resp.text
+
+    def test_conversation_search_partial_has_time_element(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_conversation(conn, "conv-1", "Thread")
+
+        resp = client.get("/conversations/search?q=Thread")
+        assert "<time " in resp.text
+
+    def test_conversation_detail_has_time_elements(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_account(conn)
+            _insert_conversation(conn, "conv-1", "Thread")
+            _insert_communication(conn, "msg-1", content="Hello")
+            _link_comm_to_conv(conn, "conv-1", "msg-1")
+
+        resp = client.get("/conversations/conv-1")
+        # Should have time elements for last_activity and message timestamp
+        assert resp.text.count("<time ") >= 2
+
+    def test_contact_detail_has_time_element(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_contact(conn, "ct-1", "Alice", "alice@a.com")
+            _insert_conversation(conn, "conv-1", "With Alice")
+            _insert_participant(conn, "conv-1", "alice@a.com", contact_id="ct-1")
+
+        resp = client.get("/contacts/ct-1")
+        assert "<time " in resp.text
+
+    def test_event_list_has_time_element(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_event(conn, "ev-1", "Standup")
+
+        resp = client.get("/events")
+        assert "<time " in resp.text
+        assert 'data-format="datetime"' in resp.text
+
+    def test_event_detail_has_time_elements(self, client, tmp_db):
+        with get_connection() as conn:
+            _insert_event(conn, "ev-1", "Standup")
+
+        resp = client.get("/events/ev-1")
+        assert "<time " in resp.text
+
+    def test_event_date_only_uses_date_format(self, client, tmp_db):
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO events "
+                "(id, title, event_type, start_date, status, source, "
+                "created_at, updated_at) "
+                "VALUES ('ev-d', 'All Day', 'meeting', '2026-03-01', "
+                "'confirmed', 'manual', ?, ?)",
+                (_NOW, _NOW),
+            )
+
+        resp = client.get("/events/ev-d")
+        assert 'data-format="date"' in resp.text
+
+    def test_dates_js_is_served(self, client, tmp_db):
+        resp = client.get("/static/dates.js")
+        assert resp.status_code == 200
+        assert "Intl.DateTimeFormat" in resp.text

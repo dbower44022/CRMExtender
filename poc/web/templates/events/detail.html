@@ -55,7 +55,7 @@
         <tr>
           <td><a href="/conversations/{{ conv.id }}">{{ conv.title or '(no subject)' }}</a></td>
           <td>{{ conv.ai_status or conv.status or 'active' }}</td>
-          <td>{{ conv.last_activity_at[:16] if conv.last_activity_at else '' }}</td>
+          <td>{{ conv.last_activity_at|datetime }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -74,18 +74,18 @@
 
         {% if event.start_datetime %}
         <dt>Start</dt>
-        <dd>{{ event.start_datetime[:16] }}</dd>
+        <dd>{{ event.start_datetime|datetime }}</dd>
         {% elif event.start_date %}
         <dt>Start Date</dt>
-        <dd>{{ event.start_date }}</dd>
+        <dd>{{ event.start_date|dateonly }}</dd>
         {% endif %}
 
         {% if event.end_datetime %}
         <dt>End</dt>
-        <dd>{{ event.end_datetime[:16] }}</dd>
+        <dd>{{ event.end_datetime|datetime }}</dd>
         {% elif event.end_date %}
         <dt>End Date</dt>
-        <dd>{{ event.end_date }}</dd>
+        <dd>{{ event.end_date|dateonly }}</dd>
         {% endif %}
 
         {% if event.is_all_day %}

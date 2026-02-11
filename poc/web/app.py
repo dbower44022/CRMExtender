@@ -37,6 +37,11 @@ def create_app() -> FastAPI:
     )
 
     templates = Jinja2Templates(directory=_HERE / "templates")
+
+    from .filters import register_filters
+    register_filters(templates)
+    templates.env.globals["CRM_TIMEZONE"] = config.CRM_TIMEZONE
+
     app.state.templates = templates
 
     from .routes import (

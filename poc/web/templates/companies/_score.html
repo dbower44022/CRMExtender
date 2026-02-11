@@ -29,7 +29,7 @@
     </table>
   </details>
   <small style="color:var(--pico-muted-color);">
-    Computed {{ score_data.computed_at[:16].replace('T', ' ') }}
+    Computed {{ score_data.computed_at|datetime }}
   </small>
   {% else %}
   <hr>

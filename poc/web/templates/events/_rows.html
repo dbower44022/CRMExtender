@@ -16,7 +16,7 @@
     <tr id="event-{{ e.id }}">
       <td><a href="/events/{{ e.id }}">{{ e.title }}</a></td>
       <td>{{ e.event_type }}</td>
-      <td>{{ e.start_datetime[:16] if e.start_datetime else (e.start_date or '') }}</td>
+      <td>{% if e.start_datetime %}{{ e.start_datetime|datetime }}{% else %}{{ e.start_date|dateonly }}{% endif %}</td>
       <td>{{ e.location or '' }}</td>
       <td>{{ e.status or 'confirmed' }}</td>
       <td>{{ e.source or '' }}</td>

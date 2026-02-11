@@ -5,7 +5,7 @@
 <hgroup>
   <h1>{{ conv.title or '(no subject)' }}</h1>
   <p>{{ communications|length }} message{{ 's' if communications|length != 1 else '' }}
-     &middot; Last activity: {{ conv.last_activity_at[:16] if conv.last_activity_at else 'N/A' }}</p>
+     &middot; Last activity: {% if conv.last_activity_at %}{{ conv.last_activity_at|datetime }}{% else %}N/A{% endif %}</p>
 </hgroup>
 
 <div class="grid">
@@ -18,7 +18,7 @@
         {% if msg.sender_address and msg.sender_name %}
           &lt;{{ msg.sender_address }}&gt;
         {% endif %}
-        &middot; {{ msg.timestamp[:16] if msg.timestamp else '' }}
+        &middot; {{ msg.timestamp|datetime }}
         {% for r in msg.recipients %}
           <br><small>{{ r.role }}: {{ r.name or r.address }}</small>
         {% endfor %}

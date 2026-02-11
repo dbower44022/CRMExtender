@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
@@ -51,6 +53,17 @@ CLAUDE_RATE_LIMIT = float(_env("POC_CLAUDE_RATE_LIMIT", "2"))
 
 # Database
 DB_PATH = Path(_env("POC_DB_PATH", "") or str(_PROJECT_ROOT / "data" / "crm_extender.db"))
+
+# Timezone for display (all storage remains UTC)
+_tz_name = _env("CRM_TIMEZONE", "UTC")
+try:
+    ZoneInfo(_tz_name)
+    CRM_TIMEZONE = _tz_name
+except (KeyError, Exception):
+    logging.getLogger(__name__).warning(
+        "Invalid CRM_TIMEZONE %r, falling back to UTC", _tz_name,
+    )
+    CRM_TIMEZONE = "UTC"
 
 # Summarization
 MAX_CONVERSATION_CHARS = int(_env("POC_MAX_CONVERSATION_CHARS", "6000"))

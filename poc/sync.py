@@ -196,9 +196,9 @@ def sync_contacts(
                 # Insert new contact + identifier
                 contact_id = str(uuid.uuid4())
                 conn.execute(
-                    """INSERT INTO contacts (id, name, company, company_id, source, status, created_at, updated_at)
-                       VALUES (?, ?, ?, ?, 'google_contacts', 'active', ?, ?)""",
-                    (contact_id, kc.name, kc.company, company_id, now, now),
+                    """INSERT INTO contacts (id, name, email, company, company_id, source, status, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, 'google_contacts', 'active', ?, ?)""",
+                    (contact_id, kc.name, email_lower, kc.company, company_id, now, now),
                 )
                 conn.execute(
                     """INSERT INTO contact_identifiers
@@ -285,12 +285,14 @@ def _store_thread(
         conv_id = str(uuid.uuid4())
         conn.execute(
             """INSERT INTO conversations
-               (id, title, status, communication_count, participant_count,
-                first_activity_at, last_activity_at, dismissed,
-                created_at, updated_at)
-               VALUES (?, ?, 'active', ?, 0, ?, ?, 0, ?, ?)""",
-            (conv_id, subject,
-             len(thread_emails), first_dt, last_dt, now, now),
+               (id, account_id, title, subject, status,
+                communication_count, message_count, participant_count,
+                first_activity_at, last_activity_at, first_message_at, last_message_at,
+                dismissed, created_at, updated_at)
+               VALUES (?, ?, ?, ?, 'active', ?, ?, 0, ?, ?, ?, ?, 0, ?, ?)""",
+            (conv_id, account_id, subject, subject,
+             len(thread_emails), len(thread_emails),
+             first_dt, last_dt, first_dt, last_dt, now, now),
         )
         conversation_created = True
 

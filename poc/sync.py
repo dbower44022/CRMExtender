@@ -413,14 +413,16 @@ def _store_thread(
 
         conn.execute(
             """INSERT INTO conversation_participants
-               (conversation_id, address, contact_id, communication_count, first_seen_at, last_seen_at)
-               VALUES (?, ?, ?, ?, ?, ?)
-               ON CONFLICT(conversation_id, address) DO UPDATE SET
+               (conversation_id, email_address, address, contact_id,
+                communication_count, first_seen_at, last_seen_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(conversation_id, email_address) DO UPDATE SET
+                   address = excluded.address,
                    contact_id = excluded.contact_id,
                    communication_count = excluded.communication_count,
                    first_seen_at = excluded.first_seen_at,
                    last_seen_at = excluded.last_seen_at""",
-            (conv_id, addr, contact_id, msg_count,
+            (conv_id, addr, addr, contact_id, msg_count,
              date_row["first_dt"], date_row["last_dt"]),
         )
 

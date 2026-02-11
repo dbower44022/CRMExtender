@@ -142,8 +142,11 @@ def _run_migration(conn: sqlite3.Connection) -> None:
         old_users = conn.execute("SELECT * FROM users").fetchall()
         print(f"  Found {len(old_users)} existing user(s) to migrate.")
 
-        # Rename old table
+        # Rename old table (disable legacy_alter_table to prevent SQLite
+        # from rewriting FK references in other tables to _users_old)
+        conn.execute("PRAGMA legacy_alter_table = ON")
         conn.execute("ALTER TABLE users RENAME TO _users_old")
+        conn.execute("PRAGMA legacy_alter_table = OFF")
 
         # Create new users table
         conn.execute("""\

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}System Settings{% endblock %}
+{% block content %}
+{% include "settings/_nav.html" %}
+
+<h2>System Settings</h2>
+
+{% if saved %}
+<article style="padding:0.5rem 1rem; background:var(--pico-ins-color);">
+  <p>Settings saved.</p>
+</article>
+{% endif %}
+
+<form method="post" action="/settings/system">
+  <label>Company name
+    <input type="text" name="company_name" value="{{ company_name }}">
+  </label>
+  <label>Default timezone
+    <select name="default_timezone">
+      {% for tz in timezones %}
+      <option value="{{ tz }}" {% if tz == default_tz %}selected{% endif %}>{{ tz }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    <input type="checkbox" name="sync_enabled" value="true"
+           {% if sync_enabled == 'true' %}checked{% endif %}>
+    Sync enabled
+  </label>
+  <button type="submit">Save</button>
+</form>
+{% endblock %}

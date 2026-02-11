@@ -26,6 +26,8 @@
     {% if user %}
     <ul>
       <li><small>{{ user.name or user.email }}</small></li>
+      <li><a href="/settings/profile" {% if active_nav == 'settings' %}class="active"{% endif %}
+          style="font-size:0.8rem;">Settings</a></li>
       <li>
         <form method="post" action="/logout" style="margin:0;">
           <button type="submit" class="outline secondary" style="padding:0.25rem 0.5rem; margin:0; font-size:0.8rem;">Logout</button>

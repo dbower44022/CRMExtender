@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Profile - Settings{% endblock %}
+{% block content %}
+{% include "settings/_nav.html" %}
+
+<h2>Profile</h2>
+
+{% if saved %}
+<article style="padding:0.5rem 1rem; background:var(--pico-ins-color);">
+  <p>Settings saved.</p>
+</article>
+{% endif %}
+{% if pw_changed %}
+<article style="padding:0.5rem 1rem; background:var(--pico-ins-color);">
+  <p>Password changed.</p>
+</article>
+{% endif %}
+{% if error %}
+<article style="padding:0.5rem 1rem; background:var(--pico-del-color);">
+  <p>{{ error }}</p>
+</article>
+{% endif %}
+
+<form method="post" action="/settings/profile">
+  <label>Name
+    <input type="text" name="name" value="{{ user.name or '' }}">
+  </label>
+  <label>Email
+    <input type="email" value="{{ user.email }}" disabled>
+  </label>
+  <label>Timezone
+    <select name="timezone">
+      {% for tz in timezones %}
+      <option value="{{ tz }}" {% if tz == current_tz %}selected{% endif %}>{{ tz }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Start of week
+    <select name="start_of_week">
+      <option value="monday" {% if start_of_week == 'monday' %}selected{% endif %}>Monday</option>
+      <option value="sunday" {% if start_of_week == 'sunday' %}selected{% endif %}>Sunday</option>
+    </select>
+  </label>
+  <label>Date format
+    <select name="date_format">
+      <option value="ISO" {% if date_format == 'ISO' %}selected{% endif %}>ISO (2026-02-11)</option>
+      <option value="US" {% if date_format == 'US' %}selected{% endif %}>US (02/11/2026)</option>
+      <option value="EU" {% if date_format == 'EU' %}selected{% endif %}>EU (11/02/2026)</option>
+    </select>
+  </label>
+  <button type="submit">Save</button>
+</form>
+
+<details>
+  <summary>Change password</summary>
+  <form method="post" action="/settings/profile/password" style="margin-top:1rem;">
+    <label>Current password
+      <input type="password" name="current_password">
+    </label>
+    <label>New password
+      <input type="password" name="new_password" minlength="8">
+    </label>
+    <label>Confirm new password
+      <input type="password" name="confirm_password" minlength="8">
+    </label>
+    <button type="submit" class="secondary">Change password</button>
+  </form>
+</details>
+{% endblock %}

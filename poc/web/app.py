@@ -27,6 +27,12 @@ class AuthTemplates(Jinja2Templates):
         context.setdefault("request", request)
         user = getattr(getattr(request, "state", None), "user", None)
         context.setdefault("user", user)
+        # Per-user timezone override
+        if user and user.get("customer_id") and user.get("id"):
+            from ..settings import get_setting
+            tz = get_setting(user["customer_id"], "timezone", user_id=user["id"])
+            if tz:
+                context["CRM_TIMEZONE"] = tz
         return super().TemplateResponse(request, name, context, **kwargs)
 
 
@@ -69,6 +75,7 @@ def create_app() -> FastAPI:
         events,
         projects,
         relationships,
+        settings_routes,
     )
 
     app.include_router(auth_routes.router)
@@ -79,5 +86,6 @@ def create_app() -> FastAPI:
     app.include_router(projects.router, prefix="/projects")
     app.include_router(relationships.router, prefix="/relationships")
     app.include_router(events.router, prefix="/events")
+    app.include_router(settings_routes.router)
 
     return app

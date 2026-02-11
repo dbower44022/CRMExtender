@@ -128,6 +128,87 @@ def set_user_password(user_id: str, password: str) -> bool:
     return changed > 0
 
 
+def list_users(customer_id: str) -> list[dict]:
+    """Return all users for a customer, ordered by name then email."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM users WHERE customer_id = ? ORDER BY name, email",
+            (customer_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_user_by_id(user_id: str) -> dict | None:
+    """Look up a user by ID. Returns dict or None."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def create_user(
+    customer_id: str,
+    email: str,
+    name: str,
+    role: str = "user",
+    *,
+    password: str | None = None,
+) -> dict:
+    """Create a new user. Returns the inserted row as dict.
+
+    Raises ValueError if a user with that email already exists for the customer.
+    """
+    with get_connection() as conn:
+        dup = conn.execute(
+            "SELECT id FROM users WHERE customer_id = ? AND email = ?",
+            (customer_id, email),
+        ).fetchone()
+        if dup:
+            raise ValueError(f"User with email '{email}' already exists.")
+
+        pw_hash = ""
+        if password:
+            from .passwords import hash_password
+            pw_hash = hash_password(password)
+
+        user = User(
+            email=email,
+            name=name,
+            customer_id=customer_id,
+            role=role,
+            password_hash=pw_hash,
+        )
+        row = user.to_row()
+        conn.execute(
+            "INSERT INTO users "
+            "(id, customer_id, email, name, role, is_active, "
+            "password_hash, google_sub, created_at, updated_at) "
+            "VALUES (:id, :customer_id, :email, :name, :role, :is_active, "
+            ":password_hash, :google_sub, :created_at, :updated_at)",
+            row,
+        )
+    return row
+
+
+def update_user(user_id: str, **fields) -> dict | None:
+    """Update a user's fields (name, role, is_active only). Returns updated row or None."""
+    allowed = {"name", "role", "is_active"}
+    updates = {k: v for k, v in fields.items() if k in allowed}
+    if not updates:
+        return None
+    now = datetime.now(timezone.utc).isoformat()
+    updates["updated_at"] = now
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [user_id]
+    with get_connection() as conn:
+        conn.execute(f"UPDATE users SET {set_clause} WHERE id = ?", values)
+        row = conn.execute(
+            "SELECT * FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
 # ---------------------------------------------------------------------------
 # Companies
 # ---------------------------------------------------------------------------

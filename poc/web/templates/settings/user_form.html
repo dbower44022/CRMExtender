@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'create' %}Create User{% else %}Edit User{% endif %} - Settings{% endblock %}
+{% block content %}
+{% include "settings/_nav.html" %}
+
+<h2>{% if mode == 'create' %}Create User{% else %}Edit User{% endif %}</h2>
+
+{% if error %}
+<article style="padding:0.5rem 1rem; background:var(--pico-del-color);">
+  <p>{{ error }}</p>
+</article>
+{% endif %}
+
+<form method="post"
+      action="{% if mode == 'create' %}/settings/users{% else %}/settings/users/{{ edit_user.id }}/edit{% endif %}">
+  <label>Name
+    <input type="text" name="name" value="{{ edit_user.name or '' }}">
+  </label>
+  <label>Email
+    {% if mode == 'create' %}
+    <input type="email" name="email" value="{{ edit_user.email or '' }}" required>
+    {% else %}
+    <input type="email" value="{{ edit_user.email }}" disabled>
+    {% endif %}
+  </label>
+  <label>Role
+    <select name="role">
+      <option value="user" {% if edit_user.get('role') == 'user' %}selected{% endif %}>User</option>
+      <option value="admin" {% if edit_user.get('role') == 'admin' %}selected{% endif %}>Admin</option>
+    </select>
+  </label>
+  {% if mode == 'create' %}
+  <label>Password
+    <input type="password" name="password" minlength="8">
+  </label>
+  {% endif %}
+  <button type="submit">{% if mode == 'create' %}Create{% else %}Save{% endif %}</button>
+  <a href="/settings/users" role="button" class="secondary outline">Cancel</a>
+</form>
+
+{% if mode == 'edit' %}
+<details style="margin-top:2rem;">
+  <summary>Set password</summary>
+  <form method="post" action="/settings/users/{{ edit_user.id }}/password" style="margin-top:1rem;">
+    <label>New password
+      <input type="password" name="new_password" minlength="8">
+    </label>
+    <label>Confirm password
+      <input type="password" name="confirm_password" minlength="8">
+    </label>
+    <button type="submit" class="secondary">Set password</button>
+  </form>
+</details>
+{% endif %}
+{% endblock %}

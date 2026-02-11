@@ -1,7 +1,7 @@
 # Data Model & Database Design
 
 This document describes the persistent data layer that backs the CRM
-Extender pipeline.  It covers the SQLite schema (v7, 39 tables), every
+Extender pipeline.  It covers the SQLite schema (v8, 46 tables), every
 table and column, the relationships between entities, the serialization
 layer that maps Python dataclasses to database rows, the indexing
 strategy, and the data flows that populate and query the database.
@@ -17,7 +17,7 @@ strategy, and the data flows that populate and query the database.
 | `poc/auto_assign.py` | Bulk auto-assign conversations to topics by tag/title matching |
 | `poc/contacts_client.py` | Google People API client (names, emails, organizations) |
 | `poc/relationship_inference.py` | Contact relationship inference from co-occurrence data |
-| `poc/config.py` | `DB_PATH` and `CRM_TIMEZONE` settings |
+| `poc/config.py` | `DB_PATH`, `CRM_TIMEZONE`, auth, and session settings |
 | `poc/relationship_types.py` | Relationship type CRUD (create, list, get, update, delete) |
 | `poc/enrichment_provider.py` | Enrichment provider interface, registry, SourceTier enum |
 | `poc/enrichment_pipeline.py` | Enrichment orchestration, conflict resolution, field apply |
@@ -30,6 +30,10 @@ strategy, and the data flows that populate and query the database.
 | `poc/migrate_to_v5.py` | Schema migration: v4 to v5 (bidirectional relationships) |
 | `poc/migrate_to_v6.py` | Schema migration: v5 to v6 (events system) |
 | `poc/migrate_to_v7.py` | Schema migration: v6 to v7 (company intelligence) |
+| `poc/migrate_to_v8.py` | Schema migration: v7 to v8 (multi-user, customers, sessions, settings) |
+| `poc/session.py` | Session CRUD (create, get, delete, cleanup) |
+| `poc/settings.py` | Settings CRUD with 4-level cascade resolution |
+| `poc/access.py` | Tenant-scoped query helpers (visible contacts/companies/conversations) |
 
 ---
 
@@ -80,6 +84,7 @@ from DB rows when needed for triage, summarization, or display.
 | v5 | 23 | Bidirectional relationships: added `is_bidirectional` to `relationship_types`, `paired_relationship_id` to `relationships` |
 | v6 | 26 | Events system: added `events`, `event_participants`, `event_conversations` tables for calendar tracking |
 | v7 | 39 | Company intelligence: added `company_identifiers`, `company_hierarchy`, `company_merges`, `company_social_profiles`, `contact_social_profiles`, `enrichment_runs`, `enrichment_field_values`, `entity_scores`, `monitoring_preferences`, `entity_assets`, `addresses`, `phone_numbers`, `email_addresses`.  New columns on `companies`: `website`, `stock_symbol`, `size_range`, `employee_count`, `founded_year`, `revenue_range`, `funding_total`, `funding_stage`, `headquarters_location`. |
+| v8 | 46 | Multi-user & multi-tenant: added `customers` (tenant table), `sessions`, `user_contacts`, `user_companies`, `user_provider_accounts`, `conversation_shares`, `settings`.  Recreated `users` with `customer_id` FK, `password_hash`, `google_sub`, role values `admin`/`user`.  Added `customer_id` column to `provider_accounts`, `contacts`, `companies`, `conversations`, `projects`, `tags`, `relationship_types`. |
 
 ---
 
@@ -87,18 +92,32 @@ from DB rows when needed for triage, summarization, or display.
 
 ```
 +------------------+
+|    customers     |
+|  (tenant)        |
+|------------------|
+| PK id            |
+|    name          |
+|    slug (UNIQ)   |
+|    is_active     |
++--------+---------+
+         |
+         | FK customer_id
+         |
++--------+---------+
 |      users       |
 |------------------|     +-------------------+
 | PK id            |     |    companies      |
-|    email (UNIQ)  |     |-------------------|
-|    name          |     | PK id             |
+| FK customer_id   |     |-------------------|
+|    email         |     | PK id             |
+|    name          |     | FK customer_id    |
 |    role          |     |    name (UNIQ)    |
 |    is_active     |     |    domain         |
-+--------+---------+     |    industry       |
-         |               |    status         |
-         | FK created_by |    created_by ----+---> users
-         | FK updated_by |    updated_by ----+---> users
-         |               +--------+----------+
+|    password_hash |     |    industry       |
+|    google_sub    |     |    status         |
++--------+---------+     |    created_by ----+---> users
+         |               |    updated_by ----+---> users
+         | FK created_by +--------+----------+
+         | FK updated_by
          |                        |
          |                        | FK company_id
          |                        |
@@ -217,6 +236,26 @@ from DB rows when needed for triage, summarization, or display.
 | `companies` | `company_social_profiles` | 1:N | `company_id` | CASCADE |
 | `contacts` | `contact_social_profiles` | 1:N | `contact_id` | CASCADE |
 | `enrichment_runs` | `enrichment_field_values` | 1:N | `enrichment_run_id` | CASCADE |
+| `customers` | `users` | 1:N | `customer_id` | CASCADE |
+| `customers` | `provider_accounts` | 1:N | `customer_id` | *(nullable)* |
+| `customers` | `contacts` | 1:N | `customer_id` | *(nullable)* |
+| `customers` | `companies` | 1:N | `customer_id` | *(nullable)* |
+| `customers` | `conversations` | 1:N | `customer_id` | *(nullable)* |
+| `customers` | `projects` | 1:N | `customer_id` | *(nullable)* |
+| `customers` | `tags` | 1:N | `customer_id` | *(nullable)* |
+| `customers` | `relationship_types` | 1:N | `customer_id` | *(nullable)* |
+| `customers` | `sessions` | 1:N | `customer_id` | CASCADE |
+| `customers` | `settings` | 1:N | `customer_id` | CASCADE |
+| `users` | `sessions` | 1:N | `user_id` | CASCADE |
+| `users` | `user_contacts` | 1:N | `user_id` | CASCADE |
+| `users` | `user_companies` | 1:N | `user_id` | CASCADE |
+| `users` | `user_provider_accounts` | 1:N | `user_id` | CASCADE |
+| `users` | `conversation_shares` | 1:N | `user_id` | CASCADE |
+| `users` | `settings` | 1:N | `user_id` | CASCADE |
+| `contacts` | `user_contacts` | 1:N | `contact_id` | CASCADE |
+| `companies` | `user_companies` | 1:N | `company_id` | CASCADE |
+| `provider_accounts` | `user_provider_accounts` | 1:N | `account_id` | CASCADE |
+| `conversations` | `conversation_shares` | 1:N | `conversation_id` | CASCADE |
 
 ---
 
@@ -245,23 +284,50 @@ overridable via the `POC_DB_PATH` environment variable.
 
 ## Table Reference
 
-### 1. `users`
+### 0. `customers` (tenant)
 
-Minimal user table for ownership and audit tracking.  FK target for
-`created_by`/`updated_by` columns throughout the schema.
+Top-level tenant table.  All data is scoped to a customer.  Phase 1
+creates a single default customer (`cust-default`); full multi-tenant
+support is planned for a future release.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `id` | TEXT | **PK** | UUID v4. |
-| `email` | TEXT | NOT NULL, UNIQUE | User's email address. |
-| `name` | TEXT | | Display name. |
-| `role` | TEXT | DEFAULT `'member'` | User role (`'member'`, `'admin'`). |
+| `id` | TEXT | **PK** | Stable identifier (e.g. `'cust-default'`). |
+| `name` | TEXT | NOT NULL | Organization name. |
+| `slug` | TEXT | NOT NULL, **UNIQUE** | URL-safe identifier. |
 | `is_active` | INTEGER | DEFAULT 1 | Boolean (0/1). |
 | `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 | `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 
+**Populated by:** `migrate_to_v8.py` (seeds default customer),
+`hierarchy.bootstrap_user()` (ensures default customer exists).
+
+### 1. `users`
+
+User accounts within a customer (tenant).  FK target for
+`created_by`/`updated_by` columns throughout the schema.  Supports
+two authentication methods: Google OAuth (`google_sub`) and
+username/password (`password_hash`).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `customer_id` | TEXT | NOT NULL, FK -> `customers(id)` | Tenant.  ON DELETE CASCADE. |
+| `email` | TEXT | NOT NULL | User's email address. |
+| `name` | TEXT | | Display name. |
+| `role` | TEXT | DEFAULT `'user'` | CHECK: `'admin'` or `'user'`. |
+| `is_active` | INTEGER | DEFAULT 1 | Boolean (0/1). |
+| `password_hash` | TEXT | | bcrypt hash.  NULL for Google-only users. |
+| `google_sub` | TEXT | | Google OAuth subject ID for login. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(customer_id, email)` -- email uniqueness is
+scoped to the customer, not global.
+
 **Populated by:** `hierarchy.bootstrap_user()`, which auto-creates a
-user from the first `provider_accounts` email.
+user from the first `provider_accounts` email with `role='admin'`
+and `customer_id='cust-default'`.
 
 ### 2. `companies`
 
@@ -272,6 +338,7 @@ via the CLI.
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | TEXT | **PK** | UUID v4. |
+| `customer_id` | TEXT | FK -> `customers(id)` | Tenant scope (v8). |
 | `name` | TEXT | NOT NULL, **UNIQUE** | Company name.  The unique index `idx_companies_name` enforces no duplicates. |
 | `domain` | TEXT | | Company domain (e.g. `'acme.com'`). |
 | `industry` | TEXT | | Industry classification. |
@@ -309,6 +376,7 @@ synchronization state.
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | TEXT | **PK** | UUID v4.  Generated by `sync.register_account()`. |
+| `customer_id` | TEXT | FK -> `customers(id)` | Tenant scope (v8). |
 | `provider` | TEXT | NOT NULL | Provider identifier (`'gmail'`; future: `'outlook'`, `'imap'`). |
 | `account_type` | TEXT | NOT NULL, DEFAULT `'email'` | Channel type. |
 | `email_address` | TEXT | | Account email address, lowercased. |
@@ -332,6 +400,7 @@ People API.  Contacts are global (not per-account).
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | TEXT | **PK** | UUID v4. |
+| `customer_id` | TEXT | FK -> `customers(id)` | Tenant scope (v8). |
 | `name` | TEXT | | Display name from contact source. |
 | `company` | TEXT | | Company name as text (backward compat; kept in sync with `company_id`). |
 | `company_id` | TEXT | FK -> `companies(id)` | Link to the `companies` table.  ON DELETE SET NULL. |
@@ -378,6 +447,7 @@ contain topics, which in turn organize conversations.
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | TEXT | **PK** | UUID v4. |
+| `customer_id` | TEXT | FK -> `customers(id)` | Tenant scope (v8). |
 | `parent_id` | TEXT | FK -> `projects(id)` | Parent project for nesting.  ON DELETE CASCADE. |
 | `name` | TEXT | NOT NULL | Project name. |
 | `description` | TEXT | | Free-text description. |
@@ -415,6 +485,7 @@ results, and organizational assignment.
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | TEXT | **PK** | UUID v4. |
+| `customer_id` | TEXT | FK -> `customers(id)` | Tenant scope (v8). |
 | `topic_id` | TEXT | FK -> `topics(id)` | Organizational topic assignment.  ON DELETE SET NULL. |
 | `title` | TEXT | | Subject line from the first communication. |
 | `status` | TEXT | DEFAULT `'active'` | System status. |
@@ -557,6 +628,7 @@ AI-extracted keyword phrases.  Distinct from organizational `topics`.
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | TEXT | **PK** | UUID v4. |
+| `customer_id` | TEXT | FK -> `customers(id)` | Tenant scope (v8). |
 | `name` | TEXT | NOT NULL, UNIQUE | Lowercase, trimmed tag string. |
 | `source` | TEXT | DEFAULT `'ai'` | How created: `'ai'`, `'manual'`. |
 | `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
@@ -660,6 +732,7 @@ types, directional labels, and whether relationships are bidirectional.
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | TEXT | **PK** | Stable identifier (e.g., `rt-knows`). |
+| `customer_id` | TEXT | FK -> `customers(id)` | Tenant scope (v8).  NULL for system seed types. |
 | `name` | TEXT | NOT NULL, **UNIQUE** | Type name (e.g., `KNOWS`). |
 | `from_entity_type` | TEXT | NOT NULL, DEFAULT `'contact'` | CHECK: `contact` or `company`. |
 | `to_entity_type` | TEXT | NOT NULL, DEFAULT `'contact'` | CHECK: `contact` or `company`. |
@@ -983,6 +1056,119 @@ Entity-agnostic multi-value email addresses for companies and contacts.
 | `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 | `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
 
+### 40. `sessions`
+
+Server-side session store for authenticated users.  Session IDs are
+stored in signed cookies.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4, stored in the `crm_session` cookie. |
+| `user_id` | TEXT | NOT NULL, FK -> `users(id)` | ON DELETE CASCADE. |
+| `customer_id` | TEXT | NOT NULL, FK -> `customers(id)` | ON DELETE CASCADE. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `expires_at` | TEXT | NOT NULL | ISO 8601 timestamp.  Default TTL: 30 days. |
+| `ip_address` | TEXT | | Client IP at session creation. |
+| `user_agent` | TEXT | | Client User-Agent at session creation. |
+
+**Populated by:** `session.create_session()`.
+
+**Cleaned up by:** `session.cleanup_expired_sessions()`.
+
+### 41. `user_contacts` (per-user contact visibility)
+
+Junction table linking users to contacts with visibility control.  A
+contact is "public" if any user has `visibility = 'public'`; it is
+"private" only if all linked users mark it private.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `user_id` | TEXT | NOT NULL, FK -> `users(id)` | ON DELETE CASCADE. |
+| `contact_id` | TEXT | NOT NULL, FK -> `contacts(id)` | ON DELETE CASCADE. |
+| `visibility` | TEXT | NOT NULL, DEFAULT `'public'` | CHECK: `'public'` or `'private'`. |
+| `is_owner` | INTEGER | NOT NULL, DEFAULT 0 | Whether this user originally created/imported the contact. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(user_id, contact_id)`.
+
+### 42. `user_companies` (per-user company visibility)
+
+Junction table linking users to companies with visibility control.
+Same visibility semantics as `user_contacts`.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `user_id` | TEXT | NOT NULL, FK -> `users(id)` | ON DELETE CASCADE. |
+| `company_id` | TEXT | NOT NULL, FK -> `companies(id)` | ON DELETE CASCADE. |
+| `visibility` | TEXT | NOT NULL, DEFAULT `'public'` | CHECK: `'public'` or `'private'`. |
+| `is_owner` | INTEGER | NOT NULL, DEFAULT 0 | Whether this user originally created/imported the company. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(user_id, company_id)`.
+
+### 43. `user_provider_accounts` (shared account access)
+
+Links users to provider accounts.  An account owner can share access
+with other users in the same customer.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `user_id` | TEXT | NOT NULL, FK -> `users(id)` | ON DELETE CASCADE. |
+| `account_id` | TEXT | NOT NULL, FK -> `provider_accounts(id)` | ON DELETE CASCADE. |
+| `role` | TEXT | NOT NULL, DEFAULT `'owner'` | CHECK: `'owner'` or `'shared'`. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(user_id, account_id)`.
+
+### 44. `conversation_shares` (explicit sharing)
+
+Allows users to explicitly share conversations with other users,
+independent of provider account access.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `conversation_id` | TEXT | NOT NULL, FK -> `conversations(id)` | ON DELETE CASCADE. |
+| `user_id` | TEXT | NOT NULL, FK -> `users(id)` | ON DELETE CASCADE. |
+| `shared_by` | TEXT | FK -> `users(id)` | Who shared this conversation.  ON DELETE SET NULL. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraint:** `(conversation_id, user_id)`.
+
+### 45. `settings` (unified key-value)
+
+Unified settings store for both system-wide (admin-editable) and
+per-user preferences.  Supports a 4-level cascade resolution:
+user-specific value -> system value -> setting_default -> hardcoded fallback.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | **PK** | UUID v4. |
+| `customer_id` | TEXT | NOT NULL, FK -> `customers(id)` | ON DELETE CASCADE. |
+| `user_id` | TEXT | FK -> `users(id)` | NULL for system-scope settings.  ON DELETE CASCADE. |
+| `scope` | TEXT | NOT NULL | CHECK: `'system'` or `'user'`. |
+| `setting_name` | TEXT | NOT NULL | Setting key (e.g. `'timezone'`, `'date_format'`). |
+| `setting_value` | TEXT | | Current value.  NULL means "use default". |
+| `setting_description` | TEXT | | Human-readable description. |
+| `setting_default` | TEXT | | Default value for this setting. |
+| `created_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+| `updated_at` | TEXT | NOT NULL | ISO 8601 timestamp. |
+
+**Unique constraints:** Enforced via partial unique indexes (SQLite
+NULL-safe):
+- `idx_settings_system_unique` on `(customer_id, setting_name)` WHERE
+  `scope = 'system'`
+- `idx_settings_user_unique` on `(customer_id, user_id, setting_name)`
+  WHERE `scope = 'user'`
+
+**Populated by:** `settings.seed_default_settings()` (called during
+migration and bootstrap), `settings.set_setting()` (manual updates).
+
 ---
 
 ## Indexes
@@ -1138,12 +1324,65 @@ All use `CREATE INDEX IF NOT EXISTS` for idempotent creation.
 | `idx_phone_entity` | `phone_numbers(entity_type, entity_id)` | Phone numbers for an entity. |
 | `idx_email_entity` | `email_addresses(entity_type, entity_id)` | Email addresses for an entity. |
 
+### Multi-user (v8)
+
+| Index | Column(s) | Supports |
+|-------|-----------|----------|
+| `idx_sessions_user` | `sessions(user_id)` | All sessions for a user. |
+| `idx_sessions_expires` | `sessions(expires_at)` | Cleanup of expired sessions. |
+| `idx_uc_user` | `user_contacts(user_id)` | Contacts visible to a user. |
+| `idx_uc_contact` | `user_contacts(contact_id)` | Users linked to a contact. |
+| `idx_uco_user` | `user_companies(user_id)` | Companies visible to a user. |
+| `idx_uco_company` | `user_companies(company_id)` | Users linked to a company. |
+| `idx_upa_user` | `user_provider_accounts(user_id)` | Provider accounts for a user. |
+| `idx_upa_account` | `user_provider_accounts(account_id)` | Users with access to an account. |
+| `idx_cs_conversation` | `conversation_shares(conversation_id)` | Users a conversation is shared with. |
+| `idx_cs_user` | `conversation_shares(user_id)` | Conversations shared with a user. |
+| `idx_settings_customer` | `settings(customer_id)` | Settings for a customer. |
+| `idx_settings_user` | `settings(user_id)` | Settings for a user. |
+| `idx_settings_system_unique` | `settings(customer_id, setting_name)` WHERE `scope='system'` UNIQUE | System setting dedup. |
+| `idx_settings_user_unique` | `settings(customer_id, user_id, setting_name)` WHERE `scope='user'` UNIQUE | User setting dedup. |
+| `idx_pa_customer` | `provider_accounts(customer_id)` | Accounts in a tenant. |
+| `idx_contacts_customer` | `contacts(customer_id)` | Contacts in a tenant. |
+| `idx_companies_customer` | `companies(customer_id)` | Companies in a tenant. |
+| `idx_conv_customer` | `conversations(customer_id)` | Conversations in a tenant. |
+| `idx_projects_customer` | `projects(customer_id)` | Projects in a tenant. |
+| `idx_tags_customer` | `tags(customer_id)` | Tags in a tenant. |
+
 ---
 
 ## Serialization Layer (`models.py`)
 
 The Python dataclasses include `to_row()` and `from_row()` methods that
 handle conversion between in-memory objects and database rows.
+
+### `Customer`
+
+| Method | Direction | Notes |
+|--------|-----------|-------|
+| `to_row(customer_id=None)` | Object -> `customers` row | Generates UUID if not provided. |
+| `from_row(row)` | `customers` row -> Object | Maps name, slug, is_active. |
+
+### `User`
+
+| Method | Direction | Notes |
+|--------|-----------|-------|
+| `to_row(user_id=None)` | Object -> `users` row | Generates UUID if not provided.  Includes `customer_id`, `password_hash`, `google_sub`. |
+| `from_row(row)` | `users` row -> Object | Role defaults to `'user'`.  `is_active` converted from int to bool. |
+
+### `Session`
+
+| Method | Direction | Notes |
+|--------|-----------|-------|
+| `to_row(session_id=None)` | Object -> `sessions` row | Generates UUID if not provided.  Includes `customer_id`, `expires_at`, `ip_address`, `user_agent`. |
+| `from_row(row)` | `sessions` row -> Object | |
+
+### `Setting`
+
+| Method | Direction | Notes |
+|--------|-----------|-------|
+| `to_row(setting_id=None)` | Object -> `settings` row | Generates UUID if not provided.  Includes `customer_id`, `scope`, `setting_name`, `setting_value`, `user_id`. |
+| `from_row(row)` | `settings` row -> Object | |
 
 ### `Company`
 
@@ -1508,6 +1747,12 @@ with an auto-accept threshold of confidence >= 0.7.
 | `company_identifiers` | `(type, value)` | Check-then-insert | Existing row reused |
 | `company_social_profiles` | `(company_id, platform, profile_url)` | `INSERT ... ON CONFLICT DO UPDATE` | Username/source/confidence refreshed |
 | `entity_scores` | `(entity_type, entity_id, score_type)` | `INSERT ... ON CONFLICT DO UPDATE` | Score value, factors, timestamp refreshed |
+| `settings` (system) | `(customer_id, setting_name)` WHERE `scope='system'` | `INSERT ... ON CONFLICT DO UPDATE` | Value and description refreshed |
+| `settings` (user) | `(customer_id, user_id, setting_name)` WHERE `scope='user'` | `INSERT ... ON CONFLICT DO UPDATE` | Value refreshed |
+| `user_contacts` | `(user_id, contact_id)` | Check-then-insert | Existing row reused |
+| `user_companies` | `(user_id, company_id)` | Check-then-insert | Existing row reused |
+| `user_provider_accounts` | `(user_id, account_id)` | Check-then-insert | Existing row reused |
+| `conversation_shares` | `(conversation_id, user_id)` | Check-then-insert | Existing row reused |
 
 ---
 
@@ -1517,6 +1762,9 @@ with an auto-accept threshold of confidence >= 0.7.
 |---------|-------------|---------|-------------|
 | `DB_PATH` | `POC_DB_PATH` | `data/crm_extender.db` | Path to the SQLite database file.  Parent directories are created automatically by `init_db()`. |
 | `CRM_TIMEZONE` | `CRM_TIMEZONE` | `UTC` | IANA timezone for display-layer date conversion.  All storage remains UTC; this setting only affects web UI rendering via `Intl.DateTimeFormat`.  Invalid values log a warning and fall back to UTC. |
+| `CRM_AUTH_ENABLED` | `CRM_AUTH_ENABLED` | `true` | Enable/disable authentication middleware.  Set to `false` during development to bypass login. |
+| `SESSION_SECRET_KEY` | `SESSION_SECRET_KEY` | `change-me-in-production` | Secret key for signing session cookies (itsdangerous). |
+| `SESSION_TTL_HOURS` | `SESSION_TTL_HOURS` | `720` | Session time-to-live in hours (default: 30 days). |
 
 The database file and its WAL/SHM companions are excluded from version
 control via `.gitignore` (`data/` directory).

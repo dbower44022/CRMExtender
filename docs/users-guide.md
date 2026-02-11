@@ -185,7 +185,7 @@ These commands manage the project/topic hierarchy for organizing
 conversations.
 
 ```bash
-# User setup (auto-creates from first provider account)
+# User setup (auto-creates from first provider account, default customer, admin role)
 python -m poc bootstrap-user
 
 # Companies
@@ -527,6 +527,9 @@ All settings are loaded from environment variables.  Place them in the
 | `POC_MAX_CONVERSATION_CHARS` | `6000`                     | Max conversation characters sent to Claude      |
 | `POC_DB_PATH`                | `data/crm_extender.db`     | SQLite database location                        |
 | `CRM_TIMEZONE`               | `UTC`                      | IANA timezone for date display (e.g. `America/New_York`) |
+| `CRM_AUTH_ENABLED`           | `true`                     | Enable/disable login requirement (`false` to bypass) |
+| `SESSION_SECRET_KEY`         | `change-me-in-production`  | Secret for signing session cookies |
+| `SESSION_TTL_HOURS`          | `720`                      | Session lifetime in hours (default: 30 days) |
 
 ---
 
@@ -565,6 +568,9 @@ CRMExtender/
     triage.py                     # Heuristic junk filtering
     domain_resolver.py            # Domain-to-company resolution logic
     website_scraper.py            # Website scraper enrichment provider
+    session.py                    # Session CRUD (create, get, delete, cleanup)
+    settings.py                   # Settings CRUD with 4-level cascade resolution
+    access.py                     # Tenant-scoped query helpers (data visibility)
     audit_parser.py               # Audit tool: compare old vs new parsing
     migrate_strip_boilerplate.py  # Migration: re-strip stored emails
     migrate_refetch_emails.py     # Migration: re-fetch emails from Gmail
@@ -574,6 +580,7 @@ CRMExtender/
     migrate_to_v5.py              # Migration: v4 to v5 (bidirectional relationships)
     migrate_to_v6.py              # Migration: v5 to v6 (events)
     migrate_to_v7.py              # Migration: v6 to v7 (company intelligence)
+    migrate_to_v8.py              # Migration: v7 to v8 (multi-user)
     web/                          # Web UI (FastAPI + HTMX)
       app.py                      # Application factory
       filters.py                  # Jinja2 date/time filters (|datetime, |dateonly)
@@ -791,6 +798,32 @@ headquarters_location).
 ```bash
 python3 -m poc.migrate_to_v7 --dry-run
 python3 -m poc.migrate_to_v7
+```
+
+### Migration: v7 to v8 Schema
+
+Adds multi-user and multi-tenant support:
+
+- **`customers`** table (tenant).  Default customer `cust-default`
+  created for all existing data.
+- **`users`** table recreated with `customer_id` FK, `password_hash`,
+  `google_sub`, and role values `admin`/`user` (replaces `member`).
+  Existing user promoted to `admin`.
+- **`customer_id`** column added to `provider_accounts`, `contacts`,
+  `companies`, `conversations`, `projects`, `tags`, `relationship_types`.
+  All existing rows backfilled with `cust-default`.
+- **`sessions`** -- server-side session store.
+- **`user_contacts`**, **`user_companies`** -- per-user data visibility
+  (public/private).  Existing contacts/companies seeded as public.
+- **`user_provider_accounts`** -- shared provider account access.
+  Existing user linked to all accounts as owner.
+- **`conversation_shares`** -- explicit conversation sharing.
+- **`settings`** -- unified key-value settings (system + user scope).
+  Default settings seeded.
+
+```bash
+python3 -m poc migrate-to-v8 --dry-run
+python3 -m poc migrate-to-v8
 ```
 
 All migration scripts create a timestamped backup before making changes

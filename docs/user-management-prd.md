@@ -4,7 +4,7 @@
 
 **Version:** 1.0
 **Date:** 2026-02-10
-**Status:** Phase 3 Implemented (route filtering & data scoping)
+**Status:** Phase 6 Implemented (phone number normalization)
 **Parent Documents:** [CRMExtender PRD v1.1](PRD.md), [Data Layer PRD](data-layer-prd.md)
 
 ---
@@ -96,7 +96,7 @@ completely open.  This creates several problems:
   management UI, per-customer billing, and cross-customer isolation are
   out of scope.
 - ~~**OAuth login flow**~~ — password-based authentication implemented
-  in Phase 2.  Google OAuth login remains deferred.
+  in Phase 2.  Google OAuth login implemented in Phase 5.
 - ~~**Route-level filtering**~~ — implemented in Phase 3.  All web UI
   queries are now scoped by customer and user visibility.
 - **RBAC beyond admin/user** — two roles are sufficient for Phase 1.
@@ -371,9 +371,10 @@ User B syncs or adds an email that matches User A's private contact:
 1. **Username/Password** (Implemented) — bcrypt-hashed password stored
    in `users.password_hash`.  Managed via CLI
    (`set-password`, `bootstrap-user --password`).
-2. **Google OAuth** (Deferred) — separate from the existing Gmail API
-   OAuth.  Uses `openid email profile` scopes for identity only.
-   Matches user by `google_sub` or `email` within customer.
+2. **Google OAuth** (Implemented — Phase 5) — separate from the existing
+   Gmail API OAuth.  Uses `openid email profile` scopes for identity
+   only.  Matches user by `google_sub` or `email` within customer.
+   Reuses the installed-app `client_secret.json`.
 
 ### 6.2 Session management
 
@@ -482,6 +483,7 @@ setting to be explicitly set per-user.
 | `default_timezone` | `UTC` | Default timezone for new users. |
 | `company_name` | *(customer name)* | Organization display name. |
 | `sync_enabled` | `true` | Enable/disable automatic sync. |
+| `default_phone_country` | `US` | Default country for phone number normalization (ISO 3166-1 alpha-2). |
 
 ### 8.3 Default user settings
 
@@ -605,12 +607,10 @@ full query and return lists of dicts.
 
 ## 10. Migration Path
 
-File: `poc/migrate_to_v8.py`
+### v7 → v8: Multi-user schema (`poc/migrate_to_v8.py`)
 
 The migration follows the established pattern: backup, sequential
 steps, validation, `--dry-run` support, `--db PATH` override.
-
-### Steps
 
 | Step | Action |
 |------|--------|
@@ -627,14 +627,21 @@ steps, validation, `--dry-run` support, `--db PATH` override.
 | 16 | Create all new indexes |
 | 17 | Validate — table existence, column presence, row count integrity, no NULL customer_ids |
 
-### Idempotency
+Idempotency: `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ADD COLUMN`
+skips if exists, `INSERT OR IGNORE` for seed data, `UPDATE ... WHERE
+customer_id IS NULL` for backfill.
 
-All steps are idempotent:
-- `CREATE TABLE IF NOT EXISTS` for new tables.
-- `ALTER TABLE ADD COLUMN` skips if column exists.
-- `INSERT OR IGNORE` for seed data.
-- `UPDATE ... WHERE customer_id IS NULL` for backfill.
-- The `users` table recreation checks for `customer_id` column first.
+### v8 → v9: Phone normalization (`poc/migrate_to_v9.py`)
+
+| Step | Action |
+|------|--------|
+| 1 | Normalize all phone numbers to E.164 format (resolve country from entity address, parse via `phonenumbers` library, `is_possible_number()` check). Numbers that cannot be parsed are left as-is with a warning. |
+| 2 | Deduplicate phone numbers — after normalization, `(entity_type, entity_id, number)` groups with duplicates are reduced to the earliest row (by `created_at`), using `ROW_NUMBER() OVER (PARTITION BY ...)`. |
+| 3 | Seed `default_phone_country` system setting (`"US"`) for all existing customers. |
+| 4 | Update schema_version to 9. |
+
+Production results (2026-02-11): 9 numbers normalized, 1 duplicate
+removed, 8 phones remaining.
 
 ---
 
@@ -643,13 +650,25 @@ All steps are idempotent:
 ### `migrate-to-v8`
 
 ```bash
-python3 -m poc migrate-to-v8 --dry-run          # Preview on a backup copy
-python3 -m poc migrate-to-v8                     # Apply to production
-python3 -m poc migrate-to-v8 --db /path/to.db    # Target specific database
+python3 -m poc.migrate_to_v8 --dry-run          # Preview on a backup copy
+python3 -m poc.migrate_to_v8                     # Apply to production
+python3 -m poc.migrate_to_v8 --db /path/to.db    # Target specific database
 ```
 
 Creates a timestamped backup (`*.v7-backup-YYYYMMDD_HHMMSS.db`) before
 making any changes.
+
+### `migrate-to-v9`
+
+```bash
+python3 -m poc.migrate_to_v9 --dry-run          # Preview on a backup copy
+python3 -m poc.migrate_to_v9                     # Apply to production
+python3 -m poc.migrate_to_v9 --db /path/to.db    # Target specific database
+```
+
+Creates a timestamped backup (`*.v8-backup-YYYYMMDD_HHMMSS.db`) before
+making any changes.  Normalizes phone numbers to E.164, deduplicates,
+and seeds the `default_phone_country` system setting.
 
 ### `bootstrap-user`
 
@@ -697,8 +716,27 @@ Sets or updates the login password for an existing user.
 |------|-------|----------|
 | `tests/test_scoping.py` | 24 | Contact scoping (all/mine, public/private visibility, cross-customer 404), company scoping (all/mine, cross-customer 404), conversation scoping (via account access, via share, cross-customer invisible), dashboard scoping (counts, recent conversations), detail access checks (cross-customer 404), sync scoping (user_contacts/user_companies creation), project scoping (customer_id on create/list) |
 
-Total test suite: **694 tests** (595 pre-existing + 57 Phase 1 + 18
-Phase 2 + 24 Phase 3), all passing.
+### Phase 4 tests (31 new)
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `tests/test_settings_ui.py` | 31 | Data layer (list/get/create/update users), profile page (render, save name/timezone/start_of_week/date_format, password change success/mismatch/too short), system settings (render for admin, 403 for non-admin, save company_name/default_timezone/sync_enabled), user management (list, 403 for non-admin, create/duplicate/edit/save/set password/toggle active/cannot deactivate self), per-user timezone (default meta tag, user override, system cascade) |
+
+### Phase 5 tests (20 new)
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `tests/test_google_oauth.py` | 20 | Config loading (with/without client_secret.json), data layer (get/set google_sub), OAuth initiate (redirect URL, state cookie, no config redirect), callback (state mismatch, success, google_sub linking, google_sub match, no matching user), login page (button visibility with/without config, error display) |
+
+### Phase 6 tests (37 new)
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `tests/test_phone_normalization.py` | 37 | `normalize_phone` (US formats, UK, E.164, toll-free, invalid/empty), `format_phone` (national/international/unparseable fallback), `validate_phone` (valid/invalid/empty), `resolve_country_code` (from address, from setting, US fallback, primary preferred), `add_phone_number` integration (E.164 normalization, dedup same/different formats, invalid returns None, address country), web routes (add valid/invalid company/contact phones, display formatting), settings UI (country dropdown render/save), migration (normalize+dedup, invalid preserved, seeds setting) |
+
+Total test suite: **782 tests** (595 pre-existing + 57 Phase 1 + 18
+Phase 2 + 24 Phase 3 + 31 Phase 4 + 20 Phase 5 + 37 Phase 6), all
+passing.
 
 ---
 
@@ -757,12 +795,48 @@ Phase 2 + 24 Phase 3), all passing.
 - Events scoped via `account_id` subquery (manual events visible to all)
 - 24 tests in `tests/test_scoping.py`
 
-### Phase 4: Settings UI (Planned)
+### Phase 4: Settings UI (Implemented)
 
-- `/settings/profile` — user profile and preferences
-- `/settings/system` — system settings (admin only)
-- `/settings/users` — user management (admin only)
-- Per-user date format and timezone in web rendering
+- `poc/web/routes/settings_routes.py` — 12 routes for profile, system settings, user management
+- `poc/hierarchy.py` — added `list_users`, `get_user_by_id`, `create_user`, `update_user`
+- Templates: `settings/profile.html`, `settings/system.html`, `settings/users.html`, `settings/user_form.html`, `settings/_nav.html`
+- **Profile page** (`/settings/profile`): name, timezone, start_of_week, date_format, password change
+- **System settings** (`/settings/system`, admin only): company_name, default_timezone, default_phone_country, sync_enabled
+- **User management** (`/settings/users`, admin only): list/create/edit users, set passwords, toggle active/inactive
+- Deactivation calls `delete_user_sessions()` to terminate sessions; prevents self-deactivation
+- Per-user timezone: `AuthTemplates.TemplateResponse` resolves via `get_setting()` cascade, overrides `CRM_TIMEZONE` meta tag per-request
+- Flash messages via query params: `?saved=1`, `?pw_changed=1`, `?error=msg`
+- 31 tests in `tests/test_settings_ui.py`
+
+### Phase 5: Google OAuth Login (Implemented)
+
+- `poc/config.py` — `_load_google_oauth_config()` reads `client_id`/`client_secret` from `credentials/client_secret.json`
+- `poc/hierarchy.py` — added `get_user_by_google_sub()`, `set_google_sub()`
+- `poc/web/routes/auth_routes.py` — `GET /auth/google` (initiate), `GET /auth/google/callback` (handle callback)
+- `poc/web/middleware.py` — `/auth/google` added to public paths
+- Login template: conditional "Sign in with Google" button (shown when `GOOGLE_OAUTH_CLIENT_ID` configured)
+- Reuses installed-app OAuth client (`client_secret.json`) — Google allows `http://localhost` redirect for these
+- Manual OAuth URL construction + `httpx` async token exchange + `google.oauth2.id_token.verify_oauth2_token()`
+- No auto-registration: matches existing users by `google_sub` first, then `email`; links `google_sub` on first Google login
+- State cookie (`oauth_state`, 10min TTL) for CSRF protection
+- Graceful degradation: no `client_secret.json` → button hidden, OAuth routes redirect with error
+- 20 tests in `tests/test_google_oauth.py`
+
+### Phase 6: Phone Number Normalization (Implemented)
+
+- `poc/phone_utils.py` — `normalize_phone` (E.164), `format_phone` (NATIONAL/INTERNATIONAL), `validate_phone`, `resolve_country_code`
+- Country resolution cascade: entity address → system setting `default_phone_country` → `"US"` fallback
+- Uses `is_possible_number()` (lenient — length check only) rather than `is_valid_number()` (strict — validates area codes)
+- `poc/hierarchy.py` — `add_phone_number()` now normalizes to E.164 and deduplicates; returns `None` for unparseable numbers; optional `customer_id` parameter
+- `poc/web/filters.py` — `format_phone` Jinja template filter
+- Phone templates use `{{ phone.number | format_phone(display_country|default('US')) }}`
+- Detail routes pass `display_country` from `resolve_country_code()`; add routes handle `None` return with error display
+- `poc/enrichment_pipeline.py` — `_apply_phone_numbers()` passes `customer_id`, relies on `add_phone_number` internal dedup
+- `poc/website_scraper.py` — `_extract_contact_info()` normalizes to E.164 before creating FieldValue
+- `poc/company_merge.py` — post-merge phone dedup via `ROW_NUMBER() OVER (PARTITION BY number ORDER BY created_at)`
+- `poc/migrate_to_v9.py` — normalize existing phones, dedup, seed `default_phone_country`, bump schema to v9
+- Dependency: `phonenumbers>=8.13.0`
+- 37 tests in `tests/test_phone_normalization.py`
 
 ---
 

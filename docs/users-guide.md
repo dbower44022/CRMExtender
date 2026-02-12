@@ -598,12 +598,14 @@ CRMExtender/
     migrate_to_v5.py              # Migration: v4 to v5 (bidirectional relationships)
     migrate_to_v6.py              # Migration: v5 to v6 (events)
     migrate_to_v7.py              # Migration: v6 to v7 (company intelligence)
+    phone_utils.py                # Phone normalization (E.164), formatting, validation
     migrate_to_v8.py              # Migration: v7 to v8 (multi-user)
+    migrate_to_v9.py              # Migration: v8 to v9 (phone normalization)
     web/                          # Web UI (FastAPI + HTMX)
       app.py                      # Application factory (AuthTemplates, middleware)
       middleware.py               # AuthMiddleware (session validation, bypass mode)
       dependencies.py             # FastAPI dependencies (get_current_user, require_admin)
-      filters.py                  # Jinja2 date/time filters (|datetime, |dateonly)
+      filters.py                  # Jinja2 filters (|datetime, |dateonly, |format_phone)
       routes/                     # Route modules
         auth_routes.py            # Login/logout routes
         dashboard.py              # Dashboard route
@@ -846,6 +848,19 @@ Adds multi-user and multi-tenant support:
 ```bash
 python3 -m poc migrate-to-v8 --dry-run
 python3 -m poc migrate-to-v8
+```
+
+### `migrate-to-v9` (v8 → v9: phone normalization)
+
+Normalizes all phone numbers to E.164 format using the `phonenumbers`
+library, deduplicates numbers that resolve to the same E.164 value
+(e.g., `440-462-6500` and `(440) 462-6500`), and seeds the
+`default_phone_country` system setting.  Numbers that cannot be parsed
+are left as-is with a warning logged.
+
+```bash
+python3 -m poc.migrate_to_v9 --dry-run
+python3 -m poc.migrate_to_v9
 ```
 
 All migration scripts create a timestamped backup before making changes

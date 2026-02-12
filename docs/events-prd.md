@@ -537,6 +537,7 @@ Google Calendar API events map to the `events` table as follows:
 | `recurrence` | `recurrence_rule` (first element) |
 | `status` | `status` (`confirmed`/`tentative`/`cancelled`) |
 | `id` | `provider_event_id` |
+| `eventType` | `event_type` (mapped: `birthday`→`birthday`, `outOfOffice`/`focusTime`/`workingLocation`→`other`, `default`→`meeting`; title heuristic for birthday fallback) |
 | `attendees[].email` | Resolved to contact via `contact_identifiers`, then inserted into `event_participants` |
 | `attendees[].responseStatus` | `rsvp_status` |
 | `organizer.email` | Participant with `role='organizer'` |
@@ -653,17 +654,19 @@ Migrates a v5 database to v6 schema.  Options:
 
 ### 12.2 Calendar Sync Tests (`test_calendar_sync.py`)
 
-28 tests covering the Google Calendar sync pipeline:
+46 tests covering the Google Calendar sync pipeline, source icon filter, and grid/detail integration:
 
 | Test Class | Count | Coverage |
 |---|---|---|
-| `TestParseGoogleEvent` | 8 | Timed event, all-day event, cancelled event, no title fallback, attendees, RSVP status mapping, missing ID, description |
-| `TestUpsertEvent` | 3 | Create new event, update existing event, cancelled status handling |
+| `TestParseGoogleEvent` | 13 | Timed event, all-day event, cancelled event, no title fallback, attendees, RSVP status mapping, missing ID, description, birthday eventType, birthday from title (case-insensitive), outOfOffice mapping, default event type |
+| `TestUpsertEvent` | 4 | Create new event, update existing event, event_type updated on resync, cancelled status handling |
 | `TestMatchAttendees` | 3 | Contact matching via email, unmatched attendee skipped, RSVP status passthrough |
 | `TestSyncCalendarEvents` | 4 | Initial sync (creates events), incremental sync (uses token), sync token persistence, expired token fallback to full sync |
 | `TestSyncAllCalendars` | 2 | Multi-calendar sync aggregation, no calendars selected error |
 | `TestCalendarSettings` | 4 | Settings page renders, calendar selection save, fetch calendars list, scope error display |
 | `TestEventsSyncRoute` | 4 | Sync button rendered in list, sync endpoint works, no accounts graceful handling, no calendars selected message |
+| `TestSourceIconFilter` | 7 | Google Calendar icon, with account name, with account + calendar, primary calendar omitted, manual icon, None defaults to manual, unknown source fallback |
+| `TestEventsSourceIcon` | 5 | Grid shows Google icon with tooltip, grid shows manual icon, detail shows Google provenance, detail shows manual source, detail hides "primary" calendar label |
 
 All Google API calls are mocked via `@patch("poc.calendar_client.build")`.
 
@@ -743,7 +746,7 @@ contacts, companies, and relationships.
 | Template | Description |
 |---|---|
 | `list.html` | 2-column grid: search/filter/results + "New Event" form |
-| `_rows.html` | Table partial with title, type, date, location, status, source, delete button |
+| `_rows.html` | Table partial with title, type, date, location, status, source icon (SVG with tooltip), delete button.  Uses `<colgroup>` for fixed column widths. |
 | `detail.html` | Grid layout: participants + linked conversations (left), event info sidebar (right) |
 | `_form.html` | Create form with title, type, datetime, location, description, recurrence, status |
 
@@ -757,7 +760,10 @@ contacts, companies, and relationships.
 - **Create form** — creates events with `source='manual'`.  Supports
   all-day toggle, recurrence type, and status selection.
 - **Detail page** — shows event metadata in a sidebar, participants
-  with entity links and roles, and linked conversations.
+  with entity links and roles, and linked conversations.  The Source
+  section shows an inline SVG icon, a human-readable label ("Google
+  Calendar" / "Manually created"), and—for synced events—the account
+  name and calendar ID.
 - **Sync Events** — button in the list header triggers Google Calendar
   sync for the current user's accounts.  Spinner shown during sync,
   results displayed as a summary.  Event list auto-refreshes via HTMX
@@ -965,9 +971,23 @@ Maps a raw Google Calendar API event dict to the internal format:
 | `location` | `location` |
 | `status` | `status` |
 | `attendees` | list of `{email, displayName, organizer, responseStatus}` |
+| `eventType` | `event_type` (see mapping below) |
 
-All parsed events have `event_type = "meeting"` and
-`source = "google_calendar"`.
+Event type is determined by Google's `eventType` field, with a title
+heuristic fallback:
+
+| Google `eventType` | CRM `event_type` |
+|---|---|
+| `default` (or missing) | `meeting` |
+| `birthday` | `birthday` |
+| `outOfOffice` | `other` |
+| `focusTime` | `other` |
+| `workingLocation` | `other` |
+
+If the resolved type is `meeting` but the title contains "birthday"
+(case-insensitive), it is reclassified as `birthday`.
+
+All parsed events have `source = "google_calendar"`.
 
 #### Error Types
 
@@ -1135,7 +1155,7 @@ the same per-account path.
 | `poc/calendar_sync.py` | Sync orchestration, upsert, attendee matching |
 | `poc/web/templates/settings/calendars.html` | Calendar selection settings page |
 | `poc/web/templates/settings/_calendar_list.html` | HTMX partial for calendar checkboxes |
-| `tests/test_calendar_sync.py` | 28 tests covering the full sync pipeline |
+| `tests/test_calendar_sync.py` | 46 tests covering the full sync pipeline, source icon filter, and grid/detail integration |
 
 Modified files:
 
@@ -1144,9 +1164,13 @@ Modified files:
 | `poc/config.py` | Added `calendar.readonly` scope, `CALENDAR_SYNC_DAYS` |
 | `poc/auth.py` | Added `reauthorize_account()` |
 | `poc/__main__.py` | Added `reauth` CLI command |
-| `poc/web/routes/events.py` | Added `POST /events/sync` route |
+| `poc/web/filters.py` | Added `source_icon` Jinja filter (inline SVG with tooltip) |
+| `poc/web/routes/events.py` | Added `POST /events/sync` route; LEFT JOIN `provider_accounts` for `account_name` in list and detail queries |
 | `poc/web/routes/settings_routes.py` | Added 3 calendar settings routes |
 | `poc/web/templates/events/list.html` | Added sync button + result area |
+| `poc/web/templates/events/_rows.html` | Added `events-table` class, `<colgroup>`, replaced Source text with icon |
+| `poc/web/templates/events/detail.html` | Source section shows icon + label + account/calendar provenance |
+| `poc/web/static/style.css` | Added `.events-table` and `.source-icon` rules |
 | `poc/web/templates/settings/_nav.html` | Added "Calendars" tab |
 
 ### 16.12 Design Decisions

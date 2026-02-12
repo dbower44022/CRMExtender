@@ -444,9 +444,12 @@ all CRM data:
 - **Communications** — browse, search, filter by channel/direction,
   view detail modals, bulk archive, assign to conversations.
 - **Events** — browse, search, filter by type, create events, view
-  detail with participants and linked conversations.  "Sync Events"
-  button pulls events from connected Google Calendar accounts.
-  Calendar selection is configured under Settings > Calendars.
+  detail with participants and linked conversations.  The event source
+  is shown as a compact SVG icon (Google Calendar "G" or pencil for
+  manual); hovering reveals a tooltip with the account email and
+  calendar name.  The detail page sidebar shows full source provenance.
+  "Sync Events" button pulls events from connected Google Calendar
+  accounts.  Calendar selection is configured under Settings > Calendars.
 
 All dates and timestamps are stored in UTC and converted to the
 configured `CRM_TIMEZONE` for display.  The conversion happens
@@ -640,7 +643,7 @@ CRMExtender/
       app.py                      # Application factory (AuthTemplates, middleware)
       middleware.py               # AuthMiddleware (session validation, bypass mode)
       dependencies.py             # FastAPI dependencies (get_current_user, require_admin)
-      filters.py                  # Jinja2 filters (|datetime, |dateonly, |format_phone)
+      filters.py                  # Jinja2 filters (|datetime, |dateonly, |format_phone, |source_icon)
       routes/                     # Route modules
         auth_routes.py            # Login/logout routes
         dashboard.py              # Dashboard route

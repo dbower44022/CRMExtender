@@ -224,9 +224,24 @@ def get_merge_preview(surviving_id: str, absorbed_id: str) -> dict:
             (surviving_id, absorbed_id),
         ).fetchone()["cnt"]
 
+        surviving_dict = dict(surviving)
+        absorbed_dict = dict(absorbed)
+
+        # Resolve domain from company_identifiers if not set on the company row
+        for d in (surviving_dict, absorbed_dict):
+            if not d.get("domain"):
+                ident = conn.execute(
+                    """SELECT value FROM company_identifiers
+                       WHERE company_id = ? AND type = 'domain'
+                       ORDER BY is_primary DESC LIMIT 1""",
+                    (d["id"],),
+                ).fetchone()
+                if ident:
+                    d["domain"] = ident["value"]
+
     return {
-        "surviving": dict(surviving),
-        "absorbed": dict(absorbed),
+        "surviving": surviving_dict,
+        "absorbed": absorbed_dict,
         "contacts": contacts,
         "relationships": relationships,
         "events": events,

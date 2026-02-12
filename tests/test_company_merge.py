@@ -611,6 +611,75 @@ class TestMergeExecution:
             urls = {p["profile_url"] for p in profiles}
             assert "https://linkedin.com/company/abs" in urls
 
+    def test_repoints_prior_merge_audit_records(self, tmp_db):
+        """If the absorbed company was surviving in a prior merge, the
+        company_merges FK must be re-pointed so DELETE doesn't violate FK."""
+        with get_connection() as conn:
+            _insert_company(conn, "old", "Old Co", "old.com")
+            _insert_company(conn, "mid", "Mid Co", "mid.com")
+            _insert_company(conn, "final", "Final Co", "final.com")
+
+        # First merge: mid absorbs old
+        merge_companies("mid", "old")
+
+        # Second merge: final absorbs mid — this must not raise FK error
+        merge_companies("final", "mid")
+
+        with get_connection() as conn:
+            # Both merge audit rows should now point to "final"
+            rows = conn.execute(
+                "SELECT surviving_company_id FROM company_merges ORDER BY merged_at"
+            ).fetchall()
+            assert all(r["surviving_company_id"] == "final" for r in rows)
+
+    def test_transfers_user_company_visibility(self, tmp_db):
+        """Users with visibility to the absorbed company should gain visibility
+        to the surviving company."""
+        with get_connection() as conn:
+            # Create a second user
+            conn.execute(
+                "INSERT INTO users "
+                "(id, customer_id, email, name, role, is_active, created_at, updated_at) "
+                "VALUES ('user-2', 'cust-test', 'user2@example.com', 'User 2', "
+                "'user', 1, ?, ?)",
+                (_NOW, _NOW),
+            )
+            _insert_company(conn, "surv", "Surviving", "acme.com")
+            _insert_company(conn, "abs", "Absorbed", "acme2.com")
+            # user-2 has visibility to absorbed but NOT surviving
+            conn.execute(
+                "INSERT INTO user_companies "
+                "(id, user_id, company_id, visibility, is_owner, created_at, updated_at) "
+                "VALUES ('uco-u2-abs', 'user-2', 'abs', 'public', 0, ?, ?)",
+                (_NOW, _NOW),
+            )
+
+        merge_companies("surv", "abs")
+
+        with get_connection() as conn:
+            # user-2 should now have visibility to surviving
+            row = conn.execute(
+                "SELECT * FROM user_companies WHERE user_id = 'user-2' AND company_id = 'surv'"
+            ).fetchone()
+            assert row is not None
+
+    def test_user_company_visibility_no_duplicate(self, tmp_db):
+        """If user already has visibility to surviving company, no duplicate
+        row should be created."""
+        with get_connection() as conn:
+            _insert_company(conn, "surv", "Surviving", "acme.com")
+            _insert_company(conn, "abs", "Absorbed", "acme2.com")
+            # user-test already has visibility to both (via _insert_company)
+
+        merge_companies("surv", "abs")
+
+        with get_connection() as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM user_companies "
+                "WHERE user_id = 'user-test' AND company_id = 'surv'"
+            ).fetchone()[0]
+            assert count == 1
+
 
 # ===================================================================
 # Web route tests

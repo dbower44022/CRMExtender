@@ -540,6 +540,31 @@ def merge_companies(
             (surviving_id, now, absorbed_id),
         )
 
+        # --- Transfer user_companies visibility rows ---
+        # Insert visibility for surviving where absorbed had it but surviving didn't
+        conn.execute(
+            """INSERT OR IGNORE INTO user_companies (id, user_id, company_id, visibility, is_owner, created_at, updated_at)
+               SELECT lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' ||
+                      substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random())%4+1,1) ||
+                      substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6))),
+                      uc.user_id, ?, uc.visibility, uc.is_owner, ?, ?
+               FROM user_companies uc
+               WHERE uc.company_id = ?
+                 AND uc.user_id NOT IN (
+                     SELECT user_id FROM user_companies WHERE company_id = ?
+                 )""",
+            (surviving_id, now, now, absorbed_id, surviving_id),
+        )
+
+        # --- Re-point prior merge audit records ---
+        # If the absorbed company was the surviving company of earlier merges,
+        # update those records to reference the new surviving company so the
+        # FK constraint (NO ACTION) does not block the DELETE.
+        conn.execute(
+            "UPDATE company_merges SET surviving_company_id = ? WHERE surviving_company_id = ?",
+            (surviving_id, absorbed_id),
+        )
+
         # --- Delete absorbed company ---
         conn.execute("DELETE FROM companies WHERE id = ?", (absorbed_id,))
 

@@ -334,8 +334,30 @@ def contact_add_identifier(
     type: str = Form("email"),
     value: str = Form(...),
 ):
+    import sqlite3
     templates = request.app.state.templates
-    add_contact_identifier(contact_id, type, value)
+    try:
+        add_contact_identifier(contact_id, type, value)
+    except sqlite3.IntegrityError:
+        # Identifier already belongs to another contact — find who
+        with get_connection() as conn:
+            existing = conn.execute(
+                "SELECT ci.contact_id, c.name FROM contact_identifiers ci "
+                "JOIN contacts c ON c.id = ci.contact_id "
+                "WHERE ci.type = ? AND ci.value = ?",
+                (type, value),
+            ).fetchone()
+        identifiers = get_contact_identifiers(contact_id)
+        error = f"That {type} is already assigned to "
+        if existing:
+            error += f'<a href="/contacts/{existing["contact_id"]}">{existing["name"]}</a>'
+        else:
+            error += "another contact"
+        return templates.TemplateResponse(request, "contacts/_identifiers.html", {
+            "contact": {"id": contact_id},
+            "identifiers": identifiers,
+            "error": error,
+        })
     identifiers = get_contact_identifiers(contact_id)
 
     return templates.TemplateResponse(request, "contacts/_identifiers.html", {

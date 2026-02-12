@@ -32,6 +32,10 @@
   <p class="empty-state">No identifiers.</p>
   {% endif %}
 
+  {% if error %}
+  <p style="color:var(--pico-del-color);">{{ error | safe }}</p>
+  {% endif %}
+
   <form hx-post="/contacts/{{ contact.id }}/identifiers"
         hx-target="#identifiers-section" hx-swap="outerHTML">
     <fieldset role="group">

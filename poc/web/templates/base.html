@@ -38,7 +38,7 @@
     {% endif %}
   </nav>
 
-  <main class="container">
+  <main class="container-fluid">
     <div id="flash-messages">
       {% if flash %}
       <article class="flash-{{ flash.level }}">
@@ -50,7 +50,7 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="container">
+  <footer class="container-fluid">
     <small>CRM Extender</small>
   </footer>
   <script src="/static/dates.js"></script>

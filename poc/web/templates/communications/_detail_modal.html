@@ -1,0 +1,60 @@
+<header>
+  <button type="button" class="close" aria-label="Close"
+          onclick="document.getElementById('comm-detail-dialog').close()">&times;</button>
+  <strong>{{ comm.subject or '(no subject)' }}</strong>
+</header>
+
+<div class="comm-detail-meta">
+  <p>
+    <span class="channel-badge">{{ comm.channel }}</span>
+    {% if comm.direction %}
+    <span class="channel-badge">{{ comm.direction }}</span>
+    {% endif %}
+  </p>
+  <p><strong>Date:</strong> {{ comm.timestamp|datetime }}</p>
+  <p><strong>From:</strong> {{ comm.sender_name or '' }} {% if comm.sender_address %}&lt;{{ comm.sender_address }}&gt;{% endif %}</p>
+
+  {% for r in comm.recipients if r.role == 'to' %}
+  {% if loop.first %}<p><strong>To:</strong> {% endif %}
+  {{ r.name or '' }} {% if r.address %}&lt;{{ r.address }}&gt;{% endif %}{% if not loop.last %}, {% endif %}
+  {% if loop.last %}</p>{% endif %}
+  {% endfor %}
+
+  {% for r in comm.recipients if r.role == 'cc' %}
+  {% if loop.first %}<p><strong>CC:</strong> {% endif %}
+  {{ r.name or '' }} {% if r.address %}&lt;{{ r.address }}&gt;{% endif %}{% if not loop.last %}, {% endif %}
+  {% if loop.last %}</p>{% endif %}
+  {% endfor %}
+
+  {% for r in comm.recipients if r.role == 'bcc' %}
+  {% if loop.first %}<p><strong>BCC:</strong> {% endif %}
+  {{ r.name or '' }} {% if r.address %}&lt;{{ r.address }}&gt;{% endif %}{% if not loop.last %}, {% endif %}
+  {% if loop.last %}</p>{% endif %}
+  {% endfor %}
+</div>
+
+{% if comm.ai_summary %}
+<details open>
+  <summary><strong>AI Summary</strong></summary>
+  <p>{{ comm.ai_summary }}</p>
+</details>
+{% endif %}
+
+<hr>
+
+<div class="comm-detail-body">
+  {% if comm.content %}
+  <pre style="white-space:pre-wrap; font-family:inherit;">{{ comm.content }}</pre>
+  {% elif comm.snippet %}
+  <p>{{ comm.snippet }}</p>
+  {% else %}
+  <p class="empty-state">No content available.</p>
+  {% endif %}
+</div>
+
+{% if comm.conversation %}
+<hr>
+<p><strong>Linked Conversation:</strong>
+  <a href="/conversations/{{ comm.conversation.id }}">{{ comm.conversation.title or '(no subject)' }}</a>
+</p>
+{% endif %}

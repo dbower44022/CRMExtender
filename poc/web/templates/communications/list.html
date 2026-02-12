@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Communications — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Communications <small>({{ total }})</small></h1>
+
+<!-- Bulk action toolbar (hidden until checkboxes selected) -->
+<div id="bulk-toolbar" class="bulk-toolbar" style="display:none;">
+  <span><strong id="selected-count">0</strong> selected</span>
+  <button type="button" class="secondary outline" onclick="bulkArchive()">Archive</button>
+  <button type="button" class="secondary outline" onclick="openAssignModal()">Assign to Conversation</button>
+  <div class="dropdown">
+    <button type="button" class="secondary outline">Other &#9662;</button>
+    <div class="dropdown-menu">
+      <a onclick="bulkArchive()">Archive</a>
+      <a onclick="openAssignModal()">Assign to Conversation</a>
+      <a onclick="openDeleteModal()">Delete Conversation</a>
+    </div>
+  </div>
+</div>
+
+<!-- Search/filter bar -->
+<div class="search-bar">
+  <input type="search" name="q" value="{{ q }}"
+         placeholder="Search subject, sender..."
+         hx-get="/communications/search"
+         hx-trigger="input changed delay:300ms, search"
+         hx-target="#results"
+         hx-include=".search-bar"
+         hx-push-url="/communications">
+  <select name="channel"
+          hx-get="/communications/search"
+          hx-trigger="change"
+          hx-target="#results"
+          hx-include=".search-bar"
+          hx-push-url="/communications">
+    <option value="" {% if not channel %}selected{% endif %}>All Types</option>
+    <option value="email" {% if channel == 'email' %}selected{% endif %}>Email</option>
+    <option value="phone" {% if channel == 'phone' %}selected{% endif %}>Phone</option>
+    <option value="sms" {% if channel == 'sms' %}selected{% endif %}>SMS</option>
+  </select>
+  <select name="direction"
+          hx-get="/communications/search"
+          hx-trigger="change"
+          hx-target="#results"
+          hx-include=".search-bar"
+          hx-push-url="/communications">
+    <option value="" {% if not direction %}selected{% endif %}>All Directions</option>
+    <option value="inbound" {% if direction == 'inbound' %}selected{% endif %}>Inbound</option>
+    <option value="outbound" {% if direction == 'outbound' %}selected{% endif %}>Outbound</option>
+  </select>
+  <input type="hidden" name="sort" value="{{ sort }}">
+  <span class="htmx-indicator" aria-busy="true"></span>
+</div>
+
+<div id="results">
+  {% include "communications/_rows.html" %}
+</div>
+
+<!-- Detail modal (populated via HTMX) -->
+<dialog id="comm-detail-dialog">
+  <article id="comm-detail-content"></article>
+</dialog>
+
+<!-- Assign modal -->
+<dialog id="assign-dialog">
+  <article>
+    <header>
+      <button type="button" class="close" aria-label="Close"
+              onclick="this.closest('dialog').close()">&times;</button>
+      <strong>Assign to Conversation</strong>
+    </header>
+    <input type="search" placeholder="Search conversations..."
+           hx-get="/communications/conversations/search"
+           hx-trigger="input changed delay:300ms, search"
+           hx-target="#conv-search-results">
+    <div id="conv-search-results"></div>
+  </article>
+</dialog>
+
+<!-- Delete confirmation modal -->
+<dialog id="delete-dialog">
+  <article>
+    <header>
+      <strong>Delete Conversation</strong>
+    </header>
+    <p>Delete the conversation(s) linked to the selected communications?</p>
+    <label>
+      <input type="checkbox" id="delete-comms-too">
+      Also delete the communications themselves
+    </label>
+    <footer>
+      <button type="button" class="secondary" onclick="this.closest('dialog').close()">Cancel</button>
+      <button type="button" class="contrast" onclick="confirmDelete()">Delete</button>
+    </footer>
+  </article>
+</dialog>
+
+<!-- Hidden form for bulk actions -->
+<form id="bulk-form" style="display:none;">
+  <input type="hidden" name="q" value="{{ q }}">
+  <input type="hidden" name="channel" value="{{ channel }}">
+  <input type="hidden" name="direction" value="{{ direction }}">
+  <input type="hidden" name="sort" value="{{ sort }}">
+  <input type="hidden" name="page" value="{{ page }}">
+</form>
+
+<script src="/static/communications.js"></script>
+{% endblock %}

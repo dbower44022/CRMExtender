@@ -1,0 +1,13 @@
+{% if conversations %}
+<div class="assign-results">
+  {% for conv in conversations %}
+  <a href="#" class="assign-conv-row"
+     onclick="assignToConversation('{{ conv.id }}'); return false;">
+    <strong>{{ conv.title or '(no subject)' }}</strong>
+    <small>{{ conv.last_activity_at|datetime }}</small>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty-state">No conversations found.</p>
+{% endif %}

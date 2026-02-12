@@ -214,6 +214,7 @@ CREATE TABLE IF NOT EXISTS communications (
     previous_revision   TEXT REFERENCES communications(id) ON DELETE SET NULL,
     next_revision       TEXT REFERENCES communications(id) ON DELETE SET NULL,
     is_current          INTEGER DEFAULT 1,
+    is_archived         INTEGER DEFAULT 0,
     ai_summary          TEXT,
     ai_summarized_at    TEXT,
     triage_result       TEXT,
@@ -750,6 +751,7 @@ CREATE INDEX IF NOT EXISTS idx_comm_sender         ON communications(sender_addr
 CREATE INDEX IF NOT EXISTS idx_comm_thread         ON communications(provider_thread_id);
 CREATE INDEX IF NOT EXISTS idx_comm_header_msg_id  ON communications(header_message_id);
 CREATE INDEX IF NOT EXISTS idx_comm_current        ON communications(is_current);
+CREATE INDEX IF NOT EXISTS idx_comm_archived       ON communications(is_archived);
 
 -- Conversations
 CREATE INDEX IF NOT EXISTS idx_conv_topic          ON conversations(topic_id);
@@ -923,6 +925,15 @@ def init_db(db_path: Path | None = None) -> None:
         conn.executescript(_SCHEMA_SQL)
         conn.executescript(_INDEX_SQL)
         conn.executescript(_SETTINGS_INDEX_SQL)
+        # Defensive: add is_archived column for existing DBs
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(communications)")}
+        if "is_archived" not in cols:
+            conn.execute(
+                "ALTER TABLE communications ADD COLUMN is_archived INTEGER DEFAULT 0"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_comm_archived ON communications(is_archived)"
+            )
         now = datetime.now(timezone.utc).isoformat()
         conn.executescript(_SEED_RELATIONSHIP_TYPES_SQL.format(now=now))
         conn.commit()

@@ -85,6 +85,26 @@ def visible_conversations_query(
     return where, [customer_id, user_id, user_id]
 
 
+def visible_communications_query(
+    customer_id: str,
+    user_id: str,
+) -> tuple[str, list]:
+    """Return (WHERE clause, params) for communications visible to a user.
+
+    Visible = user has access to the provider account that produced the communication.
+    """
+    where = (
+        "EXISTS ("
+        "  SELECT 1 FROM user_provider_accounts upa"
+        "  WHERE upa.account_id = comm.account_id AND upa.user_id = ?"
+        ") AND EXISTS ("
+        "  SELECT 1 FROM provider_accounts pa"
+        "  WHERE pa.id = comm.account_id AND pa.customer_id = ?"
+        ")"
+    )
+    return where, [user_id, customer_id]
+
+
 def get_visible_contacts(
     conn: sqlite3.Connection,
     customer_id: str,

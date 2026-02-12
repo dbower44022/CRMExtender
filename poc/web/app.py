@@ -68,6 +68,7 @@ def create_app() -> FastAPI:
 
     from .routes import (
         auth_routes,
+        communications,
         companies,
         contacts,
         conversations,
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_routes.router)
     app.include_router(dashboard.router)
+    app.include_router(communications.router, prefix="/communications")
     app.include_router(conversations.router, prefix="/conversations")
     app.include_router(contacts.router, prefix="/contacts")
     app.include_router(companies.router, prefix="/companies")

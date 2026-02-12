@@ -1,0 +1,76 @@
+{% if communications %}
+<table>
+  <thead>
+    <tr>
+      <th class="comm-check-col"><input type="checkbox" id="select-all"></th>
+      <th>
+        <a href="#" class="sort-header" data-sort="channel"
+           onclick="toggleSort('channel'); return false;">
+          Type {% if sort == 'channel' %}&#9650;{% elif sort == '-channel' %}&#9660;{% endif %}
+        </a>
+      </th>
+      <th>
+        <a href="#" class="sort-header" data-sort="from"
+           onclick="toggleSort('from'); return false;">
+          From {% if sort == 'from' %}&#9650;{% elif sort == '-from' %}&#9660;{% endif %}
+        </a>
+      </th>
+      <th>
+        <a href="#" class="sort-header" data-sort="to"
+           onclick="toggleSort('to'); return false;">
+          To {% if sort == 'to' %}&#9650;{% elif sort == '-to' %}&#9660;{% endif %}
+        </a>
+      </th>
+      <th>
+        <a href="#" class="sort-header" data-sort="subject"
+           onclick="toggleSort('subject'); return false;">
+          Subject {% if sort == 'subject' %}&#9650;{% elif sort == '-subject' %}&#9660;{% endif %}
+        </a>
+      </th>
+      <th>
+        <a href="#" class="sort-header" data-sort="date"
+           onclick="toggleSort('date'); return false;">
+          Date {% if sort == 'date' %}&#9650;{% elif sort == '-date' %}&#9660;{% endif %}
+        </a>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for comm in communications %}
+    <tr>
+      <td class="comm-check-col"><input type="checkbox" class="comm-check" value="{{ comm.id }}"></td>
+      <td><span class="channel-badge">{{ comm.channel }}</span></td>
+      <td>{{ comm.sender_name or comm.sender_address or '' }}</td>
+      <td>{{ comm.to_addresses or '' }}</td>
+      <td>
+        <a href="#"
+           hx-get="/communications/{{ comm.id }}/detail"
+           hx-target="#comm-detail-content"
+           hx-on::after-request="document.getElementById('comm-detail-dialog').showModal()">
+          {{ comm.subject or '(no subject)' }}
+        </a>
+        {% if comm.conversation_id %}
+        <a href="/conversations/{{ comm.conversation_id }}" class="conv-link" title="View conversation">&#128279;</a>
+        {% endif %}
+      </td>
+      <td>{{ comm.timestamp|datetime }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if total_pages > 1 %}
+<nav>
+  <ul>
+    {% if page > 1 %}
+    <li><a href="/communications?q={{ q }}&channel={{ channel }}&direction={{ direction }}&sort={{ sort }}&page={{ page - 1 }}">Previous</a></li>
+    {% endif %}
+    <li>Page {{ page }} of {{ total_pages }}</li>
+    {% if page < total_pages %}
+    <li><a href="/communications?q={{ q }}&channel={{ channel }}&direction={{ direction }}&sort={{ sort }}&page={{ page + 1 }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% else %}
+<p class="empty-state">No communications found.</p>
+{% endif %}

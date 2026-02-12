@@ -49,7 +49,12 @@
       "Bash(git status:*)",
       "Bash(curl:*)",
       "Bash(lsof:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender status)",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender diff)",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender log --oneline -5)",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender commit -m \"$\\(cat <<''EOF''\nAdd settings UI with profile, system settings, and user management \\(Phase 4\\)\n\nAdds three settings pages \\(profile, system, users\\), per-user timezone\nrendering, user management CRUD, and fixes the v8 migration''s SQLite\nALTER TABLE RENAME bug that caused dangling FK references to _users_old.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender push)"
     ]
   }
 }

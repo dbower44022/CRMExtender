@@ -55,6 +55,7 @@ Unlike traditional CRMs that treat contacts as static address book entries, CRME
 **Current state:** The PoC implements a minimal contact model — a `contacts` table with `email`, `name`, `source`, and `source_id` columns populated from the Google People API. Contacts are used for conversation participant matching and triage filtering. This PRD defines the requirements for the full contact management system.
 
 **Relationship to other PRDs:**
+
 - **[Communication & Conversation Intelligence PRD](email-conversations-prd.md)** — Every communication participant resolves to a contact. The conversations subsystem depends on the contact model for participant resolution, but owns its own `conversation_participants` and `communication_participants` tables.
 - **[Data Layer Architecture PRD](data-layer-prd.md)** — Defines the `contacts` and `contact_identifiers` tables used by the conversations subsystem. This PRD extends the contact model with the full event-sourced schema, intelligence tables, and graph model.
 
@@ -68,16 +69,16 @@ Traditional CRM contact records are snapshots: a name, a company, an email, and 
 
 **The consequences for CRM users:**
 
-| Pain Point | Impact |
-|---|---|
-| **Stale data** | Contacts change jobs, titles, and companies. Without continuous enrichment, records degrade. A sales rep discovers mid-call that their "VP of Engineering" contact left the company six months ago. |
-| **Duplicate records** | The same person entered via email sync, LinkedIn capture, and manual entry creates three separate records. Communication history is fragmented across duplicates. |
-| **No identity resolution** | A contact's work email, personal email, and phone number are treated as three different people. Cross-channel communication threads are disconnected. |
-| **Missing context** | A name and email reveal nothing about a contact's priorities, recent activity, organizational influence, or relationship history. Users must manually research before every interaction. |
-| **No temporal awareness** | When a contact changes roles, the old role is overwritten. There's no employment timeline, no history of how the relationship evolved, no way to understand career trajectory. |
-| **Manual data entry** | Sales reps and networkers spend hours per week entering, updating, and deduplicating contact records. Most give up, leaving CRM data incomplete and unreliable. |
-| **Siloed data sources** | Contact intelligence exists across Google Contacts, LinkedIn, email signatures, enrichment APIs, and manual notes — but no system unifies them with proper attribution and conflict resolution. |
-| **No proactive intelligence** | CRMs don't tell you that a contact just got promoted, their company raised funding, or they've gone silent after months of active engagement. Users must discover these signals manually. |
+| Pain Point                    | Impact                                                                                                                                                                                              |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Stale data**                | Contacts change jobs, titles, and companies. Without continuous enrichment, records degrade. A sales rep discovers mid-call that their "VP of Engineering" contact left the company six months ago. |
+| **Duplicate records**         | The same person entered via email sync, LinkedIn capture, and manual entry creates three separate records. Communication history is fragmented across duplicates.                                   |
+| **No identity resolution**    | A contact's work email, personal email, and phone number are treated as three different people. Cross-channel communication threads are disconnected.                                               |
+| **Missing context**           | A name and email reveal nothing about a contact's priorities, recent activity, organizational influence, or relationship history. Users must manually research before every interaction.            |
+| **No temporal awareness**     | When a contact changes roles, the old role is overwritten. There's no employment timeline, no history of how the relationship evolved, no way to understand career trajectory.                      |
+| **Manual data entry**         | Sales reps and networkers spend hours per week entering, updating, and deduplicating contact records. Most give up, leaving CRM data incomplete and unreliable.                                     |
+| **Siloed data sources**       | Contact intelligence exists across Google Contacts, LinkedIn, email signatures, enrichment APIs, and manual notes — but no system unifies them with proper attribution and conflict resolution.     |
+| **No proactive intelligence** | CRMs don't tell you that a contact just got promoted, their company raised funding, or they've gone silent after months of active engagement. Users must discover these signals manually.           |
 
 ### Why Existing Solutions Fall Short
 
@@ -104,20 +105,20 @@ CRMExtender closes this gap by making contacts **living intelligence objects** �
 
 ### Success Metrics
 
-| Metric | Target | Measurement Method |
-|---|---|---|
-| Contact auto-creation rate | > 90% of communication participants have matching contacts | `SELECT COUNT(*) FROM communication_participants WHERE contact_id IS NOT NULL` |
-| Duplicate contact rate | < 2% after entity resolution | Periodic duplicate scan audit |
-| Auto-enrichment coverage | > 60% of contacts have enrichment data within 24 hours of creation | `contacts_current WHERE intelligence_score > 0 / total` |
-| Entity resolution accuracy (high-confidence) | > 95% correct auto-merges | Manual sampling of auto-merged records |
-| Entity resolution accuracy (medium-confidence) | > 80% correct auto-merges with flag | Manual review of flagged merges |
-| Data freshness | < 7 days for actively monitored contacts | `osint_monitors WHERE last_checked > NOW() - INTERVAL '7 days'` |
-| Point-in-time query response | < 500ms p95 | APM monitoring on `/contacts/{id}/history?at=` |
-| Contact detail page load | < 200ms p95 | APM monitoring on `/contacts/{id}` |
-| AI briefing generation | < 5 seconds per contact | APM monitoring on `/contacts/{id}/briefing` |
-| User correction rate (declining) | < 10% of auto-merges corrected after 90 days | `entity_match_candidates WHERE status = 'rejected'` |
-| Import throughput | > 1,000 contacts per minute (CSV/vCard) | Load testing |
-| Search latency | < 50ms p95 | Meilisearch metrics |
+| Metric                                         | Target                                                             | Measurement Method                                                             |
+| ---------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Contact auto-creation rate                     | > 90% of communication participants have matching contacts         | `SELECT COUNT(*) FROM communication_participants WHERE contact_id IS NOT NULL` |
+| Duplicate contact rate                         | < 2% after entity resolution                                       | Periodic duplicate scan audit                                                  |
+| Auto-enrichment coverage                       | > 60% of contacts have enrichment data within 24 hours of creation | `contacts_current WHERE intelligence_score > 0 / total`                        |
+| Entity resolution accuracy (high-confidence)   | > 95% correct auto-merges                                          | Manual sampling of auto-merged records                                         |
+| Entity resolution accuracy (medium-confidence) | > 80% correct auto-merges with flag                                | Manual review of flagged merges                                                |
+| Data freshness                                 | < 7 days for actively monitored contacts                           | `osint_monitors WHERE last_checked > NOW() - INTERVAL '7 days'`                |
+| Point-in-time query response                   | < 500ms p95                                                        | APM monitoring on `/contacts/{id}/history?at=`                                 |
+| Contact detail page load                       | < 200ms p95                                                        | APM monitoring on `/contacts/{id}`                                             |
+| AI briefing generation                         | < 5 seconds per contact                                            | APM monitoring on `/contacts/{id}/briefing`                                    |
+| User correction rate (declining)               | < 10% of auto-merges corrected after 90 days                       | `entity_match_candidates WHERE status = 'rejected'`                            |
+| Import throughput                              | > 1,000 contacts per minute (CSV/vCard)                            | Load testing                                                                   |
+| Search latency                                 | < 50ms p95                                                         | Meilisearch metrics                                                            |
 
 ---
 
@@ -125,71 +126,71 @@ CRMExtender closes this gap by making contacts **living intelligence objects** �
 
 ### Personas
 
-| Persona | Context | Contact Management Needs |
-|---|---|---|
-| **Networker / Consultant** | Manages 500-5,000 contacts across industries. Relies on warm introductions and referral chains. | Relationship mapping, employment timeline, warm intro paths, meeting prep briefs, stale contact alerts |
-| **Sales Professional** | Manages 200-2,000 contacts tied to active deals and pipeline. Needs to understand stakeholder dynamics. | Org chart reconstruction, decision-maker identification, engagement scoring, enrichment on demand, deal-contact linking |
-| **General Business User** | Manages 100-500 professional contacts. Wants an intelligent address book, not a data-entry chore. | Auto-creation from email, zero-friction capture, basic enrichment, search, import/export |
+| Persona                    | Context                                                                                                 | Contact Management Needs                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Networker / Consultant** | Manages 500-5,000 contacts across industries. Relies on warm introductions and referral chains.         | Relationship mapping, employment timeline, warm intro paths, meeting prep briefs, stale contact alerts                  |
+| **Sales Professional**     | Manages 200-2,000 contacts tied to active deals and pipeline. Needs to understand stakeholder dynamics. | Org chart reconstruction, decision-maker identification, engagement scoring, enrichment on demand, deal-contact linking |
+| **General Business User**  | Manages 100-500 professional contacts. Wants an intelligent address book, not a data-entry chore.       | Auto-creation from email, zero-friction capture, basic enrichment, search, import/export                                |
 
 ### User Stories
 
 #### Contact Creation & Capture
 
-| ID | Story | Acceptance Criteria |
-|---|---|---|
+| ID    | Story                                                                                                                                                      | Acceptance Criteria                                                                                                                           |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | CM-01 | As a user, I want contacts to be created automatically when I receive or send emails to new people, so I never have to manually enter contacts from email. | Email sync creates `status='incomplete'` contacts for unknown participants within 60 seconds of sync. Contact is linked to the communication. |
-| CM-02 | As a user, I want to manually create a contact with name, company, email, and phone, so I can add people I meet at events. | Form with required name, optional company/email/phone/social. Contact saved with `source='manual'`. Enrichment triggered automatically. |
-| CM-03 | As a user, I want to import contacts from a CSV file, so I can migrate from my existing CRM or address book. | CSV upload with column mapping UI. Duplicate detection during import. Preview before commit. Progress indicator for large files. |
-| CM-04 | As a user, I want to import my Google Contacts, so my existing address book is available immediately. | OAuth-based sync via Google People API. UPSERT on email match. Ongoing incremental sync option. |
-| CM-05 | As a user, I want the browser extension to capture contact data from LinkedIn profiles I visit, so I can build my network without copy-pasting. | Extension captures name, title, company, LinkedIn URL. Data pushed to API. Entity resolution matches to existing contact or creates new. |
-| CM-06 | As a user, I want to import contacts from a vCard file, so I can import from Apple Contacts or other vCard-compatible tools. | Standard vCard 3.0/4.0 parsing. Multi-contact vCard files supported. Same dedup/preview flow as CSV. |
+| CM-02 | As a user, I want to manually create a contact with name, company, email, and phone, so I can add people I meet at events.                                 | Form with required name, optional company/email/phone/social. Contact saved with `source='manual'`. Enrichment triggered automatically.       |
+| CM-03 | As a user, I want to import contacts from a CSV file, so I can migrate from my existing CRM or address book.                                               | CSV upload with column mapping UI. Duplicate detection during import. Preview before commit. Progress indicator for large files.              |
+| CM-04 | As a user, I want to import my Google Contacts, so my existing address book is available immediately.                                                      | OAuth-based sync via Google People API. UPSERT on email match. Ongoing incremental sync option.                                               |
+| CM-05 | As a user, I want the browser extension to capture contact data from LinkedIn profiles I visit, so I can build my network without copy-pasting.            | Extension captures name, title, company, LinkedIn URL. Data pushed to API. Entity resolution matches to existing contact or creates new.      |
+| CM-06 | As a user, I want to import contacts from a vCard file, so I can import from Apple Contacts or other vCard-compatible tools.                               | Standard vCard 3.0/4.0 parsing. Multi-contact vCard files supported. Same dedup/preview flow as CSV.                                          |
 
 #### Contact Viewing & Editing
 
-| ID | Story | Acceptance Criteria |
-|---|---|---|
+| ID    | Story                                                                                                                                                                       | Acceptance Criteria                                                                                                                               |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | CM-07 | As a user, I want to see a unified contact detail page showing all information about a person — profile, communication history, relationships, intelligence — in one place. | Contact detail page with sections: Profile, Timeline, Relationships, Intelligence, Employment History, Notes, Deals. All data loads within 200ms. |
-| CM-08 | As a user, I want to edit any contact field (name, title, company, emails, phones, social profiles), and have the change recorded with an audit trail. | Inline editing. Each change emits an event. `updated_at` reflects the change. Previous values visible in history tab. |
-| CM-09 | As a user, I want to see a contact's full employment history — every company, title, and department they've held — in chronological order. | Employment history timeline component showing positions with start/end dates, sourced from event store and enrichment. |
-| CM-10 | As a user, I want to see when a contact's details changed (email, phone, title) and what they were before, so I can understand their career trajectory. | Point-in-time history view via event replay. "As of" date picker shows the contact's profile at any historical point. |
-| CM-11 | As a user, I want to add notes to a contact, so I can record context from meetings, calls, or research. | Note creation with rich text (Markdown). Notes appear on contact timeline. Notes are searchable via Meilisearch. |
+| CM-08 | As a user, I want to edit any contact field (name, title, company, emails, phones, social profiles), and have the change recorded with an audit trail.                      | Inline editing. Each change emits an event. `updated_at` reflects the change. Previous values visible in history tab.                             |
+| CM-09 | As a user, I want to see a contact's full employment history — every company, title, and department they've held — in chronological order.                                  | Employment history timeline component showing positions with start/end dates, sourced from event store and enrichment.                            |
+| CM-10 | As a user, I want to see when a contact's details changed (email, phone, title) and what they were before, so I can understand their career trajectory.                     | Point-in-time history view via event replay. "As of" date picker shows the contact's profile at any historical point.                             |
+| CM-11 | As a user, I want to add notes to a contact, so I can record context from meetings, calls, or research.                                                                     | Note creation with rich text (Markdown). Notes appear on contact timeline. Notes are searchable via Meilisearch.                                  |
 
 #### Identity Resolution & Deduplication
 
-| ID | Story | Acceptance Criteria |
-|---|---|---|
-| CM-12 | As a user, I want the system to automatically detect when two contact records refer to the same person and merge them, so I don't have duplicate records. | High-confidence matches (email or LinkedIn URL match) auto-merge. Medium-confidence matches auto-merge with review flag. Low-confidence matches queued for human review. |
-| CM-13 | As a user, I want to review suggested merges and approve or reject them, so the system doesn't merge contacts incorrectly. | Review queue UI showing candidate pairs with match signals, confidence score, and side-by-side comparison. Approve/reject actions with one click. |
-| CM-14 | As a user, I want to manually merge two contacts when I notice duplicates, so I can clean up my data. | Manual merge UI with field-level conflict resolution. Pick the preferred value for each conflicting field. All identifiers, communications, and relationships transfer to the surviving record. |
-| CM-15 | As a user, I want to split a contact that was incorrectly merged, so I can undo a bad merge. | Split action restores original records from event history. Communications re-linked to the correct contact. Merge event reversed in audit trail. |
-| CM-16 | As a user, I want to configure the auto-merge confidence threshold, so I can balance automation vs. review volume for my team's data quality needs. | Tenant-level settings for high/medium/low confidence thresholds. Changes apply to future matches only, not retroactive. |
+| ID    | Story                                                                                                                                                     | Acceptance Criteria                                                                                                                                                                             |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CM-12 | As a user, I want the system to automatically detect when two contact records refer to the same person and merge them, so I don't have duplicate records. | High-confidence matches (email or LinkedIn URL match) auto-merge. Medium-confidence matches auto-merge with review flag. Low-confidence matches queued for human review.                        |
+| CM-13 | As a user, I want to review suggested merges and approve or reject them, so the system doesn't merge contacts incorrectly.                                | Review queue UI showing candidate pairs with match signals, confidence score, and side-by-side comparison. Approve/reject actions with one click.                                               |
+| CM-14 | As a user, I want to manually merge two contacts when I notice duplicates, so I can clean up my data.                                                     | Manual merge UI with field-level conflict resolution. Pick the preferred value for each conflicting field. All identifiers, communications, and relationships transfer to the surviving record. |
+| CM-15 | As a user, I want to split a contact that was incorrectly merged, so I can undo a bad merge.                                                              | Split action restores original records from event history. Communications re-linked to the correct contact. Merge event reversed in audit trail.                                                |
+| CM-16 | As a user, I want to configure the auto-merge confidence threshold, so I can balance automation vs. review volume for my team's data quality needs.       | Tenant-level settings for high/medium/low confidence thresholds. Changes apply to future matches only, not retroactive.                                                                         |
 
 #### Enrichment & Intelligence
 
-| ID | Story | Acceptance Criteria |
-|---|---|---|
-| CM-17 | As a user, I want new contacts to be automatically enriched with public data (company, title, social profiles, photo) within minutes of creation. | Background enrichment job fires on contact creation. Enriched fields merged with source attribution. Intelligence score updated. |
-| CM-18 | As a user, I want to manually trigger enrichment for a specific contact, so I can refresh stale data or fill gaps. | "Enrich" button on contact detail page. Calls enrichment pipeline on demand. Shows results diff before applying. |
-| CM-19 | As a user, I want to see where each piece of contact data came from (Google Contacts, LinkedIn, Apollo, manual entry) and how confident the system is. | Source attribution badge on each field. Confidence score (0-1) visible on hover. Fields with conflicting sources show comparison. |
-| CM-20 | As a user, I want to set up monitoring alerts for key contacts, so I'm notified when they change jobs, their company raises funding, or other notable events occur. | Per-contact monitoring toggle. Configurable alert types (job change, funding, news). Notification via in-app alert, email, or Slack. |
-| CM-21 | As a user, I want an AI-generated one-paragraph briefing on any contact that synthesizes all available data — profile, communication history, relationship context, recent intelligence. | "Brief me" action on contact detail. Claude generates briefing in < 5 seconds. Briefing cached with TTL. Refresh on demand. |
+| ID    | Story                                                                                                                                                                                    | Acceptance Criteria                                                                                                                  |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| CM-17 | As a user, I want new contacts to be automatically enriched with public data (company, title, social profiles, photo) within minutes of creation.                                        | Background enrichment job fires on contact creation. Enriched fields merged with source attribution. Intelligence score updated.     |
+| CM-18 | As a user, I want to manually trigger enrichment for a specific contact, so I can refresh stale data or fill gaps.                                                                       | "Enrich" button on contact detail page. Calls enrichment pipeline on demand. Shows results diff before applying.                     |
+| CM-19 | As a user, I want to see where each piece of contact data came from (Google Contacts, LinkedIn, Apollo, manual entry) and how confident the system is.                                   | Source attribution badge on each field. Confidence score (0-1) visible on hover. Fields with conflicting sources show comparison.    |
+| CM-20 | As a user, I want to set up monitoring alerts for key contacts, so I'm notified when they change jobs, their company raises funding, or other notable events occur.                      | Per-contact monitoring toggle. Configurable alert types (job change, funding, news). Notification via in-app alert, email, or Slack. |
+| CM-21 | As a user, I want an AI-generated one-paragraph briefing on any contact that synthesizes all available data — profile, communication history, relationship context, recent intelligence. | "Brief me" action on contact detail. Claude generates briefing in < 5 seconds. Briefing cached with TTL. Refresh on demand.          |
 
 #### Relationships & Graph
 
-| ID | Story | Acceptance Criteria |
-|---|---|---|
-| CM-22 | As a user, I want to define relationships between contacts (reports to, knows, introduced by, mentor of, etc.), so I can model my professional network. | Relationship creation UI with typed edges. Temporal bounds (since/until). Bidirectional visualization. |
-| CM-23 | As a user, I want to see a visual network graph of a contact's relationships — who they know, who they work with, how they connect to my network. | Interactive graph visualization centered on the selected contact. Zoom, pan, filter by relationship type. Click-through to related contacts. |
-| CM-24 | As a user, I want to find the shortest warm introduction path between me and a target contact through mutual connections. | Path-finding query via Neo4j. Shows intermediate contacts with relationship strength. Multiple paths ranked by overall strength. |
-| CM-25 | As a user, I want to see the organizational chart for a company reconstructed from contact relationships. | Org chart view filtered by company. Inferred from REPORTS_TO, MANAGES, and WORKS_AT edges. Manual corrections supported. |
+| ID    | Story                                                                                                                                                   | Acceptance Criteria                                                                                                                          |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| CM-22 | As a user, I want to define relationships between contacts (reports to, knows, introduced by, mentor of, etc.), so I can model my professional network. | Relationship creation UI with typed edges. Temporal bounds (since/until). Bidirectional visualization.                                       |
+| CM-23 | As a user, I want to see a visual network graph of a contact's relationships — who they know, who they work with, how they connect to my network.       | Interactive graph visualization centered on the selected contact. Zoom, pan, filter by relationship type. Click-through to related contacts. |
+| CM-24 | As a user, I want to find the shortest warm introduction path between me and a target contact through mutual connections.                               | Path-finding query via Neo4j. Shows intermediate contacts with relationship strength. Multiple paths ranked by overall strength.             |
+| CM-25 | As a user, I want to see the organizational chart for a company reconstructed from contact relationships.                                               | Org chart view filtered by company. Inferred from REPORTS_TO, MANAGES, and WORKS_AT edges. Manual corrections supported.                     |
 
 #### Search, Filtering & Segmentation
 
-| ID | Story | Acceptance Criteria |
-|---|---|---|
-| CM-26 | As a user, I want to search contacts by name, email, company, title, or any field using fuzzy text search. | Meilisearch-backed full-text search. Typo-tolerant. Results ranked by relevance. < 50ms response. |
-| CM-27 | As a user, I want to filter contacts by company, tag, lead status, engagement score, last contact date, and custom fields. | Filter panel with AND/OR combinators. Saved filter presets. Contact list updates in real-time as filters change. |
-| CM-28 | As a user, I want to create contact groups (e.g., "Conference Leads Q1", "Advisory Board") and add/remove contacts from them. | Group CRUD. Bulk add/remove. Groups visible on contact detail page. Group-level communication templates. |
+| ID    | Story                                                                                                                                 | Acceptance Criteria                                                                                                                |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| CM-26 | As a user, I want to search contacts by name, email, company, title, or any field using fuzzy text search.                            | Meilisearch-backed full-text search. Typo-tolerant. Results ranked by relevance. < 50ms response.                                  |
+| CM-27 | As a user, I want to filter contacts by company, tag, lead status, engagement score, last contact date, and custom fields.            | Filter panel with AND/OR combinators. Saved filter presets. Contact list updates in real-time as filters change.                   |
+| CM-28 | As a user, I want to create contact groups (e.g., "Conference Leads Q1", "Advisory Board") and add/remove contacts from them.         | Group CRUD. Bulk add/remove. Groups visible on contact detail page. Group-level communication templates.                           |
 | CM-29 | As a user, I want to use natural language to search my contacts (e.g., "fintech founders in Boston I haven't talked to in 3 months"). | AI-powered NL search via Claude. Query translated to structured filters + Meilisearch + graph traversal. Results with explanation. |
 
 ---
@@ -243,31 +244,32 @@ Group (conventional table)
 
 The `contacts_current` table is the read-optimized materialized view derived from the event store. All read operations query this table. Write operations append events and synchronously update the materialized view.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4. Immutable after creation. |
-| `first_name` | TEXT | | First name or given name |
-| `last_name` | TEXT | | Last name or family name |
-| `display_name` | TEXT | NOT NULL | Computed: `first_name + ' ' + last_name`, or manual override |
-| `email_primary` | TEXT | | Denormalized from `contact_emails` for display performance. Kept in sync by event handler. |
-| `phone_primary` | TEXT | | Denormalized from `contact_phones` for display performance. |
-| `job_title` | TEXT | | Current job title (latest from `employment_history` where `is_current=TRUE`) |
-| `company_id` | TEXT | FK → `companies_current(id)` | Current company (latest from `employment_history` where `is_current=TRUE`) |
-| `company_name` | TEXT | | Denormalized company name for display performance (avoids JOIN) |
-| `avatar_url` | TEXT | | Profile photo URL (object storage or external) |
-| `lead_source` | TEXT | | How this contact entered the system: `email_sync`, `google_contacts`, `csv_import`, `linkedin_capture`, `manual`, `enrichment`, `referral` |
-| `lead_status` | TEXT | DEFAULT `'new'` | Sales lifecycle stage: `new`, `contacted`, `qualified`, `nurturing`, `customer`, `lost`, `inactive` |
-| `engagement_score` | REAL | DEFAULT 0.0 | Composite engagement metric (0.0–1.0). Computed from behavioral signals. |
-| `intelligence_score` | REAL | DEFAULT 0.0 | Data completeness metric (0.0–1.0). How much we know about this contact. |
-| `source` | TEXT | | First source that created this contact |
-| `status` | TEXT | DEFAULT `'active'` | Contact lifecycle: `active`, `incomplete`, `archived`, `merged` |
-| `custom_fields` | TEXT | | JSON object of tenant-defined custom field values. JSONB in PostgreSQL. |
-| `created_by` | TEXT | FK → `users(id)` | User who created the contact (NULL for auto-created) |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
-| `updated_at` | TEXT | NOT NULL | ISO 8601 |
-| `synced_at` | TEXT | | ISO 8601 timestamp of last sync to clients |
+| Column               | Type | Constraints                  | Description                                                                                                                                |
+| -------------------- | ---- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                 | TEXT | **PK**                       | UUID v4. Immutable after creation.                                                                                                         |
+| `first_name`         | TEXT |                              | First name or given name                                                                                                                   |
+| `last_name`          | TEXT |                              | Last name or family name                                                                                                                   |
+| `display_name`       | TEXT | NOT NULL                     | Computed: `first_name + ' ' + last_name`, or manual override                                                                               |
+| `email_primary`      | TEXT |                              | Denormalized from `contact_emails` for display performance. Kept in sync by event handler.                                                 |
+| `phone_primary`      | TEXT |                              | Denormalized from `contact_phones` for display performance.                                                                                |
+| `job_title`          | TEXT |                              | Current job title (latest from `employment_history` where `is_current=TRUE`)                                                               |
+| `company_id`         | TEXT | FK → `companies_current(id)` | Current company (latest from `employment_history` where `is_current=TRUE`)                                                                 |
+| `company_name`       | TEXT |                              | Denormalized company name for display performance (avoids JOIN)                                                                            |
+| `avatar_url`         | TEXT |                              | Profile photo URL (object storage or external)                                                                                             |
+| `lead_source`        | TEXT |                              | How this contact entered the system: `email_sync`, `google_contacts`, `csv_import`, `linkedin_capture`, `manual`, `enrichment`, `referral` |
+| `lead_status`        | TEXT | DEFAULT `'new'`              | Sales lifecycle stage: `new`, `contacted`, `qualified`, `nurturing`, `customer`, `lost`, `inactive`                                        |
+| `engagement_score`   | REAL | DEFAULT 0.0                  | Composite engagement metric (0.0–1.0). Computed from behavioral signals.                                                                   |
+| `intelligence_score` | REAL | DEFAULT 0.0                  | Data completeness metric (0.0–1.0). How much we know about this contact.                                                                   |
+| `source`             | TEXT |                              | First source that created this contact                                                                                                     |
+| `status`             | TEXT | DEFAULT `'active'`           | Contact lifecycle: `active`, `incomplete`, `archived`, `merged`                                                                            |
+| `custom_fields`      | TEXT |                              | JSON object of tenant-defined custom field values. JSONB in PostgreSQL.                                                                    |
+| `created_by`         | TEXT | FK → `users(id)`             | User who created the contact (NULL for auto-created)                                                                                       |
+| `created_at`         | TEXT | NOT NULL                     | ISO 8601                                                                                                                                   |
+| `updated_at`         | TEXT | NOT NULL                     | ISO 8601                                                                                                                                   |
+| `synced_at`          | TEXT |                              | ISO 8601 timestamp of last sync to clients                                                                                                 |
 
 **Notes:**
+
 - `email_primary` and `phone_primary` are intentionally denormalized. The canonical data lives in `contact_emails` and `contact_phones`. These columns are updated by event handlers to avoid JOINs on list views.
 - `company_name` is denormalized from `companies_current` for the same reason.
 - `engagement_score` and `intelligence_score` are recomputed periodically by background jobs, not updated on every event.
@@ -276,27 +278,29 @@ The `contacts_current` table is the read-optimized materialized view derived fro
 
 Multi-identifier resolution table. Every way a contact can be identified — email, phone, social handle, alias — is stored here with lifecycle tracking. This is the primary lookup table for resolving incoming communications to contacts.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE | Which contact this identifier belongs to |
-| `type` | TEXT | NOT NULL | Identifier type: `email`, `phone`, `linkedin`, `twitter`, `github`, `slack`, `custom` |
-| `value` | TEXT | NOT NULL | The identifier value, normalized. Email: lowercased, trimmed. Phone: E.164 format. LinkedIn: canonical URL. |
-| `label` | TEXT | | User-facing label: `work`, `personal`, `mobile`, `home`, `old`, etc. |
-| `is_primary` | INTEGER | DEFAULT 0 | Boolean. Primary identifier for this type. At most one primary per (contact_id, type). |
-| `status` | TEXT | DEFAULT `'active'` | Lifecycle: `active`, `inactive`, `unverified` |
-| `source` | TEXT | | Discovery source: `google_contacts`, `email_sync`, `linkedin_capture`, `enrichment_apollo`, `enrichment_clearbit`, `manual`, `osint` |
-| `confidence` | REAL | DEFAULT 1.0 | Confidence that this identifier belongs to this contact (0.0–1.0). Enrichment and auto-detection sources have < 1.0 confidence. |
-| `verified` | INTEGER | DEFAULT 0 | Boolean. Confirmed by user, enrichment match, or verified source. |
-| `valid_from` | TEXT | | ISO 8601. When this identifier became active (e.g., when the person started at a new company). |
-| `valid_until` | TEXT | | ISO 8601. When this identifier became inactive (e.g., when the person left a company). NULL = still active. |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
-| `updated_at` | TEXT | NOT NULL | ISO 8601 |
+| Column        | Type    | Constraints                                             | Description                                                                                                                          |
+| ------------- | ------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`          | TEXT    | **PK**                                                  | UUID v4                                                                                                                              |
+| `contact_id`  | TEXT    | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE | Which contact this identifier belongs to                                                                                             |
+| `type`        | TEXT    | NOT NULL                                                | Identifier type: `email`, `phone`, `linkedin`, `twitter`, `github`, `slack`, `custom`                                                |
+| `value`       | TEXT    | NOT NULL                                                | The identifier value, normalized. Email: lowercased, trimmed. Phone: E.164 format. LinkedIn: canonical URL.                          |
+| `label`       | TEXT    |                                                         | User-facing label: `work`, `personal`, `mobile`, `home`, `old`, etc.                                                                 |
+| `is_primary`  | INTEGER | DEFAULT 0                                               | Boolean. Primary identifier for this type. At most one primary per (contact_id, type).                                               |
+| `status`      | TEXT    | DEFAULT `'active'`                                      | Lifecycle: `active`, `inactive`, `unverified`                                                                                        |
+| `source`      | TEXT    |                                                         | Discovery source: `google_contacts`, `email_sync`, `linkedin_capture`, `enrichment_apollo`, `enrichment_clearbit`, `manual`, `osint` |
+| `confidence`  | REAL    | DEFAULT 1.0                                             | Confidence that this identifier belongs to this contact (0.0–1.0). Enrichment and auto-detection sources have < 1.0 confidence.      |
+| `verified`    | INTEGER | DEFAULT 0                                               | Boolean. Confirmed by user, enrichment match, or verified source.                                                                    |
+| `valid_from`  | TEXT    |                                                         | ISO 8601. When this identifier became active (e.g., when the person started at a new company).                                       |
+| `valid_until` | TEXT    |                                                         | ISO 8601. When this identifier became inactive (e.g., when the person left a company). NULL = still active.                          |
+| `created_at`  | TEXT    | NOT NULL                                                | ISO 8601                                                                                                                             |
+| `updated_at`  | TEXT    | NOT NULL                                                | ISO 8601                                                                                                                             |
 
 **Constraints:**
+
 - `UNIQUE(type, value)` — No two contacts can claim the same identifier. If entity resolution discovers a conflict, it triggers a merge workflow.
 
 **Resolution flow:**
+
 ```sql
 -- Resolve any incoming identifier to a contact
 SELECT contact_id, confidence, status
@@ -307,6 +311,7 @@ WHERE type = :type AND LOWER(value) = LOWER(:value);
 This single query works for email addresses, phone numbers, LinkedIn URLs, or any future identifier type. The `status` column ensures inactive identifiers still resolve for historical communications.
 
 **Auto-creation flow** (when identifier not found):
+
 1. Create a new `contacts_current` row with `source='email_sync'` (or appropriate source), `status='incomplete'`.
 2. Create a `contact_identifiers` row linking the identifier.
 3. Emit `ContactCreated` and `ContactIdentifierAdded` events.
@@ -319,85 +324,86 @@ These tables store multi-value contact details with temporal bounds, enabling hi
 
 #### `contact_emails`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE | |
-| `email` | TEXT | NOT NULL | Email address, lowercased |
-| `type` | TEXT | DEFAULT `'work'` | `work`, `personal`, `other` |
-| `is_primary` | INTEGER | DEFAULT 0 | Boolean. At most one primary per contact. |
-| `valid_from` | TEXT | | ISO 8601. NULL = unknown start date. |
-| `valid_until` | TEXT | | ISO 8601. NULL = still active. |
+| Column        | Type    | Constraints                                             | Description                               |
+| ------------- | ------- | ------------------------------------------------------- | ----------------------------------------- |
+| `id`          | TEXT    | **PK**                                                  | UUID v4                                   |
+| `contact_id`  | TEXT    | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE |                                           |
+| `email`       | TEXT    | NOT NULL                                                | Email address, lowercased                 |
+| `type`        | TEXT    | DEFAULT `'work'`                                        | `work`, `personal`, `other`               |
+| `is_primary`  | INTEGER | DEFAULT 0                                               | Boolean. At most one primary per contact. |
+| `valid_from`  | TEXT    |                                                         | ISO 8601. NULL = unknown start date.      |
+| `valid_until` | TEXT    |                                                         | ISO 8601. NULL = still active.            |
 
 #### `contact_phones`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE | |
-| `phone` | TEXT | NOT NULL | E.164 format |
-| `type` | TEXT | DEFAULT `'mobile'` | `mobile`, `work`, `home`, `fax`, `other` |
-| `is_primary` | INTEGER | DEFAULT 0 | Boolean. At most one primary per contact. |
-| `valid_from` | TEXT | | |
-| `valid_until` | TEXT | | |
+| Column        | Type    | Constraints                                             | Description                               |
+| ------------- | ------- | ------------------------------------------------------- | ----------------------------------------- |
+| `id`          | TEXT    | **PK**                                                  | UUID v4                                   |
+| `contact_id`  | TEXT    | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE |                                           |
+| `phone`       | TEXT    | NOT NULL                                                | E.164 format                              |
+| `type`        | TEXT    | DEFAULT `'mobile'`                                      | `mobile`, `work`, `home`, `fax`, `other`  |
+| `is_primary`  | INTEGER | DEFAULT 0                                               | Boolean. At most one primary per contact. |
+| `valid_from`  | TEXT    |                                                         |                                           |
+| `valid_until` | TEXT    |                                                         |                                           |
 
 #### `contact_social_profiles`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE | |
-| `platform` | TEXT | NOT NULL | `linkedin`, `twitter`, `github`, `facebook`, `instagram`, `other` |
-| `url` | TEXT | | Full profile URL |
-| `username` | TEXT | | Platform-specific handle |
-| `valid_from` | TEXT | | |
-| `valid_until` | TEXT | | |
+| Column        | Type | Constraints                                             | Description                                                       |
+| ------------- | ---- | ------------------------------------------------------- | ----------------------------------------------------------------- |
+| `id`          | TEXT | **PK**                                                  | UUID v4                                                           |
+| `contact_id`  | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE |                                                                   |
+| `platform`    | TEXT | NOT NULL                                                | `linkedin`, `twitter`, `github`, `facebook`, `instagram`, `other` |
+| `url`         | TEXT |                                                         | Full profile URL                                                  |
+| `username`    | TEXT |                                                         | Platform-specific handle                                          |
+| `valid_from`  | TEXT |                                                         |                                                                   |
+| `valid_until` | TEXT |                                                         |                                                                   |
 
 #### `contact_addresses`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE | |
-| `street` | TEXT | | Street address (line 1 + line 2) |
-| `city` | TEXT | | |
-| `state` | TEXT | | State, province, or region |
-| `country` | TEXT | | ISO 3166-1 alpha-2 country code |
-| `postal_code` | TEXT | | |
-| `type` | TEXT | DEFAULT `'work'` | `work`, `home`, `other` |
-| `valid_from` | TEXT | | |
-| `valid_until` | TEXT | | |
+| Column        | Type | Constraints                                             | Description                      |
+| ------------- | ---- | ------------------------------------------------------- | -------------------------------- |
+| `id`          | TEXT | **PK**                                                  | UUID v4                          |
+| `contact_id`  | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE |                                  |
+| `street`      | TEXT |                                                         | Street address (line 1 + line 2) |
+| `city`        | TEXT |                                                         |                                  |
+| `state`       | TEXT |                                                         | State, province, or region       |
+| `country`     | TEXT |                                                         | ISO 3166-1 alpha-2 country code  |
+| `postal_code` | TEXT |                                                         |                                  |
+| `type`        | TEXT | DEFAULT `'work'`                                        | `work`, `home`, `other`          |
+| `valid_from`  | TEXT |                                                         |                                  |
+| `valid_until` | TEXT |                                                         |                                  |
 
 #### `contact_key_dates`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE | |
-| `type` | TEXT | NOT NULL | `birthday`, `work_anniversary`, `first_met`, `custom` |
-| `date` | TEXT | NOT NULL | ISO 8601 date (YYYY-MM-DD) |
-| `label` | TEXT | | Custom label (for `type='custom'`) |
-| `source` | TEXT | | How this date was discovered |
+| Column       | Type | Constraints                                             | Description                                           |
+| ------------ | ---- | ------------------------------------------------------- | ----------------------------------------------------- |
+| `id`         | TEXT | **PK**                                                  | UUID v4                                               |
+| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE |                                                       |
+| `type`       | TEXT | NOT NULL                                                | `birthday`, `work_anniversary`, `first_met`, `custom` |
+| `date`       | TEXT | NOT NULL                                                | ISO 8601 date (YYYY-MM-DD)                            |
+| `label`      | TEXT |                                                         | Custom label (for `type='custom'`)                    |
+| `source`     | TEXT |                                                         | How this date was discovered                          |
 
 ### 5.5 Employment History
 
 Temporal employment records linking contacts to companies. Enables career trajectory analysis, org chart reconstruction, and "where did they work before?" queries.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE | |
-| `company_id` | TEXT | FK → `companies_current(id)` ON DELETE SET NULL | Linked company record (NULL if company not yet in system) |
-| `company_name` | TEXT | NOT NULL | Company name at time of employment (preserved even if company record changes) |
-| `title` | TEXT | | Job title |
-| `department` | TEXT | | Department or team |
-| `started_at` | TEXT | | ISO 8601. NULL = unknown start date. |
-| `ended_at` | TEXT | | ISO 8601. NULL = still employed. |
-| `is_current` | INTEGER | DEFAULT 0 | Boolean. TRUE for current positions. Enforced: at most one `is_current=1` per contact. |
-| `source` | TEXT | | Discovery source: `manual`, `linkedin_capture`, `enrichment_apollo`, `email_signature`, `google_contacts` |
-| `confidence` | REAL | DEFAULT 1.0 | Source confidence (0.0–1.0) |
+| Column         | Type    | Constraints                                             | Description                                                                                               |
+| -------------- | ------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `id`           | TEXT    | **PK**                                                  | UUID v4                                                                                                   |
+| `contact_id`   | TEXT    | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE |                                                                                                           |
+| `company_id`   | TEXT    | FK → `companies_current(id)` ON DELETE SET NULL         | Linked company record (NULL if company not yet in system)                                                 |
+| `company_name` | TEXT    | NOT NULL                                                | Company name at time of employment (preserved even if company record changes)                             |
+| `title`        | TEXT    |                                                         | Job title                                                                                                 |
+| `department`   | TEXT    |                                                         | Department or team                                                                                        |
+| `started_at`   | TEXT    |                                                         | ISO 8601. NULL = unknown start date.                                                                      |
+| `ended_at`     | TEXT    |                                                         | ISO 8601. NULL = still employed.                                                                          |
+| `is_current`   | INTEGER | DEFAULT 0                                               | Boolean. TRUE for current positions. Enforced: at most one `is_current=1` per contact.                    |
+| `source`       | TEXT    |                                                         | Discovery source: `manual`, `linkedin_capture`, `enrichment_apollo`, `email_signature`, `google_contacts` |
+| `confidence`   | REAL    | DEFAULT 1.0                                             | Source confidence (0.0–1.0)                                                                               |
 
 **Constraints:**
+
 - Index on `(contact_id, is_current)` for fast "current employer" lookup.
 - Index on `(company_id, is_current)` for fast "current employees at company" lookup.
 
@@ -407,25 +413,25 @@ Temporal employment records linking contacts to companies. Enables career trajec
 
 ### 6.1 Company Record — Materialized View
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `name` | TEXT | NOT NULL | Company name |
-| `domain` | TEXT | UNIQUE | Primary web domain (e.g., `acmecorp.com`). Used for email domain matching. |
-| `industry` | TEXT | | Industry classification |
-| `size` | TEXT | | Employee count range: `1-10`, `11-50`, `51-200`, `201-500`, `501-1000`, `1001-5000`, `5001+` |
-| `location` | TEXT | | Headquarters location (city, state/country) |
-| `description` | TEXT | | Brief company description |
-| `logo_url` | TEXT | | Company logo (object storage or external) |
-| `website` | TEXT | | Company website URL |
-| `linkedin_url` | TEXT | | Company LinkedIn page URL |
-| `founded_year` | INTEGER | | Year founded |
-| `revenue_range` | TEXT | | Annual revenue range |
-| `funding_total` | TEXT | | Total funding raised |
-| `funding_stage` | TEXT | | Latest funding stage: `seed`, `series_a`, `series_b`, etc. |
-| `custom_fields` | TEXT | | JSON object of tenant-defined custom field values. JSONB in PostgreSQL. |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
-| `updated_at` | TEXT | NOT NULL | ISO 8601 |
+| Column          | Type    | Constraints | Description                                                                                  |
+| --------------- | ------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `id`            | TEXT    | **PK**      | UUID v4                                                                                      |
+| `name`          | TEXT    | NOT NULL    | Company name                                                                                 |
+| `domain`        | TEXT    | UNIQUE      | Primary web domain (e.g., `acmecorp.com`). Used for email domain matching.                   |
+| `industry`      | TEXT    |             | Industry classification                                                                      |
+| `size`          | TEXT    |             | Employee count range: `1-10`, `11-50`, `51-200`, `201-500`, `501-1000`, `1001-5000`, `5001+` |
+| `location`      | TEXT    |             | Headquarters location (city, state/country)                                                  |
+| `description`   | TEXT    |             | Brief company description                                                                    |
+| `logo_url`      | TEXT    |             | Company logo (object storage or external)                                                    |
+| `website`       | TEXT    |             | Company website URL                                                                          |
+| `linkedin_url`  | TEXT    |             | Company LinkedIn page URL                                                                    |
+| `founded_year`  | INTEGER |             | Year founded                                                                                 |
+| `revenue_range` | TEXT    |             | Annual revenue range                                                                         |
+| `funding_total` | TEXT    |             | Total funding raised                                                                         |
+| `funding_stage` | TEXT    |             | Latest funding stage: `seed`, `series_a`, `series_b`, etc.                                   |
+| `custom_fields` | TEXT    |             | JSON object of tenant-defined custom field values. JSONB in PostgreSQL.                      |
+| `created_at`    | TEXT    | NOT NULL    | ISO 8601                                                                                     |
+| `updated_at`    | TEXT    | NOT NULL    | ISO 8601                                                                                     |
 
 ### 6.2 Company Domain Resolution
 
@@ -490,16 +496,16 @@ Contact: Sarah Chen (Acme Corp)  [status=active, intelligence_score=0.85]
 
 Identity resolution uses a **tiered confidence model** with configurable thresholds:
 
-| Tier | Signal Combination | Default Confidence | Default Action |
-|---|---|---|---|
-| **Exact** | Email address exact match | 1.0 | Auto-merge, no flag |
-| **Exact** | LinkedIn profile URL match | 1.0 | Auto-merge, no flag |
-| **Exact** | Phone number exact match (E.164 normalized) | 0.95 | Auto-merge, no flag |
-| **High** | Name + Company + Title fuzzy match (>90% similarity) | 0.80–0.95 | Auto-merge with review flag |
-| **High** | Name + Email domain match | 0.80–0.90 | Auto-merge with review flag |
-| **Medium** | Name + Company fuzzy match (no title) | 0.60–0.80 | Auto-merge with review flag |
-| **Medium** | Name + Location match | 0.50–0.70 | Queue for human review |
-| **Low** | Name-only fuzzy match | 0.20–0.50 | Queue for human review |
+| Tier       | Signal Combination                                   | Default Confidence | Default Action              |
+| ---------- | ---------------------------------------------------- | ------------------ | --------------------------- |
+| **Exact**  | Email address exact match                            | 1.0                | Auto-merge, no flag         |
+| **Exact**  | LinkedIn profile URL match                           | 1.0                | Auto-merge, no flag         |
+| **Exact**  | Phone number exact match (E.164 normalized)          | 0.95               | Auto-merge, no flag         |
+| **High**   | Name + Company + Title fuzzy match (>90% similarity) | 0.80–0.95          | Auto-merge with review flag |
+| **High**   | Name + Email domain match                            | 0.80–0.90          | Auto-merge with review flag |
+| **Medium** | Name + Company fuzzy match (no title)                | 0.60–0.80          | Auto-merge with review flag |
+| **Medium** | Name + Location match                                | 0.50–0.70          | Queue for human review      |
+| **Low**    | Name-only fuzzy match                                | 0.20–0.50          | Queue for human review      |
 
 **Confidence scoring formula:**
 
@@ -513,18 +519,18 @@ Where `s1...sN` are the individual signal confidences. This ensures multiple wea
 
 **Signal weights:**
 
-| Signal | Weight | Notes |
-|---|---|---|
-| Email exact match | 1.0 | Definitive identifier |
-| LinkedIn URL match | 1.0 | Definitive identifier |
-| Phone E.164 match | 0.95 | Very high but not 1.0 (shared phones exist) |
-| Name exact match | 0.30 | Common names reduce this weight |
-| Name fuzzy match (>90%) | 0.20 | Levenshtein + phonetic |
-| Company exact match | 0.25 | |
-| Company fuzzy match | 0.15 | |
-| Title match | 0.15 | |
-| Email domain match | 0.20 | Same company domain |
-| Location match | 0.10 | Same city/region |
+| Signal                  | Weight | Notes                                       |
+| ----------------------- | ------ | ------------------------------------------- |
+| Email exact match       | 1.0    | Definitive identifier                       |
+| LinkedIn URL match      | 1.0    | Definitive identifier                       |
+| Phone E.164 match       | 0.95   | Very high but not 1.0 (shared phones exist) |
+| Name exact match        | 0.30   | Common names reduce this weight             |
+| Name fuzzy match (>90%) | 0.20   | Levenshtein + phonetic                      |
+| Company exact match     | 0.25   |                                             |
+| Company fuzzy match     | 0.15   |                                             |
+| Title match             | 0.15   |                                             |
+| Email domain match      | 0.20   | Same company domain                         |
+| Location match          | 0.10   | Same city/region                            |
 
 ### 7.3 Entity Resolution Pipeline
 
@@ -584,20 +590,21 @@ Incoming data (email sync, enrichment, browser extension, manual entry)
 
 ### 7.4 Match Candidates Table
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `entity_type` | TEXT | NOT NULL | `contact` or `company` |
-| `entity_a_id` | TEXT | NOT NULL | First entity in the candidate pair |
-| `entity_b_id` | TEXT | NOT NULL | Second entity in the candidate pair |
-| `confidence_score` | REAL | NOT NULL | Combined confidence (0.0–1.0) |
-| `match_signals` | TEXT | NOT NULL | JSON array of signal details: `[{"signal": "email_exact", "weight": 1.0, "value": "sarah@acme.com"}, ...]` |
-| `status` | TEXT | DEFAULT `'pending'` | `pending`, `approved`, `rejected`, `auto_merged` |
-| `reviewed_by` | TEXT | FK → `users(id)` | User who reviewed (NULL for auto-merged) |
-| `reviewed_at` | TEXT | | ISO 8601 |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
+| Column             | Type | Constraints         | Description                                                                                                |
+| ------------------ | ---- | ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `id`               | TEXT | **PK**              | UUID v4                                                                                                    |
+| `entity_type`      | TEXT | NOT NULL            | `contact` or `company`                                                                                     |
+| `entity_a_id`      | TEXT | NOT NULL            | First entity in the candidate pair                                                                         |
+| `entity_b_id`      | TEXT | NOT NULL            | Second entity in the candidate pair                                                                        |
+| `confidence_score` | REAL | NOT NULL            | Combined confidence (0.0–1.0)                                                                              |
+| `match_signals`    | TEXT | NOT NULL            | JSON array of signal details: `[{"signal": "email_exact", "weight": 1.0, "value": "sarah@acme.com"}, ...]` |
+| `status`           | TEXT | DEFAULT `'pending'` | `pending`, `approved`, `rejected`, `auto_merged`                                                           |
+| `reviewed_by`      | TEXT | FK → `users(id)`    | User who reviewed (NULL for auto-merged)                                                                   |
+| `reviewed_at`      | TEXT |                     | ISO 8601                                                                                                   |
+| `created_at`       | TEXT | NOT NULL            | ISO 8601                                                                                                   |
 
 **Constraints:**
+
 - `UNIQUE(entity_type, entity_a_id, entity_b_id)` — One candidate record per pair.
 - Index on `(status)` for the review queue query.
 
@@ -605,20 +612,21 @@ Incoming data (email sync, enrichment, browser extension, manual entry)
 
 Preserves the original data from each source before merge. Enables split (undo merge) and source attribution.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `entity_type` | TEXT | NOT NULL | `contact` or `company` |
-| `entity_id` | TEXT | NOT NULL | The merged entity this came from |
-| `source` | TEXT | NOT NULL | Source system: `google_contacts`, `email_sync`, `linkedin_capture`, `enrichment_apollo`, `manual`, etc. |
-| `source_id` | TEXT | | Source system's native ID (e.g., Google People API `resourceName`) |
-| `raw_data` | TEXT | NOT NULL | JSON blob of original data as received from the source |
-| `captured_at` | TEXT | NOT NULL | ISO 8601 timestamp of data capture |
-| `captured_by` | TEXT | FK → `users(id)` | User who captured (NULL for automated sources) |
+| Column        | Type | Constraints      | Description                                                                                             |
+| ------------- | ---- | ---------------- | ------------------------------------------------------------------------------------------------------- |
+| `id`          | TEXT | **PK**           | UUID v4                                                                                                 |
+| `entity_type` | TEXT | NOT NULL         | `contact` or `company`                                                                                  |
+| `entity_id`   | TEXT | NOT NULL         | The merged entity this came from                                                                        |
+| `source`      | TEXT | NOT NULL         | Source system: `google_contacts`, `email_sync`, `linkedin_capture`, `enrichment_apollo`, `manual`, etc. |
+| `source_id`   | TEXT |                  | Source system's native ID (e.g., Google People API `resourceName`)                                      |
+| `raw_data`    | TEXT | NOT NULL         | JSON blob of original data as received from the source                                                  |
+| `captured_at` | TEXT | NOT NULL         | ISO 8601 timestamp of data capture                                                                      |
+| `captured_by` | TEXT | FK → `users(id)` | User who captured (NULL for automated sources)                                                          |
 
 ### 7.6 Merge & Split Semantics
 
 **Merge execution:**
+
 1. Select the **survivor** contact (typically the record with the higher intelligence score, or the older record if scores are equal).
 2. Transfer all `contact_identifiers` from the duplicate to the survivor.
 3. Transfer all `contact_emails`, `contact_phones`, `contact_social_profiles`, `contact_addresses`, `contact_key_dates` from the duplicate to the survivor.
@@ -632,6 +640,7 @@ Preserves the original data from each source before merge. Enables split (undo m
 11. Log the merge in `entity_match_candidates` with `status='approved'` or `status='auto_merged'`.
 
 **Split execution (undo merge):**
+
 1. Replay `entity_source_records` for the merged entity to reconstruct original records.
 2. Create a new contact record for the split-off entity.
 3. Re-assign identifiers, communications, and relationships based on source record attribution.
@@ -644,25 +653,25 @@ Preserves the original data from each source before merge. Enables split (undo m
 
 ### 8.1 Contact Statuses
 
-| Status | Description | Transitions |
-|---|---|---|
-| `incomplete` | Auto-created from an unknown identifier. Minimal data. Awaiting enrichment. | → `active` (after enrichment or manual edit) |
-| `active` | Fully identified contact with at least name + one verified identifier. | → `archived`, → `merged` |
-| `archived` | User-archived contact. Excluded from active lists but data preserved. Identifiers still resolve for historical communications. | → `active` (unarchive) |
-| `merged` | Duplicate contact that was merged into another record. Soft-deleted. | → `active` (via split/undo merge) |
+| Status       | Description                                                                                                                    | Transitions                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `incomplete` | Auto-created from an unknown identifier. Minimal data. Awaiting enrichment.                                                    | → `active` (after enrichment or manual edit) |
+| `active`     | Fully identified contact with at least name + one verified identifier.                                                         | → `archived`, → `merged`                     |
+| `archived`   | User-archived contact. Excluded from active lists but data preserved. Identifiers still resolve for historical communications. | → `active` (unarchive)                       |
+| `merged`     | Duplicate contact that was merged into another record. Soft-deleted.                                                           | → `active` (via split/undo merge)            |
 
 ### 8.2 Contact Creation Sources
 
-| Source | Trigger | Initial Status | Auto-Enrichment |
-|---|---|---|---|
-| `email_sync` | Unknown email participant during sync | `incomplete` | Yes |
-| `google_contacts` | Google People API sync | `active` | Yes |
-| `linkedin_capture` | Browser extension captures LinkedIn profile | `active` | Optional |
-| `csv_import` | CSV file upload | `active` (if name present) or `incomplete` | Yes |
-| `vcard_import` | vCard file upload | `active` | Yes |
-| `manual` | User creates via UI | `active` | Yes |
-| `enrichment` | Enrichment discovers a new related contact | `incomplete` | Yes (chain enrichment) |
-| `referral` | User explicitly links a referral relationship | `active` | Yes |
+| Source             | Trigger                                       | Initial Status                             | Auto-Enrichment        |
+| ------------------ | --------------------------------------------- | ------------------------------------------ | ---------------------- |
+| `email_sync`       | Unknown email participant during sync         | `incomplete`                               | Yes                    |
+| `google_contacts`  | Google People API sync                        | `active`                                   | Yes                    |
+| `linkedin_capture` | Browser extension captures LinkedIn profile   | `active`                                   | Optional               |
+| `csv_import`       | CSV file upload                               | `active` (if name present) or `incomplete` | Yes                    |
+| `vcard_import`     | vCard file upload                             | `active`                                   | Yes                    |
+| `manual`           | User creates via UI                           | `active`                                   | Yes                    |
+| `enrichment`       | Enrichment discovers a new related contact    | `incomplete`                               | Yes (chain enrichment) |
+| `referral`         | User explicitly links a referral relationship | `active`                                   | Yes                    |
 
 ### 8.3 Contact Deletion & Data Retention
 
@@ -671,6 +680,7 @@ Contacts are **never hard-deleted** in the normal workflow. The event-sourced mo
 **Soft deletion:** Setting `status='archived'` hides the contact from active lists. The record, all identifiers, and all history remain in the system. Identifiers continue to resolve for historical communications.
 
 **Hard deletion (GDPR/CCPA):** A dedicated data subject access request (DSAR) workflow:
+
 1. User initiates deletion request with justification.
 2. System generates a data export for the contact (all events, identifiers, communications, intelligence).
 3. After confirmation, the system:
@@ -743,14 +753,14 @@ Contact created / enrichment requested
 
 The enrichment system uses a pluggable adapter pattern. Each adapter normalizes external data to a common schema:
 
-| Adapter | Input | Output | Priority | Cost |
-|---|---|---|---|---|
-| **Apollo** | Email or domain | Full profile (name, title, company, phone, social, photo) | 1 (primary) | Per-lookup |
-| **Clearbit** | Email or domain | Company + person data, firmographics | 2 | Per-lookup |
-| **People Data Labs** | Email, phone, or name+company | Person + company data | 3 | Per-lookup |
-| **Google People API** | OAuth + contact sync | Name, emails, phones, addresses, photos | 0 (free, pre-existing) | Free |
-| **LinkedIn (browser ext.)** | Browser extension capture | Profile, headline, experience, connections | N/A (user-driven) | Free |
-| **Email signature parser** | Email body parsing | Name, title, company, phone, address | N/A (passive) | Free |
+| Adapter                     | Input                         | Output                                                    | Priority               | Cost       |
+| --------------------------- | ----------------------------- | --------------------------------------------------------- | ---------------------- | ---------- |
+| **Apollo**                  | Email or domain               | Full profile (name, title, company, phone, social, photo) | 1 (primary)            | Per-lookup |
+| **Clearbit**                | Email or domain               | Company + person data, firmographics                      | 2                      | Per-lookup |
+| **People Data Labs**        | Email, phone, or name+company | Person + company data                                     | 3                      | Per-lookup |
+| **Google People API**       | OAuth + contact sync          | Name, emails, phones, addresses, photos                   | 0 (free, pre-existing) | Free       |
+| **LinkedIn (browser ext.)** | Browser extension capture     | Profile, headline, experience, connections                | N/A (user-driven)      | Free       |
+| **Email signature parser**  | Email body parsing            | Name, title, company, phone, address                      | N/A (passive)          | Free       |
 
 **Adapter interface:**
 
@@ -781,56 +791,56 @@ class EnrichmentAdapter(Protocol):
 
 Discrete pieces of intelligence about a contact or company, sourced from enrichment, OSINT monitoring, or manual entry.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `contact_id` | TEXT | FK → `contacts_current(id)` | Linked contact (NULL if company-level intel) |
-| `company_id` | TEXT | FK → `companies_current(id)` | Linked company (NULL if contact-level intel) |
-| `source` | TEXT | NOT NULL | Data source: `enrichment_apollo`, `osint_news`, `osint_sec`, `browser_extension`, `manual`, etc. |
-| `category` | TEXT | NOT NULL | `job_change`, `funding_round`, `news_mention`, `social_activity`, `technology_change`, `hiring_signal`, `acquisition`, `patent`, `publication`, `custom` |
-| `title` | TEXT | NOT NULL | Brief headline for the intelligence item |
-| `summary` | TEXT | | Longer description or context |
-| `raw_data` | TEXT | | JSON blob of original source data |
-| `url` | TEXT | | Source URL (news article, SEC filing, etc.) |
-| `confidence` | REAL | DEFAULT 1.0 | Confidence that this intel is accurate (0.0–1.0) |
-| `verified_by` | TEXT | FK → `users(id)` | User who verified (NULL if unverified) |
-| `verified_at` | TEXT | | ISO 8601 |
-| `expires_at` | TEXT | | ISO 8601. For time-sensitive intel (e.g., a job posting that closes). |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
+| Column        | Type | Constraints                  | Description                                                                                                                                              |
+| ------------- | ---- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | TEXT | **PK**                       | UUID v4                                                                                                                                                  |
+| `contact_id`  | TEXT | FK → `contacts_current(id)`  | Linked contact (NULL if company-level intel)                                                                                                             |
+| `company_id`  | TEXT | FK → `companies_current(id)` | Linked company (NULL if contact-level intel)                                                                                                             |
+| `source`      | TEXT | NOT NULL                     | Data source: `enrichment_apollo`, `osint_news`, `osint_sec`, `browser_extension`, `manual`, etc.                                                         |
+| `category`    | TEXT | NOT NULL                     | `job_change`, `funding_round`, `news_mention`, `social_activity`, `technology_change`, `hiring_signal`, `acquisition`, `patent`, `publication`, `custom` |
+| `title`       | TEXT | NOT NULL                     | Brief headline for the intelligence item                                                                                                                 |
+| `summary`     | TEXT |                              | Longer description or context                                                                                                                            |
+| `raw_data`    | TEXT |                              | JSON blob of original source data                                                                                                                        |
+| `url`         | TEXT |                              | Source URL (news article, SEC filing, etc.)                                                                                                              |
+| `confidence`  | REAL | DEFAULT 1.0                  | Confidence that this intel is accurate (0.0–1.0)                                                                                                         |
+| `verified_by` | TEXT | FK → `users(id)`             | User who verified (NULL if unverified)                                                                                                                   |
+| `verified_at` | TEXT |                              | ISO 8601                                                                                                                                                 |
+| `expires_at`  | TEXT |                              | ISO 8601. For time-sensitive intel (e.g., a job posting that closes).                                                                                    |
+| `created_at`  | TEXT | NOT NULL                     | ISO 8601                                                                                                                                                 |
 
 ### 9.4 OSINT Monitors
 
 Configurable monitors that periodically check for changes to tracked entities.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `entity_type` | TEXT | NOT NULL | `contact` or `company` |
-| `entity_id` | TEXT | NOT NULL | ID of the monitored contact or company |
-| `source` | TEXT | NOT NULL | Which source to monitor: `linkedin`, `news`, `sec`, `domain`, `enrichment` |
-| `frequency` | TEXT | DEFAULT `'daily'` | Check frequency: `hourly`, `daily`, `weekly` |
-| `last_checked` | TEXT | | ISO 8601 timestamp of last check |
-| `status` | TEXT | DEFAULT `'active'` | `active`, `paused`, `expired` |
-| `alert_types` | TEXT | | JSON array of alert categories to trigger on: `["job_change", "funding_round", "news_mention"]` |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
+| Column         | Type | Constraints        | Description                                                                                     |
+| -------------- | ---- | ------------------ | ----------------------------------------------------------------------------------------------- |
+| `id`           | TEXT | **PK**             | UUID v4                                                                                         |
+| `entity_type`  | TEXT | NOT NULL           | `contact` or `company`                                                                          |
+| `entity_id`    | TEXT | NOT NULL           | ID of the monitored contact or company                                                          |
+| `source`       | TEXT | NOT NULL           | Which source to monitor: `linkedin`, `news`, `sec`, `domain`, `enrichment`                      |
+| `frequency`    | TEXT | DEFAULT `'daily'`  | Check frequency: `hourly`, `daily`, `weekly`                                                    |
+| `last_checked` | TEXT |                    | ISO 8601 timestamp of last check                                                                |
+| `status`       | TEXT | DEFAULT `'active'` | `active`, `paused`, `expired`                                                                   |
+| `alert_types`  | TEXT |                    | JSON array of alert categories to trigger on: `["job_change", "funding_round", "news_mention"]` |
+| `created_at`   | TEXT | NOT NULL           | ISO 8601                                                                                        |
 
 ### 9.5 Intelligence Score Computation
 
 The intelligence score reflects how much the system knows about a contact, weighted by data quality:
 
-| Field Category | Weight | Scoring Rule |
-|---|---|---|
-| **Name** (first + last) | 0.15 | 0.15 if both present, 0.08 if only one |
-| **Email** (verified) | 0.15 | 0.15 if at least one verified email |
-| **Phone** (verified) | 0.10 | 0.10 if at least one verified phone |
-| **Company** (current) | 0.10 | 0.10 if current employment record exists |
-| **Title** (current) | 0.08 | 0.08 if current job title exists |
-| **Social profiles** | 0.07 | 0.035 per profile (max 2 counted) |
-| **Photo** | 0.05 | 0.05 if avatar_url is set |
-| **Address** | 0.05 | 0.05 if at least one address |
-| **Employment history** | 0.10 | 0.05 per historical position (max 2) |
-| **Enrichment data** | 0.10 | 0.10 if at least one enrichment source |
-| **Communication history** | 0.05 | 0.05 if at least one communication linked |
+| Field Category            | Weight | Scoring Rule                              |
+| ------------------------- | ------ | ----------------------------------------- |
+| **Name** (first + last)   | 0.15   | 0.15 if both present, 0.08 if only one    |
+| **Email** (verified)      | 0.15   | 0.15 if at least one verified email       |
+| **Phone** (verified)      | 0.10   | 0.10 if at least one verified phone       |
+| **Company** (current)     | 0.10   | 0.10 if current employment record exists  |
+| **Title** (current)       | 0.08   | 0.08 if current job title exists          |
+| **Social profiles**       | 0.07   | 0.035 per profile (max 2 counted)         |
+| **Photo**                 | 0.05   | 0.05 if avatar_url is set                 |
+| **Address**               | 0.05   | 0.05 if at least one address              |
+| **Employment history**    | 0.10   | 0.05 per historical position (max 2)      |
+| **Enrichment data**       | 0.10   | 0.10 if at least one enrichment source    |
+| **Communication history** | 0.05   | 0.05 if at least one communication linked |
 
 **Total: 1.0.** Score recomputed on enrichment, identity merge, and on a scheduled basis (daily).
 
@@ -856,28 +866,28 @@ Contacts and companies exist as nodes in a Neo4j property graph. Relationships a
 
 **Relationship taxonomy:**
 
-| Category | Edge Type | Properties | Description |
-|---|---|---|---|
-| **Hierarchical** | `REPORTS_TO` | `since`, `until` | Direct reporting relationship |
-| | `MANAGES` | `since`, `until` | Direct management relationship |
-| | `DOTTED_LINE_TO` | `context` | Indirect reporting / matrix |
-| **Professional** | `WORKS_WITH` | `context` | Colleague relationship |
-| | `ADVISES` | `since`, `domain` | Advisory relationship |
-| | `BOARD_MEMBER_OF` | `since`, `until` | Board membership (Contact→Company) |
-| | `INVESTOR_IN` | `round`, `amount` | Investment relationship (Contact→Company) |
-| **Social** | `KNOWS` | `strength`, `since`, `context`, `last_interaction` | General acquaintance |
-| | `INTRODUCED_BY` | `date`, `outcome` | Introduction provenance |
-| | `REFERRED_BY` | `date`, `context` | Referral provenance |
-| | `MENTOR_OF` | `since`, `domain` | Mentorship |
-| **Employment** | `WORKS_AT` | `role`, `department`, `since`, `until`, `is_current` | Employment (Contact→Company) |
-| **Deal** | `DECISION_MAKER_FOR` | | Deal stakeholder role |
-| | `INFLUENCER_ON` | | Deal stakeholder role |
-| | `CHAMPION_OF` | | Deal stakeholder role |
-| | `PARTICIPATES_IN` | | General deal involvement |
-| **Other** | `ATTENDED` | `role` | Event attendance |
-| | `MEMBER_OF` | | Group membership |
-| | `HAS_SKILL` | | Skill tagging |
-| | `INTERESTED_IN` | | Industry interest |
+| Category         | Edge Type            | Properties                                           | Description                               |
+| ---------------- | -------------------- | ---------------------------------------------------- | ----------------------------------------- |
+| **Hierarchical** | `REPORTS_TO`         | `since`, `until`                                     | Direct reporting relationship             |
+|                  | `MANAGES`            | `since`, `until`                                     | Direct management relationship            |
+|                  | `DOTTED_LINE_TO`     | `context`                                            | Indirect reporting / matrix               |
+| **Professional** | `WORKS_WITH`         | `context`                                            | Colleague relationship                    |
+|                  | `ADVISES`            | `since`, `domain`                                    | Advisory relationship                     |
+|                  | `BOARD_MEMBER_OF`    | `since`, `until`                                     | Board membership (Contact→Company)        |
+|                  | `INVESTOR_IN`        | `round`, `amount`                                    | Investment relationship (Contact→Company) |
+| **Social**       | `KNOWS`              | `strength`, `since`, `context`, `last_interaction`   | General acquaintance                      |
+|                  | `INTRODUCED_BY`      | `date`, `outcome`                                    | Introduction provenance                   |
+|                  | `REFERRED_BY`        | `date`, `context`                                    | Referral provenance                       |
+|                  | `MENTOR_OF`          | `since`, `domain`                                    | Mentorship                                |
+| **Employment**   | `WORKS_AT`           | `role`, `department`, `since`, `until`, `is_current` | Employment (Contact→Company)              |
+| **Deal**         | `DECISION_MAKER_FOR` |                                                      | Deal stakeholder role                     |
+|                  | `INFLUENCER_ON`      |                                                      | Deal stakeholder role                     |
+|                  | `CHAMPION_OF`        |                                                      | Deal stakeholder role                     |
+|                  | `PARTICIPATES_IN`    |                                                      | General deal involvement                  |
+| **Other**        | `ATTENDED`           | `role`                                               | Event attendance                          |
+|                  | `MEMBER_OF`          |                                                      | Group membership                          |
+|                  | `HAS_SKILL`          |                                                      | Skill tagging                             |
+|                  | `INTERESTED_IN`      |                                                      | Industry interest                         |
 
 ### 10.2 Relationship Strength Scoring
 
@@ -885,13 +895,13 @@ The `KNOWS` relationship includes a `strength` property (0.0–1.0) that reflect
 
 **Input signals:**
 
-| Signal | Weight | Description |
-|---|---|---|
-| Communication frequency | 0.30 | Emails, calls, meetings in the last 90 days |
-| Communication recency | 0.25 | Days since last communication (decays exponentially) |
-| Reciprocity | 0.20 | Ratio of bidirectional communication (1.0 = perfectly balanced) |
-| Duration | 0.15 | Length of known relationship (capped at 5+ years = max) |
-| Explicit connections | 0.10 | User-defined relationships (introductions, referrals) |
+| Signal                  | Weight | Description                                                     |
+| ----------------------- | ------ | --------------------------------------------------------------- |
+| Communication frequency | 0.30   | Emails, calls, meetings in the last 90 days                     |
+| Communication recency   | 0.25   | Days since last communication (decays exponentially)            |
+| Reciprocity             | 0.20   | Ratio of bidirectional communication (1.0 = perfectly balanced) |
+| Duration                | 0.15   | Length of known relationship (capped at 5+ years = max)         |
+| Explicit connections    | 0.10   | User-defined relationships (introductions, referrals)           |
 
 **Decay function:** Strength decays by 10% per month of inactivity. A relationship with no communication for 6 months loses ~47% of its frequency-weighted score. This ensures active relationships surface above dormant ones.
 
@@ -899,15 +909,15 @@ The `KNOWS` relationship includes a `strength` property (0.0–1.0) that reflect
 
 ### 10.3 Key Graph Queries
 
-| Query | Cypher Pattern | Use Case |
-|---|---|---|
-| **Warm intro path** | `shortestPath((me)-[:KNOWS*..4]-(target))` | Find introduction chain to target contact |
-| **Strongest path** | `allShortestPaths((me)-[:KNOWS*..3]-(target))` weighted by `strength` | Best introduction chain by relationship quality |
-| **Who do we know at X?** | `MATCH (c:Contact)-[:WORKS_AT {is_current: true}]->(co:Company {id: X}) RETURN c` | Pre-meeting research |
-| **Org chart** | `MATCH (c)-[:REPORTS_TO*]->(top) WHERE (c)-[:WORKS_AT]->(co {id: X}) RETURN c, top` | Stakeholder mapping |
-| **Key connectors** | `MATCH (c:Contact) WITH c, SIZE([(c)-[:KNOWS]-() | 1]) as degree RETURN c ORDER BY degree DESC` | Network hubs |
-| **Mutual connections** | `MATCH (me)-[:KNOWS]-(mutual)-[:KNOWS]-(target) RETURN mutual` | Common ground for outreach |
-| **Career movers** | `MATCH (c)-[:WORKS_AT {is_current: false}]->(old), (c)-[:WORKS_AT {is_current: true}]->(new) RETURN c, old, new` | Job change detection |
+| Query                    | Cypher Pattern                                                                                                   | Use Case                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| **Warm intro path**      | `shortestPath((me)-[:KNOWS*..4]-(target))`                                                                       | Find introduction chain to target contact       |
+| **Strongest path**       | `allShortestPaths((me)-[:KNOWS*..3]-(target))` weighted by `strength`                                            | Best introduction chain by relationship quality |
+| **Who do we know at X?** | `MATCH (c:Contact)-[:WORKS_AT {is_current: true}]->(co:Company {id: X}) RETURN c`                                | Pre-meeting research                            |
+| **Org chart**            | `MATCH (c)-[:REPORTS_TO*]->(top) WHERE (c)-[:WORKS_AT]->(co {id: X}) RETURN c, top`                              | Stakeholder mapping                             |
+| **Key connectors**       | `MATCH (c:Contact) WITH c, SIZE([(c)-[:KNOWS]-()                                                                 | 1]) as degree RETURN c ORDER BY degree DESC`    |
+| **Mutual connections**   | `MATCH (me)-[:KNOWS]-(mutual)-[:KNOWS]-(target) RETURN mutual`                                                   | Common ground for outreach                      |
+| **Career movers**        | `MATCH (c)-[:WORKS_AT {is_current: false}]->(old), (c)-[:WORKS_AT {is_current: true}]->(new) RETURN c, old, new` | Job change detection                            |
 
 ---
 
@@ -917,24 +927,24 @@ The `KNOWS` relationship includes a `strength` property (0.0–1.0) that reflect
 
 Behavioral signals are derived from communication activity, calendar events, and in-app interactions:
 
-| Signal Source | Signals Extracted | Update Frequency |
-|---|---|---|
-| **Email** | Send/receive frequency, response time, response rate, thread depth, sentiment | On each email sync |
-| **Calendar** | Meeting frequency, cancellation rate, meeting duration trends, no-shows | On each calendar sync |
-| **Phone/SMS** | Call frequency, call duration, missed calls, response patterns | On each communication sync |
-| **In-app activity** | Notes added, profile views, deal stage changes, searches for contact | Real-time event tracking |
-| **External** | Form fills, website visits (opt-in tracking pixel) | Webhook/polling |
+| Signal Source       | Signals Extracted                                                             | Update Frequency           |
+| ------------------- | ----------------------------------------------------------------------------- | -------------------------- |
+| **Email**           | Send/receive frequency, response time, response rate, thread depth, sentiment | On each email sync         |
+| **Calendar**        | Meeting frequency, cancellation rate, meeting duration trends, no-shows       | On each calendar sync      |
+| **Phone/SMS**       | Call frequency, call duration, missed calls, response patterns                | On each communication sync |
+| **In-app activity** | Notes added, profile views, deal stage changes, searches for contact          | Real-time event tracking   |
+| **External**        | Form fills, website visits (opt-in tracking pixel)                            | Webhook/polling            |
 
 ### 11.2 Computed Engagement Metrics
 
-| Metric | Formula | Description |
-|---|---|---|
-| **Engagement score** | Weighted composite of frequency, recency, and reciprocity across all channels | Overall relationship health (0.0–1.0) |
-| **Responsiveness index** | `avg(response_time) * response_rate` | How quickly and reliably the contact responds |
-| **Sentiment trend** | Rolling 30-day window of AI-analyzed sentiment across communications | Positive, neutral, negative, or declining |
-| **Attention signal** | Statistical deviation from baseline engagement | Alerts on sudden increases or decreases in engagement |
-| **Best time to contact** | Mode of historical interaction timestamps (day-of-week + hour) | Optimal outreach window |
-| **Stale contact alert** | Days since last bidirectional communication exceeds threshold | Relationship at risk of going dormant |
+| Metric                   | Formula                                                                       | Description                                           |
+| ------------------------ | ----------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **Engagement score**     | Weighted composite of frequency, recency, and reciprocity across all channels | Overall relationship health (0.0–1.0)                 |
+| **Responsiveness index** | `avg(response_time) * response_rate`                                          | How quickly and reliably the contact responds         |
+| **Sentiment trend**      | Rolling 30-day window of AI-analyzed sentiment across communications          | Positive, neutral, negative, or declining             |
+| **Attention signal**     | Statistical deviation from baseline engagement                                | Alerts on sudden increases or decreases in engagement |
+| **Best time to contact** | Mode of historical interaction timestamps (day-of-week + hour)                | Optimal outreach window                               |
+| **Stale contact alert**  | Days since last bidirectional communication exceeds threshold                 | Relationship at risk of going dormant                 |
 
 ### 11.3 Engagement Score Computation
 
@@ -958,25 +968,25 @@ engagement_score = (
 
 User-defined collections of contacts. Groups are flat (no hierarchy) and serve organizational purposes: event attendee lists, advisory boards, deal teams, conference leads.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `name` | TEXT | NOT NULL | Group name (unique per tenant) |
-| `description` | TEXT | | Purpose or context for the group |
-| `owner_id` | TEXT | FK → `users(id)` | User who created the group |
-| `is_smart` | INTEGER | DEFAULT 0 | Boolean. Smart groups use saved filters (see `query_def`). |
-| `query_def` | TEXT | | JSON filter definition for smart groups. NULL for manual groups. |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
-| `updated_at` | TEXT | NOT NULL | ISO 8601 |
+| Column        | Type    | Constraints      | Description                                                      |
+| ------------- | ------- | ---------------- | ---------------------------------------------------------------- |
+| `id`          | TEXT    | **PK**           | UUID v4                                                          |
+| `name`        | TEXT    | NOT NULL         | Group name (unique per tenant)                                   |
+| `description` | TEXT    |                  | Purpose or context for the group                                 |
+| `owner_id`    | TEXT    | FK → `users(id)` | User who created the group                                       |
+| `is_smart`    | INTEGER | DEFAULT 0        | Boolean. Smart groups use saved filters (see `query_def`).       |
+| `query_def`   | TEXT    |                  | JSON filter definition for smart groups. NULL for manual groups. |
+| `created_at`  | TEXT    | NOT NULL         | ISO 8601                                                         |
+| `updated_at`  | TEXT    | NOT NULL         | ISO 8601                                                         |
 
 **`group_members` join table:**
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `group_id` | TEXT | NOT NULL, FK → `groups(id)` ON DELETE CASCADE | |
-| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE | |
-| `added_at` | TEXT | NOT NULL | ISO 8601 |
-| `added_by` | TEXT | FK → `users(id)` | |
+| Column       | Type | Constraints                                             | Description |
+| ------------ | ---- | ------------------------------------------------------- | ----------- |
+| `group_id`   | TEXT | NOT NULL, FK → `groups(id)` ON DELETE CASCADE           |             |
+| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE |             |
+| `added_at`   | TEXT | NOT NULL                                                | ISO 8601    |
+| `added_by`   | TEXT | FK → `users(id)`                                        |             |
 
 **Constraints:** `PRIMARY KEY (group_id, contact_id)`
 
@@ -999,23 +1009,23 @@ Smart group membership is recomputed on access or on a schedule (configurable).
 
 Lightweight labels applied to contacts for categorization and filtering.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `name` | TEXT | NOT NULL, UNIQUE | Tag name (e.g., "VIP", "Advisor", "Technical") |
-| `color` | TEXT | | Hex color code for UI display |
-| `is_ai_suggested` | INTEGER | DEFAULT 0 | Boolean. TRUE if the tag was suggested by AI. |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
+| Column            | Type    | Constraints      | Description                                    |
+| ----------------- | ------- | ---------------- | ---------------------------------------------- |
+| `id`              | TEXT    | **PK**           | UUID v4                                        |
+| `name`            | TEXT    | NOT NULL, UNIQUE | Tag name (e.g., "VIP", "Advisor", "Technical") |
+| `color`           | TEXT    |                  | Hex color code for UI display                  |
+| `is_ai_suggested` | INTEGER | DEFAULT 0        | Boolean. TRUE if the tag was suggested by AI.  |
+| `created_at`      | TEXT    | NOT NULL         | ISO 8601                                       |
 
 **`contact_tags` join table:**
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE | |
-| `tag_id` | TEXT | NOT NULL, FK → `tags(id)` ON DELETE CASCADE | |
-| `source` | TEXT | | `manual`, `ai_suggested`, `import`, `rule` |
-| `confidence` | REAL | DEFAULT 1.0 | For AI-suggested tags, how confident the suggestion is |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
+| Column       | Type | Constraints                                             | Description                                            |
+| ------------ | ---- | ------------------------------------------------------- | ------------------------------------------------------ |
+| `contact_id` | TEXT | NOT NULL, FK → `contacts_current(id)` ON DELETE CASCADE |                                                        |
+| `tag_id`     | TEXT | NOT NULL, FK → `tags(id)` ON DELETE CASCADE             |                                                        |
+| `source`     | TEXT |                                                         | `manual`, `ai_suggested`, `import`, `rule`             |
+| `confidence` | REAL | DEFAULT 1.0                                             | For AI-suggested tags, how confident the suggestion is |
+| `created_at` | TEXT | NOT NULL                                                | ISO 8601                                               |
 
 **Constraints:** `PRIMARY KEY (contact_id, tag_id)`
 
@@ -1036,12 +1046,12 @@ Suggested tags appear with a "suggested" badge. Users can accept (promoting to `
 
 ### 13.1 Import Formats
 
-| Format | Source | Capabilities |
-|---|---|---|
-| **CSV** | Any CRM, spreadsheet | Column mapping UI. Supports name, email, phone, company, title, tags, custom fields. |
-| **vCard 3.0/4.0** | Apple Contacts, Outlook, Google (export) | Standard contact interchange. Multi-value fields (multiple emails/phones) supported. |
-| **Google Contacts API** | Google account | OAuth-based live sync. Ongoing incremental sync supported. |
-| **LinkedIn CSV** | LinkedIn export | Structured export with name, company, title, email, connected date. |
+| Format                  | Source                                   | Capabilities                                                                         |
+| ----------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------ |
+| **CSV**                 | Any CRM, spreadsheet                     | Column mapping UI. Supports name, email, phone, company, title, tags, custom fields. |
+| **vCard 3.0/4.0**       | Apple Contacts, Outlook, Google (export) | Standard contact interchange. Multi-value fields (multiple emails/phones) supported. |
+| **Google Contacts API** | Google account                           | OAuth-based live sync. Ongoing incremental sync supported.                           |
+| **LinkedIn CSV**        | LinkedIn export                          | Structured export with name, company, title, email, connected date.                  |
 
 ### 13.2 Import Pipeline
 
@@ -1100,11 +1110,11 @@ File uploaded / API sync initiated
 
 ### 13.3 Export Formats
 
-| Format | Use Case |
-|---|---|
-| **CSV** | General export, spreadsheet analysis, migration to another system |
-| **vCard 4.0** | Import into address book applications |
-| **JSON** | API-based export, data portability, GDPR export |
+| Format        | Use Case                                                          |
+| ------------- | ----------------------------------------------------------------- |
+| **CSV**       | General export, spreadsheet analysis, migration to another system |
+| **vCard 4.0** | Import into address book applications                             |
+| **JSON**      | API-based export, data portability, GDPR export                   |
 
 **Export scoping:** Users can export all contacts, a filtered subset, a group, or a single contact's full record (including history, for GDPR compliance).
 
@@ -1118,21 +1128,21 @@ Contacts are indexed in Meilisearch for fast, typo-tolerant search across all fi
 
 **Indexed fields:**
 
-| Field | Searchable | Filterable | Sortable |
-|---|---|---|---|
-| `display_name` | Yes (primary) | | Yes |
-| `email_primary` | Yes | | |
-| `phone_primary` | Yes | | |
-| `company_name` | Yes | Yes | Yes |
-| `job_title` | Yes | Yes | |
-| `lead_status` | | Yes | |
-| `lead_source` | | Yes | |
-| `engagement_score` | | Yes | Yes |
-| `intelligence_score` | | Yes | Yes |
-| `tags` | Yes | Yes | |
-| `custom_fields` | Yes | | |
-| `created_at` | | Yes | Yes |
-| `updated_at` | | | Yes |
+| Field                | Searchable    | Filterable | Sortable |
+| -------------------- | ------------- | ---------- | -------- |
+| `display_name`       | Yes (primary) |            | Yes      |
+| `email_primary`      | Yes           |            |          |
+| `phone_primary`      | Yes           |            |          |
+| `company_name`       | Yes           | Yes        | Yes      |
+| `job_title`          | Yes           | Yes        |          |
+| `lead_status`        |               | Yes        |          |
+| `lead_source`        |               | Yes        |          |
+| `engagement_score`   |               | Yes        | Yes      |
+| `intelligence_score` |               | Yes        | Yes      |
+| `tags`               | Yes           | Yes        |          |
+| `custom_fields`      | Yes           |            |          |
+| `created_at`         |               | Yes        | Yes      |
+| `updated_at`         |               |            | Yes      |
 
 **Performance targets:** < 50ms p95 for any search query.
 
@@ -1144,12 +1154,12 @@ AI-powered search translates natural language queries into structured filter + s
 
 **Example queries:**
 
-| Natural Language | Translated To |
-|---|---|
-| "founders at Series A companies in healthcare" | `title CONTAINS 'founder' AND industry = 'healthcare' AND funding_stage = 'series_a'` |
-| "people I haven't emailed in 3 months" | `last_communication < NOW() - 90 days AND has_communication = true` |
-| "VIP contacts at companies with 500+ employees" | `tags CONTAINS 'VIP' AND company_size IN ('501-1000', '1001-5000', '5001+')` |
-| "who introduced me to Sarah Chen?" | Graph query: `MATCH (me)-[r:INTRODUCED_BY]->(s:Contact {name: 'Sarah Chen'}) RETURN r` |
+| Natural Language                                | Translated To                                                                          |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------- |
+| "founders at Series A companies in healthcare"  | `title CONTAINS 'founder' AND industry = 'healthcare' AND funding_stage = 'series_a'`  |
+| "people I haven't emailed in 3 months"          | `last_communication < NOW() - 90 days AND has_communication = true`                    |
+| "VIP contacts at companies with 500+ employees" | `tags CONTAINS 'VIP' AND company_size IN ('501-1000', '1001-5000', '5001+')`           |
+| "who introduced me to Sarah Chen?"              | Graph query: `MATCH (me)-[r:INTRODUCED_BY]->(s:Contact {name: 'Sarah Chen'}) RETURN r` |
 
 **Implementation:** Claude receives the query, contact schema, and available filter fields. It returns a structured filter JSON that is executed against Meilisearch and/or Neo4j.
 
@@ -1188,14 +1198,14 @@ recently closed a $15M Series B, which may affect her engineering team's priorit
 
 Based on contact analysis, the AI suggests proactive actions:
 
-| Trigger | Suggested Action |
-|---|---|
-| Engagement declining for 30+ days | "You haven't heard from Sarah in 5 weeks. Consider reaching out." |
-| Job change detected | "Sarah just moved to Globex Inc. Send a congratulations note." |
-| Upcoming meeting with contact | "You have a meeting with Sarah tomorrow. Here's a briefing." |
-| Open action items aging | "You have 2 open action items with Sarah from 2 weeks ago." |
-| Warm intro opportunity | "Sarah knows Marcus Rodriguez at TechVentures — they worked together at Globex." |
-| Stale enrichment data | "Sarah's profile hasn't been updated in 6 months. Re-enrich?" |
+| Trigger                           | Suggested Action                                                                 |
+| --------------------------------- | -------------------------------------------------------------------------------- |
+| Engagement declining for 30+ days | "You haven't heard from Sarah in 5 weeks. Consider reaching out."                |
+| Job change detected               | "Sarah just moved to Globex Inc. Send a congratulations note."                   |
+| Upcoming meeting with contact     | "You have a meeting with Sarah tomorrow. Here's a briefing."                     |
+| Open action items aging           | "You have 2 open action items with Sarah from 2 weeks ago."                      |
+| Warm intro opportunity            | "Sarah knows Marcus Rodriguez at TechVentures — they worked together at Globex." |
+| Stale enrichment data             | "Sarah's profile hasn't been updated in 6 months. Re-enrich?"                    |
 
 ### 15.3 AI Tag Suggestions
 
@@ -1217,63 +1227,64 @@ All contact and company mutations are stored as immutable events in an append-on
 
 **Event store table:**
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `entity_type` | TEXT | NOT NULL | `contact`, `company` |
-| `entity_id` | TEXT | NOT NULL | The entity this event belongs to |
-| `event_type` | TEXT | NOT NULL | Event type (see catalog below) |
-| `payload` | TEXT | NOT NULL | JSON blob containing event data |
-| `actor_id` | TEXT | FK → `users(id)` | User who triggered the event (NULL for system events) |
-| `timestamp` | TEXT | NOT NULL | ISO 8601 |
-| `sequence_number` | INTEGER | NOT NULL | Monotonically increasing per entity, for ordering |
+| Column            | Type    | Constraints      | Description                                           |
+| ----------------- | ------- | ---------------- | ----------------------------------------------------- |
+| `id`              | TEXT    | **PK**           | UUID v4                                               |
+| `entity_type`     | TEXT    | NOT NULL         | `contact`, `company`                                  |
+| `entity_id`       | TEXT    | NOT NULL         | The entity this event belongs to                      |
+| `event_type`      | TEXT    | NOT NULL         | Event type (see catalog below)                        |
+| `payload`         | TEXT    | NOT NULL         | JSON blob containing event data                       |
+| `actor_id`        | TEXT    | FK → `users(id)` | User who triggered the event (NULL for system events) |
+| `timestamp`       | TEXT    | NOT NULL         | ISO 8601                                              |
+| `sequence_number` | INTEGER | NOT NULL         | Monotonically increasing per entity, for ordering     |
 
 **Constraints:**
+
 - `UNIQUE(entity_type, entity_id, sequence_number)` — guarantees event ordering per entity.
 - Index on `(entity_type, entity_id, timestamp)` for temporal queries.
 
 ### 16.2 Event Catalog
 
-| Event Type | Payload Fields | Description |
-|---|---|---|
-| `ContactCreated` | `first_name`, `last_name`, `source`, `status` | New contact created |
-| `ContactUpdated` | `field`, `old_value`, `new_value` | Single field changed |
-| `ContactArchived` | `reason` | Contact archived |
-| `ContactUnarchived` | | Contact restored from archive |
-| `ContactsMerged` | `survivor_id`, `duplicate_id`, `match_signals` | Two contacts merged |
-| `ContactsSplit` | `original_id`, `new_id`, `identifiers_moved` | Merge undone |
-| `ContactDeleted` | `reason`, `requested_by` | GDPR hard delete |
-| `IdentifierAdded` | `type`, `value`, `source`, `confidence` | New identifier linked |
-| `IdentifierRemoved` | `type`, `value`, `reason` | Identifier unlinked |
-| `IdentifierStatusChanged` | `type`, `value`, `old_status`, `new_status` | Active → inactive, etc. |
-| `EmploymentStarted` | `company_id`, `company_name`, `title`, `department` | New position |
-| `EmploymentEnded` | `company_id`, `ended_at`, `reason` | Position ended |
-| `EmploymentUpdated` | `company_id`, `field`, `old_value`, `new_value` | Title/dept change at same company |
-| `EnrichmentCompleted` | `source`, `fields_updated`, `confidence` | Enrichment data merged |
-| `IntelItemCreated` | `category`, `title`, `source` | New intelligence item |
-| `TagAdded` | `tag_id`, `tag_name`, `source` | Tag applied |
-| `TagRemoved` | `tag_id`, `tag_name` | Tag removed |
-| `RelationshipCreated` | `target_id`, `type`, `properties` | Graph edge created |
-| `RelationshipUpdated` | `target_id`, `type`, `old_props`, `new_props` | Graph edge modified |
-| `RelationshipRemoved` | `target_id`, `type` | Graph edge deleted |
-| `NoteAdded` | `note_id`, `preview` | Note linked to contact |
-| `GroupMemberAdded` | `group_id`, `group_name` | Added to group |
-| `GroupMemberRemoved` | `group_id`, `group_name` | Removed from group |
-| `CompanyCreated` | `name`, `domain`, `source` | New company created |
-| `CompanyUpdated` | `field`, `old_value`, `new_value` | Company field changed |
+| Event Type                | Payload Fields                                      | Description                       |
+| ------------------------- | --------------------------------------------------- | --------------------------------- |
+| `ContactCreated`          | `first_name`, `last_name`, `source`, `status`       | New contact created               |
+| `ContactUpdated`          | `field`, `old_value`, `new_value`                   | Single field changed              |
+| `ContactArchived`         | `reason`                                            | Contact archived                  |
+| `ContactUnarchived`       |                                                     | Contact restored from archive     |
+| `ContactsMerged`          | `survivor_id`, `duplicate_id`, `match_signals`      | Two contacts merged               |
+| `ContactsSplit`           | `original_id`, `new_id`, `identifiers_moved`        | Merge undone                      |
+| `ContactDeleted`          | `reason`, `requested_by`                            | GDPR hard delete                  |
+| `IdentifierAdded`         | `type`, `value`, `source`, `confidence`             | New identifier linked             |
+| `IdentifierRemoved`       | `type`, `value`, `reason`                           | Identifier unlinked               |
+| `IdentifierStatusChanged` | `type`, `value`, `old_status`, `new_status`         | Active → inactive, etc.           |
+| `EmploymentStarted`       | `company_id`, `company_name`, `title`, `department` | New position                      |
+| `EmploymentEnded`         | `company_id`, `ended_at`, `reason`                  | Position ended                    |
+| `EmploymentUpdated`       | `company_id`, `field`, `old_value`, `new_value`     | Title/dept change at same company |
+| `EnrichmentCompleted`     | `source`, `fields_updated`, `confidence`            | Enrichment data merged            |
+| `IntelItemCreated`        | `category`, `title`, `source`                       | New intelligence item             |
+| `TagAdded`                | `tag_id`, `tag_name`, `source`                      | Tag applied                       |
+| `TagRemoved`              | `tag_id`, `tag_name`                                | Tag removed                       |
+| `RelationshipCreated`     | `target_id`, `type`, `properties`                   | Graph edge created                |
+| `RelationshipUpdated`     | `target_id`, `type`, `old_props`, `new_props`       | Graph edge modified               |
+| `RelationshipRemoved`     | `target_id`, `type`                                 | Graph edge deleted                |
+| `NoteAdded`               | `note_id`, `preview`                                | Note linked to contact            |
+| `GroupMemberAdded`        | `group_id`, `group_name`                            | Added to group                    |
+| `GroupMemberRemoved`      | `group_id`, `group_name`                            | Removed from group                |
+| `CompanyCreated`          | `name`, `domain`, `source`                          | New company created               |
+| `CompanyUpdated`          | `field`, `old_value`, `new_value`                   | Company field changed             |
 
 ### 16.3 Event Snapshots
 
 To avoid replaying long event chains for temporal queries, periodic snapshots capture the full state of an entity:
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | UUID v4 |
-| `entity_type` | TEXT | NOT NULL | `contact`, `company` |
-| `entity_id` | TEXT | NOT NULL | |
-| `state` | TEXT | NOT NULL | JSON blob of the entity's full state at snapshot time |
-| `snapshot_at` | TEXT | NOT NULL | ISO 8601 |
-| `event_sequence` | INTEGER | NOT NULL | The sequence_number of the latest event included in this snapshot |
+| Column           | Type    | Constraints | Description                                                       |
+| ---------------- | ------- | ----------- | ----------------------------------------------------------------- |
+| `id`             | TEXT    | **PK**      | UUID v4                                                           |
+| `entity_type`    | TEXT    | NOT NULL    | `contact`, `company`                                              |
+| `entity_id`      | TEXT    | NOT NULL    |                                                                   |
+| `state`          | TEXT    | NOT NULL    | JSON blob of the entity's full state at snapshot time             |
+| `snapshot_at`    | TEXT    | NOT NULL    | ISO 8601                                                          |
+| `event_sequence` | INTEGER | NOT NULL    | The sequence_number of the latest event included in this snapshot |
 
 **Snapshot strategy:** A snapshot is created when an entity accumulates 50+ events since the last snapshot, or daily for entities with 10+ events. Snapshots are created by a Celery background job.
 
@@ -1395,25 +1406,25 @@ POST   /api/v1/contacts/search/natural              # Natural language search
 
 The `GET /api/v1/contacts` endpoint supports rich filtering via query parameters:
 
-| Parameter | Type | Example | Description |
-|---|---|---|---|
-| `q` | string | `q=sarah` | Full-text search across all indexed fields |
-| `company` | string | `company=Acme Corp` | Filter by company name (exact or partial) |
-| `company_id` | UUID | | Filter by company ID |
-| `tag` | string[] | `tag=VIP&tag=Advisor` | Filter by tags (AND logic) |
-| `lead_status` | string[] | `lead_status=qualified&lead_status=nurturing` | Filter by lead status |
-| `lead_source` | string | | Filter by lead source |
-| `status` | string | `status=active` | Filter by contact status |
-| `engagement_score_min` | float | `engagement_score_min=0.5` | Minimum engagement score |
-| `engagement_score_max` | float | | Maximum engagement score |
-| `last_communication_before` | ISO 8601 | | Contacts not communicated with since |
-| `last_communication_after` | ISO 8601 | | Contacts communicated with since |
-| `created_after` | ISO 8601 | | Created after date |
-| `created_before` | ISO 8601 | | Created before date |
-| `group_id` | UUID | | Filter by group membership |
-| `sort` | string | `sort=-engagement_score` | Sort field (prefix `-` for descending) |
-| `page[cursor]` | string | | Cursor-based pagination |
-| `page[size]` | integer | `page[size]=50` | Page size (default 25, max 100) |
+| Parameter                   | Type     | Example                                       | Description                                |
+| --------------------------- | -------- | --------------------------------------------- | ------------------------------------------ |
+| `q`                         | string   | `q=sarah`                                     | Full-text search across all indexed fields |
+| `company`                   | string   | `company=Acme Corp`                           | Filter by company name (exact or partial)  |
+| `company_id`                | UUID     |                                               | Filter by company ID                       |
+| `tag`                       | string[] | `tag=VIP&tag=Advisor`                         | Filter by tags (AND logic)                 |
+| `lead_status`               | string[] | `lead_status=qualified&lead_status=nurturing` | Filter by lead status                      |
+| `lead_source`               | string   |                                               | Filter by lead source                      |
+| `status`                    | string   | `status=active`                               | Filter by contact status                   |
+| `engagement_score_min`      | float    | `engagement_score_min=0.5`                    | Minimum engagement score                   |
+| `engagement_score_max`      | float    |                                               | Maximum engagement score                   |
+| `last_communication_before` | ISO 8601 |                                               | Contacts not communicated with since       |
+| `last_communication_after`  | ISO 8601 |                                               | Contacts communicated with since           |
+| `created_after`             | ISO 8601 |                                               | Created after date                         |
+| `created_before`            | ISO 8601 |                                               | Created before date                        |
+| `group_id`                  | UUID     |                                               | Filter by group membership                 |
+| `sort`                      | string   | `sort=-engagement_score`                      | Sort field (prefix `-` for descending)     |
+| `page[cursor]`              | string   |                                               | Cursor-based pagination                    |
+| `page[size]`                | integer  | `page[size]=50`                               | Page size (default 25, max 100)            |
 
 ### 17.3 Response Format
 
@@ -1459,6 +1470,7 @@ All responses follow JSON:API specification:
 The Flutter client maintains a local SQLite/Isar database with a subset of contact data for offline access:
 
 **Synced to client:**
+
 - `contacts_current` — Full contact records for the user's accessible contacts.
 - `contact_identifiers` — For local search and communication participant resolution.
 - `employment_history` — For contact detail display.
@@ -1467,6 +1479,7 @@ The Flutter client maintains a local SQLite/Isar database with a subset of conta
 - `groups` and `group_members` — For group membership display.
 
 **Not synced to client (server-only):**
+
 - Event store — Too large, not needed for display.
 - Intelligence items — Fetched on demand via API.
 - Graph relationships — Queried live from Neo4j via API.
@@ -1482,6 +1495,7 @@ The Flutter client maintains a local SQLite/Isar database with a subset of conta
 ### 18.3 Offline Write Queue
 
 When offline, the client queues write operations locally:
+
 - Create contact
 - Update contact fields
 - Add/remove tags
@@ -1496,33 +1510,33 @@ Queued writes are displayed with a "pending" indicator. On reconnect, the queue 
 
 ### 19.1 Data Protection
 
-| Requirement | Implementation |
-|---|---|
-| **Encryption at rest** | AES-256 for database storage. S3 server-side encryption for objects. |
-| **Encryption in transit** | TLS 1.3 for all API communication. |
-| **PII handling** | Contact PII (name, email, phone) encrypted at database level. Meilisearch index encrypted at rest. |
-| **Access control** | RBAC (Owner, Admin, Member, Viewer). Contact visibility follows tenant membership. |
-| **Audit trail** | Event sourcing provides complete audit trail for all contact mutations. |
-| **Data minimization** | Only collect data relevant to CRM purposes. Enrichment respects data collection boundaries. |
+| Requirement               | Implementation                                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Encryption at rest**    | AES-256 for database storage. S3 server-side encryption for objects.                               |
+| **Encryption in transit** | TLS 1.3 for all API communication.                                                                 |
+| **PII handling**          | Contact PII (name, email, phone) encrypted at database level. Meilisearch index encrypted at rest. |
+| **Access control**        | RBAC (Owner, Admin, Member, Viewer). Contact visibility follows tenant membership.                 |
+| **Audit trail**           | Event sourcing provides complete audit trail for all contact mutations.                            |
+| **Data minimization**     | Only collect data relevant to CRM purposes. Enrichment respects data collection boundaries.        |
 
 ### 19.2 GDPR Compliance
 
-| GDPR Right | Implementation |
-|---|---|
-| **Right of access** | Export endpoint provides full contact record including all events, identifiers, communications, and intelligence. |
-| **Right to rectification** | Standard edit flow with event-sourced audit trail. |
-| **Right to erasure** | Hard delete workflow (Section 8.3) with full data removal and audit record. |
-| **Right to data portability** | JSON and CSV export in machine-readable format. |
-| **Right to object** | Contact status can be set to `archived` to exclude from processing. Enrichment and monitoring can be disabled per contact. |
-| **Consent tracking** | Source attribution on all data points. Enrichment sources record consent basis. |
+| GDPR Right                    | Implementation                                                                                                             |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Right of access**           | Export endpoint provides full contact record including all events, identifiers, communications, and intelligence.          |
+| **Right to rectification**    | Standard edit flow with event-sourced audit trail.                                                                         |
+| **Right to erasure**          | Hard delete workflow (Section 8.3) with full data removal and audit record.                                                |
+| **Right to data portability** | JSON and CSV export in machine-readable format.                                                                            |
+| **Right to object**           | Contact status can be set to `archived` to exclude from processing. Enrichment and monitoring can be disabled per contact. |
+| **Consent tracking**          | Source attribution on all data points. Enrichment sources record consent basis.                                            |
 
 ### 19.3 CCPA Compliance
 
-| CCPA Requirement | Implementation |
-|---|---|
-| **Right to know** | Same as GDPR right of access — full data export. |
-| **Right to delete** | Same as GDPR right to erasure — hard delete workflow. |
-| **Right to opt out** | Per-contact enrichment and monitoring opt-out flag. |
+| CCPA Requirement       | Implementation                                                        |
+| ---------------------- | --------------------------------------------------------------------- |
+| **Right to know**      | Same as GDPR right of access — full data export.                      |
+| **Right to delete**    | Same as GDPR right to erasure — hard delete workflow.                 |
+| **Right to opt out**   | Per-contact enrichment and monitoring opt-out flag.                   |
 | **Non-discrimination** | Contact features available regardless of privacy preference exercise. |
 
 ### 19.4 OSINT & Enrichment Ethics
@@ -1542,95 +1556,95 @@ Queued writes are displayed with a "pending" indicator. On reconnect, the queue 
 
 **Goal:** Core contact management with event sourcing, basic intelligence, and offline clients.
 
-| Feature | Priority | Description |
-|---|---|---|
-| Contact CRUD | P0 | Create, read, update, archive contacts via API and UI |
-| Company CRUD | P0 | Create, read, update companies with domain matching |
-| Multi-identifier model | P0 | `contact_identifiers` table with type, value, lifecycle |
-| Event store | P0 | Immutable event log for contacts and companies |
-| Materialized views | P0 | `contacts_current` and `companies_current` tables |
-| Contact detail tables | P0 | Emails, phones, addresses, social profiles, key dates |
-| Employment history | P0 | Temporal employment records with company linking |
-| Contact list view | P0 | Paginated, sorted, filtered contact list |
-| Contact detail page | P0 | Unified detail view with profile, timeline, history |
-| Full-text search | P0 | Meilisearch indexing and search |
-| CSV import | P0 | File upload, column mapping, dedup, preview, execute |
-| vCard import | P1 | Parse vCard 3.0/4.0, same pipeline as CSV |
-| Google Contacts sync | P0 | OAuth-based import from Google People API |
-| Tags | P1 | Tag CRUD, contact-tag assignment, filter by tag |
-| Groups | P1 | Manual groups, membership management |
-| Notes | P1 | Add/edit notes on contacts |
-| Export (CSV, vCard) | P1 | Contact export with field selection |
-| Offline read cache | P1 | Client-side SQLite with incremental sync |
-| Offline write queue | P1 | Queued writes with replay on reconnect |
-| Point-in-time queries | P2 | Event replay for historical state reconstruction |
-| Event snapshots | P2 | Periodic snapshots for query performance |
-| AI contact summarization | P1 | Claude-powered contact briefings |
-| Natural language search | P2 | AI-translated search queries |
+| Feature                  | Priority | Description                                             |
+| ------------------------ | -------- | ------------------------------------------------------- |
+| Contact CRUD             | P0       | Create, read, update, archive contacts via API and UI   |
+| Company CRUD             | P0       | Create, read, update companies with domain matching     |
+| Multi-identifier model   | P0       | `contact_identifiers` table with type, value, lifecycle |
+| Event store              | P0       | Immutable event log for contacts and companies          |
+| Materialized views       | P0       | `contacts_current` and `companies_current` tables       |
+| Contact detail tables    | P0       | Emails, phones, addresses, social profiles, key dates   |
+| Employment history       | P0       | Temporal employment records with company linking        |
+| Contact list view        | P0       | Paginated, sorted, filtered contact list                |
+| Contact detail page      | P0       | Unified detail view with profile, timeline, history     |
+| Full-text search         | P0       | Meilisearch indexing and search                         |
+| CSV import               | P0       | File upload, column mapping, dedup, preview, execute    |
+| vCard import             | P1       | Parse vCard 3.0/4.0, same pipeline as CSV               |
+| Google Contacts sync     | P0       | OAuth-based import from Google People API               |
+| Tags                     | P1       | Tag CRUD, contact-tag assignment, filter by tag         |
+| Groups                   | P1       | Manual groups, membership management                    |
+| Notes                    | P1       | Add/edit notes on contacts                              |
+| Export (CSV, vCard)      | P1       | Contact export with field selection                     |
+| Offline read cache       | P1       | Client-side SQLite with incremental sync                |
+| Offline write queue      | P1       | Queued writes with replay on reconnect                  |
+| Point-in-time queries    | P2       | Event replay for historical state reconstruction        |
+| Event snapshots          | P2       | Periodic snapshots for query performance                |
+| AI contact summarization | P1       | Claude-powered contact briefings                        |
+| Natural language search  | P2       | AI-translated search queries                            |
 
 ### Phase 2 — Intelligence Engine
 
 **Goal:** Full intelligence capabilities that differentiate from standard CRMs.
 
-| Feature | Priority | Description |
-|---|---|---|
-| Enrichment engine | P0 | Pluggable adapter framework, enrichment dispatcher |
-| Apollo adapter | P0 | First enrichment integration |
-| Clearbit adapter | P1 | Second enrichment integration |
-| People Data Labs adapter | P2 | Third enrichment integration |
-| Auto-enrichment on creation | P0 | Background enrichment for new contacts |
-| Intelligence score | P0 | Computed score based on data completeness |
-| Entity resolution pipeline | P0 | Tiered matching, confidence scoring, pipeline |
-| Auto-merge (high confidence) | P0 | Automatic merge for exact identifier matches |
-| Auto-merge (medium confidence) | P0 | Merge with review flag |
-| Human review queue | P0 | UI for reviewing merge candidates |
-| Manual merge | P1 | User-initiated merge with conflict resolution |
-| Split (undo merge) | P1 | Reverse a bad merge from event history |
-| Configurable thresholds | P2 | Tenant-level merge confidence settings |
-| Browser extension (LinkedIn) | P1 | Chrome/Firefox extension for LinkedIn capture |
-| Browser extension (Twitter) | P2 | Twitter/X profile capture |
-| OSINT monitoring | P1 | Configurable monitors for contact changes |
-| Intelligence items | P0 | Intel item storage and display |
-| Behavioral signal tracking | P1 | Engagement scoring, responsiveness, sentiment |
-| Smart groups | P2 | Dynamic group membership from saved filters |
-| AI tag suggestions | P2 | Claude-powered tag recommendations |
+| Feature                        | Priority | Description                                        |
+| ------------------------------ | -------- | -------------------------------------------------- |
+| Enrichment engine              | P0       | Pluggable adapter framework, enrichment dispatcher |
+| Apollo adapter                 | P0       | First enrichment integration                       |
+| Clearbit adapter               | P1       | Second enrichment integration                      |
+| People Data Labs adapter       | P2       | Third enrichment integration                       |
+| Auto-enrichment on creation    | P0       | Background enrichment for new contacts             |
+| Intelligence score             | P0       | Computed score based on data completeness          |
+| Entity resolution pipeline     | P0       | Tiered matching, confidence scoring, pipeline      |
+| Auto-merge (high confidence)   | P0       | Automatic merge for exact identifier matches       |
+| Auto-merge (medium confidence) | P0       | Merge with review flag                             |
+| Human review queue             | P0       | UI for reviewing merge candidates                  |
+| Manual merge                   | P1       | User-initiated merge with conflict resolution      |
+| Split (undo merge)             | P1       | Reverse a bad merge from event history             |
+| Configurable thresholds        | P2       | Tenant-level merge confidence settings             |
+| Browser extension (LinkedIn)   | P1       | Chrome/Firefox extension for LinkedIn capture      |
+| Browser extension (Twitter)    | P2       | Twitter/X profile capture                          |
+| OSINT monitoring               | P1       | Configurable monitors for contact changes          |
+| Intelligence items             | P0       | Intel item storage and display                     |
+| Behavioral signal tracking     | P1       | Engagement scoring, responsiveness, sentiment      |
+| Smart groups                   | P2       | Dynamic group membership from saved filters        |
+| AI tag suggestions             | P2       | Claude-powered tag recommendations                 |
 
 ### Phase 3 — Relationship Intelligence
 
 **Goal:** Graph-powered relationship modeling and analysis.
 
-| Feature | Priority | Description |
-|---|---|---|
-| Neo4j integration | P0 | Graph database setup, node/edge sync |
-| Relationship CRUD | P0 | Create, edit, delete typed relationships |
-| Relationship visualization | P0 | Interactive network graph UI |
-| Relationship strength scoring | P1 | Computed strength with decay |
-| Warm introduction paths | P0 | Shortest/strongest path finding |
-| Org chart reconstruction | P1 | Company org chart from graph edges |
-| Influence mapping | P1 | Key connector identification |
-| Network clustering | P2 | Automatic community detection |
-| Deal stakeholder roles | P1 | Decision Maker, Influencer, Champion |
-| Meeting prep briefs | P1 | Pre-meeting briefing generation |
-| AI relationship suggestions | P2 | "You should connect X and Y" |
-| AI action suggestions | P2 | Proactive outreach recommendations |
-| Stale contact alerts | P1 | Notifications for declining engagement |
+| Feature                       | Priority | Description                              |
+| ----------------------------- | -------- | ---------------------------------------- |
+| Neo4j integration             | P0       | Graph database setup, node/edge sync     |
+| Relationship CRUD             | P0       | Create, edit, delete typed relationships |
+| Relationship visualization    | P0       | Interactive network graph UI             |
+| Relationship strength scoring | P1       | Computed strength with decay             |
+| Warm introduction paths       | P0       | Shortest/strongest path finding          |
+| Org chart reconstruction      | P1       | Company org chart from graph edges       |
+| Influence mapping             | P1       | Key connector identification             |
+| Network clustering            | P2       | Automatic community detection            |
+| Deal stakeholder roles        | P1       | Decision Maker, Influencer, Champion     |
+| Meeting prep briefs           | P1       | Pre-meeting briefing generation          |
+| AI relationship suggestions   | P2       | "You should connect X and Y"             |
+| AI action suggestions         | P2       | Proactive outreach recommendations       |
+| Stale contact alerts          | P1       | Notifications for declining engagement   |
 
 ### Phase 4 — Scale & Ecosystem
 
 **Goal:** Platform maturity and extensibility.
 
-| Feature | Priority | Description |
-|---|---|---|
-| Bulk operations | P0 | Bulk tag, group, archive, export |
-| Workflow automation | P1 | Trigger-action rules for contacts |
-| Webhook events | P0 | Contact created, updated, merged webhooks |
-| Zapier / Make integration | P1 | Pre-built triggers and actions |
-| Advanced reporting | P1 | Contact analytics, enrichment coverage, engagement trends |
-| GDPR tooling | P0 | Data export, hard delete, consent management UI |
-| Custom field builder | P0 | Tenant-configurable typed fields |
-| LinkedIn CSV import | P1 | Structured import from LinkedIn export |
-| API rate limiting | P0 | Per-tenant and per-user rate limits |
-| Email signature parsing | P2 | Extract contact details from email signatures |
+| Feature                   | Priority | Description                                               |
+| ------------------------- | -------- | --------------------------------------------------------- |
+| Bulk operations           | P0       | Bulk tag, group, archive, export                          |
+| Workflow automation       | P1       | Trigger-action rules for contacts                         |
+| Webhook events            | P0       | Contact created, updated, merged webhooks                 |
+| Zapier / Make integration | P1       | Pre-built triggers and actions                            |
+| Advanced reporting        | P1       | Contact analytics, enrichment coverage, engagement trends |
+| GDPR tooling              | P0       | Data export, hard delete, consent management UI           |
+| Custom field builder      | P0       | Tenant-configurable typed fields                          |
+| LinkedIn CSV import       | P1       | Structured import from LinkedIn export                    |
+| API rate limiting         | P0       | Per-tenant and per-user rate limits                       |
+| Email signature parsing   | P2       | Extract contact details from email signatures             |
 
 ---
 
@@ -1638,29 +1652,29 @@ Queued writes are displayed with a "pending" indicator. On reconnect, the queue 
 
 ### 21.1 Internal Subsystem Dependencies
 
-| Subsystem | Direction | Integration |
-|---|---|---|
+| Subsystem                                     | Direction     | Integration                                                                                 |
+| --------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------- |
 | **Communication & Conversation Intelligence** | Bidirectional | Conversations resolve participants to contacts. Contact detail pages link to conversations. |
-| **Pipeline & Deals** | Bidirectional | Deals link to contacts as stakeholders. Contact timeline shows deal activity. |
-| **Event Store** | Write | All contact/company mutations emit events. |
-| **Search (Meilisearch)** | Write | Contact changes pushed to search index. |
-| **Graph (Neo4j)** | Bidirectional | Contact nodes and relationship edges. Graph queries for intelligence features. |
-| **AI Service (Claude)** | Read | Briefings, tag suggestions, NL search, action recommendations. |
-| **Sync Service** | Write | Email sync creates/resolves contacts. Google Contacts sync updates contacts. |
-| **Notification Service** | Write | OSINT alerts, stale contact alerts, engagement signals. |
+| **Pipeline & Deals**                          | Bidirectional | Deals link to contacts as stakeholders. Contact timeline shows deal activity.               |
+| **Event Store**                               | Write         | All contact/company mutations emit events.                                                  |
+| **Search (Meilisearch)**                      | Write         | Contact changes pushed to search index.                                                     |
+| **Graph (Neo4j)**                             | Bidirectional | Contact nodes and relationship edges. Graph queries for intelligence features.              |
+| **AI Service (Claude)**                       | Read          | Briefings, tag suggestions, NL search, action recommendations.                              |
+| **Sync Service**                              | Write         | Email sync creates/resolves contacts. Google Contacts sync updates contacts.                |
+| **Notification Service**                      | Write         | OSINT alerts, stale contact alerts, engagement signals.                                     |
 
 ### 21.2 External Integrations
 
-| Integration | Protocol | Data Flow | Phase |
-|---|---|---|---|
-| **Google People API** | OAuth 2.0 + REST | Bidirectional sync | Phase 1 |
-| **Apollo** | REST API | Enrichment → contact updates | Phase 2 |
-| **Clearbit** | REST API | Enrichment → contact updates | Phase 2 |
-| **People Data Labs** | REST API | Enrichment → contact updates | Phase 2 |
-| **LinkedIn (browser ext.)** | Extension → API | Profile capture → contacts | Phase 2 |
-| **Twitter (browser ext.)** | Extension → API | Profile capture → contacts | Phase 2 |
-| **Slack** | OAuth 2.0 + Webhooks | Contact lookup slash command, alerts | Phase 4 |
-| **Zapier / Make** | Webhooks + REST | Trigger/action automation | Phase 4 |
+| Integration                 | Protocol             | Data Flow                            | Phase   |
+| --------------------------- | -------------------- | ------------------------------------ | ------- |
+| **Google People API**       | OAuth 2.0 + REST     | Bidirectional sync                   | Phase 1 |
+| **Apollo**                  | REST API             | Enrichment → contact updates         | Phase 2 |
+| **Clearbit**                | REST API             | Enrichment → contact updates         | Phase 2 |
+| **People Data Labs**        | REST API             | Enrichment → contact updates         | Phase 2 |
+| **LinkedIn (browser ext.)** | Extension → API      | Profile capture → contacts           | Phase 2 |
+| **Twitter (browser ext.)**  | Extension → API      | Profile capture → contacts           | Phase 2 |
+| **Slack**                   | OAuth 2.0 + Webhooks | Contact lookup slash command, alerts | Phase 4 |
+| **Zapier / Make**           | Webhooks + REST      | Trigger/action automation            | Phase 4 |
 
 ---
 
@@ -1668,27 +1682,27 @@ Queued writes are displayed with a "pending" indicator. On reconnect, the queue 
 
 ### Dependencies
 
-| Dependency | Impact | Mitigation |
-|---|---|---|
-| **PostgreSQL 16+** | Required for event store, materialized views, JSONB | Well-established technology. SQLite PoC allows pre-production development. |
-| **Neo4j** | Required for relationship queries and graph visualization | Can defer graph features to Phase 3 while building contact CRUD in Phase 1. |
-| **Meilisearch** | Required for full-text search | PostgreSQL `tsvector` provides basic search fallback. |
-| **Celery + Redis** | Required for background enrichment and score computation | Critical path for enrichment. Can degrade to synchronous enrichment for MVP. |
-| **Enrichment API providers** | Required for auto-enrichment features | Multi-adapter design ensures no single-vendor dependency. |
-| **Claude API** | Required for briefings, NL search, tag suggestions | Briefings cached. NL search degrades to structured search. |
-| **Google People API** | Required for Google Contacts sync | Free tier sufficient for initial scale. |
+| Dependency                   | Impact                                                    | Mitigation                                                                   |
+| ---------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| **PostgreSQL 16+**           | Required for event store, materialized views, JSONB       | Well-established technology. SQLite PoC allows pre-production development.   |
+| **Neo4j**                    | Required for relationship queries and graph visualization | Can defer graph features to Phase 3 while building contact CRUD in Phase 1.  |
+| **Meilisearch**              | Required for full-text search                             | PostgreSQL `tsvector` provides basic search fallback.                        |
+| **Celery + Redis**           | Required for background enrichment and score computation  | Critical path for enrichment. Can degrade to synchronous enrichment for MVP. |
+| **Enrichment API providers** | Required for auto-enrichment features                     | Multi-adapter design ensures no single-vendor dependency.                    |
+| **Claude API**               | Required for briefings, NL search, tag suggestions        | Briefings cached. NL search degrades to structured search.                   |
+| **Google People API**        | Required for Google Contacts sync                         | Free tier sufficient for initial scale.                                      |
 
 ### Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| **Enrichment API cost** | Medium | High | Rate limiting, caching, cost-based adapter prioritization. Free sources first (Google, email signature), paid sources on demand. |
-| **Entity resolution false merges** | Medium | High | Conservative default thresholds. Review queue for medium-confidence matches. Split (undo merge) capability. |
-| **Event store growth** | Low | Medium | Snapshot strategy bounds replay depth. Retention policy compacts old events. PostgreSQL partitioning by timestamp. |
-| **OSINT legal compliance** | Medium | High | Legal review per jurisdiction. Opt-in only for monitoring. Public data only. Terms of Service compliance. |
-| **LinkedIn ToS** | High | Medium | Browser extension captures only pages the user actively visits. No automated scraping. Clear user disclosure. |
-| **Meilisearch index lag** | Low | Low | Async indexing with max 5-second lag. Fallback to PostgreSQL search if Meilisearch unavailable. |
-| **Graph query performance** | Medium | Medium | Neo4j indexes on frequently traversed properties. Query depth limits. Caching for common patterns. |
+| Risk                               | Likelihood | Impact | Mitigation                                                                                                                       |
+| ---------------------------------- | ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Enrichment API cost**            | Medium     | High   | Rate limiting, caching, cost-based adapter prioritization. Free sources first (Google, email signature), paid sources on demand. |
+| **Entity resolution false merges** | Medium     | High   | Conservative default thresholds. Review queue for medium-confidence matches. Split (undo merge) capability.                      |
+| **Event store growth**             | Low        | Medium | Snapshot strategy bounds replay depth. Retention policy compacts old events. PostgreSQL partitioning by timestamp.               |
+| **OSINT legal compliance**         | Medium     | High   | Legal review per jurisdiction. Opt-in only for monitoring. Public data only. Terms of Service compliance.                        |
+| **LinkedIn ToS**                   | High       | Medium | Browser extension captures only pages the user actively visits. No automated scraping. Clear user disclosure.                    |
+| **Meilisearch index lag**          | Low        | Low    | Async indexing with max 5-second lag. Fallback to PostgreSQL search if Meilisearch unavailable.                                  |
+| **Graph query performance**        | Medium     | Medium | Neo4j indexes on frequently traversed properties. Query depth limits. Caching for common patterns.                               |
 
 ---
 
@@ -1718,33 +1732,33 @@ Queued writes are displayed with a "pending" indicator. On reconnect, the queue 
 
 ## 24. Glossary
 
-| Term | Definition |
-|---|---|
-| **Contact** | A person record in the CRM, uniquely identified by a UUID, with one or more identifiers |
-| **Company** | An organization record, typically associated with contacts via employment history |
-| **Identifier** | A piece of information that identifies a contact: email address, phone number, social profile URL |
-| **Entity resolution** | The process of determining when records from different sources refer to the same real-world person or company |
-| **Materialized view** | A precomputed table derived from event replay, used for fast read access |
-| **Event sourcing** | Data architecture where state changes are stored as immutable events rather than mutable rows |
-| **Enrichment** | The process of augmenting a contact record with data from external sources |
-| **Intelligence item** | A discrete piece of intelligence about a contact or company (job change, funding round, news mention) |
-| **Intelligence score** | Composite metric (0.0–1.0) reflecting how much the system knows about a contact |
-| **Engagement score** | Composite metric (0.0–1.0) reflecting the health and recency of the relationship |
-| **Warm intro path** | A chain of mutual connections between the user and a target contact |
-| **OSINT** | Open-Source Intelligence — publicly available data about people and companies |
-| **DSAR** | Data Subject Access Request — a GDPR right for individuals to request their data |
-| **E.164** | International phone number format: `+{country code}{number}` (e.g., `+15550199`) |
-| **Survivor** | In a merge operation, the contact record that persists and absorbs the duplicate's data |
-| **Smart group** | A contact group whose membership is dynamically computed from a saved filter definition |
-| **Behavioral signal** | A data point derived from communication patterns (frequency, recency, sentiment) |
-| **Stale contact** | A contact whose engagement score has fallen below a threshold due to inactivity |
+| Term                   | Definition                                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Contact**            | A person record in the CRM, uniquely identified by a UUID, with one or more identifiers                       |
+| **Company**            | An organization record, typically associated with contacts via employment history                             |
+| **Identifier**         | A piece of information that identifies a contact: email address, phone number, social profile URL             |
+| **Entity resolution**  | The process of determining when records from different sources refer to the same real-world person or company |
+| **Materialized view**  | A precomputed table derived from event replay, used for fast read access                                      |
+| **Event sourcing**     | Data architecture where state changes are stored as immutable events rather than mutable rows                 |
+| **Enrichment**         | The process of augmenting a contact record with data from external sources                                    |
+| **Intelligence item**  | A discrete piece of intelligence about a contact or company (job change, funding round, news mention)         |
+| **Intelligence score** | Composite metric (0.0–1.0) reflecting how much the system knows about a contact                               |
+| **Engagement score**   | Composite metric (0.0–1.0) reflecting the health and recency of the relationship                              |
+| **Warm intro path**    | A chain of mutual connections between the user and a target contact                                           |
+| **OSINT**              | Open-Source Intelligence — publicly available data about people and companies                                 |
+| **DSAR**               | Data Subject Access Request — a GDPR right for individuals to request their data                              |
+| **E.164**              | International phone number format: `+{country code}{number}` (e.g., `+15550199`)                              |
+| **Survivor**           | In a merge operation, the contact record that persists and absorbs the duplicate's data                       |
+| **Smart group**        | A contact group whose membership is dynamically computed from a saved filter definition                       |
+| **Behavioral signal**  | A data point derived from communication patterns (frequency, recency, sentiment)                              |
+| **Stale contact**      | A contact whose engagement score has fallen below a threshold due to inactivity                               |
 
 ---
 
 ## Related PRDs
 
-| Document | Relationship |
-|---|---|
-| [CRMExtender PRD v1.1](PRD.md) | Parent document defining system architecture, phasing, and all feature areas |
-| [Communication & Conversation Intelligence PRD](email-conversations-prd.md) | Sibling subsystem that resolves communication participants to contacts |
-| [Data Layer Architecture PRD](data-layer-prd.md) | Defines the database schema for contacts and identifiers used by the conversations subsystem |
+| Document                                                                    | Relationship                                                                                 |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| [CRMExtender PRD v1.1](PRD.md)                                              | Parent document defining system architecture, phasing, and all feature areas                 |
+| [Communication & Conversation Intelligence PRD](email-conversations-prd.md) | Sibling subsystem that resolves communication participants to contacts                       |
+| [Data Layer Architecture PRD](data-layer-prd.md)                            | Defines the database schema for contacts and identifiers used by the conversations subsystem |

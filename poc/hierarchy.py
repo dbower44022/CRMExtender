@@ -378,10 +378,10 @@ def find_company_by_domain(domain: str) -> dict | None:
 
 
 def delete_company(company_id: str) -> dict:
-    """Delete a company. Contacts get company_id SET NULL. Returns impact summary."""
+    """Delete a company. Affiliations CASCADE-deleted. Returns impact summary."""
     with get_connection() as conn:
         contact_count = conn.execute(
-            "SELECT COUNT(*) AS cnt FROM contacts WHERE company_id = ?",
+            "SELECT COUNT(*) AS cnt FROM contact_companies WHERE company_id = ?",
             (company_id,),
         ).fetchone()["cnt"]
         conn.execute("DELETE FROM companies WHERE id = ?", (company_id,))
@@ -525,7 +525,7 @@ def remove_company_hierarchy(hierarchy_id: str) -> None:
 
 def update_contact(contact_id: str, **fields) -> dict | None:
     """Update a contact's fields. Returns updated row dict or None."""
-    allowed = {"name", "company", "company_id", "source", "status"}
+    allowed = {"name", "source", "status"}
     updates = {k: v for k, v in fields.items() if k in allowed}
     if not updates:
         return None

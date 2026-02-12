@@ -13,13 +13,22 @@
         <tr>
           <th>Name</th>
           <th>Email</th>
+          <th>Role</th>
+          <th>Title</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody>
         {% for c in contacts %}
-        <tr>
-          <td><a href="/contacts/{{ c.id }}">{{ c.name or '(unnamed)' }}</a></td>
+        <tr{% if not c.is_current %} style="opacity:0.6;"{% endif %}>
+          <td>
+            <a href="/contacts/{{ c.id }}">{{ c.name or '(unnamed)' }}</a>
+            {% if c.is_primary %}<small title="Primary">&#9733;</small>{% endif %}
+          </td>
           <td>{{ c.email or '' }}</td>
+          <td>{{ c.role_name or '' }}</td>
+          <td>{{ c.job_title or '' }}</td>
+          <td>{{ 'Current' if c.is_current else 'Former' }}</td>
         </tr>
         {% endfor %}
       </tbody>

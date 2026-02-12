@@ -6,6 +6,11 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...access import my_contacts_query, visible_contacts_query
+from ...contact_companies import (
+    add_affiliation, list_affiliations_for_contact, remove_affiliation,
+    set_primary, update_affiliation,
+)
+from ...contact_company_roles import list_roles
 from ...database import get_connection
 from ...hierarchy import (
     update_contact, list_companies,
@@ -68,19 +73,22 @@ def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
                 FROM contacts c
                 {mine_join}
                 LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
-                LEFT JOIN companies co ON co.id = c.company_id
+                LEFT JOIN contact_companies ccx ON ccx.contact_id = c.id AND ccx.is_primary = 1 AND ccx.is_current = 1
+                LEFT JOIN companies co ON co.id = ccx.company_id
                 {where}""",
             params,
         ).fetchone()["cnt"]
 
         offset = (page - 1) * per_page
         rows = conn.execute(
-            f"""SELECT c.*, ci.value AS email, co.name AS company_name,
+            f"""SELECT c.*, ci.value AS email,
+                       co.name AS company_name, co.id AS company_id,
                        es.score_value AS score
                 FROM contacts c
                 {mine_join}
                 LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
-                LEFT JOIN companies co ON co.id = c.company_id
+                LEFT JOIN contact_companies ccx ON ccx.contact_id = c.id AND ccx.is_primary = 1 AND ccx.is_current = 1
+                LEFT JOIN companies co ON co.id = ccx.company_id
                 LEFT JOIN entity_scores es
                   ON es.entity_type = 'contact'
                  AND es.entity_id = c.id
@@ -165,15 +173,6 @@ def contact_detail(request: Request, contact_id: str):
         ).fetchall()
         contact["identifiers"] = [dict(i) for i in identifiers]
 
-        # Company
-        company = None
-        if contact.get("company_id"):
-            c = conn.execute(
-                "SELECT * FROM companies WHERE id = ?", (contact["company_id"],)
-            ).fetchone()
-            if c:
-                company = dict(c)
-
         # Conversations this contact participates in
         convs = conn.execute(
             """SELECT conv.* FROM conversations conv
@@ -227,6 +226,9 @@ def contact_detail(request: Request, contact_id: str):
             (contact_id,),
         ).fetchall()]
 
+    # Affiliations
+    affiliations = list_affiliations_for_contact(contact_id)
+    all_roles = list_roles(customer_id=cid)
     phones = get_phone_numbers("contact", contact_id)
     addresses = get_addresses("contact", contact_id)
     emails = get_email_addresses("contact", contact_id)
@@ -241,7 +243,8 @@ def contact_detail(request: Request, contact_id: str):
     return templates.TemplateResponse(request, "contacts/detail.html", {
         "active_nav": "contacts",
         "contact": contact,
-        "company": company,
+        "affiliations": affiliations,
+        "all_roles": all_roles,
         "conversations": conversations,
         "relationships": relationships,
         "identifiers": contact["identifiers"],
@@ -286,7 +289,6 @@ def contact_score(request: Request, contact_id: str):
 @router.get("/{contact_id}/edit", response_class=HTMLResponse)
 def contact_edit_form(request: Request, contact_id: str):
     templates = request.app.state.templates
-    cid = request.state.customer_id
 
     with get_connection() as conn:
         contact = conn.execute(
@@ -296,12 +298,9 @@ def contact_edit_form(request: Request, contact_id: str):
             return HTMLResponse("Contact not found", status_code=404)
         contact = dict(contact)
 
-    all_companies = list_companies(customer_id=cid)
-
     return templates.TemplateResponse(request, "contacts/edit.html", {
         "active_nav": "contacts",
         "contact": contact,
-        "all_companies": all_companies,
     })
 
 
@@ -310,14 +309,12 @@ def contact_edit(
     request: Request,
     contact_id: str,
     name: str = Form(...),
-    company_id: str = Form(""),
     source: str = Form(""),
     status: str = Form("active"),
 ):
     update_contact(
         contact_id,
         name=name,
-        company_id=company_id if company_id else None,
         source=source,
         status=status,
     )
@@ -486,3 +483,101 @@ def contact_remove_email(
         "contact": {"id": contact_id},
         "emails": emails,
     })
+
+
+# ---------------------------------------------------------------------------
+# Affiliations (Contact ↔ Company)
+# ---------------------------------------------------------------------------
+
+def _affiliation_context(request, contact_id):
+    cid = request.state.customer_id
+    return {
+        "contact": {"id": contact_id},
+        "affiliations": list_affiliations_for_contact(contact_id),
+        "all_roles": list_roles(customer_id=cid),
+        "all_companies": list_companies(customer_id=cid),
+    }
+
+
+@router.post("/{contact_id}/affiliations", response_class=HTMLResponse)
+def contact_add_affiliation(
+    request: Request,
+    contact_id: str,
+    company_id: str = Form(...),
+    role_id: str = Form(""),
+    title: str = Form(""),
+    department: str = Form(""),
+    is_primary: str = Form(""),
+    is_current: str = Form("1"),
+    started_at: str = Form(""),
+    ended_at: str = Form(""),
+    notes: str = Form(""),
+):
+    templates = request.app.state.templates
+    user = request.state.user
+    add_affiliation(
+        contact_id, company_id,
+        role_id=role_id or None,
+        title=title, department=department,
+        is_primary=bool(is_primary),
+        is_current=is_current == "1",
+        started_at=started_at, ended_at=ended_at,
+        notes=notes,
+        created_by=user["id"],
+    )
+    return templates.TemplateResponse(
+        request, "contacts/_affiliations.html", _affiliation_context(request, contact_id),
+    )
+
+
+@router.post("/{contact_id}/affiliations/{aff_id}/edit", response_class=HTMLResponse)
+def contact_edit_affiliation(
+    request: Request,
+    contact_id: str,
+    aff_id: str,
+    role_id: str = Form(""),
+    title: str = Form(""),
+    department: str = Form(""),
+    is_primary: str = Form(""),
+    is_current: str = Form("1"),
+    started_at: str = Form(""),
+    ended_at: str = Form(""),
+    notes: str = Form(""),
+):
+    templates = request.app.state.templates
+    user = request.state.user
+    update_affiliation(
+        aff_id,
+        role_id=role_id or None,
+        title=title or None, department=department or None,
+        is_primary=int(bool(is_primary)),
+        is_current=int(is_current == "1"),
+        started_at=started_at or None, ended_at=ended_at or None,
+        notes=notes or None,
+        updated_by=user["id"],
+    )
+    return templates.TemplateResponse(
+        request, "contacts/_affiliations.html", _affiliation_context(request, contact_id),
+    )
+
+
+@router.delete("/{contact_id}/affiliations/{aff_id}", response_class=HTMLResponse)
+def contact_remove_affiliation(
+    request: Request, contact_id: str, aff_id: str,
+):
+    templates = request.app.state.templates
+    remove_affiliation(aff_id)
+    return templates.TemplateResponse(
+        request, "contacts/_affiliations.html", _affiliation_context(request, contact_id),
+    )
+
+
+@router.post("/{contact_id}/affiliations/{aff_id}/primary", response_class=HTMLResponse)
+def contact_set_primary_affiliation(
+    request: Request, contact_id: str, aff_id: str,
+):
+    templates = request.app.state.templates
+    set_primary(aff_id)
+    return templates.TemplateResponse(
+        request, "contacts/_affiliations.html", _affiliation_context(request, contact_id),
+    )

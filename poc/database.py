@@ -89,14 +89,47 @@ CREATE TABLE IF NOT EXISTS contacts (
     id         TEXT PRIMARY KEY,
     customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
     name       TEXT,
-    company    TEXT,
-    company_id TEXT REFERENCES companies(id) ON DELETE SET NULL,
     source     TEXT,
     status     TEXT DEFAULT 'active',
     created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
+);
+
+-- Contact-company affiliation roles (user-editable lookup)
+CREATE TABLE IF NOT EXISTS contact_company_roles (
+    id          TEXT PRIMARY KEY,
+    customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
+    name        TEXT NOT NULL,
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    is_system   INTEGER NOT NULL DEFAULT 0,
+    created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    UNIQUE(customer_id, name)
+);
+
+-- Contact-company affiliations (junction table)
+CREATE TABLE IF NOT EXISTS contact_companies (
+    id         TEXT PRIMARY KEY,
+    contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    role_id    TEXT REFERENCES contact_company_roles(id) ON DELETE SET NULL,
+    title      TEXT,
+    department TEXT,
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    is_current INTEGER NOT NULL DEFAULT 1,
+    started_at TEXT,
+    ended_at   TEXT,
+    notes      TEXT,
+    source     TEXT NOT NULL DEFAULT 'manual',
+    created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(contact_id, company_id, role_id, started_at)
 );
 
 -- Contact identifiers (email, phone, etc.)
@@ -776,7 +809,11 @@ CREATE INDEX IF NOT EXISTS idx_ci_status           ON contact_identifiers(status
 
 -- Companies
 CREATE INDEX IF NOT EXISTS idx_companies_domain    ON companies(domain);
-CREATE INDEX IF NOT EXISTS idx_contacts_company    ON contacts(company_id);
+
+-- Contact-company affiliations
+CREATE INDEX IF NOT EXISTS idx_cc_contact           ON contact_companies(contact_id);
+CREATE INDEX IF NOT EXISTS idx_cc_company           ON contact_companies(company_id);
+CREATE INDEX IF NOT EXISTS idx_cc_primary           ON contact_companies(contact_id, is_primary, is_current);
 
 -- Other tables
 CREATE INDEX IF NOT EXISTS idx_projects_parent     ON projects(parent_id);
@@ -901,12 +938,22 @@ INSERT OR IGNORE INTO relationship_types
      is_system, is_bidirectional, description, created_at, updated_at)
 VALUES
     ('rt-knows',      'KNOWS',      'contact', 'contact', 'Knows',             'Knows',            1, 1, 'Auto-inferred co-occurrence',      '{now}', '{now}'),
-    ('rt-employee',   'EMPLOYEE',   'company', 'contact', 'Employs',           'Works at',         0, 0, 'Employment relationship',           '{now}', '{now}'),
     ('rt-reports-to', 'REPORTS_TO', 'contact', 'contact', 'Has direct report', 'Reports to',       0, 0, 'Reporting chain',                   '{now}', '{now}'),
     ('rt-works-with', 'WORKS_WITH', 'contact', 'contact', 'Works with',        'Works with',       0, 1, 'Peer / collaborator',               '{now}', '{now}'),
     ('rt-partner',    'PARTNER',    'company', 'company', 'Partners with',     'Partners with',    0, 1, 'Business partnership',              '{now}', '{now}'),
     ('rt-vendor',     'VENDOR',     'company', 'company', 'Is a vendor of',    'Is a client of',   0, 0, 'Vendor / client relationship',      '{now}', '{now}');
 """
+
+_SEED_CONTACT_COMPANY_ROLES = [
+    ("ccr-employee", "Employee", 0),
+    ("ccr-contractor", "Contractor", 1),
+    ("ccr-volunteer", "Volunteer", 2),
+    ("ccr-advisor", "Advisor", 3),
+    ("ccr-board-member", "Board Member", 4),
+    ("ccr-investor", "Investor", 5),
+    ("ccr-founder", "Founder", 6),
+    ("ccr-intern", "Intern", 7),
+]
 
 
 def _db_path() -> Path:
@@ -936,6 +983,17 @@ def init_db(db_path: Path | None = None) -> None:
             )
         now = datetime.now(timezone.utc).isoformat()
         conn.executescript(_SEED_RELATIONSHIP_TYPES_SQL.format(now=now))
+        # Seed contact_company_roles for each customer
+        cust_rows = conn.execute("SELECT id FROM customers").fetchall()
+        for cust in cust_rows:
+            for role_id, role_name, sort_order in _SEED_CONTACT_COMPANY_ROLES:
+                full_id = f"{role_id}-{cust[0]}"
+                conn.execute(
+                    "INSERT OR IGNORE INTO contact_company_roles "
+                    "(id, customer_id, name, sort_order, is_system, created_at, updated_at) "
+                    "VALUES (?, ?, ?, ?, 1, ?, ?)",
+                    (full_id, cust[0], role_name, sort_order, now, now),
+                )
         conn.commit()
         log.info("Database initialized at %s", path)
     finally:

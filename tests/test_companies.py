@@ -195,66 +195,70 @@ class TestAuditColumns:
         assert contact["created_by"] == "u-1"
         assert identifier["created_by"] == "u-1"
 
-    def test_known_contact_company_id(self):
+    def test_known_contact_no_company_id(self):
+        """KnownContact.to_row() should not include company_id."""
         kc = KnownContact(email="test@x.com", name="Test")
-        contact, _ = kc.to_row(company_id="c-123")
-        assert contact["company_id"] == "c-123"
+        contact, _ = kc.to_row()
+        assert "company_id" not in contact
 
 
 # ---------------------------------------------------------------------------
-# Contact-company linkage tests
+# Contact-company linkage tests (via contact_companies junction table)
 # ---------------------------------------------------------------------------
 
 class TestContactCompanyLink:
 
     def test_link_contact_to_company(self, tmp_db):
+        from poc.contact_companies import add_affiliation, list_affiliations_for_contact
         company = create_company("LinkCo")
         now = datetime.now(timezone.utc).isoformat()
 
         with get_connection() as conn:
             conn.execute(
-                "INSERT INTO contacts (id, name, company, company_id, source, status, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, 'test', 'active', ?, ?)",
-                ("ct-1", "Alice", "LinkCo", company["id"], now, now),
+                "INSERT INTO contacts (id, name, source, status, created_at, updated_at) "
+                "VALUES (?, ?, 'test', 'active', ?, ?)",
+                ("ct-1", "Alice", now, now),
             )
 
-        with get_connection() as conn:
-            row = conn.execute(
-                "SELECT company_id FROM contacts WHERE id = 'ct-1'"
-            ).fetchone()
-        assert row["company_id"] == company["id"]
+        add_affiliation("ct-1", company["id"], is_primary=True)
+        affs = list_affiliations_for_contact("ct-1")
+        assert len(affs) == 1
+        assert affs[0]["company_id"] == company["id"]
 
-    def test_company_deletion_nulls_contact(self, tmp_db):
+    def test_company_deletion_cascades_affiliations(self, tmp_db):
+        from poc.contact_companies import add_affiliation, list_affiliations_for_contact
         company = create_company("GoneCo")
         now = datetime.now(timezone.utc).isoformat()
 
         with get_connection() as conn:
             conn.execute(
-                "INSERT INTO contacts (id, name, company, company_id, source, status, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, 'test', 'active', ?, ?)",
-                ("ct-2", "Bob", "GoneCo", company["id"], now, now),
+                "INSERT INTO contacts (id, name, source, status, created_at, updated_at) "
+                "VALUES (?, ?, 'test', 'active', ?, ?)",
+                ("ct-2", "Bob", now, now),
             )
 
+        add_affiliation("ct-2", company["id"], is_primary=True)
         impact = delete_company(company["id"])
         assert impact["contacts_unlinked"] == 1
 
-        with get_connection() as conn:
-            row = conn.execute(
-                "SELECT company_id FROM contacts WHERE id = 'ct-2'"
-            ).fetchone()
-        assert row["company_id"] is None
+        affs = list_affiliations_for_contact("ct-2")
+        assert len(affs) == 0
 
     def test_multiple_contacts_same_company(self, tmp_db):
+        from poc.contact_companies import add_affiliation
         company = create_company("SharedCo")
         now = datetime.now(timezone.utc).isoformat()
 
         with get_connection() as conn:
             for i in range(3):
                 conn.execute(
-                    "INSERT INTO contacts (id, name, company_id, source, status, created_at, updated_at) "
-                    "VALUES (?, ?, ?, 'test', 'active', ?, ?)",
-                    (f"ct-{i}", f"Person {i}", company["id"], now, now),
+                    "INSERT INTO contacts (id, name, source, status, created_at, updated_at) "
+                    "VALUES (?, ?, 'test', 'active', ?, ?)",
+                    (f"ct-{i}", f"Person {i}", now, now),
                 )
+
+        for i in range(3):
+            add_affiliation(f"ct-{i}", company["id"])
 
         impact = delete_company(company["id"])
         assert impact["contacts_unlinked"] == 3

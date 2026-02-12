@@ -31,6 +31,8 @@
     <p class="empty-state">No conversations.</p>
     {% endif %}
 
+    {% include "contacts/_affiliations.html" %}
+
     {% include "contacts/_identifiers.html" %}
 
     {% include "contacts/_phones.html" %}
@@ -56,10 +58,19 @@
 
         <dt>Company</dt>
         <dd>
-          {% if company %}
-          <a href="/companies/{{ company.id }}">{{ company.name }}</a>
-          {% elif contact.company %}
-          {{ contact.company }}
+          {% if affiliations %}
+          {% for aff in affiliations if aff.is_primary and aff.is_current %}
+          <a href="/companies/{{ aff.company_id }}">{{ aff.company_name }}</a>
+          {% if aff.role_name %}<small>({{ aff.role_name }})</small>{% endif %}
+          {% endfor %}
+          {% if not affiliations|selectattr('is_primary')|selectattr('is_current')|list %}
+          {% for aff in affiliations if aff.is_current %}
+          {% if loop.first %}<a href="/companies/{{ aff.company_id }}">{{ aff.company_name }}</a>{% endif %}
+          {% endfor %}
+          {% endif %}
+          {% if affiliations|length > 1 %}
+          <br><small>+{{ affiliations|length - 1 }} more</small>
+          {% endif %}
           {% else %}
           <em>None</em>
           {% endif %}

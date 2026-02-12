@@ -116,12 +116,12 @@ def _link_comm_to_conv(conn, conv_id, comm_id):
 
 
 def _insert_contact(conn, contact_id, name="Alice", email="alice@example.com",
-                     company_id=None, customer_id="cust-test"):
+                     customer_id="cust-test"):
     conn.execute(
         "INSERT OR IGNORE INTO contacts "
-        "(id, name, company_id, customer_id, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (contact_id, name, company_id, customer_id, _NOW, _NOW),
+        "(id, name, customer_id, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (contact_id, name, customer_id, _NOW, _NOW),
     )
     conn.execute(
         "INSERT OR IGNORE INTO contact_identifiers "
@@ -152,6 +152,19 @@ def _insert_company(conn, company_id, name="Acme Corp", domain="acme.com",
         "(id, user_id, company_id, visibility, is_owner, created_at, updated_at) "
         "VALUES (?, 'user-test', ?, 'public', 1, ?, ?)",
         (f"uco-{company_id}", company_id, _NOW, _NOW),
+    )
+
+
+def _insert_affiliation(conn, contact_id, company_id, is_primary=1, is_current=1):
+    """Link a contact to a company via contact_companies junction table."""
+    import uuid as _uuid
+    conn.execute(
+        "INSERT OR IGNORE INTO contact_companies "
+        "(id, contact_id, company_id, is_primary, is_current, source, "
+        "created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, 'test', ?, ?)",
+        (str(_uuid.uuid4()), contact_id, company_id, is_primary, is_current,
+         _NOW, _NOW),
     )
 
 
@@ -345,8 +358,8 @@ class TestContacts:
     def test_detail_page(self, client, tmp_db):
         with get_connection() as conn:
             _insert_company(conn, "co-1", "Acme")
-            _insert_contact(conn, "ct-1", "Alice", "alice@acme.com",
-                            company_id="co-1")
+            _insert_contact(conn, "ct-1", "Alice", "alice@acme.com")
+            _insert_affiliation(conn, "ct-1", "co-1")
 
         resp = client.get("/contacts/ct-1")
         assert resp.status_code == 200
@@ -428,8 +441,8 @@ class TestCompanies:
     def test_detail_page(self, client, tmp_db):
         with get_connection() as conn:
             _insert_company(conn, "co-1", "Acme Corp", "acme.com")
-            _insert_contact(conn, "ct-1", "Alice", "alice@acme.com",
-                            company_id="co-1")
+            _insert_contact(conn, "ct-1", "Alice", "alice@acme.com")
+            _insert_affiliation(conn, "ct-1", "co-1")
 
         resp = client.get("/companies/co-1")
         assert resp.status_code == 200
@@ -484,7 +497,7 @@ class TestCompanies:
             assert company is not None
 
             linked = conn.execute(
-                "SELECT id FROM contacts WHERE company_id = ?",
+                "SELECT id FROM contact_companies WHERE company_id = ?",
                 (company["id"],),
             ).fetchall()
         assert len(linked) == 2
@@ -509,7 +522,7 @@ class TestCompanies:
             assert company is not None
 
             linked = conn.execute(
-                "SELECT id FROM contacts WHERE company_id = ?",
+                "SELECT id FROM contact_companies WHERE company_id = ?",
                 (company["id"],),
             ).fetchall()
         assert len(linked) == 0
@@ -1577,11 +1590,9 @@ class TestContactDetail:
     def test_edit_updates_fields(self, client, tmp_db):
         with get_connection() as conn:
             _insert_contact(conn, "ct-1", "Alice", "alice@example.com")
-            _insert_company(conn, "co-1", "Acme Corp")
 
         resp = client.post("/contacts/ct-1/edit", data={
             "name": "Alice Smith",
-            "company_id": "co-1",
             "source": "google",
             "status": "inactive",
         })
@@ -1592,7 +1603,6 @@ class TestContactDetail:
                 "SELECT * FROM contacts WHERE id = 'ct-1'"
             ).fetchone()
         assert row["name"] == "Alice Smith"
-        assert row["company_id"] == "co-1"
         assert row["status"] == "inactive"
 
     def test_add_identifier_via_web(self, client, tmp_db):

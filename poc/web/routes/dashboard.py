@@ -87,7 +87,9 @@ def dashboard(request: Request):
                JOIN contacts ct ON ct.id = es.entity_id
                LEFT JOIN contact_identifiers ci
                  ON ci.contact_id = ct.id AND ci.type = 'email'
-               LEFT JOIN companies co ON co.id = ct.company_id
+               LEFT JOIN contact_companies ccx
+                 ON ccx.contact_id = ct.id AND ccx.is_primary = 1 AND ccx.is_current = 1
+               LEFT JOIN companies co ON co.id = ccx.company_id
                WHERE es.entity_type = 'contact'
                  AND es.score_type = 'relationship_strength'
                  AND ct.customer_id = ?

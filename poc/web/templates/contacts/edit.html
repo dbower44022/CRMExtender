@@ -10,15 +10,6 @@
     <input type="text" name="name" value="{{ contact.name or '' }}" required>
   </label>
   <label>
-    Company
-    <select name="company_id">
-      <option value="">None</option>
-      {% for co in all_companies %}
-      <option value="{{ co.id }}" {% if contact.company_id == co.id %}selected{% endif %}>{{ co.name }}</option>
-      {% endfor %}
-    </select>
-  </label>
-  <label>
     Source
     <input type="text" name="source" value="{{ contact.source or '' }}">
   </label>

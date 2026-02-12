@@ -206,18 +206,19 @@ def sync_contacts(
 
             if existing:
                 # Update existing contact
+                contact_id = existing["contact_id"]
                 conn.execute(
-                    "UPDATE contacts SET name = ?, company = ?, company_id = ?, updated_at = ? WHERE id = ?",
-                    (kc.name, kc.company, company_id, now, existing["contact_id"]),
+                    "UPDATE contacts SET name = ?, updated_at = ? WHERE id = ?",
+                    (kc.name, now, contact_id),
                 )
             else:
                 # Insert new contact + identifier
                 contact_id = str(uuid.uuid4())
                 conn.execute(
-                    """INSERT INTO contacts (id, name, company, company_id, source, status,
+                    """INSERT INTO contacts (id, name, source, status,
                        customer_id, created_by, created_at, updated_at)
-                       VALUES (?, ?, ?, ?, 'google_contacts', 'active', ?, ?, ?, ?)""",
-                    (contact_id, kc.name, kc.company, company_id,
+                       VALUES (?, ?, 'google_contacts', 'active', ?, ?, ?, ?)""",
+                    (contact_id, kc.name,
                      customer_id, user_id, now, now),
                 )
                 conn.execute(
@@ -234,6 +235,17 @@ def sync_contacts(
                            VALUES (?, ?, ?, 'public', 1, ?, ?)""",
                         (str(uuid.uuid4()), user_id, contact_id, now, now),
                     )
+
+            # Create affiliation if company resolved
+            if company_id:
+                conn.execute(
+                    """INSERT OR IGNORE INTO contact_companies
+                       (id, contact_id, company_id, is_primary, is_current,
+                        source, created_at, updated_at)
+                       VALUES (?, ?, ?, 1, 1, 'sync', ?, ?)""",
+                    (str(uuid.uuid4()), contact_id, company_id, now, now),
+                )
+
             count += 1
 
     log.info("Synced %d contacts to database", count)

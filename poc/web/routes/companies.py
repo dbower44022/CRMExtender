@@ -32,7 +32,10 @@ router = APIRouter()
 
 def _find_contacts_by_domain(domain: str, *, customer_id: str | None = None) -> list[dict]:
     """Return unlinked contacts whose email matches *@domain*."""
-    clauses = ["ci.value LIKE ?", "c.company_id IS NULL"]
+    clauses = [
+        "ci.value LIKE ?",
+        "NOT EXISTS (SELECT 1 FROM contact_companies cc WHERE cc.contact_id = c.id)",
+    ]
     params: list = [f"%@{domain}"]
     if customer_id:
         clauses.append("c.customer_id = ?")
@@ -262,11 +265,12 @@ def company_confirm(
         domain_clean = domain.strip().lower()
         contacts = _find_contacts_by_domain(domain_clean, customer_id=cid)
         if contacts:
-            now = datetime.now(timezone.utc).isoformat()
-            with get_connection() as conn:
-                conn.executemany(
-                    "UPDATE contacts SET company_id = ?, updated_at = ? WHERE id = ?",
-                    [(row["id"], now, c["id"]) for c in contacts],
+            from ...contact_companies import add_affiliation
+            for c in contacts:
+                add_affiliation(
+                    c["id"], row["id"],
+                    is_primary=True, is_current=True,
+                    source="domain_link", created_by=user["id"],
                 )
 
     if _is_htmx(request):
@@ -320,11 +324,15 @@ def company_detail(request: Request, company_id: str):
             return HTMLResponse("Company not found", status_code=404)
 
         contacts = conn.execute(
-            """SELECT c.*, ci.value AS email
-               FROM contacts c
+            """SELECT c.*, ci.value AS email,
+                      ccr.name AS role_name, cc.title AS job_title,
+                      cc.is_current, cc.is_primary
+               FROM contact_companies cc
+               JOIN contacts c ON c.id = cc.contact_id
                LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
-               WHERE c.company_id = ?
-               ORDER BY c.name""",
+               LEFT JOIN contact_company_roles ccr ON ccr.id = cc.role_id
+               WHERE cc.company_id = ?
+               ORDER BY cc.is_current DESC, c.name""",
             (company_id,),
         ).fetchall()
         contacts = [dict(r) for r in contacts]

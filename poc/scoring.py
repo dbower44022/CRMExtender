@@ -113,11 +113,11 @@ SELECT
     MAX(c.timestamp) AS last_ts,
     COUNT(DISTINCT ct.id) AS distinct_contacts
 FROM contacts ct
+JOIN contact_companies ccx ON ccx.contact_id = ct.id AND ccx.company_id = :company_id
 JOIN contact_identifiers ci ON ci.contact_id = ct.id AND ci.type = 'email'
 LEFT JOIN communication_participants cp ON LOWER(cp.address) = LOWER(ci.value)
 LEFT JOIN communications c ON c.id = cp.communication_id
-WHERE ct.company_id = :company_id
-  AND c.id IS NOT NULL
+WHERE c.id IS NOT NULL
 """
 
 _COMPANY_SENDER_STATS_SQL = """\
@@ -133,9 +133,9 @@ SELECT
     MAX(c.timestamp) AS last_ts,
     COUNT(DISTINCT ct.id) AS distinct_contacts
 FROM contacts ct
+JOIN contact_companies ccx ON ccx.contact_id = ct.id AND ccx.company_id = :company_id
 JOIN contact_identifiers ci ON ci.contact_id = ct.id AND ci.type = 'email'
 JOIN communications c ON LOWER(c.sender_address) = LOWER(ci.value)
-WHERE ct.company_id = :company_id
 """
 
 _CONTACT_STATS_SQL = """\

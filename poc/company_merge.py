@@ -163,7 +163,7 @@ def get_merge_preview(surviving_id: str, absorbed_id: str) -> dict:
             raise ValueError("Both companies must exist.")
 
         contacts = conn.execute(
-            "SELECT COUNT(*) AS cnt FROM contacts WHERE company_id = ?",
+            "SELECT COUNT(*) AS cnt FROM contact_companies WHERE company_id = ?",
             (absorbed_id,),
         ).fetchone()["cnt"]
 
@@ -349,9 +349,19 @@ def merge_companies(
 
         now = datetime.now(timezone.utc).isoformat()
 
-        # --- Reassign contacts ---
+        # --- Reassign contact affiliations ---
+        # Delete absorbed affiliations that would conflict (same contact+company+role+started_at)
+        conn.execute(
+            """DELETE FROM contact_companies
+               WHERE company_id = ?
+                 AND (contact_id, role_id, started_at) IN (
+                     SELECT contact_id, role_id, started_at
+                     FROM contact_companies WHERE company_id = ?
+                 )""",
+            (absorbed_id, surviving_id),
+        )
         cur = conn.execute(
-            "UPDATE contacts SET company_id = ?, updated_at = ? WHERE company_id = ?",
+            "UPDATE contact_companies SET company_id = ?, updated_at = ? WHERE company_id = ?",
             (surviving_id, now, absorbed_id),
         )
         contacts_reassigned = cur.rowcount

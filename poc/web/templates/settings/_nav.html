@@ -4,6 +4,7 @@
     <li><a href="/settings/calendars" {% if settings_tab == 'calendars' %}class="active"{% endif %}>Calendars</a></li>
     {% if user and user.role == 'admin' %}
     <li><a href="/settings/system" {% if settings_tab == 'system' %}class="active"{% endif %}>System</a></li>
+    <li><a href="/settings/roles" {% if settings_tab == 'roles' %}class="active"{% endif %}>Roles</a></li>
     <li><a href="/settings/users" {% if settings_tab == 'users' %}class="active"{% endif %}>Users</a></li>
     {% endif %}
   </ul>

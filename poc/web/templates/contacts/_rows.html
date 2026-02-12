@@ -27,9 +27,7 @@
       <td>{{ c.email or '' }}</td>
       <td>
         {% if c.company_id %}
-        <a href="/companies/{{ c.company_id }}">{{ c.company_name or c.company or '' }}</a>
-        {% else %}
-        {{ c.company or '' }}
+        <a href="/companies/{{ c.company_id }}">{{ c.company_name or '' }}</a>
         {% endif %}
       </td>
       <td>

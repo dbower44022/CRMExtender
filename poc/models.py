@@ -33,7 +33,6 @@ class KnownContact:
         self,
         *,
         contact_id: str | None = None,
-        company_id: str | None = None,
         created_by: str | None = None,
         updated_by: str | None = None,
     ) -> tuple[dict, dict]:
@@ -47,8 +46,6 @@ class KnownContact:
         contact = {
             "id": cid,
             "name": self.name,
-            "company": self.company,
-            "company_id": company_id,
             "source": "google_contacts",
             "status": self.status,
             "created_by": created_by,

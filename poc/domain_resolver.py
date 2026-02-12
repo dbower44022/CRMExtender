@@ -113,8 +113,9 @@ class DomainResolveResult:
 def resolve_unlinked_contacts(*, dry_run: bool = False) -> DomainResolveResult:
     """Bulk backfill: link unlinked contacts to companies by email domain.
 
-    Contacts with ``company_id IS NULL`` are checked against known company
-    domains (both ``companies.domain`` and ``company_identifiers``).
+    Contacts with no affiliation in ``contact_companies`` are checked
+    against known company domains (both ``companies.domain`` and
+    ``company_identifiers``).
 
     Args:
         dry_run: If True, compute results without writing to the database.
@@ -129,7 +130,8 @@ def resolve_unlinked_contacts(*, dry_run: bool = False) -> DomainResolveResult:
             "SELECT c.id AS contact_id, c.name AS contact_name, ci.value AS email "
             "FROM contacts c "
             "JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email' "
-            "WHERE c.company_id IS NULL "
+            "LEFT JOIN contact_companies cc ON cc.contact_id = c.id "
+            "WHERE cc.id IS NULL "
             "ORDER BY c.name",
         ).fetchall()
 
@@ -162,9 +164,14 @@ def resolve_unlinked_contacts(*, dry_run: bool = False) -> DomainResolveResult:
             })
 
             if not dry_run:
+                import uuid as _uuid
                 conn.execute(
-                    "UPDATE contacts SET company_id = ?, updated_at = ? WHERE id = ?",
-                    (company["id"], now, row["contact_id"]),
+                    """INSERT OR IGNORE INTO contact_companies
+                       (id, contact_id, company_id, is_primary, is_current,
+                        source, created_at, updated_at)
+                       VALUES (?, ?, ?, 1, 1, 'domain_resolver', ?, ?)""",
+                    (str(_uuid.uuid4()), row["contact_id"], company["id"],
+                     now, now),
                 )
 
     return result

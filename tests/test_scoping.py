@@ -109,13 +109,13 @@ def _uid():
 
 
 def _add_contact(conn, name, email, customer_id, owner_user_id,
-                 visibility="public", company_id=None):
+                 visibility="public"):
     cid = _uid()
     conn.execute(
         "INSERT INTO contacts "
-        "(id, name, company_id, customer_id, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (cid, name, company_id, customer_id, _NOW, _NOW),
+        "(id, name, customer_id, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (cid, name, customer_id, _NOW, _NOW),
     )
     conn.execute(
         "INSERT INTO contact_identifiers "

@@ -39,7 +39,11 @@ def v7_db(tmp_path):
 
 
 def _downgrade_to_v7(conn):
-    """Remove v8 tables and recreate users without customer_id."""
+    """Remove v8+ tables and recreate users without customer_id."""
+    # Drop v10 tables
+    for table in ["contact_companies", "contact_company_roles"]:
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
+
     for table in [
         "settings", "conversation_shares", "user_provider_accounts",
         "user_companies", "user_contacts", "sessions", "customers",
@@ -59,6 +63,13 @@ def _downgrade_to_v7(conn):
             updated_at TEXT NOT NULL
         )
     """)
+
+    # Add company_id back to contacts (removed in v10 schema)
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(contacts)").fetchall()}
+    if "company_id" not in cols:
+        conn.execute("ALTER TABLE contacts ADD COLUMN company_id TEXT")
+    if "company" not in cols:
+        conn.execute("ALTER TABLE contacts ADD COLUMN company TEXT")
 
     # Remove customer_id from tables that have it
     for table in [

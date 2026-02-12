@@ -34,7 +34,6 @@ class TestSeedTypes:
         types = list_relationship_types()
         names = {t["name"] for t in types}
         assert "KNOWS" in names
-        assert "EMPLOYEE" in names
         assert "REPORTS_TO" in names
         assert "WORKS_WITH" in names
         assert "PARTNER" in names
@@ -45,13 +44,13 @@ class TestSeedTypes:
         assert rt is not None
         assert rt["is_system"] == 1
 
-    def test_employee_entity_types(self, tmp_db):
-        rt = get_relationship_type_by_name("EMPLOYEE")
+    def test_vendor_entity_types(self, tmp_db):
+        rt = get_relationship_type_by_name("VENDOR")
         assert rt is not None
         assert rt["from_entity_type"] == "company"
-        assert rt["to_entity_type"] == "contact"
-        assert rt["forward_label"] == "Employs"
-        assert rt["reverse_label"] == "Works at"
+        assert rt["to_entity_type"] == "company"
+        assert rt["forward_label"] == "Is a vendor of"
+        assert rt["reverse_label"] == "Is a client of"
 
     def test_partner_is_company_to_company(self, tmp_db):
         rt = get_relationship_type_by_name("PARTNER")
@@ -73,7 +72,7 @@ class TestSeedTypes:
             assert rt is not None
             assert rt["is_bidirectional"] == 1, f"{name} should be bidirectional"
 
-        for name in ("EMPLOYEE", "REPORTS_TO", "VENDOR"):
+        for name in ("REPORTS_TO", "VENDOR"):
             rt = get_relationship_type_by_name(name)
             assert rt is not None
             assert rt["is_bidirectional"] == 0, f"{name} should be unidirectional"
@@ -135,7 +134,7 @@ class TestCreate:
 class TestList:
     def test_list_all(self, tmp_db):
         types = list_relationship_types()
-        assert len(types) >= 6  # seed types
+        assert len(types) >= 5  # seed types
 
     def test_filter_by_from_entity_type(self, tmp_db):
         types = list_relationship_types(from_entity_type="company")

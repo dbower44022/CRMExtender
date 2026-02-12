@@ -66,14 +66,14 @@ def _insert_company(conn, name="Acme Corp", domain="acme.com") -> str:
     return cid
 
 
-def _insert_contact(conn, name="Alice", company_id=None, email="alice@acme.com") -> str:
+def _insert_contact(conn, name="Alice", email="alice@acme.com") -> str:
     cid = _uid()
     iid = _uid()
     now = _now_iso()
     conn.execute(
-        """INSERT INTO contacts (id, name, company_id, status, created_at, updated_at)
-           VALUES (?, ?, ?, 'active', ?, ?)""",
-        (cid, name, company_id, now, now),
+        """INSERT INTO contacts (id, name, status, created_at, updated_at)
+           VALUES (?, ?, 'active', ?, ?)""",
+        (cid, name, now, now),
     )
     conn.execute(
         """INSERT INTO contact_identifiers (id, contact_id, type, value, created_at, updated_at)
@@ -81,6 +81,16 @@ def _insert_contact(conn, name="Alice", company_id=None, email="alice@acme.com")
         (iid, cid, email, now, now),
     )
     return cid
+
+
+def _link_contact_to_company(conn, contact_id, company_id):
+    """Create a contact_companies affiliation row."""
+    conn.execute(
+        """INSERT OR IGNORE INTO contact_companies
+           (id, contact_id, company_id, is_primary, is_current, source, created_at, updated_at)
+           VALUES (?, ?, ?, 1, 1, 'test', ?, ?)""",
+        (_uid(), contact_id, company_id, _now_iso(), _now_iso()),
+    )
 
 
 def _insert_provider_account(conn) -> str:
@@ -277,7 +287,8 @@ class TestComputeCompanyScore:
     def test_with_communications(self, tmp_db):
         with get_connection() as conn:
             cid = _insert_company(conn)
-            contact_id = _insert_contact(conn, company_id=cid, email="alice@acme.com")
+            contact_id = _insert_contact(conn, email="alice@acme.com")
+            _link_contact_to_company(conn, contact_id, cid)
             aid = _insert_provider_account(conn)
 
             # Create some inbound and outbound comms
@@ -312,8 +323,10 @@ class TestComputeCompanyScore:
         """Company with multiple contacts should have higher breadth."""
         with get_connection() as conn:
             cid = _insert_company(conn)
-            c1 = _insert_contact(conn, "Alice", company_id=cid, email="alice@acme.com")
-            c2 = _insert_contact(conn, "Bob", company_id=cid, email="bob@acme.com")
+            c1 = _insert_contact(conn, "Alice", email="alice@acme.com")
+            _link_contact_to_company(conn, c1, cid)
+            c2 = _insert_contact(conn, "Bob", email="bob@acme.com")
+            _link_contact_to_company(conn, c2, cid)
             aid = _insert_provider_account(conn)
 
             comm1 = _insert_communication(
@@ -337,7 +350,8 @@ class TestComputeCompanyScore:
         """Custom weights should change the final score."""
         with get_connection() as conn:
             cid = _insert_company(conn)
-            _insert_contact(conn, company_id=cid, email="alice@acme.com")
+            ct = _insert_contact(conn, email="alice@acme.com")
+            _link_contact_to_company(conn, ct, cid)
             aid = _insert_provider_account(conn)
 
             comm = _insert_communication(
@@ -362,7 +376,8 @@ class TestComputeCompanyScore:
         """Comms from 400 days ago should yield 0 recency."""
         with get_connection() as conn:
             cid = _insert_company(conn)
-            _insert_contact(conn, company_id=cid, email="alice@acme.com")
+            ct = _insert_contact(conn, email="alice@acme.com")
+            _link_contact_to_company(conn, ct, cid)
             aid = _insert_provider_account(conn)
 
             comm = _insert_communication(
@@ -528,7 +543,8 @@ class TestBatch:
     def test_score_all_companies(self, tmp_db):
         with get_connection() as conn:
             cid = _insert_company(conn, "Test Co")
-            _insert_contact(conn, company_id=cid, email="test@testco.com")
+            ct = _insert_contact(conn, email="test@testco.com")
+            _link_contact_to_company(conn, ct, cid)
             aid = _insert_provider_account(conn)
 
             comm = _insert_communication(
@@ -573,7 +589,8 @@ class TestBatch:
         """Running batch twice should update, not duplicate."""
         with get_connection() as conn:
             cid = _insert_company(conn)
-            _insert_contact(conn, company_id=cid, email="x@acme.com")
+            ct = _insert_contact(conn, email="x@acme.com")
+            _link_contact_to_company(conn, ct, cid)
             aid = _insert_provider_account(conn)
 
             comm = _insert_communication(

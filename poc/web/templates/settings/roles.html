@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Affiliation Roles — Settings — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Settings</h1>
+{% include "settings/_nav.html" %}
+
+<h2>Affiliation Roles</h2>
+<p>Define the role types available when linking contacts to companies.</p>
+
+{% if error %}
+<p style="color:var(--pico-del-color);">{{ error }}</p>
+{% endif %}
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Sort Order</th>
+      <th>System</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for role in roles %}
+    <tr>
+      <td>{{ role.name }}</td>
+      <td>{{ role.sort_order }}</td>
+      <td>{{ "Yes" if role.is_system else "No" }}</td>
+      <td>
+        {% if not role.is_system %}
+        <form method="post" action="/settings/roles/{{ role.id }}/edit" style="display:inline;">
+          <input type="text" name="name" value="{{ role.name }}" style="width:8rem;display:inline-block;padding:4px 8px;margin:0;">
+          <input type="number" name="sort_order" value="{{ role.sort_order }}" style="width:4rem;display:inline-block;padding:4px 8px;margin:0;">
+          <button type="submit" class="outline" style="padding:4px 12px;font-size:.85em;">Save</button>
+        </form>
+        <button hx-delete="/settings/roles/{{ role.id }}"
+                hx-target="closest tr" hx-swap="outerHTML"
+                hx-confirm="Delete role '{{ role.name }}'?"
+                class="outline" style="padding:4px 12px;font-size:.85em;color:var(--pico-del-color);">Delete</button>
+        {% else %}
+        <small style="color:var(--pico-muted-color);">Built-in</small>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3>Add Custom Role</h3>
+<form method="post" action="/settings/roles" class="grid">
+  <label>
+    Name
+    <input type="text" name="name" required placeholder="e.g. Consultant">
+  </label>
+  <label>
+    Sort Order
+    <input type="number" name="sort_order" value="100">
+  </label>
+  <div style="align-self:end;">
+    <button type="submit">Add Role</button>
+  </div>
+</form>
+{% endblock %}

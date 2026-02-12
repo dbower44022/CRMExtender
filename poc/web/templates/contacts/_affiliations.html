@@ -1,0 +1,101 @@
+<div id="affiliations-section">
+<h2>Company Affiliations ({{ affiliations|length }})</h2>
+
+{% if affiliations %}
+<table>
+  <thead>
+    <tr>
+      <th>Company</th>
+      <th>Role</th>
+      <th>Title</th>
+      <th>Period</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for aff in affiliations %}
+    <tr{% if not aff.is_current %} style="opacity:0.6;"{% endif %}>
+      <td>
+        <a href="/companies/{{ aff.company_id }}">{{ aff.company_name }}</a>
+        {% if aff.is_primary %}<small title="Primary affiliation">&#9733;</small>{% endif %}
+        {% if not aff.is_current %}<small>(former)</small>{% endif %}
+      </td>
+      <td>{{ aff.role_name or '' }}</td>
+      <td>{{ aff.title or '' }}</td>
+      <td>
+        {% if aff.started_at %}{{ aff.started_at[:10] }}{% endif %}
+        {% if aff.started_at or aff.ended_at %}&ndash;{% endif %}
+        {% if aff.ended_at %}{{ aff.ended_at[:10] }}{% elif aff.started_at %}present{% endif %}
+      </td>
+      <td style="white-space:nowrap;">
+        {% if not aff.is_primary %}
+        <button hx-post="/contacts/{{ contact.id }}/affiliations/{{ aff.id }}/primary"
+                hx-target="#affiliations-section" hx-swap="outerHTML"
+                class="outline" style="padding:2px 8px;font-size:.8em;"
+                title="Set as primary">&#9733;</button>
+        {% endif %}
+        <button hx-delete="/contacts/{{ contact.id }}/affiliations/{{ aff.id }}"
+                hx-target="#affiliations-section" hx-swap="outerHTML"
+                hx-confirm="Remove this affiliation?"
+                class="outline" style="padding:2px 8px;font-size:.8em;color:var(--pico-del-color);"
+                title="Remove">&#10005;</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty-state">No company affiliations.</p>
+{% endif %}
+
+<details>
+  <summary>Add Affiliation</summary>
+  <form hx-post="/contacts/{{ contact.id }}/affiliations"
+        hx-target="#affiliations-section" hx-swap="outerHTML"
+        class="grid">
+    <label>
+      Company
+      <select name="company_id" required>
+        <option value="">Select company…</option>
+        {% for co in all_companies %}
+        <option value="{{ co.id }}">{{ co.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Role
+      <select name="role_id">
+        <option value="">None</option>
+        {% for r in all_roles %}
+        <option value="{{ r.id }}">{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Title
+      <input type="text" name="title" placeholder="e.g. VP of Engineering">
+    </label>
+    <label>
+      Department
+      <input type="text" name="department" placeholder="e.g. Engineering">
+    </label>
+    <label>
+      Start Date
+      <input type="date" name="started_at">
+    </label>
+    <label>
+      End Date
+      <input type="date" name="ended_at">
+    </label>
+    <label>
+      <input type="checkbox" name="is_primary" value="1"> Primary
+    </label>
+    <label>
+      <input type="checkbox" name="is_current" value="1" checked> Current
+    </label>
+    <div>
+      <button type="submit">Add</button>
+    </div>
+  </form>
+</details>
+</div>

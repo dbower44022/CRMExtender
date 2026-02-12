@@ -79,18 +79,29 @@ def _insert_identifier(conn, company_id, value, type_="domain", id_=None):
     )
 
 
-def _insert_contact(conn, contact_id, name="Alice", email="alice@acme.com",
-                     company_id=None):
+def _insert_contact(conn, contact_id, name="Alice", email="alice@acme.com"):
     conn.execute(
         "INSERT OR IGNORE INTO contacts "
-        "(id, name, company_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-        (contact_id, name, company_id, _NOW, _NOW),
+        "(id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+        (contact_id, name, _NOW, _NOW),
     )
     conn.execute(
         "INSERT OR IGNORE INTO contact_identifiers "
         "(id, contact_id, type, value, created_at, updated_at) "
         "VALUES (?, ?, 'email', ?, ?, ?)",
         (f"ci-{contact_id}", contact_id, email, _NOW, _NOW),
+    )
+
+
+def _link_contact(conn, contact_id, company_id):
+    """Create a contact_companies affiliation row."""
+    import uuid as _uuid
+    conn.execute(
+        "INSERT OR IGNORE INTO contact_companies "
+        "(id, contact_id, company_id, is_primary, is_current, source, "
+        "created_at, updated_at) "
+        "VALUES (?, ?, ?, 1, 1, 'test', ?, ?)",
+        (str(_uuid.uuid4()), contact_id, company_id, _NOW, _NOW),
     )
 
 
@@ -309,9 +320,10 @@ class TestMergePreview:
         with get_connection() as conn:
             _insert_company(conn, "surv", "Surviving", "acme.com")
             _insert_company(conn, "abs", "Absorbed", "acme2.com")
-            _insert_contact(conn, "ct1", company_id="abs")
-            _insert_contact(conn, "ct2", name="Bob", email="bob@acme.com",
-                            company_id="abs")
+            _insert_contact(conn, "ct1")
+            _link_contact(conn, "ct1", "abs")
+            _insert_contact(conn, "ct2", name="Bob", email="bob@acme.com")
+            _link_contact(conn, "ct2", "abs")
         preview = get_merge_preview("surv", "abs")
         assert preview["contacts"] == 2
 
@@ -362,14 +374,15 @@ class TestMergeExecution:
         with get_connection() as conn:
             _insert_company(conn, "surv", "Surviving", "acme.com")
             _insert_company(conn, "abs", "Absorbed", "acme2.com")
-            _insert_contact(conn, "ct1", company_id="abs")
+            _insert_contact(conn, "ct1")
+            _link_contact(conn, "ct1", "abs")
 
         result = merge_companies("surv", "abs")
         assert result["contacts_reassigned"] == 1
 
         with get_connection() as conn:
             ct = conn.execute(
-                "SELECT company_id FROM contacts WHERE id = 'ct1'"
+                "SELECT company_id FROM contact_companies WHERE contact_id = 'ct1'"
             ).fetchone()
             assert ct["company_id"] == "surv"
 
@@ -705,7 +718,8 @@ class TestMergeWebRoutes:
         with get_connection() as conn:
             _insert_company(conn, "c1", "Acme Corp", "acme.com")
             _insert_company(conn, "c2", "Acme Inc", "acme.com")
-            _insert_contact(conn, "ct1", company_id="c2")
+            _insert_contact(conn, "ct1")
+            _link_contact(conn, "ct1", "c2")
         resp = client.post("/companies/c1/merge", data={"target_id": "c2"})
         assert resp.status_code == 200
         assert "contact" in resp.text.lower()

@@ -52,18 +52,29 @@ def _insert_company_identifier(conn, company_id, domain, identifier_id=None):
     )
 
 
-def _insert_contact(conn, contact_id, name, email, company_id=None):
+def _insert_contact(conn, contact_id, name, email):
     now = _now_iso()
     conn.execute(
-        "INSERT INTO contacts (id, name, company, company_id, source, status, "
-        "created_at, updated_at) VALUES (?, ?, '', ?, 'test', 'active', ?, ?)",
-        (contact_id, name, company_id, now, now),
+        "INSERT INTO contacts (id, name, source, status, "
+        "created_at, updated_at) VALUES (?, ?, 'test', 'active', ?, ?)",
+        (contact_id, name, now, now),
     )
     conn.execute(
         "INSERT INTO contact_identifiers (id, contact_id, type, value, is_primary, "
         "status, source, verified, created_at, updated_at) "
         "VALUES (?, ?, 'email', ?, 1, 'active', 'test', 1, ?, ?)",
         (str(uuid.uuid4()), contact_id, email, now, now),
+    )
+
+
+def _link_contact(conn, contact_id, company_id):
+    """Create a contact_companies affiliation row."""
+    conn.execute(
+        "INSERT OR IGNORE INTO contact_companies "
+        "(id, contact_id, company_id, is_primary, is_current, source, "
+        "created_at, updated_at) "
+        "VALUES (?, ?, ?, 1, 1, 'test', ?, ?)",
+        (str(uuid.uuid4()), contact_id, company_id, _now_iso(), _now_iso()),
     )
 
 
@@ -209,7 +220,7 @@ class TestResolveUnlinkedContacts:
         assert result.contacts_linked == 2
         with get_connection() as conn:
             row = conn.execute(
-                "SELECT company_id FROM contacts WHERE id = 'ct-1'"
+                "SELECT company_id FROM contact_companies WHERE contact_id = 'ct-1'"
             ).fetchone()
         assert row["company_id"] == "co-1"
 
@@ -223,9 +234,9 @@ class TestResolveUnlinkedContacts:
         assert result.contacts_linked == 1
         with get_connection() as conn:
             row = conn.execute(
-                "SELECT company_id FROM contacts WHERE id = 'ct-1'"
+                "SELECT id FROM contact_companies WHERE contact_id = 'ct-1'"
             ).fetchone()
-        assert row["company_id"] is None
+        assert row is None
 
     def test_skips_public(self, tmp_db):
         with get_connection() as conn:
@@ -239,7 +250,8 @@ class TestResolveUnlinkedContacts:
     def test_skips_already_linked(self, tmp_db):
         with get_connection() as conn:
             _insert_company(conn, "co-1", "Acme Corp", domain="acme.com")
-            _insert_contact(conn, "ct-1", "Alice", "alice@acme.com", company_id="co-1")
+            _insert_contact(conn, "ct-1", "Alice", "alice@acme.com")
+            _link_contact(conn, "ct-1", "co-1")
 
         result = resolve_unlinked_contacts()
 

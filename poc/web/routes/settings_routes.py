@@ -19,6 +19,33 @@ from ...settings import get_setting, set_setting
 
 router = APIRouter()
 
+COMMON_COUNTRIES = [
+    ("US", "United States"),
+    ("CA", "Canada"),
+    ("GB", "United Kingdom"),
+    ("AU", "Australia"),
+    ("DE", "Germany"),
+    ("FR", "France"),
+    ("JP", "Japan"),
+    ("BR", "Brazil"),
+    ("IN", "India"),
+    ("MX", "Mexico"),
+    ("NZ", "New Zealand"),
+    ("ZA", "South Africa"),
+    ("IT", "Italy"),
+    ("ES", "Spain"),
+    ("NL", "Netherlands"),
+    ("SE", "Sweden"),
+    ("CH", "Switzerland"),
+    ("IE", "Ireland"),
+    ("SG", "Singapore"),
+    ("HK", "Hong Kong"),
+    ("KR", "South Korea"),
+    ("CN", "China"),
+    ("AE", "United Arab Emirates"),
+    ("AR", "Argentina"),
+]
+
 COMMON_TIMEZONES = [
     "UTC",
     "US/Eastern", "US/Central", "US/Mountain", "US/Pacific",
@@ -133,14 +160,17 @@ async def system_page(request: Request):
     company_name = get_setting(cid, "company_name") or ""
     default_tz = get_setting(cid, "default_timezone") or "UTC"
     sync_enabled = get_setting(cid, "sync_enabled") or "true"
+    default_phone_country = get_setting(cid, "default_phone_country") or "US"
 
     return templates.TemplateResponse(request, "settings/system.html", {
         "active_nav": "settings",
         "settings_tab": "system",
         "timezones": COMMON_TIMEZONES,
+        "countries": COMMON_COUNTRIES,
         "company_name": company_name,
         "default_tz": default_tz,
         "sync_enabled": sync_enabled,
+        "default_phone_country": default_phone_country,
         "saved": request.query_params.get("saved"),
     })
 
@@ -160,6 +190,9 @@ async def system_save(request: Request):
 
     sync_enabled = "true" if form.get("sync_enabled") else "false"
     set_setting(cid, "sync_enabled", sync_enabled, scope="system")
+
+    default_phone_country = form.get("default_phone_country", "US")
+    set_setting(cid, "default_phone_country", default_phone_country, scope="system")
 
     return RedirectResponse("/settings/system?saved=1", status_code=303)
 

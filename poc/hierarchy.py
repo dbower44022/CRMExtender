@@ -583,21 +583,42 @@ def add_phone_number(
     number: str,
     *,
     phone_type: str = "mobile",
-) -> dict:
-    """Add a phone number. Returns the new row as a dict."""
-    now = datetime.now(timezone.utc).isoformat()
-    row = {
-        "id": str(uuid.uuid4()),
-        "entity_type": entity_type,
-        "entity_id": entity_id,
-        "phone_type": phone_type,
-        "number": number,
-        "is_primary": 0,
-        "source": "",
-        "created_at": now,
-        "updated_at": now,
-    }
+    customer_id: str | None = None,
+) -> dict | None:
+    """Add a phone number with E.164 normalization and dedup.
+
+    Returns the new (or existing duplicate) row as a dict,
+    or ``None`` if the number cannot be parsed.
+    """
+    from .phone_utils import normalize_phone, resolve_country_code
+
+    country = resolve_country_code(entity_type, entity_id, customer_id=customer_id)
+    normalized = normalize_phone(number, country)
+    if normalized is None:
+        return None
+
     with get_connection() as conn:
+        # Dedup: return existing row if same normalized number already stored
+        existing = conn.execute(
+            "SELECT * FROM phone_numbers "
+            "WHERE entity_type = ? AND entity_id = ? AND number = ?",
+            (entity_type, entity_id, normalized),
+        ).fetchone()
+        if existing:
+            return dict(existing)
+
+        now = datetime.now(timezone.utc).isoformat()
+        row = {
+            "id": str(uuid.uuid4()),
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "phone_type": phone_type,
+            "number": normalized,
+            "is_primary": 0,
+            "source": "",
+            "created_at": now,
+            "updated_at": now,
+        }
         conn.execute(
             "INSERT INTO phone_numbers "
             "(id, entity_type, entity_id, phone_type, number, is_primary, source, "

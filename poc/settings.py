@@ -15,6 +15,7 @@ _HARDCODED_DEFAULTS = {
     "timezone": "UTC",
     "start_of_week": "monday",
     "date_format": "ISO",
+    "default_phone_country": "US",
 }
 
 
@@ -171,6 +172,7 @@ def seed_default_settings(
         ("default_timezone", "UTC", "Default timezone for new users"),
         ("company_name", "Default Organization", "Organization display name"),
         ("sync_enabled", "true", "Enable/disable automatic sync"),
+        ("default_phone_country", "US", "Default country for phone numbers"),
     ]
 
     system_count = 0

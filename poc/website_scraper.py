@@ -258,16 +258,16 @@ def _extract_contact_info(soup: BeautifulSoup, base_domain: str) -> list[FieldVa
     text = soup.get_text(" ", strip=True)
 
     # Phone numbers
+    from .phone_utils import normalize_phone
     seen_phones = set()
     for match in _PHONE_RE.finditer(text):
         phone = match.group(0).strip()
-        # Normalize: remove non-digit except leading +
-        digits = re.sub(r"[^\d+]", "", phone)
-        if len(digits) >= 10 and digits not in seen_phones:
-            seen_phones.add(digits)
+        normalized = normalize_phone(phone, "US")
+        if normalized and normalized not in seen_phones:
+            seen_phones.add(normalized)
             results.append(FieldValue(
                 field_name="phone",
-                field_value=phone,
+                field_value=normalized,
                 confidence=0.7,
             ))
 

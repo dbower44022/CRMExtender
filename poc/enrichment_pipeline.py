@@ -224,15 +224,18 @@ def _apply_phone_numbers(
     entity_id: str,
     field_values: list[FieldValue],
     provider_tier: SourceTier,
+    *,
+    customer_id: str | None = None,
 ) -> int:
-    """Add phone numbers avoiding duplicates. Returns count added."""
-    existing = {p["number"] for p in get_phone_numbers("company", entity_id)}
+    """Add phone numbers with normalization and dedup. Returns count added."""
     count = 0
     for fv in field_values:
         if fv.field_name == "phone" and fv.confidence >= AUTO_ACCEPT_THRESHOLD:
-            if fv.field_value not in existing:
-                add_phone_number("company", entity_id, fv.field_value, phone_type="main")
-                existing.add(fv.field_value)
+            result = add_phone_number(
+                "company", entity_id, fv.field_value,
+                phone_type="main", customer_id=customer_id,
+            )
+            if result is not None:
                 count += 1
     return count
 
@@ -373,7 +376,8 @@ def _run_single_provider(
     applied = 0
     if entity_type == "company":
         applied += _apply_direct_fields(entity_id, field_values, provider.tier, entity)
-        applied += _apply_phone_numbers(entity_id, field_values, provider.tier)
+        applied += _apply_phone_numbers(entity_id, field_values, provider.tier,
+                                        customer_id=entity.get("customer_id"))
         applied += _apply_email_addresses(entity_id, field_values, provider.tier)
         applied += _apply_addresses(entity_id, field_values, provider.tier)
         applied += _apply_social_profiles(entity_id, field_values, provider.tier)

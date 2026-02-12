@@ -232,6 +232,9 @@ def contact_detail(request: Request, contact_id: str):
     emails = get_email_addresses("contact", contact_id)
     all_companies = list_companies(customer_id=cid)
 
+    from ...phone_utils import resolve_country_code
+    display_country = resolve_country_code("contact", contact_id, customer_id=cid)
+
     from ...scoring import get_entity_score
     score_data = get_entity_score("contact", contact_id)
 
@@ -248,6 +251,7 @@ def contact_detail(request: Request, contact_id: str):
         "social_profiles": social_profiles,
         "all_companies": all_companies,
         "score_data": score_data,
+        "display_country": display_country,
     })
 
 
@@ -369,13 +373,22 @@ def contact_add_phone(
     number: str = Form(...),
 ):
     templates = request.app.state.templates
-    add_phone_number("contact", contact_id, number, phone_type=phone_type)
+    cid = request.state.customer_id
+    result = add_phone_number("contact", contact_id, number,
+                              phone_type=phone_type, customer_id=cid)
     phones = get_phone_numbers("contact", contact_id)
 
-    return templates.TemplateResponse(request, "contacts/_phones.html", {
+    from ...phone_utils import resolve_country_code
+    display_country = resolve_country_code("contact", contact_id, customer_id=cid)
+
+    ctx = {
         "contact": {"id": contact_id},
         "phones": phones,
-    })
+        "display_country": display_country,
+    }
+    if result is None:
+        ctx["phone_error"] = "Invalid phone number."
+    return templates.TemplateResponse(request, "contacts/_phones.html", ctx)
 
 
 @router.delete("/{contact_id}/phones/{phone_id}", response_class=HTMLResponse)
@@ -383,12 +396,17 @@ def contact_remove_phone(
     request: Request, contact_id: str, phone_id: str,
 ):
     templates = request.app.state.templates
+    cid = request.state.customer_id
     remove_phone_number(phone_id)
     phones = get_phone_numbers("contact", contact_id)
+
+    from ...phone_utils import resolve_country_code
+    display_country = resolve_country_code("contact", contact_id, customer_id=cid)
 
     return templates.TemplateResponse(request, "contacts/_phones.html", {
         "contact": {"id": contact_id},
         "phones": phones,
+        "display_country": display_country,
     })
 
 

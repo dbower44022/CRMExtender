@@ -40,3 +40,6 @@ def register_filters(templates):
     """Register date/time filters on a Jinja2Templates instance."""
     templates.env.filters["datetime"] = datetime_filter
     templates.env.filters["dateonly"] = dateonly_filter
+
+    from ..phone_utils import format_phone
+    templates.env.filters["format_phone"] = format_phone

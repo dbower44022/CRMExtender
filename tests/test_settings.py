@@ -173,12 +173,12 @@ class TestListSettings:
 class TestSeedDefaultSettings:
     def test_seed_system_only(self, tmp_db):
         result = seed_default_settings("cust-1", db_path=tmp_db)
-        assert result["system"] == 3
+        assert result["system"] == 4
         assert result["user"] == 0
 
     def test_seed_system_and_user(self, tmp_db):
         result = seed_default_settings("cust-1", user_id="user-1", db_path=tmp_db)
-        assert result["system"] == 3
+        assert result["system"] == 4
         assert result["user"] == 5
 
     def test_seed_idempotent(self, tmp_db):
@@ -193,4 +193,4 @@ class TestSeedDefaultSettings:
         seed_default_settings("cust-1", user_id="user-1", db_path=tmp_db)
         settings = list_settings("cust-1", scope="system", db_path=tmp_db)
         names = {s["setting_name"] for s in settings}
-        assert names == {"default_timezone", "company_name", "sync_enabled"}
+        assert names == {"default_timezone", "company_name", "sync_enabled", "default_phone_country"}

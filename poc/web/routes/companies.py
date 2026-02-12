@@ -385,6 +385,9 @@ def company_detail(request: Request, company_id: str):
             ).fetchall()
         ]
 
+    from ...phone_utils import resolve_country_code
+    display_country = resolve_country_code("company", company_id, customer_id=cid)
+
     from ...scoring import get_entity_score
     score_data = get_entity_score("company", company_id)
 
@@ -402,6 +405,7 @@ def company_detail(request: Request, company_id: str):
         "emails": emails,
         "social_profiles": social_profiles,
         "score_data": score_data,
+        "display_country": display_country,
     })
 
 
@@ -701,13 +705,22 @@ def company_add_phone(
     number: str = Form(...),
 ):
     templates = request.app.state.templates
-    add_phone_number("company", company_id, number, phone_type=phone_type)
+    cid = request.state.customer_id
+    result = add_phone_number("company", company_id, number,
+                              phone_type=phone_type, customer_id=cid)
     phones = get_phone_numbers("company", company_id)
 
-    return templates.TemplateResponse(request, "companies/_phones.html", {
+    from ...phone_utils import resolve_country_code
+    display_country = resolve_country_code("company", company_id, customer_id=cid)
+
+    ctx = {
         "company": {"id": company_id},
         "phones": phones,
-    })
+        "display_country": display_country,
+    }
+    if result is None:
+        ctx["phone_error"] = "Invalid phone number."
+    return templates.TemplateResponse(request, "companies/_phones.html", ctx)
 
 
 @router.delete("/{company_id}/phones/{phone_id}", response_class=HTMLResponse)
@@ -715,12 +728,17 @@ def company_remove_phone(
     request: Request, company_id: str, phone_id: str,
 ):
     templates = request.app.state.templates
+    cid = request.state.customer_id
     remove_phone_number(phone_id)
     phones = get_phone_numbers("company", company_id)
+
+    from ...phone_utils import resolve_country_code
+    display_country = resolve_country_code("company", company_id, customer_id=cid)
 
     return templates.TemplateResponse(request, "companies/_phones.html", {
         "company": {"id": company_id},
         "phones": phones,
+        "display_country": display_country,
     })
 
 

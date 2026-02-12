@@ -251,11 +251,12 @@ class TestPipelineExecution:
         assert company["industry"] == "Old Value"
 
     def test_apply_phone_dedup(self, sample_company):
-        add_phone_number("company", sample_company["id"], "555-1234", phone_type="main")
+        add_phone_number("company", sample_company["id"], "(201) 555-1234",
+                         phone_type="main", customer_id="cust-test")
 
         provider = MockProvider(field_values=[
-            FieldValue("phone", "555-1234", 0.8),  # Already exists
-            FieldValue("phone", "555-5678", 0.8),  # New
+            FieldValue("phone", "(201) 555-1234", 0.8),  # Already exists
+            FieldValue("phone", "(201) 555-5678", 0.8),  # New
         ])
         register_provider(provider)
 

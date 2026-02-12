@@ -800,12 +800,12 @@ class TestCompanyDetail:
         with get_connection() as conn:
             _insert_company(conn, "co-1", "Acme Corp")
             _insert_phone_number(conn, "ph-1", "company", "co-1",
-                                  "+1-555-0100", phone_type="main")
+                                  "+12015550100", phone_type="main")
 
         resp = client.get("/companies/co-1")
         assert resp.status_code == 200
         assert "Phone Numbers (1)" in resp.text
-        assert "+1-555-0100" in resp.text
+        assert "(201) 555-0100" in resp.text
 
     def test_detail_shows_addresses(self, client, tmp_db):
         with get_connection() as conn:
@@ -848,10 +848,10 @@ class TestCompanyDetail:
 
         resp = client.post("/companies/co-1/phones", data={
             "phone_type": "main",
-            "number": "+1-555-0200",
+            "number": "(201) 555-0200",
         })
         assert resp.status_code == 200
-        assert "+1-555-0200" in resp.text
+        assert "(201) 555-0200" in resp.text
 
         with get_connection() as conn:
             rows = conn.execute(
@@ -859,7 +859,7 @@ class TestCompanyDetail:
                 "WHERE entity_type = 'company' AND entity_id = 'co-1'"
             ).fetchall()
         assert len(rows) == 1
-        assert rows[0]["number"] == "+1-555-0200"
+        assert rows[0]["number"] == "+12015550200"
 
     def test_remove_phone_via_web(self, client, tmp_db):
         with get_connection() as conn:
@@ -1535,13 +1535,13 @@ class TestContactDetail:
     def test_detail_shows_phones(self, client, tmp_db):
         with get_connection() as conn:
             _insert_contact(conn, "ct-1", "Alice", "alice@example.com")
-            _insert_phone_number(conn, "ph-1", "contact", "ct-1", "+1-555-0100",
+            _insert_phone_number(conn, "ph-1", "contact", "ct-1", "+12015550100",
                                   phone_type="mobile")
 
         resp = client.get("/contacts/ct-1")
         assert resp.status_code == 200
         assert "Phone Numbers (1)" in resp.text
-        assert "+1-555-0100" in resp.text
+        assert "(201) 555-0100" in resp.text
 
     def test_detail_shows_addresses(self, client, tmp_db):
         with get_connection() as conn:
@@ -1631,17 +1631,17 @@ class TestContactDetail:
 
         resp = client.post("/contacts/ct-1/phones", data={
             "phone_type": "work",
-            "number": "+1-555-0200",
+            "number": "(201) 555-0200",
         })
         assert resp.status_code == 200
-        assert "+1-555-0200" in resp.text
+        assert "(201) 555-0200" in resp.text
 
         with get_connection() as conn:
             rows = conn.execute(
                 "SELECT * FROM phone_numbers WHERE entity_id = 'ct-1'"
             ).fetchall()
         assert len(rows) == 1
-        assert rows[0]["number"] == "+1-555-0200"
+        assert rows[0]["number"] == "+12015550200"
 
     def test_remove_phone_via_web(self, client, tmp_db):
         with get_connection() as conn:

@@ -1,5 +1,10 @@
 <div id="phones-section">
   <h2>Phone Numbers ({{ phones|length }})</h2>
+  {% if phone_error %}
+  <article style="padding:0.5rem 1rem; background:var(--pico-del-color);">
+    <p>{{ phone_error }}</p>
+  </article>
+  {% endif %}
   {% if phones %}
   <table>
     <thead>
@@ -13,7 +18,7 @@
       {% for phone in phones %}
       <tr>
         <td>{{ phone.phone_type }}</td>
-        <td>{{ phone.number }}</td>
+        <td>{{ phone.number | format_phone(display_country|default('US')) }}</td>
         <td>
           <button hx-delete="/companies/{{ company.id }}/phones/{{ phone.id }}"
                   hx-target="#phones-section" hx-swap="outerHTML"

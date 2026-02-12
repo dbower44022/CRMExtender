@@ -412,6 +412,18 @@ def merge_companies(
                 (surviving_id, now, absorbed_id),
             )
 
+        # --- Dedup phone numbers after merge (keep earliest per number) ---
+        dup_phones = conn.execute(
+            """SELECT id, number, created_at,
+                      ROW_NUMBER() OVER (PARTITION BY number ORDER BY created_at) AS rn
+               FROM phone_numbers
+               WHERE entity_type = 'company' AND entity_id = ?""",
+            (surviving_id,),
+        ).fetchall()
+        for row in dup_phones:
+            if row["rn"] > 1:
+                conn.execute("DELETE FROM phone_numbers WHERE id = ?", (row["id"],))
+
         # --- Delete absorbed entity scores (will be recomputed) ---
         conn.execute(
             "DELETE FROM entity_scores WHERE entity_type = 'company' AND entity_id = ?",

@@ -598,8 +598,24 @@ def company_add_identifier(
     type: str = Form("domain"),
     value: str = Form(...),
 ):
+    import sqlite3
+
     templates = request.app.state.templates
-    add_company_identifier(company_id, type, value)
+    error = None
+    try:
+        add_company_identifier(company_id, type, value)
+    except sqlite3.IntegrityError:
+        # UNIQUE(type, value) — identifier already belongs to another company
+        with get_connection() as conn:
+            existing = conn.execute(
+                "SELECT co.name FROM company_identifiers ci "
+                "JOIN companies co ON co.id = ci.company_id "
+                "WHERE ci.type = ? AND ci.value = ?",
+                (type, value),
+            ).fetchone()
+        owner = existing["name"] if existing else "another company"
+        error = f"'{value}' is already assigned to {owner}."
+
     identifiers = get_company_identifiers(company_id)
 
     with get_connection() as conn:
@@ -611,6 +627,7 @@ def company_add_identifier(
     return templates.TemplateResponse(request, "companies/_identifiers.html", {
         "company": company,
         "identifiers": identifiers,
+        "error": error,
     })
 
 

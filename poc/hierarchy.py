@@ -284,19 +284,39 @@ def list_companies(*, customer_id: str | None = None) -> list[dict]:
     When *customer_id* is given, only companies belonging to that customer
     are returned.  With ``None`` (the default) all companies are returned
     for backward-compatibility with CLI callers.
+
+    The ``domain`` field is resolved from ``company_identifiers`` when the
+    company row itself has no domain set.
     """
+    _DOMAIN_SQL = """\
+        SELECT c.*,
+               (SELECT ci.value FROM company_identifiers ci
+                WHERE ci.company_id = c.id AND ci.type = 'domain'
+                ORDER BY ci.is_primary DESC LIMIT 1
+               ) AS _ci_domain
+        FROM companies c
+        WHERE c.status = 'active'"""
+
     if customer_id:
         with get_connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM companies WHERE status = 'active' AND customer_id = ? ORDER BY name",
+                _DOMAIN_SQL + " AND c.customer_id = ? ORDER BY c.name",
                 (customer_id,),
             ).fetchall()
     else:
         with get_connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM companies WHERE status = 'active' ORDER BY name"
+                _DOMAIN_SQL + " ORDER BY c.name"
             ).fetchall()
-    return [dict(r) for r in rows]
+
+    result = []
+    for r in rows:
+        d = dict(r)
+        if not d.get("domain") and d.get("_ci_domain"):
+            d["domain"] = d["_ci_domain"]
+        d.pop("_ci_domain", None)
+        result.append(d)
+    return result
 
 
 def get_company(company_id: str) -> dict | None:

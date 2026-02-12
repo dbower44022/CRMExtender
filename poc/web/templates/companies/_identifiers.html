@@ -30,6 +30,9 @@
   <p class="empty-state">No identifiers.</p>
   {% endif %}
 
+  {% if error %}
+  <p style="color:var(--pico-del-color);margin-bottom:.5rem;">{{ error }}</p>
+  {% endif %}
   <form hx-post="/companies/{{ company.id }}/identifiers"
         hx-target="#identifiers-section" hx-swap="outerHTML">
     <fieldset role="group">

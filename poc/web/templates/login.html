@@ -28,6 +28,13 @@
 
         <button type="submit">Sign in</button>
       </form>
+
+      {% if google_oauth_enabled %}
+      <hr>
+      <a href="/auth/google" role="button" class="outline" style="width:100%; text-align:center;">
+        Sign in with Google
+      </a>
+      {% endif %}
     </article>
   </main>
 </body>

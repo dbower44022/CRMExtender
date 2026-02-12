@@ -70,5 +70,17 @@ CRM_AUTH_ENABLED = _env("CRM_AUTH_ENABLED", "true").lower() in ("true", "1", "ye
 SESSION_SECRET_KEY = _env("SESSION_SECRET_KEY", "change-me-in-production")
 SESSION_TTL_HOURS = int(_env("SESSION_TTL_HOURS", "720"))
 
+# Google OAuth (for web login)
+def _load_google_oauth_config() -> tuple[str, str]:
+    """Load client_id and client_secret from client_secret.json."""
+    if CLIENT_SECRET_PATH.exists():
+        import json
+        data = json.loads(CLIENT_SECRET_PATH.read_text())
+        installed = data.get("installed", {})
+        return installed.get("client_id", ""), installed.get("client_secret", "")
+    return "", ""
+
+GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET = _load_google_oauth_config()
+
 # Summarization
 MAX_CONVERSATION_CHARS = int(_env("POC_MAX_CONVERSATION_CHARS", "6000"))

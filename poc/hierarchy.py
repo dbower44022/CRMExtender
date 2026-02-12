@@ -114,6 +114,28 @@ def get_user_by_email(email: str) -> dict | None:
     return dict(row) if row else None
 
 
+def get_user_by_google_sub(google_sub: str) -> dict | None:
+    """Look up an active user by Google subject ID. Returns dict or None."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE google_sub = ? AND is_active = 1",
+            (google_sub,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def set_google_sub(user_id: str, google_sub: str) -> bool:
+    """Link a Google subject ID to a user. Returns True if updated."""
+    now = datetime.now(timezone.utc).isoformat()
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE users SET google_sub = ?, updated_at = ? WHERE id = ?",
+            (google_sub, now, user_id),
+        )
+        changed = conn.execute("SELECT changes()").fetchone()[0]
+    return changed > 0
+
+
 def set_user_password(user_id: str, password: str) -> bool:
     """Set a user's password. Returns True if user was found and updated."""
     from .passwords import hash_password

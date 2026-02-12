@@ -13,7 +13,7 @@ from .. import config
 log = logging.getLogger(__name__)
 
 # Paths that never require authentication
-_PUBLIC_PATHS = ("/login", "/static/")
+_PUBLIC_PATHS = ("/login", "/static/", "/auth/google")
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -50,8 +50,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
             request.state.user = None
             request.state.customer_id = None
 
-        # Public paths (login) pass through even without auth
-        if path == "/login":
+        # Public paths pass through even without auth
+        if path == "/login" or path.startswith("/auth/google"):
             return await call_next(request)
 
         # Protected paths require valid session

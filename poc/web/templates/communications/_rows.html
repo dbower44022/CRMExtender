@@ -1,33 +1,41 @@
 {% if communications %}
-<table>
+<table class="comm-table">
+  <colgroup>
+    <col style="width:2.5rem;">
+    <col style="width:5rem;">
+    <col style="width:10rem;">
+    <col style="width:10rem;">
+    <col>
+    <col style="width:12rem;">
+  </colgroup>
   <thead>
     <tr>
       <th class="comm-check-col"><input type="checkbox" id="select-all"></th>
-      <th>
+      <th class="comm-col-type">
         <a href="#" class="sort-header" data-sort="channel"
            onclick="toggleSort('channel'); return false;">
           Type {% if sort == 'channel' %}&#9650;{% elif sort == '-channel' %}&#9660;{% endif %}
         </a>
       </th>
-      <th>
+      <th class="comm-col-from">
         <a href="#" class="sort-header" data-sort="from"
            onclick="toggleSort('from'); return false;">
           From {% if sort == 'from' %}&#9650;{% elif sort == '-from' %}&#9660;{% endif %}
         </a>
       </th>
-      <th>
+      <th class="comm-col-to">
         <a href="#" class="sort-header" data-sort="to"
            onclick="toggleSort('to'); return false;">
           To {% if sort == 'to' %}&#9650;{% elif sort == '-to' %}&#9660;{% endif %}
         </a>
       </th>
-      <th>
+      <th class="comm-col-subject">
         <a href="#" class="sort-header" data-sort="subject"
            onclick="toggleSort('subject'); return false;">
           Subject {% if sort == 'subject' %}&#9650;{% elif sort == '-subject' %}&#9660;{% endif %}
         </a>
       </th>
-      <th>
+      <th class="comm-col-date">
         <a href="#" class="sort-header" data-sort="date"
            onclick="toggleSort('date'); return false;">
           Date {% if sort == 'date' %}&#9650;{% elif sort == '-date' %}&#9660;{% endif %}
@@ -39,10 +47,10 @@
     {% for comm in communications %}
     <tr>
       <td class="comm-check-col"><input type="checkbox" class="comm-check" value="{{ comm.id }}"></td>
-      <td><span class="channel-badge">{{ comm.channel }}</span></td>
-      <td>{{ comm.sender_name or comm.sender_address or '' }}</td>
-      <td>{{ comm.to_addresses or '' }}</td>
-      <td>
+      <td class="comm-col-type"><span class="channel-badge">{{ comm.channel }}</span></td>
+      <td class="comm-col-from">{{ comm.sender_name or comm.sender_address or '' }}</td>
+      <td class="comm-col-to" title="{{ comm.to_addresses or '' }}">{{ comm.to_addresses or '' }}</td>
+      <td class="comm-col-subject">
         <a href="#"
            hx-get="/communications/{{ comm.id }}/detail"
            hx-target="#comm-detail-content"
@@ -53,7 +61,7 @@
         <a href="/conversations/{{ comm.conversation_id }}" class="conv-link" title="View conversation">&#128279;</a>
         {% endif %}
       </td>
-      <td>{{ comm.timestamp|datetime }}</td>
+      <td class="comm-col-date">{{ comm.timestamp|datetime }}</td>
     </tr>
     {% endfor %}
   </tbody>

@@ -55,7 +55,14 @@ def _list_conversations(
 
         offset = (page - 1) * per_page
         rows = conn.execute(
-            f"""SELECT conv.*, t.name AS topic_name
+            f"""SELECT conv.*, t.name AS topic_name,
+                       (SELECT COALESCE(pa.display_name, pa.email_address, pa.phone_number)
+                        FROM conversation_communications cc2
+                        JOIN communications comm2 ON comm2.id = cc2.communication_id
+                        JOIN provider_accounts pa ON pa.id = comm2.account_id
+                        WHERE cc2.conversation_id = conv.id
+                        LIMIT 1
+                       ) AS account_name
                 FROM conversations conv
                 LEFT JOIN topics t ON t.id = conv.topic_id
                 {where}

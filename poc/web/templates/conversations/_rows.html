@@ -1,8 +1,17 @@
 {% if conversations %}
-<table>
+<table class="conv-table">
+  <colgroup>
+    <col>
+    <col style="width:12rem;">
+    <col style="width:8rem;">
+    <col style="width:12rem;">
+    <col style="width:6rem;">
+    <col style="width:12rem;">
+  </colgroup>
   <thead>
     <tr>
       <th>Subject</th>
+      <th>Account</th>
       <th>Status</th>
       <th>Topic</th>
       <th>Messages</th>
@@ -13,6 +22,7 @@
     {% for conv in conversations %}
     <tr>
       <td><a href="/conversations/{{ conv.id }}">{{ conv.title or '(no subject)' }}</a></td>
+      <td>{{ conv.account_name or '' }}</td>
       <td>{{ conv.ai_status or conv.status or 'active' }}</td>
       <td>{{ conv.topic_name or '' }}</td>
       <td>{{ conv.communication_count }}</td>

@@ -1,5 +1,14 @@
 {% if events %}
-<table>
+<table class="events-table">
+  <colgroup>
+    <col>
+    <col style="width:7rem">
+    <col style="width:12rem">
+    <col style="width:10rem">
+    <col style="width:6rem">
+    <col style="width:2.5rem">
+    <col style="width:5rem">
+  </colgroup>
   <thead>
     <tr>
       <th>Title</th>
@@ -7,7 +16,7 @@
       <th>Date</th>
       <th>Location</th>
       <th>Status</th>
-      <th>Source</th>
+      <th></th>
       <th></th>
     </tr>
   </thead>
@@ -19,7 +28,7 @@
       <td>{% if e.start_datetime %}{{ e.start_datetime|datetime }}{% else %}{{ e.start_date|dateonly }}{% endif %}</td>
       <td>{{ e.location or '' }}</td>
       <td>{{ e.status or 'confirmed' }}</td>
-      <td>{{ e.source or '' }}</td>
+      <td>{{ e.source|source_icon(e.account_name, e.provider_calendar_id) }}</td>
       <td>
         <button class="outline secondary"
                 style="padding:0.2rem 0.5rem;font-size:0.75rem"

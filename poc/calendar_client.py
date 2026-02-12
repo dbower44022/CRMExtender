@@ -135,6 +135,14 @@ def fetch_events(
     return events, next_sync_token
 
 
+_GOOGLE_EVENT_TYPE_MAP = {
+    "birthday": "birthday",
+    "outOfOffice": "other",
+    "focusTime": "other",
+    "workingLocation": "other",
+}
+
+
 def _parse_google_event(raw: dict) -> dict | None:
     """Parse a raw Google Calendar event into our internal format."""
     event_id = raw.get("id")
@@ -161,6 +169,12 @@ def _parse_google_event(raw: dict) -> dict | None:
     # Description
     description = raw.get("description")
 
+    # Event type: use Google's eventType field, fall back to title heuristic
+    google_type = raw.get("eventType", "default")
+    event_type = _GOOGLE_EVENT_TYPE_MAP.get(google_type, "meeting")
+    if event_type == "meeting" and "birthday" in title.lower():
+        event_type = "birthday"
+
     # Attendees
     attendees = []
     for att in raw.get("attendees", []):
@@ -185,7 +199,7 @@ def _parse_google_event(raw: dict) -> dict | None:
         "is_all_day": is_all_day,
         "location": location,
         "status": status,
-        "event_type": "meeting",
+        "event_type": event_type,
         "source": "google_calendar",
         "attendees": attendees,
         "organizer_email": organizer.get("email", ""),

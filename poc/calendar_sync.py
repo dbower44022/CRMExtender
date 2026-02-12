@@ -189,7 +189,8 @@ def _upsert_event(
                 start_datetime = ?, start_date = ?,
                 end_datetime = ?, end_date = ?,
                 is_all_day = ?, location = ?,
-                status = ?, provider_calendar_id = ?,
+                status = ?, event_type = ?,
+                provider_calendar_id = ?,
                 updated_by = ?, updated_at = ?
                WHERE id = ?""",
             (
@@ -197,7 +198,8 @@ def _upsert_event(
                 event.get("start_datetime"), event.get("start_date"),
                 event.get("end_datetime"), event.get("end_date"),
                 event["is_all_day"], event.get("location"),
-                event["status"], calendar_id,
+                event["status"], event["event_type"],
+                calendar_id,
                 user_id, now,
                 existing["id"],
             ),

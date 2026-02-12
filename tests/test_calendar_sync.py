@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 from poc.calendar_client import (
     CalendarScopeError,
     SyncTokenExpiredError,
+    _GOOGLE_EVENT_TYPE_MAP,
     _parse_google_event,
 )
 from poc.calendar_sync import (
@@ -197,6 +198,40 @@ class TestParseGoogleEvent:
         parsed = _parse_google_event(raw)
         assert parsed["description"] == "Discuss Q1 goals"
 
+    def test_parse_birthday_event_type(self):
+        """Google eventType='birthday' maps to birthday."""
+        raw = _make_raw_event(summary="Jane Doe")
+        raw["eventType"] = "birthday"
+        parsed = _parse_google_event(raw)
+        assert parsed["event_type"] == "birthday"
+
+    def test_parse_birthday_from_title(self):
+        """Title containing 'birthday' maps to birthday even without eventType."""
+        raw = _make_raw_event(summary="John's Birthday")
+        parsed = _parse_google_event(raw)
+        assert parsed["event_type"] == "birthday"
+
+    def test_parse_birthday_from_title_case_insensitive(self):
+        raw = _make_raw_event(summary="BIRTHDAY PARTY")
+        parsed = _parse_google_event(raw)
+        assert parsed["event_type"] == "birthday"
+
+    def test_parse_out_of_office_event_type(self):
+        raw = _make_raw_event(summary="OOO")
+        raw["eventType"] = "outOfOffice"
+        parsed = _parse_google_event(raw)
+        assert parsed["event_type"] == "other"
+
+    def test_parse_default_event_type_is_meeting(self):
+        """Regular events (eventType='default' or missing) stay as meeting."""
+        raw = _make_raw_event()
+        parsed = _parse_google_event(raw)
+        assert parsed["event_type"] == "meeting"
+
+        raw["eventType"] = "default"
+        parsed = _parse_google_event(raw)
+        assert parsed["event_type"] == "meeting"
+
 
 # ===========================================================================
 # Calendar sync DB tests
@@ -234,6 +269,26 @@ class TestUpsertEvent:
             assert result == "updated"
             row = conn.execute("SELECT title FROM events WHERE provider_event_id = 'evt-1'").fetchone()
             assert row["title"] == "Updated Meeting"
+
+    def test_event_type_updated_on_resync(self, tmp_db):
+        """Upsert updates event_type for existing events."""
+        event = _parse_google_event(_make_raw_event())
+        assert event["event_type"] == "meeting"
+        with get_connection() as conn:
+            _upsert_event(
+                conn, event, ACCT_ID, "primary",
+                customer_id=CUST_ID, user_id=USER_ID, now=_NOW,
+            )
+            # Simulate re-sync where Google now reports birthday type
+            event["event_type"] = "birthday"
+            _upsert_event(
+                conn, event, ACCT_ID, "primary",
+                customer_id=CUST_ID, user_id=USER_ID, now=_NOW,
+            )
+            row = conn.execute(
+                "SELECT event_type FROM events WHERE provider_event_id = 'evt-1'"
+            ).fetchone()
+            assert row["event_type"] == "birthday"
 
     def test_cancelled_status_update(self, tmp_db):
         event = _parse_google_event(_make_raw_event())
@@ -527,3 +582,132 @@ class TestEventsSyncRoute:
         resp = client.post("/events/sync")
         assert resp.status_code == 200
         assert "No calendars selected" in resp.text
+
+
+# ===========================================================================
+# Source icon filter tests
+# ===========================================================================
+
+class TestSourceIconFilter:
+    def test_google_calendar_icon(self):
+        from poc.web.filters import source_icon_filter
+        result = str(source_icon_filter("google_calendar"))
+        assert 'class="source-icon"' in result
+        assert "<svg" in result
+        assert ">G</text>" in result
+        assert 'title="Google Calendar"' in result
+
+    def test_google_calendar_with_account(self):
+        from poc.web.filters import source_icon_filter
+        result = str(source_icon_filter("google_calendar", account_name="doug@example.com"))
+        assert "Google Calendar" in result
+        assert "doug@example.com" in result
+        assert "\u2014" in result  # em-dash separator
+
+    def test_google_calendar_with_account_and_calendar(self):
+        from poc.web.filters import source_icon_filter
+        result = str(source_icon_filter(
+            "google_calendar", account_name="doug@example.com", calendar_id="work",
+        ))
+        assert "Google Calendar" in result
+        assert "doug@example.com" in result
+        assert "work" in result
+
+    def test_google_calendar_primary_calendar_omitted(self):
+        from poc.web.filters import source_icon_filter
+        result = str(source_icon_filter(
+            "google_calendar", account_name="doug@example.com", calendar_id="primary",
+        ))
+        assert "primary" not in result
+
+    def test_manual_icon(self):
+        from poc.web.filters import source_icon_filter
+        result = str(source_icon_filter("manual"))
+        assert 'class="source-icon"' in result
+        assert "<svg" in result
+        assert 'title="Manually created"' in result
+
+    def test_none_source_defaults_to_manual(self):
+        from poc.web.filters import source_icon_filter
+        result = str(source_icon_filter(None))
+        assert 'title="Manually created"' in result
+
+    def test_unknown_source_uses_fallback(self):
+        from poc.web.filters import source_icon_filter
+        result = str(source_icon_filter("outlook_calendar"))
+        assert 'class="source-icon"' in result
+        assert "<svg" in result
+        assert 'title="outlook_calendar"' in result
+        # Should NOT have the "G" text (that's google-specific)
+        assert ">G</text>" not in result
+
+
+# ===========================================================================
+# Events grid + detail integration tests for source icon
+# ===========================================================================
+
+class TestEventsSourceIcon:
+    def _insert_synced_event(self, title="Synced Meeting", calendar_id="work-cal"):
+        """Insert a google_calendar event linked to the test provider account."""
+        event_id = str(uuid.uuid4())
+        with get_connection() as conn:
+            conn.execute(
+                """INSERT INTO events
+                   (id, title, event_type, start_datetime, end_datetime,
+                    source, account_id, provider_event_id, provider_calendar_id,
+                    status, created_at, updated_at)
+                   VALUES (?, ?, 'meeting', '2026-02-12T10:00:00Z', '2026-02-12T11:00:00Z',
+                           'google_calendar', ?, ?, ?, 'confirmed', ?, ?)""",
+                (event_id, title, ACCT_ID, f"gev-{event_id[:8]}", calendar_id, _NOW, _NOW),
+            )
+        return event_id
+
+    def _insert_manual_event(self, title="Manual Event"):
+        event_id = str(uuid.uuid4())
+        with get_connection() as conn:
+            conn.execute(
+                """INSERT INTO events
+                   (id, title, event_type, start_datetime, end_datetime,
+                    source, status, created_by, created_at, updated_at)
+                   VALUES (?, ?, 'meeting', '2026-02-12T14:00:00Z', '2026-02-12T15:00:00Z',
+                           'manual', 'confirmed', ?, ?, ?)""",
+                (event_id, title, USER_ID, _NOW, _NOW),
+            )
+        return event_id
+
+    def test_grid_shows_google_icon_with_tooltip(self, client, tmp_db):
+        self._insert_synced_event()
+        resp = client.get("/events")
+        assert resp.status_code == 200
+        assert 'class="source-icon"' in resp.text
+        assert ">G</text>" in resp.text
+        # Tooltip should include account name from provider_accounts
+        assert "admin@test.com" in resp.text
+
+    def test_grid_shows_manual_icon(self, client, tmp_db):
+        self._insert_manual_event()
+        resp = client.get("/events")
+        assert resp.status_code == 200
+        assert 'title="Manually created"' in resp.text
+
+    def test_detail_shows_google_provenance(self, client, tmp_db):
+        event_id = self._insert_synced_event(calendar_id="work-cal")
+        resp = client.get(f"/events/{event_id}")
+        assert resp.status_code == 200
+        assert "Google Calendar" in resp.text
+        assert "admin@test.com" in resp.text
+        assert "work-cal" in resp.text
+
+    def test_detail_shows_manual_source(self, client, tmp_db):
+        event_id = self._insert_manual_event()
+        resp = client.get(f"/events/{event_id}")
+        assert resp.status_code == 200
+        assert "Manually created" in resp.text
+
+    def test_detail_hides_primary_calendar(self, client, tmp_db):
+        event_id = self._insert_synced_event(calendar_id="primary")
+        resp = client.get(f"/events/{event_id}")
+        assert resp.status_code == 200
+        assert "Google Calendar" in resp.text
+        # "primary" should not appear as calendar label
+        assert "Calendar: primary" not in resp.text

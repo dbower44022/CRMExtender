@@ -48,8 +48,10 @@ def _list_events(*, search: str = "", event_type: str = "",
 
         offset = (page - 1) * per_page
         rows = conn.execute(
-            f"""SELECT e.*
+            f"""SELECT e.*,
+                       COALESCE(pa.display_name, pa.email_address) AS account_name
                 FROM events e
+                LEFT JOIN provider_accounts pa ON pa.id = e.account_id
                 {where}
                 ORDER BY COALESCE(e.start_datetime, e.start_date) DESC
                 LIMIT ? OFFSET ?""",
@@ -252,7 +254,12 @@ def event_detail(request: Request, event_id: str):
 
     with get_connection() as conn:
         event = conn.execute(
-            "SELECT * FROM events WHERE id = ?", (event_id,)
+            """SELECT e.*,
+                      COALESCE(pa.display_name, pa.email_address) AS account_name
+               FROM events e
+               LEFT JOIN provider_accounts pa ON pa.id = e.account_id
+               WHERE e.id = ?""",
+            (event_id,),
         ).fetchone()
         if not event:
             return HTMLResponse("Event not found", status_code=404)

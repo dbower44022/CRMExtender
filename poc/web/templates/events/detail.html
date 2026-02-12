@@ -109,7 +109,16 @@
         {% endif %}
 
         <dt>Source</dt>
-        <dd>{{ event.source or 'manual' }}</dd>
+        <dd>
+          {{ event.source|source_icon(event.account_name, event.provider_calendar_id) }}
+          {% if event.source == 'google_calendar' %}Google Calendar{% else %}Manually created{% endif %}
+          {% if event.account_name %}
+          <br><small>Account: {{ event.account_name }}</small>
+          {% endif %}
+          {% if event.provider_calendar_id and event.provider_calendar_id != 'primary' %}
+          <br><small>Calendar: {{ event.provider_calendar_id }}</small>
+          {% endif %}
+        </dd>
 
         <dt>Status</dt>
         <dd>{{ event.status or 'confirmed' }}</dd>

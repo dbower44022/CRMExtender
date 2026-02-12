@@ -7,6 +7,7 @@ Usage:
     python -m poc add-account                # add a new Gmail account
     python -m poc list-accounts              # list registered accounts
     python -m poc remove-account EMAIL       # remove an account
+    python -m poc reauth EMAIL              # re-authorize with updated scopes
     python -m poc infer-relationships        # infer contact relationships
     python -m poc show-relationships         # display inferred relationships
     python -m poc auto-assign PROJECT        # bulk assign conversations to topics
@@ -1214,6 +1215,37 @@ def cmd_enrich_company(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def cmd_reauth(args: argparse.Namespace) -> None:
+    """Re-authorize a Google account with updated scopes."""
+    from .auth import reauthorize_account
+
+    init_db()
+    email = args.email
+
+    # Verify the account exists
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT id FROM provider_accounts WHERE email_address = ?",
+            (email,),
+        ).fetchone()
+
+    if not row:
+        console.print(f"\n[red]Account not found:[/red] {email}")
+        sys.exit(1)
+
+    console.print(f"\n[bold]Re-authorizing {email} with updated scopes...[/bold]")
+    console.print("This will open a browser window for Google OAuth.")
+
+    try:
+        reauthorize_account(email)
+    except Exception as exc:
+        console.print(f"\n[red]Re-authorization failed:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(f"\n[bold green]Account {email} re-authorized successfully.[/bold green]")
+    console.print("Calendar sync is now available.")
+
+
 def cmd_serve(args: argparse.Namespace) -> None:
     """Launch the web UI."""
     import uvicorn
@@ -1266,6 +1298,10 @@ def build_parser() -> argparse.ArgumentParser:
     # remove-account
     rm = sub.add_parser("remove-account", help="Remove an account")
     rm.add_argument("email", help="Email address of the account to remove")
+
+    # reauth
+    ra = sub.add_parser("reauth", help="Re-authorize a Google account with updated scopes")
+    ra.add_argument("email", help="Email address of the account to re-authorize")
 
     # infer-relationships
     sub.add_parser("infer-relationships", help="Infer contact relationships from conversations")
@@ -1437,6 +1473,7 @@ def main() -> None:
         "add-account": cmd_add_account,
         "list-accounts": cmd_list_accounts,
         "remove-account": cmd_remove_account,
+        "reauth": cmd_reauth,
         "infer-relationships": cmd_infer_relationships,
         "show-relationships": cmd_show_relationships,
         "bootstrap-user": cmd_bootstrap_user,

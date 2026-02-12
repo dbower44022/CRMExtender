@@ -1,15 +1,18 @@
-"""Event routes — list, search, create, detail, delete."""
+"""Event routes — list, search, create, detail, delete, sync."""
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...database import get_connection
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -95,6 +98,99 @@ def event_search(request: Request, q: str = "", event_type: str = "",
         "q": q,
         "event_type": event_type,
     })
+
+
+@router.post("/sync", response_class=HTMLResponse)
+def sync_events(request: Request):
+    """Sync calendar events from the user's Google accounts."""
+    from ...auth import get_credentials_for_account
+    from ...calendar_client import CalendarScopeError
+    from ...calendar_sync import sync_all_calendars
+    from ...rate_limiter import RateLimiter
+    from ... import config
+
+    user = request.state.user
+    uid = user["id"]
+    cid = request.state.customer_id
+
+    # Get user's Google provider accounts
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT pa.* FROM provider_accounts pa
+               JOIN user_provider_accounts upa ON upa.account_id = pa.id
+               WHERE upa.user_id = ?
+               ORDER BY pa.created_at""",
+            (uid,),
+        ).fetchall()
+        accounts = [dict(a) for a in rows]
+
+    if not accounts:
+        # Fallback to customer's accounts
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM provider_accounts WHERE customer_id = ? ORDER BY created_at",
+                (cid,),
+            ).fetchall()
+            accounts = [dict(a) for a in rows]
+
+    if not accounts:
+        return HTMLResponse("<strong>No accounts registered.</strong>")
+
+    rate_limiter = RateLimiter(rate=config.GMAIL_RATE_LIMIT)
+    total_created = 0
+    total_updated = 0
+    total_matched = 0
+    errors: list[str] = []
+
+    for account in accounts:
+        account_id = account["id"]
+        email_addr = account["email_address"]
+
+        token_path = Path(account["auth_token_path"])
+        try:
+            creds = get_credentials_for_account(token_path)
+        except Exception as exc:
+            log.warning("Auth failed for %s: %s", email_addr, exc)
+            errors.append(f"{email_addr}: auth failed ({exc})")
+            continue
+
+        try:
+            result = sync_all_calendars(
+                account_id, creds,
+                rate_limiter=rate_limiter,
+                customer_id=cid,
+                user_id=uid,
+            )
+        except CalendarScopeError as exc:
+            errors.append(f"{email_addr}: {exc}")
+            continue
+        except Exception as exc:
+            log.warning("Calendar sync failed for %s: %s", email_addr, exc)
+            errors.append(f"{email_addr}: sync failed ({exc})")
+            continue
+
+        if result.get("error"):
+            errors.append(f"{email_addr}: {result['error']}")
+            continue
+
+        total_created += result.get("events_created", 0)
+        total_updated += result.get("events_updated", 0)
+        total_matched += result.get("attendees_matched", 0)
+
+    parts = [
+        f"{total_created} events created,",
+        f"{total_updated} updated,",
+        f"{total_matched} attendees matched.",
+    ]
+    summary = " ".join(parts)
+
+    if errors:
+        error_html = "<br>".join(f"Error: {e}" for e in errors)
+        html = f"<strong>{summary}</strong><br>{error_html}"
+    else:
+        html = f"<strong>{summary}</strong>"
+
+    return HTMLResponse(html, headers={"HX-Trigger": "refreshEvents"})
 
 
 @router.post("", response_class=HTMLResponse)

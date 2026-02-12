@@ -1,0 +1,25 @@
+<form method="post" action="/settings/calendars/{{ account_id }}/save">
+  {% if error %}
+  <p style="color: var(--pico-del-color);">{{ error }}</p>
+  {% endif %}
+
+  {% for cal in calendars %}
+  <label>
+    <input type="checkbox" name="calendar_ids" value="{{ cal.id }}"
+           {% if cal.id in selected %}checked{% endif %}>
+    {{ cal.summary }}
+    {% if cal.primary %}<small>(Primary)</small>{% endif %}
+    {% if cal.backgroundColor %}
+    <span style="display:inline-block;width:12px;height:12px;background:{{ cal.backgroundColor }};border-radius:2px;vertical-align:middle;margin-left:4px;"></span>
+    {% endif %}
+  </label>
+  {% endfor %}
+
+  {% if not calendars %}
+  <p>No calendars found for this account.</p>
+  {% endif %}
+
+  {% if calendars %}
+  <button type="submit" class="secondary">Save Selection</button>
+  {% endif %}
+</form>

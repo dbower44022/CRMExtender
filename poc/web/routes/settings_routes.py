@@ -1,11 +1,15 @@
-"""Settings routes: profile, system settings, user management."""
+"""Settings routes: profile, system settings, user management, calendars."""
 
 from __future__ import annotations
 
+import json
+import logging
+
 from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ..dependencies import require_admin
+from ...database import get_connection
 from ...hierarchy import (
     create_user,
     get_user_by_id,
@@ -16,6 +20,8 @@ from ...hierarchy import (
 from ...passwords import verify_password
 from ...session import delete_user_sessions
 from ...settings import get_setting, set_setting
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -335,3 +341,132 @@ async def user_toggle_active(request: Request, user_id: str):
         delete_user_sessions(user_id)
 
     return RedirectResponse("/settings/users", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Calendar Settings
+# ---------------------------------------------------------------------------
+
+@router.get("/settings/calendars")
+async def calendars_page(request: Request):
+    templates = request.app.state.templates
+    user = request.state.user
+    uid = user["id"]
+    cid = user["customer_id"]
+
+    # Get user's Google provider accounts
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT pa.* FROM provider_accounts pa
+               JOIN user_provider_accounts upa ON upa.account_id = pa.id
+               WHERE upa.user_id = ? AND pa.provider = 'gmail'
+               ORDER BY pa.created_at""",
+            (uid,),
+        ).fetchall()
+
+    accounts = []
+    for row in rows:
+        account = dict(row)
+        cal_key = f"cal_sync_calendars_{account['id']}"
+        cal_json = get_setting(cid, cal_key, user_id=uid)
+        try:
+            account["selected_calendars"] = json.loads(cal_json) if cal_json else []
+        except (json.JSONDecodeError, TypeError):
+            account["selected_calendars"] = []
+        accounts.append(account)
+
+    # Fallback: if no user_provider_accounts, use customer's accounts
+    if not accounts:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM provider_accounts WHERE customer_id = ? AND provider = 'gmail' ORDER BY created_at",
+                (cid,),
+            ).fetchall()
+        for row in rows:
+            account = dict(row)
+            cal_key = f"cal_sync_calendars_{account['id']}"
+            cal_json = get_setting(cid, cal_key, user_id=uid)
+            try:
+                account["selected_calendars"] = json.loads(cal_json) if cal_json else []
+            except (json.JSONDecodeError, TypeError):
+                account["selected_calendars"] = []
+            accounts.append(account)
+
+    return templates.TemplateResponse(request, "settings/calendars.html", {
+        "active_nav": "settings",
+        "settings_tab": "calendars",
+        "accounts": accounts,
+        "saved": request.query_params.get("saved"),
+        "error": request.query_params.get("error"),
+    })
+
+
+@router.post("/settings/calendars/{account_id}/fetch", response_class=HTMLResponse)
+async def calendars_fetch(request: Request, account_id: str):
+    """HTMX partial: load available calendars for an account."""
+    from ...auth import get_credentials_for_account
+    from ...calendar_client import CalendarScopeError, list_calendars
+
+    templates = request.app.state.templates
+    user = request.state.user
+    uid = user["id"]
+    cid = user["customer_id"]
+
+    with get_connection() as conn:
+        account = conn.execute(
+            "SELECT * FROM provider_accounts WHERE id = ?",
+            (account_id,),
+        ).fetchone()
+
+    if not account:
+        return HTMLResponse("<p>Account not found.</p>")
+
+    # Load existing selections
+    cal_key = f"cal_sync_calendars_{account_id}"
+    cal_json = get_setting(cid, cal_key, user_id=uid)
+    try:
+        selected = set(json.loads(cal_json)) if cal_json else set()
+    except (json.JSONDecodeError, TypeError):
+        selected = set()
+
+    from pathlib import Path
+    token_path = Path(account["auth_token_path"])
+    try:
+        creds = get_credentials_for_account(token_path)
+        calendars = list_calendars(creds)
+    except CalendarScopeError as exc:
+        return templates.TemplateResponse(request, "settings/_calendar_list.html", {
+            "account_id": account_id,
+            "calendars": [],
+            "selected": selected,
+            "error": str(exc),
+        })
+    except Exception as exc:
+        log.warning("Failed to fetch calendars for %s: %s", account_id, exc)
+        return templates.TemplateResponse(request, "settings/_calendar_list.html", {
+            "account_id": account_id,
+            "calendars": [],
+            "selected": selected,
+            "error": f"Failed to load calendars: {exc}",
+        })
+
+    return templates.TemplateResponse(request, "settings/_calendar_list.html", {
+        "account_id": account_id,
+        "calendars": calendars,
+        "selected": selected,
+    })
+
+
+@router.post("/settings/calendars/{account_id}/save")
+async def calendars_save(request: Request, account_id: str):
+    """Save selected calendar IDs for an account."""
+    user = request.state.user
+    uid = user["id"]
+    cid = user["customer_id"]
+    form = await request.form()
+
+    calendar_ids = form.getlist("calendar_ids")
+    cal_key = f"cal_sync_calendars_{account_id}"
+    set_setting(cid, cal_key, json.dumps(calendar_ids), scope="user", user_id=uid)
+
+    return RedirectResponse("/settings/calendars?saved=1", status_code=303)

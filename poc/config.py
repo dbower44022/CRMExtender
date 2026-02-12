@@ -34,7 +34,11 @@ def token_path_for_account(email: str) -> Path:
 GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/contacts.readonly",
+    "https://www.googleapis.com/auth/calendar.readonly",
 ]
+
+# Calendar sync
+CALENDAR_SYNC_DAYS = 90
 
 # Gmail query defaults
 GMAIL_QUERY = _env("POC_GMAIL_QUERY", "newer_than:7d")

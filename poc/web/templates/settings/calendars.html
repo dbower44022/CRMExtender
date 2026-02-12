@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Calendars - Settings{% endblock %}
+{% block content %}
+{% include "settings/_nav.html" %}
+
+<h2>Calendar Sync</h2>
+<p>Select which Google calendars to sync events from.</p>
+
+{% if saved %}
+<article style="padding:0.5rem 1rem; background:var(--pico-ins-color);">
+  <p>Calendar selection saved.</p>
+</article>
+{% endif %}
+{% if error %}
+<article style="padding:0.5rem 1rem; background:var(--pico-del-color);">
+  <p>{{ error }}</p>
+</article>
+{% endif %}
+
+{% if not accounts %}
+<article>
+  <p>No Google accounts connected. Add an account first using the CLI:
+  <code>python3 -m poc add-account</code></p>
+</article>
+{% endif %}
+
+{% for account in accounts %}
+<article>
+  <header>
+    <strong>{{ account.display_name or account.email_address }}</strong>
+    <small>({{ account.email_address }})</small>
+  </header>
+
+  <div id="cal-list-{{ account.id }}">
+    {% if account.selected_calendars %}
+    <p>{{ account.selected_calendars | length }} calendar(s) selected.</p>
+    {% else %}
+    <p>No calendars selected yet.</p>
+    {% endif %}
+    <button
+      hx-post="/settings/calendars/{{ account.id }}/fetch"
+      hx-target="#cal-list-{{ account.id }}"
+      hx-indicator="#cal-spinner-{{ account.id }}"
+      class="secondary outline"
+    >Load Calendars</button>
+    <span id="cal-spinner-{{ account.id }}" class="htmx-indicator" aria-busy="true"></span>
+  </div>
+</article>
+{% endfor %}
+
+{% endblock %}

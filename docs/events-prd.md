@@ -24,7 +24,9 @@
 11. [CLI Commands](#11-cli-commands)
 12. [Test Coverage](#12-test-coverage)
 13. [Future Work](#13-future-work)
-14. [Design Decisions](#14-design-decisions)
+14. [Web UI](#14-web-ui)
+15. [Design Decisions](#15-design-decisions)
+16. [Google Calendar Sync](#16-google-calendar-sync)
 
 ---
 
@@ -81,9 +83,12 @@ creates several gaps:
   be a separate object in a future iteration.
 - **Reminders/notifications** — reminder scheduling and delivery are
   deferred to a future version.
-- **Calendar sync implementation** — this PRD defines the data model
+- ~~**Calendar sync implementation** — this PRD defines the data model
   and provider integration points.  The actual Google Calendar API
-  client, Outlook sync, etc. are future implementation work.
+  client, Outlook sync, etc. are future implementation work.~~
+  **Implemented** — Google Calendar sync is live.  See
+  [Google Calendar Sync](#16-google-calendar-sync) section below.
+  Outlook and Apple Calendar remain future work.
 - **Web UI for events** — ~~the events browser, creation form, and
   detail pages will be added in a subsequent iteration.~~
   **Implemented** — see [Web UI](#web-ui) section below.
@@ -469,22 +474,16 @@ correlation between events and conversations.
 
 ### 8.1 Provider Account Reuse
 
-Events reuse the existing `provider_accounts` table with
-`account_type = 'calendar'`.  A Google Calendar account would be
-registered as:
+Events reuse the existing `provider_accounts` table.  Google Calendar
+sync uses the same Gmail provider accounts (`provider = 'gmail'`)
+with the OAuth scope extended to include `calendar.readonly`.  No
+separate calendar account type is needed — the same OAuth token that
+grants Gmail and Contacts access also grants Calendar read access
+after re-authorization.
 
-```
-provider_accounts:
-  id: acc-gcal-1
-  provider: google
-  account_type: calendar
-  email_address: user@gmail.com
-  auth_token_path: data/tokens/gcal_user.json
-```
-
-This allows the same OAuth token infrastructure used for Gmail sync
-to be extended for Calendar sync.  Outlook, Apple Calendar, and other
-providers follow the same pattern.
+This means the sync infrastructure requires no new account
+registration.  Existing accounts work once the user re-authorizes
+to grant the calendar scope (see `reauth` CLI command).
 
 ### 8.2 Source Values
 
@@ -638,7 +637,9 @@ Migrates a v5 database to v6 schema.  Options:
 
 ## 12. Test Coverage
 
-39 tests in `tests/test_events.py`:
+39 tests in `tests/test_events.py` + 28 tests in `tests/test_calendar_sync.py`:
+
+### 12.1 Events Schema & Model Tests (`test_events.py`)
 
 | Test Class | Count | Coverage |
 |---|---|---|
@@ -650,6 +651,22 @@ Migrates a v5 database to v6 schema.  Options:
 | `TestRecurringEvents` | 2 | Parent-instance linking, ON DELETE SET NULL behavior |
 | `TestMigration` | 4 | Fresh v5 DB migration, idempotency, backup creation, dry-run behavior |
 
+### 12.2 Calendar Sync Tests (`test_calendar_sync.py`)
+
+28 tests covering the Google Calendar sync pipeline:
+
+| Test Class | Count | Coverage |
+|---|---|---|
+| `TestParseGoogleEvent` | 8 | Timed event, all-day event, cancelled event, no title fallback, attendees, RSVP status mapping, missing ID, description |
+| `TestUpsertEvent` | 3 | Create new event, update existing event, cancelled status handling |
+| `TestMatchAttendees` | 3 | Contact matching via email, unmatched attendee skipped, RSVP status passthrough |
+| `TestSyncCalendarEvents` | 4 | Initial sync (creates events), incremental sync (uses token), sync token persistence, expired token fallback to full sync |
+| `TestSyncAllCalendars` | 2 | Multi-calendar sync aggregation, no calendars selected error |
+| `TestCalendarSettings` | 4 | Settings page renders, calendar selection save, fetch calendars list, scope error display |
+| `TestEventsSyncRoute` | 4 | Sync button rendered in list, sync endpoint works, no accounts graceful handling, no calendars selected message |
+
+All Google API calls are mocked via `@patch("poc.calendar_client.build")`.
+
 ---
 
 ## 13. Future Work
@@ -658,8 +675,9 @@ The following items are planned for subsequent iterations:
 
 ### 13.1 Calendar Sync Clients
 
-- **Google Calendar sync** — API client to fetch events, map to
-  `Event` model, UPSERT into database, resolve attendees to contacts.
+- ~~**Google Calendar sync** — API client to fetch events, map to
+  `Event` model, UPSERT into database, resolve attendees to contacts.~~
+  **Done.** See [Google Calendar Sync](#16-google-calendar-sync).
 - **Outlook/Exchange sync** — Microsoft Graph API client.
 - **Apple Calendar sync** — CalDAV or EventKit bridge.
 - **.ics import** — parse iCalendar files and bulk-import events.
@@ -715,6 +733,7 @@ contacts, companies, and relationships.
 |---|---|---|
 | GET | `/events` | List page with search, type filter, pagination (50/page) |
 | GET | `/events/search` | HTMX partial returning `_rows.html` |
+| POST | `/events/sync` | Sync Google Calendar events for the current user's accounts |
 | POST | `/events` | Create a new event (redirects to detail page) |
 | GET | `/events/{event_id}` | Detail page (info sidebar, participants, linked conversations) |
 | DELETE | `/events/{event_id}` | Delete an event and its participant/conversation links |
@@ -739,6 +758,10 @@ contacts, companies, and relationships.
   all-day toggle, recurrence type, and status selection.
 - **Detail page** — shows event metadata in a sidebar, participants
   with entity links and roles, and linked conversations.
+- **Sync Events** — button in the list header triggers Google Calendar
+  sync for the current user's accounts.  Spinner shown during sync,
+  results displayed as a summary.  Event list auto-refreshes via HTMX
+  `refreshEvents` trigger.
 - **Delete** — HTMX delete with confirmation dialog.
 - **Dashboard** — events count card added to the dashboard.
 - **Navigation** — "Events" link added to the global nav bar.
@@ -833,3 +856,336 @@ means manual events (where `account_id` is NULL and
 `provider_event_id` is NULL) can coexist without violating the
 constraint.  Only synced events (with non-NULL values for both
 columns) are subject to uniqueness checking.
+
+---
+
+## 16. Google Calendar Sync
+
+**Status:** Implemented (2026-02-12)
+
+Google Calendar sync pulls events from the user's connected Google
+accounts into the CRM, matching attendees to existing contacts and
+supporting both initial backfill and incremental updates.
+
+### 16.1 Architecture Overview
+
+The sync pipeline has four layers:
+
+```
+User clicks "Sync Events"
+    → POST /events/sync (web route)
+        → sync_all_calendars() (orchestration)
+            → sync_calendar_events() per calendar
+                → fetch_events() (Google Calendar API client)
+                → _upsert_event() (database)
+                → _match_attendees() (contact resolution)
+```
+
+### 16.2 Google Cloud Console Setup
+
+The Calendar API must be enabled in Google Cloud Console before sync
+will work.  This is in addition to the Gmail API and People API that
+are already required for email and contact sync.
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select the project used for CRMExtender OAuth credentials
+3. Navigate to **APIs & Services > Library**
+4. Search for **Google Calendar API**
+5. Click **Enable**
+
+The same OAuth client (`credentials/client_secret.json`) is used for
+all three APIs.  No additional credentials are needed.
+
+After enabling the API, existing accounts must re-authorize to grant
+the new `calendar.readonly` scope:
+
+```bash
+python3 -m poc reauth user@example.com
+```
+
+This deletes the existing token and opens a browser for fresh OAuth
+consent.  The user must approve the new Calendar scope.
+
+### 16.3 OAuth Scopes
+
+The application requests three Google OAuth scopes:
+
+| Scope | Purpose |
+|---|---|
+| `gmail.readonly` | Email sync |
+| `contacts.readonly` | Contact sync |
+| `calendar.readonly` | Calendar event sync |
+
+All three are defined in `poc/config.py` as `GOOGLE_SCOPES`.  Adding
+`calendar.readonly` to existing tokens requires re-authorization via
+the `reauth` CLI command.
+
+### 16.4 Calendar API Client (`poc/calendar_client.py`)
+
+Wrapper around the Google Calendar API v3, following the same patterns
+as `poc/contacts_client.py` and `poc/gmail_client.py`.
+
+#### Functions
+
+**`list_calendars(creds, *, rate_limiter=None) -> list[dict]`**
+
+Fetches the user's calendar list via `calendarList().list()` with
+pagination.  Returns a list of dicts:
+
+```python
+{"id": "primary", "summary": "My Calendar", "primary": True,
+ "accessRole": "owner", "backgroundColor": "#4285f4"}
+```
+
+**`fetch_events(creds, calendar_id, *, time_min=None, sync_token=None, rate_limiter=None) -> tuple[list[dict], str | None]`**
+
+Fetches events from a single calendar with pagination.  Two modes:
+
+- **Initial sync** — pass `time_min` (ISO timestamp).  Fetches all
+  events from that date forward.  Uses `singleEvents=True` to expand
+  recurring events into individual instances.
+- **Incremental sync** — pass `sync_token` (opaque string from
+  previous sync).  Fetches only changes since last sync.
+
+Returns `(parsed_events, next_sync_token)`.
+
+**`_parse_google_event(raw) -> dict`**
+
+Maps a raw Google Calendar API event dict to the internal format:
+
+| Google Field | Internal Field |
+|---|---|
+| `id` | `provider_event_id` |
+| `summary` | `title` (default: `"(no title)"`) |
+| `description` | `description` |
+| `start.dateTime` | `start_datetime`, `is_all_day = 0` |
+| `start.date` | `start_date`, `is_all_day = 1` |
+| `end.dateTime` | `end_datetime` |
+| `end.date` | `end_date` |
+| `location` | `location` |
+| `status` | `status` |
+| `attendees` | list of `{email, displayName, organizer, responseStatus}` |
+
+All parsed events have `event_type = "meeting"` and
+`source = "google_calendar"`.
+
+#### Error Types
+
+- **`CalendarScopeError`** — raised when credentials lack the
+  `calendar.readonly` scope.  Detected by checking
+  `creds.scopes` before making API calls.  The error message
+  directs users to run `python3 -m poc reauth EMAIL`.
+- **`SyncTokenExpiredError`** — raised when the Google API returns
+  HTTP 410 (Gone), meaning the sync token is no longer valid.
+  The caller should discard the token and do a full re-sync.
+
+### 16.5 Sync Orchestration (`poc/calendar_sync.py`)
+
+#### `sync_calendar_events(account_id, creds, calendar_id, *, rate_limiter, customer_id, user_id) -> dict`
+
+Syncs events from a single calendar:
+
+1. **Load sync token** from settings table (key:
+   `cal_sync_token_{account_id}_{calendar_id}`, scope: user).
+2. **Fetch events**:
+   - If no token: initial sync with `time_min = now - 90 days`
+     (configurable via `config.CALENDAR_SYNC_DAYS`).
+   - If token exists: incremental sync.  On `SyncTokenExpiredError`,
+     falls back to full sync.
+3. **Upsert events** — for each parsed event, insert or update via
+   `_upsert_event()`.  Existing events matched by
+   `(account_id, provider_event_id)`.
+4. **Match attendees** — for created/updated events with attendees,
+   resolve email addresses to CRM contacts and insert
+   `event_participants` rows.
+5. **Save sync token** — persist the new sync token to settings.
+
+Returns stats:
+
+```python
+{"events_created": 5, "events_updated": 2,
+ "events_cancelled": 1, "attendees_matched": 8}
+```
+
+#### `sync_all_calendars(account_id, creds, *, rate_limiter, customer_id, user_id) -> dict`
+
+Reads the user's selected calendars from settings
+(`cal_sync_calendars_{account_id}`, JSON list) and calls
+`sync_calendar_events()` for each.  Returns aggregate totals with
+`calendars_synced` count and any `errors` list.
+
+#### `_upsert_event(conn, event, account_id, calendar_id, *, customer_id, user_id, now)`
+
+Checks if an event already exists by `(account_id, provider_event_id)`.
+If yes, updates all mutable fields (title, description, times,
+location, status).  If no, inserts a new row with a generated UUID.
+Returns `"created"` or `"updated"`.
+
+#### `_match_attendees(conn, event_id, attendees, customer_id) -> int`
+
+For each attendee:
+
+1. Look up `contact_identifiers` where `type = 'email'` and
+   `value = attendee_email` (lowercased), filtered by `customer_id`.
+2. If a match is found, insert into `event_participants`:
+   - `entity_type = 'contact'`
+   - `role = 'organizer'` if the attendee is the organizer, else
+     `'attendee'`
+   - `rsvp_status` mapped from Google's values:
+
+     | Google `responseStatus` | CRM `rsvp_status` |
+     |---|---|
+     | `accepted` | `accepted` |
+     | `declined` | `declined` |
+     | `tentative` | `tentative` |
+     | `needsAction` | `needs_action` |
+
+3. Uses `INSERT OR IGNORE` to avoid duplicates (composite PK on
+   `event_participants`).
+
+Existing auto-matched participants are cleared before re-matching
+(`DELETE FROM event_participants WHERE event_id = ? AND
+entity_type = 'contact'`).
+
+### 16.6 Sync Token Lifecycle
+
+Sync tokens are the key to efficient incremental sync:
+
+1. **Initial sync** — no token exists.  All events from the past 90
+   days are fetched.  Google returns a `nextSyncToken` with the
+   response.
+2. **Save token** — stored in the `settings` table:
+   `set_setting(cid, "cal_sync_token_{acct}_{cal}", token, scope="user", user_id=uid)`.
+3. **Incremental sync** — pass the saved token to
+   `fetch_events(sync_token=...)`.  Google returns only events that
+   changed since the token was issued, plus a new token.
+4. **Token expiry** — Google may invalidate old tokens (HTTP 410).
+   The client catches `SyncTokenExpiredError`, discards the token,
+   and falls back to a full initial sync.
+
+### 16.7 Calendar Selection Settings UI
+
+Users choose which calendars to sync via **Settings > Calendars**.
+
+#### Routes (`poc/web/routes/settings_routes.py`)
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/settings/calendars` | Calendar selection page listing user's Google accounts |
+| POST | `/settings/calendars/{account_id}/fetch` | HTMX partial: load available calendars for an account |
+| POST | `/settings/calendars/{account_id}/save` | Save selected calendar IDs |
+
+#### Templates
+
+| Template | Description |
+|---|---|
+| `settings/calendars.html` | Per-account articles with "Load Calendars" HTMX button |
+| `settings/_calendar_list.html` | HTMX partial with checkboxes for each calendar, Save button |
+
+Calendar selections are stored as JSON in the settings table:
+`cal_sync_calendars_{account_id}` (scope: user).
+
+#### Settings Nav
+
+The "Calendars" tab appears in `settings/_nav.html` between Profile
+and the admin-only tabs.  It is visible to all users (not
+admin-restricted).
+
+### 16.8 Events Sync Route
+
+**`POST /events/sync`** (`poc/web/routes/events.py`)
+
+Triggered by the "Sync Events" button on the Events list page:
+
+1. Gets the current user's Google provider accounts via
+   `user_provider_accounts` join.
+2. For each account, loads credentials and calls
+   `sync_all_calendars()`.
+3. Returns an HTML summary showing counts (events created/updated,
+   attendees matched, calendars synced) or error messages.
+4. Sets the `HX-Trigger: refreshEvents` response header, which
+   causes the event list `#results` div to auto-refresh via
+   `hx-trigger="refreshEvents from:body"`.
+
+### 16.9 CLI Commands
+
+#### `reauth`
+
+```bash
+python3 -m poc reauth user@example.com
+```
+
+Forces re-authorization of a Google account to pick up new OAuth
+scopes (e.g., `calendar.readonly`).  Deletes the existing token file
+and runs a fresh browser-based OAuth flow.  The new token is saved to
+the same per-account path.
+
+### 16.10 Configuration
+
+| Constant | Value | Location | Description |
+|---|---|---|---|
+| `GOOGLE_SCOPES` | `[gmail.readonly, contacts.readonly, calendar.readonly]` | `poc/config.py` | OAuth scopes requested during authorization |
+| `CALENDAR_SYNC_DAYS` | `90` | `poc/config.py` | Number of days to backfill on initial sync |
+
+### 16.11 Files
+
+| File | Purpose |
+|---|---|
+| `poc/calendar_client.py` | Google Calendar API v3 wrapper |
+| `poc/calendar_sync.py` | Sync orchestration, upsert, attendee matching |
+| `poc/web/templates/settings/calendars.html` | Calendar selection settings page |
+| `poc/web/templates/settings/_calendar_list.html` | HTMX partial for calendar checkboxes |
+| `tests/test_calendar_sync.py` | 28 tests covering the full sync pipeline |
+
+Modified files:
+
+| File | Change |
+|---|---|
+| `poc/config.py` | Added `calendar.readonly` scope, `CALENDAR_SYNC_DAYS` |
+| `poc/auth.py` | Added `reauthorize_account()` |
+| `poc/__main__.py` | Added `reauth` CLI command |
+| `poc/web/routes/events.py` | Added `POST /events/sync` route |
+| `poc/web/routes/settings_routes.py` | Added 3 calendar settings routes |
+| `poc/web/templates/events/list.html` | Added sync button + result area |
+| `poc/web/templates/settings/_nav.html` | Added "Calendars" tab |
+
+### 16.12 Design Decisions
+
+#### Why reuse Gmail provider accounts instead of separate calendar accounts?
+
+Google OAuth tokens can hold multiple scopes.  Since the user already
+has a `provider_accounts` row for their Gmail account, adding
+`calendar.readonly` to the same token avoids a second OAuth flow and
+a second account row.  The calendar selection is stored per-account
+in the settings table.
+
+#### Why `singleEvents=True` instead of storing recurring event parents?
+
+When `singleEvents=True`, Google expands recurring events into
+individual instances.  This avoids the complexity of RRULE expansion
+at query time and matches how users think about their calendar
+(individual meetings, not abstract recurrence patterns).  Each
+instance gets its own `provider_event_id` and can be independently
+updated or cancelled.
+
+#### Why store sync tokens in the settings table instead of a dedicated column?
+
+Sync tokens are per-user, per-account, per-calendar.  The settings
+table already supports scoped key-value storage with user isolation.
+A dedicated column would require schema changes and would be less
+flexible for multi-calendar support.
+
+#### Why 90 days for initial backfill?
+
+Balances having useful historical context against the API quota cost
+of fetching years of events.  The constant `CALENDAR_SYNC_DAYS` in
+`config.py` can be adjusted if needed.
+
+#### Why clear and re-match attendees on update?
+
+When an event is updated, the attendee list may have changed.
+Rather than computing diffs, the simpler approach is to delete
+existing auto-matched participants and re-insert.  `INSERT OR IGNORE`
+and the composite PK prevent duplicates.  Manual participant links
+(if added in the future) would use a different `entity_type` and
+would not be affected.

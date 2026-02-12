@@ -14,7 +14,16 @@ directory:
    downloaded from Google Cloud Console (APIs & Services > Credentials >
    OAuth 2.0 Client IDs > Download JSON).
 
-2. **`.env` file** in the project root (copy from `.env.example`):
+2. **Google Cloud APIs enabled** -- three Google APIs must be enabled
+   in the Cloud Console project associated with your OAuth credentials:
+   - **Gmail API** -- for email sync
+   - **People API** -- for contact sync
+   - **Google Calendar API** -- for calendar event sync
+
+   See [Google Cloud Console Setup](#google-cloud-console-setup) for
+   step-by-step instructions.
+
+3. **`.env` file** in the project root (copy from `.env.example`):
 
    ```
    ANTHROPIC_API_KEY=sk-ant-...
@@ -236,6 +245,26 @@ The typical workflow is:
 5. `auto-assign` — bulk-assign conversations by tag/title matching
 6. `show-hierarchy` — review the result
 
+### `reauth`
+
+```bash
+python3 -m poc reauth user@example.com
+```
+
+Re-authorizes a Google account to pick up new OAuth scopes.  This is
+needed after upgrading CRMExtender to a version that requests
+additional Google API access (e.g., adding Calendar sync).
+
+The command:
+
+1. Deletes the existing token file for the account.
+2. Opens a browser for the Google OAuth consent screen.
+3. The user must approve the updated set of permissions.
+4. Saves the new token to the same per-account path.
+
+After re-authorizing, the account can access all APIs that the new
+scopes grant (Gmail, Contacts, and Calendar).
+
 ### `resolve-domains`
 
 ```bash
@@ -412,8 +441,12 @@ all CRM data:
   conversations by tag/title matching.
 - **Relationships** — browse inferred and manual relationships, run
   inference, manage relationship types.
+- **Communications** — browse, search, filter by channel/direction,
+  view detail modals, bulk archive, assign to conversations.
 - **Events** — browse, search, filter by type, create events, view
-  detail with participants and linked conversations.
+  detail with participants and linked conversations.  "Sync Events"
+  button pulls events from connected Google Calendar accounts.
+  Calendar selection is configured under Settings > Calendars.
 
 All dates and timestamps are stored in UTC and converted to the
 configured `CRM_TIMEZONE` for display.  The conversion happens
@@ -572,6 +605,8 @@ CRMExtender/
     email_parser.py               # Quote/signature stripping (plain-text track)
     html_email_parser.py          # HTML-aware quote/signature stripping
     gmail_client.py               # Gmail API client
+    calendar_client.py            # Google Calendar API v3 wrapper
+    calendar_sync.py              # Calendar sync orchestration and attendee matching
     enrichment_provider.py        # Enrichment provider interface and registry
     enrichment_pipeline.py        # Enrichment orchestration and conflict resolution
     hierarchy.py                  # Company/project/topic/assignment data access
@@ -614,7 +649,9 @@ CRMExtender/
         companies.py              # Company routes
         projects.py               # Project/topic routes
         relationships.py          # Relationship routes
-        events.py                 # Event routes
+        events.py                 # Event routes (list, detail, create, sync)
+        communications.py         # Communications routes (list, detail, archive, assign)
+        settings_routes.py        # Settings routes (profile, system, users, calendars)
       templates/                  # Jinja2 templates
         login.html                # Standalone login page
       static/                     # CSS, JS, and static assets
@@ -868,6 +905,108 @@ and support `--db PATH` to target a specific database file.
 
 ---
 
+## Google Cloud Console Setup
+
+CRMExtender uses three Google APIs that must be enabled in the Google
+Cloud project associated with your OAuth credentials.
+
+### Step 1: Access the Cloud Console
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select the project that owns your `client_secret.json` OAuth
+   credentials.  The project ID is shown in the JSON file under
+   `installed.project_id`.
+
+### Step 2: Enable Required APIs
+
+Navigate to **APIs & Services > Library** and enable each of these:
+
+| API | Purpose | Required For |
+|-----|---------|--------------|
+| **Gmail API** | Read email threads and messages | Email sync (`run`, `add-account`) |
+| **People API** | Read Google Contacts | Contact sync |
+| **Google Calendar API** | Read calendar events | Calendar event sync (`/events/sync`, Settings > Calendars) |
+
+For each API:
+1. Search for the API name in the Library
+2. Click on the API card
+3. Click **Enable**
+
+### Step 3: Verify OAuth Consent Screen
+
+Under **APIs & Services > OAuth consent screen**, ensure:
+
+- The app is configured (Internal or External with test users)
+- The scopes include:
+  - `https://www.googleapis.com/auth/gmail.readonly`
+  - `https://www.googleapis.com/auth/contacts.readonly`
+  - `https://www.googleapis.com/auth/calendar.readonly`
+
+If you added the Calendar scope after initial setup, existing accounts
+need re-authorization:
+
+```bash
+python3 -m poc reauth user@example.com
+```
+
+### Step 4: Download OAuth Credentials
+
+Under **APIs & Services > Credentials**:
+
+1. Find your OAuth 2.0 Client ID (type: "Desktop app" or "Web
+   application" for localhost)
+2. Click the download icon to get the JSON file
+3. Save it as `credentials/client_secret.json`
+
+### Common API Errors
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `HttpError 403: Google Calendar API has not been used in project...` | Calendar API not enabled | Enable it in Cloud Console > Library |
+| `HttpError 403: Request had insufficient authentication scopes` | Token lacks calendar scope | Run `python3 -m poc reauth EMAIL` |
+| `HttpError 403: The caller does not have permission` | API restricted by domain policy | Check org admin policies |
+
+---
+
+## Calendar Sync Workflow
+
+Once Google Calendar API is enabled and the account is authorized:
+
+### 1. Select Calendars
+
+Navigate to **Settings > Calendars** in the web UI.  For each Google
+account:
+
+1. Click **Load Calendars** to fetch the list from Google
+2. Check the calendars you want to sync (e.g., primary calendar,
+   shared team calendars)
+3. Click **Save**
+
+### 2. Sync Events
+
+On the **Events** tab, click **Sync Events**.  This:
+
+- Fetches events from all selected calendars
+- Creates new events and updates existing ones
+- Matches attendee emails to CRM contacts
+- Shows a summary of what was synced
+
+### 3. Incremental Updates
+
+Subsequent syncs are incremental — only changes since the last sync
+are fetched.  This is fast and uses minimal API quota.
+
+### 4. Attendee Matching
+
+When a synced event has attendees, each attendee's email is looked up
+in the CRM contacts via `contact_identifiers`.  Matches are recorded
+in `event_participants` with the appropriate role (organizer or
+attendee) and RSVP status.
+
+Unmatched attendees (email not in the CRM) are silently skipped.
+
+---
+
 ## Troubleshooting
 
 ### "OAuth client secret not found"
@@ -912,3 +1051,37 @@ runs triage but skips AI summarization.
 
 Gmail's history API only reports changes since the last sync cursor.
 If no new mail arrived since the previous run, this is expected.
+
+### Calendar sync: "Failed to load calendars"
+
+The Google Calendar API is not enabled in your Google Cloud project.
+Go to Cloud Console > APIs & Services > Library, search for "Google
+Calendar API", and enable it.  See
+[Google Cloud Console Setup](#google-cloud-console-setup).
+
+### Calendar sync: "Calendar scope not authorized"
+
+Your existing OAuth token was created before calendar sync was added
+and lacks the `calendar.readonly` scope.  Re-authorize the account:
+
+```bash
+python3 -m poc reauth user@example.com
+```
+
+This opens a browser for fresh OAuth consent.  Approve the Calendar
+permission when prompted.
+
+### Calendar sync: "No calendars selected"
+
+You need to select which calendars to sync before clicking "Sync
+Events".  Go to **Settings > Calendars**, load the calendar list for
+your account, check the ones you want, and save.
+
+### Calendar sync shows 0 events
+
+Possible causes:
+- The selected calendars have no events in the past 90 days
+- The calendars are empty or contain only recurring event definitions
+  without instances in the sync window
+- Check that you selected the right calendars (the "primary" calendar
+  is usually the main one)

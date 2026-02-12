@@ -112,6 +112,31 @@ def add_account_interactive() -> tuple[Credentials, str, Path]:
     return creds, email, token_path
 
 
+def reauthorize_account(email: str) -> Credentials:
+    """Delete existing token and re-authorize with updated scopes."""
+    token_path = config.token_path_for_account(email)
+
+    if token_path.exists():
+        token_path.unlink()
+        log.info("Deleted existing token at %s", token_path)
+
+    if not config.CLIENT_SECRET_PATH.exists():
+        raise FileNotFoundError(
+            f"OAuth client secret not found at {config.CLIENT_SECRET_PATH}."
+        )
+
+    flow = InstalledAppFlow.from_client_secrets_file(
+        str(config.CLIENT_SECRET_PATH), config.GOOGLE_SCOPES
+    )
+    creds = flow.run_local_server(port=0)
+
+    config.CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
+    token_path.write_text(creds.to_json())
+    log.info("New token saved to %s", token_path)
+
+    return creds
+
+
 def get_credentials() -> Credentials:
     """Return valid Google OAuth credentials (backward-compat wrapper)."""
     return get_credentials_for_account(config.TOKEN_PATH)

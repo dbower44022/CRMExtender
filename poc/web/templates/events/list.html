@@ -2,7 +2,19 @@
 {% block title %}Events — CRM Extender{% endblock %}
 
 {% block content %}
-<h1>Events <small>({{ total }})</small></h1>
+<div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+  <h1 style="margin:0;">Events <small>({{ total }})</small></h1>
+  <button
+    hx-post="/events/sync"
+    hx-target="#sync-result"
+    hx-indicator="#sync-spinner"
+    class="secondary outline"
+    style="margin-left:auto; white-space:nowrap;"
+  >Sync Events</button>
+  <span id="sync-spinner" class="htmx-indicator" aria-busy="true"></span>
+</div>
+
+<div id="sync-result" style="margin-bottom:1rem;"></div>
 
 <div class="grid">
   <div>
@@ -30,7 +42,7 @@
       <span class="htmx-indicator" aria-busy="true"></span>
     </div>
 
-    <div id="results">
+    <div id="results" hx-trigger="refreshEvents from:body" hx-get="/events/search" hx-include=".search-bar">
       {% include "events/_rows.html" %}
     </div>
   </div>

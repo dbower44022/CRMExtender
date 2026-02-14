@@ -178,7 +178,11 @@ def extract_contact_data(vcard) -> dict | None:
     if hasattr(vcard, "org"):
         org_val = vcard.org.value
         if isinstance(org_val, list):
-            org = org_val[0].strip() if org_val else None
+            first = org_val[0] if org_val else None
+            # vobject may nest lists (e.g. [['Company']])
+            while isinstance(first, list):
+                first = first[0] if first else None
+            org = first.strip() if isinstance(first, str) and first else None
         elif isinstance(org_val, str):
             org = org_val.strip()
         if org == "":

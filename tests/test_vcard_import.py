@@ -617,6 +617,107 @@ END:VCARD
         assert result.contacts_created == 1
         assert result.emails_added == 0
 
+    def test_import_skips_duplicate_by_phone(self, tmp_db, tmp_path):
+        """Phone-only contact detected as duplicate on re-import."""
+        vcf_text = """\
+BEGIN:VCARD
+VERSION:3.0
+FN:Phone Only Person
+TEL;TYPE=CELL:+15551234567
+END:VCARD
+"""
+        vcf = _make_vcf(tmp_path / "phone.vcf", vcf_text)
+
+        result1 = import_vcards(vcf, customer_id=CUST_ID, user_id=USER_ID)
+        assert result1.contacts_created == 1
+
+        result2 = import_vcards(vcf, customer_id=CUST_ID, user_id=USER_ID)
+        assert result2.contacts_created == 0
+        assert result2.contacts_skipped_duplicate == 1
+
+    def test_import_skips_duplicate_by_name(self, tmp_db, tmp_path):
+        """Name-only contact detected as duplicate on re-import."""
+        vcf_text = """\
+BEGIN:VCARD
+VERSION:3.0
+FN:Name Only Person
+END:VCARD
+"""
+        vcf = _make_vcf(tmp_path / "name.vcf", vcf_text)
+
+        result1 = import_vcards(vcf, customer_id=CUST_ID, user_id=USER_ID)
+        assert result1.contacts_created == 1
+
+        result2 = import_vcards(vcf, customer_id=CUST_ID, user_id=USER_ID)
+        assert result2.contacts_created == 0
+        assert result2.contacts_skipped_duplicate == 1
+
+    def test_import_phone_dedup_uses_normalization(self, tmp_db, tmp_path):
+        """Phone stored as E.164, vCard has raw format — still detected."""
+        # First import with E.164 format
+        vcf1 = _make_vcf(tmp_path / "first.vcf", """\
+BEGIN:VCARD
+VERSION:3.0
+FN:Norm Phone Person
+TEL;TYPE=CELL:+15551234567
+END:VCARD
+""")
+        result1 = import_vcards(vcf1, customer_id=CUST_ID, user_id=USER_ID)
+        assert result1.contacts_created == 1
+
+        # Second import with raw format — should normalize and match
+        vcf2 = _make_vcf(tmp_path / "second.vcf", """\
+BEGIN:VCARD
+VERSION:3.0
+FN:Norm Phone Person
+TEL;TYPE=CELL:(555) 123-4567
+END:VCARD
+""")
+        result2 = import_vcards(vcf2, customer_id=CUST_ID, user_id=USER_ID)
+        assert result2.contacts_created == 0
+        assert result2.contacts_skipped_duplicate == 1
+
+    def test_reimport_same_file_no_duplicates(self, tmp_db, tmp_path):
+        """Importing a file twice creates no duplicate contacts."""
+        vcf = _make_vcf(tmp_path / "reimport.vcf", SAMPLE_VCF)
+
+        result1 = import_vcards(vcf, customer_id=CUST_ID, user_id=USER_ID)
+        assert result1.contacts_created == 1
+
+        result2 = import_vcards(vcf, customer_id=CUST_ID, user_id=USER_ID)
+        assert result2.contacts_created == 0
+
+        with get_connection() as conn:
+            count = conn.execute("SELECT COUNT(*) as n FROM contacts").fetchone()["n"]
+        assert count == 1
+
+    def test_name_dedup_different_customer(self, tmp_db, tmp_path):
+        """Same name in different customer is NOT a duplicate."""
+        other_cust = "cust-other"
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO customers (id, name, slug, is_active, created_at, updated_at) "
+                "VALUES (?, 'Other Org', 'other', 1, ?, ?)",
+                (other_cust, _NOW, _NOW),
+            )
+
+        vcf_text = """\
+BEGIN:VCARD
+VERSION:3.0
+FN:Cross Customer Person
+END:VCARD
+"""
+        vcf = _make_vcf(tmp_path / "cross.vcf", vcf_text)
+
+        # Import into first customer
+        result1 = import_vcards(vcf, customer_id=CUST_ID, user_id=USER_ID)
+        assert result1.contacts_created == 1
+
+        # Import into different customer — should NOT be a duplicate
+        result2 = import_vcards(vcf, customer_id=other_cust, user_id=None)
+        assert result2.contacts_created == 1
+        assert result2.contacts_skipped_duplicate == 0
+
     def test_import_affiliation_has_title(self, tmp_db, tmp_path):
         vcf = _make_vcf(tmp_path / "test.vcf", """\
 BEGIN:VCARD

@@ -283,6 +283,59 @@ def import_vcards(
     return result
 
 
+def _is_duplicate(data: dict, customer_id: str | None) -> bool:
+    """Check if contact already exists using a three-tier waterfall.
+
+    1. Email match — check contact_identifiers for any matching email
+    2. Phone match — normalize vCard phones to E.164, check phone_numbers
+       (only when no emails)
+    3. Name match — exact name within same customer_id
+       (only when no emails and no phones)
+    """
+    emails = data["emails"]
+    phones = data["phones"]
+
+    with get_connection() as conn:
+        # Tier 1: Email match (most specific)
+        for em in emails:
+            existing = conn.execute(
+                "SELECT contact_id FROM contact_identifiers "
+                "WHERE type = 'email' AND value = ?",
+                (em["value"],),
+            ).fetchone()
+            if existing:
+                return True
+
+        # Tier 2: Normalized phone match
+        if phones and not emails:
+            from .phone_utils import normalize_phone, resolve_country_code
+
+            country = resolve_country_code("system", None, customer_id=customer_id)
+            for phone in phones:
+                normalized = normalize_phone(phone["number"], country)
+                if normalized:
+                    existing = conn.execute(
+                        "SELECT pn.entity_id FROM phone_numbers pn "
+                        "JOIN contacts c ON c.id = pn.entity_id "
+                        "WHERE pn.entity_type = 'contact' AND pn.number = ? "
+                        "AND c.customer_id = ?",
+                        (normalized, customer_id),
+                    ).fetchone()
+                    if existing:
+                        return True
+
+        # Tier 3: Exact name match (fallback for no-email, no-phone contacts)
+        if not emails and not phones:
+            existing = conn.execute(
+                "SELECT id FROM contacts WHERE name = ? AND customer_id = ?",
+                (data["name"], customer_id),
+            ).fetchone()
+            if existing:
+                return True
+
+    return False
+
+
 def _import_single_contact(
     data: dict,
     result: ImportResult,
@@ -294,17 +347,10 @@ def _import_single_contact(
     now = datetime.now(timezone.utc).isoformat()
     emails = data["emails"]
 
-    # Check for duplicate: any email already exists in contact_identifiers
-    with get_connection() as conn:
-        for em in emails:
-            existing = conn.execute(
-                "SELECT contact_id FROM contact_identifiers "
-                "WHERE type = 'email' AND value = ?",
-                (em["value"],),
-            ).fetchone()
-            if existing:
-                result.contacts_skipped_duplicate += 1
-                return
+    # Check for duplicate using three-tier waterfall
+    if _is_duplicate(data, customer_id):
+        result.contacts_skipped_duplicate += 1
+        return
 
     # Create the contact
     contact_id = str(uuid.uuid4())

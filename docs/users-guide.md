@@ -387,8 +387,17 @@ a single `.vcf` file or a directory containing `.vcf` files.
    files (multiple `BEGIN:VCARD` blocks in one file) are supported.
 3. **Extract data** — Name (FN, fallback to N), emails, phones, addresses,
    organization, and title are extracted.
-4. **Duplicate detection** — If any email in the vCard already exists in
-   `contact_identifiers`, the contact is skipped.
+4. **Duplicate detection** — A three-tier waterfall prevents duplicates
+   on re-import:
+   - **Email match** — if any email already exists in
+     `contact_identifiers`, the contact is skipped.
+   - **Phone match** — for contacts without emails, phone numbers are
+     normalized to E.164 and checked against existing contacts in the
+     same organization.  Phones that can't be normalized (extensions,
+     foreign numbers without a `+` prefix) are skipped.
+   - **Name match** — for contacts with no emails and no successfully
+     matched phone, an exact name match within the same organization
+     detects the duplicate.
 5. **Create contact** — New contact with `source='vcard_import'`, plus
    email identifiers, phone numbers (E.164 normalized), and addresses.
 6. **Company resolution** — Email domain is checked first via

@@ -157,13 +157,13 @@ CRMExtender closes this gap by making contacts **living intelligence objects** �
 
 #### Identity Resolution & Deduplication
 
-| ID    | Story                                                                                                                                                     | Acceptance Criteria                                                                                                                                                                             |
-| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CM-12 | As a user, I want the system to automatically detect when two contact records refer to the same person and merge them, so I don't have duplicate records. | High-confidence matches (email or LinkedIn URL match) auto-merge. Medium-confidence matches auto-merge with review flag. Low-confidence matches queued for human review.                        |
-| CM-13 | As a user, I want to review suggested merges and approve or reject them, so the system doesn't merge contacts incorrectly.                                | Review queue UI showing candidate pairs with match signals, confidence score, and side-by-side comparison. Approve/reject actions with one click.                                               |
+| ID    | Story                                                                                                                                                     | Acceptance Criteria                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| CM-12 | As a user, I want the system to automatically detect when two contact records refer to the same person and merge them, so I don't have duplicate records. | High-confidence matches (email or LinkedIn URL match) auto-merge. Medium-confidence matches auto-merge with review flag. Low-confidence matches queued for human review.                                                                                                                                                                                                                                                             |
+| CM-13 | As a user, I want to review suggested merges and approve or reject them, so the system doesn't merge contacts incorrectly.                                | Review queue UI showing candidate pairs with match signals, confidence score, and side-by-side comparison. Approve/reject actions with one click.                                                                                                                                                                                                                                                                                    |
 | CM-14 | As a user, I want to manually merge two contacts when I notice duplicates, so I can clean up my data.                                                     | **Implemented.** Merge UI at `/contacts/merge` with conflict resolution for name and source. All identifiers, affiliations, communications, relationships, events, phones, addresses, emails, and social profiles transfer to the surviving record. Post-merge domain resolution auto-creates missing company affiliations. Audit trail in `contact_merges` table. Entry points: list checkboxes and identifier-conflict merge link. |
-| CM-15 | As a user, I want to split a contact that was incorrectly merged, so I can undo a bad merge.                                                              | Split action restores original records from event history. Communications re-linked to the correct contact. Merge event reversed in audit trail.                                                |
-| CM-16 | As a user, I want to configure the auto-merge confidence threshold, so I can balance automation vs. review volume for my team's data quality needs.       | Tenant-level settings for high/medium/low confidence thresholds. Changes apply to future matches only, not retroactive.                                                                         |
+| CM-15 | As a user, I want to split a contact that was incorrectly merged, so I can undo a bad merge.                                                              | Split action restores original records from event history. Communications re-linked to the correct contact. Merge event reversed in audit trail.                                                                                                                                                                                                                                                                                     |
+| CM-16 | As a user, I want to configure the auto-merge confidence threshold, so I can balance automation vs. review volume for my team's data quality needs.       | Tenant-level settings for high/medium/low confidence thresholds. Changes apply to future matches only, not retroactive.                                                                                                                                                                                                                                                                                                              |
 
 #### Enrichment & Intelligence
 
@@ -667,20 +667,20 @@ Preserves the original data from each source before merge. Enables split (undo m
 
 **Audit table** (`contact_merges`):
 
-| Column | Type | Description |
-| --- | --- | --- |
-| `id` | TEXT PK | UUID |
-| `surviving_contact_id` | TEXT FK | Contact that persists |
-| `absorbed_contact_id` | TEXT | Contact that was deleted |
-| `absorbed_contact_snapshot` | TEXT | Full JSON snapshot before deletion |
-| `identifiers_transferred` | INTEGER | Count of identifiers moved |
-| `affiliations_transferred` | INTEGER | Count of affiliations moved |
-| `conversations_reassigned` | INTEGER | Count of conversations reassigned |
-| `relationships_reassigned` | INTEGER | Count of relationships moved |
-| `events_reassigned` | INTEGER | Count of event participations moved |
+| Column                       | Type    | Description                              |
+| ---------------------------- | ------- | ---------------------------------------- |
+| `id`                         | TEXT PK | UUID                                     |
+| `surviving_contact_id`       | TEXT FK | Contact that persists                    |
+| `absorbed_contact_id`        | TEXT    | Contact that was deleted                 |
+| `absorbed_contact_snapshot`  | TEXT    | Full JSON snapshot before deletion       |
+| `identifiers_transferred`    | INTEGER | Count of identifiers moved               |
+| `affiliations_transferred`   | INTEGER | Count of affiliations moved              |
+| `conversations_reassigned`   | INTEGER | Count of conversations reassigned        |
+| `relationships_reassigned`   | INTEGER | Count of relationships moved             |
+| `events_reassigned`          | INTEGER | Count of event participations moved      |
 | `relationships_deduplicated` | INTEGER | Count of duplicate relationships removed |
-| `merged_by` | TEXT FK | User who performed the merge |
-| `merged_at` | TEXT | ISO 8601 timestamp |
+| `merged_by`                  | TEXT FK | User who performed the merge             |
+| `merged_at`                  | TEXT    | ISO 8601 timestamp                       |
 
 **Affiliation dedup during merge:** The merge deduplicates affiliations using `(company_id, COALESCE(role_id, ''), COALESCE(started_at, ''))` tuple comparison, so NULL roles and start dates are treated as equal. This matches the database-level `idx_cc_dedup` NULL-safe unique index (added in v11). After merge, email domain resolution auto-creates any missing affiliations for the surviving contact's email domains.
 
@@ -1087,12 +1087,12 @@ Suggested tags appear with a "suggested" badge. Users can accept (promoting to `
 
 ### 13.1 Import Formats
 
-| Format                  | Source                                   | Capabilities                                                                         |
-| ----------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------ |
-| **CSV**                 | Any CRM, spreadsheet                     | Column mapping UI. Supports name, email, phone, company, title, tags, custom fields. |
-| **vCard 3.0/4.0**       | Apple Contacts, Outlook, Google (export) | Standard contact interchange. Multi-value fields (multiple emails/phones) supported. **Implemented** — `poc/vcard_import.py`, web UI at `/contacts/import`, CLI `import-vcards`. |
-| **Google Contacts API** | Google account                           | OAuth-based live sync. Ongoing incremental sync supported.                           |
-| **LinkedIn CSV**        | LinkedIn export                          | Structured export with name, company, title, email, connected date.                  |
+| Format                  | Source                                   | Capabilities                                                                                                                                                                                                                                                                                |
+| ----------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **CSV**                 | Any CRM, spreadsheet                     | Column mapping UI. Supports name, email, phone, company, title, tags, custom fields.                                                                                                                                                                                                        |
+| **vCard 3.0/4.0**       | Apple Contacts, Outlook, Google (export) | Standard contact interchange. Multi-value fields (multiple emails/phones) supported. **Implemented** — `poc/vcard_import.py`, web UI at `/contacts/import`, CLI `import-vcards`. Three-tier duplicate detection: email match → normalized phone match → exact name match (customer-scoped). |
+| **Google Contacts API** | Google account                           | OAuth-based live sync. Ongoing incremental sync supported.                                                                                                                                                                                                                                  |
+| **LinkedIn CSV**        | LinkedIn export                          | Structured export with name, company, title, email, connected date.                                                                                                                                                                                                                         |
 
 ### 13.2 Import Pipeline
 
@@ -1627,28 +1627,28 @@ Queued writes are displayed with a "pending" indicator. On reconnect, the queue 
 
 **Goal:** Full intelligence capabilities that differentiate from standard CRMs.
 
-| Feature                        | Priority | Description                                        |
-| ------------------------------ | -------- | -------------------------------------------------- |
+| Feature                        | Priority | Description                                                                                                                                                                                                                                                            |
+| ------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Enrichment engine              | P0       | **Implemented.** Pluggable provider framework (`poc/enrichment_provider.py`, `poc/enrichment_pipeline.py`). Website scraper provider extracts name, description, social profiles, phones, emails from company websites. Batch enrichment via `enrich_new_companies()`. |
-| Apollo adapter                 | P0       | First enrichment integration                       |
-| Clearbit adapter               | P1       | Second enrichment integration                      |
-| People Data Labs adapter       | P2       | Third enrichment integration                       |
-| Auto-enrichment on creation    | P0       | **Partially implemented.** Batch website enrichment runs after each sync, enriching companies with domains but no completed enrichment run. Company names are auto-populated from website metadata (JSON-LD, og:site_name). |
-| Intelligence score             | P0       | Computed score based on data completeness          |
-| Entity resolution pipeline     | P0       | Tiered matching, confidence scoring, pipeline      |
-| Auto-merge (high confidence)   | P0       | Automatic merge for exact identifier matches       |
-| Auto-merge (medium confidence) | P0       | Merge with review flag                             |
-| Human review queue             | P0       | UI for reviewing merge candidates                  |
-| Manual merge                   | P1       | **Implemented.** User-initiated merge with conflict resolution (`poc/contact_merge.py`). Multi-contact merge, audit trail, post-merge domain resolution. |
-| Split (undo merge)             | P1       | Reverse a bad merge from event history             |
-| Configurable thresholds        | P2       | Tenant-level merge confidence settings             |
-| Browser extension (LinkedIn)   | P1       | Chrome/Firefox extension for LinkedIn capture      |
-| Browser extension (Twitter)    | P2       | Twitter/X profile capture                          |
-| OSINT monitoring               | P1       | Configurable monitors for contact changes          |
-| Intelligence items             | P0       | Intel item storage and display                     |
-| Behavioral signal tracking     | P1       | Engagement scoring, responsiveness, sentiment      |
-| Smart groups                   | P2       | Dynamic group membership from saved filters        |
-| AI tag suggestions             | P2       | Claude-powered tag recommendations                 |
+| Apollo adapter                 | P0       | First enrichment integration                                                                                                                                                                                                                                           |
+| Clearbit adapter               | P1       | Second enrichment integration                                                                                                                                                                                                                                          |
+| People Data Labs adapter       | P2       | Third enrichment integration                                                                                                                                                                                                                                           |
+| Auto-enrichment on creation    | P0       | **Partially implemented.** Batch website enrichment runs after each sync, enriching companies with domains but no completed enrichment run. Company names are auto-populated from website metadata (JSON-LD, og:site_name).                                            |
+| Intelligence score             | P0       | Computed score based on data completeness                                                                                                                                                                                                                              |
+| Entity resolution pipeline     | P0       | Tiered matching, confidence scoring, pipeline                                                                                                                                                                                                                          |
+| Auto-merge (high confidence)   | P0       | Automatic merge for exact identifier matches                                                                                                                                                                                                                           |
+| Auto-merge (medium confidence) | P0       | Merge with review flag                                                                                                                                                                                                                                                 |
+| Human review queue             | P0       | UI for reviewing merge candidates                                                                                                                                                                                                                                      |
+| Manual merge                   | P1       | **Implemented.** User-initiated merge with conflict resolution (`poc/contact_merge.py`). Multi-contact merge, audit trail, post-merge domain resolution.                                                                                                               |
+| Split (undo merge)             | P1       | Reverse a bad merge from event history                                                                                                                                                                                                                                 |
+| Configurable thresholds        | P2       | Tenant-level merge confidence settings                                                                                                                                                                                                                                 |
+| Browser extension (LinkedIn)   | P1       | Chrome/Firefox extension for LinkedIn capture                                                                                                                                                                                                                          |
+| Browser extension (Twitter)    | P2       | Twitter/X profile capture                                                                                                                                                                                                                                              |
+| OSINT monitoring               | P1       | Configurable monitors for contact changes                                                                                                                                                                                                                              |
+| Intelligence items             | P0       | Intel item storage and display                                                                                                                                                                                                                                         |
+| Behavioral signal tracking     | P1       | Engagement scoring, responsiveness, sentiment                                                                                                                                                                                                                          |
+| Smart groups                   | P2       | Dynamic group membership from saved filters                                                                                                                                                                                                                            |
+| AI tag suggestions             | P2       | Claude-powered tag recommendations                                                                                                                                                                                                                                     |
 
 ### Phase 3 — Relationship Intelligence
 

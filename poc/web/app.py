@@ -75,6 +75,7 @@ def create_app() -> FastAPI:
         conversations,
         dashboard,
         events,
+        notes,
         projects,
         relationships,
         settings_routes,
@@ -89,6 +90,7 @@ def create_app() -> FastAPI:
     app.include_router(projects.router, prefix="/projects")
     app.include_router(relationships.router, prefix="/relationships")
     app.include_router(events.router, prefix="/events")
+    app.include_router(notes.router, prefix="/notes")
     app.include_router(contact_company_roles.router)
     app.include_router(settings_routes.router)
 

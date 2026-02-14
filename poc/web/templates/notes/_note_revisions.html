@@ -1,0 +1,33 @@
+<div style="margin-top:0.5rem;padding:0.5rem;border:1px solid var(--pico-muted-border-color);border-radius:4px;">
+  <strong>Revision History</strong>
+  <table style="font-size:.85em;margin-top:0.25rem;">
+    <thead>
+      <tr>
+        <th>Version</th>
+        <th>By</th>
+        <th>Date</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rev in revisions %}
+      <tr>
+        <td>v{{ rev.revision_number }}</td>
+        <td>{{ rev.revised_by_name or 'Unknown' }}</td>
+        <td>{{ rev.created_at|datetime }}</td>
+        <td>
+          {% if rev.id == note.current_revision_id %}
+          <small>(current)</small>
+          {% else %}
+          <a href="#" hx-get="/notes/{{ note.id }}/revisions/{{ rev.id }}"
+             hx-target="#rev-content-{{ rev.id }}"
+             hx-swap="innerHTML"
+             style="font-size:.85em;">View</a>
+          {% endif %}
+        </td>
+      </tr>
+      <tr id="rev-content-{{ rev.id }}" style="display:none;"></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

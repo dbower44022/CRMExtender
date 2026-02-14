@@ -224,6 +224,10 @@ def conversation_detail(request: Request, conversation_id: str):
         ).fetchall()
         all_topics = [dict(t) for t in all_topics]
 
+    from ...notes import get_notes_for_entity
+    cid = request.state.customer_id
+    notes = get_notes_for_entity("conversation", conversation_id, customer_id=cid)
+
     return templates.TemplateResponse(request, "conversations/detail.html", {
         "active_nav": "conversations",
         "conv": conv,
@@ -232,6 +236,9 @@ def conversation_detail(request: Request, conversation_id: str):
         "participants": participants,
         "tags": tag_names,
         "all_topics": all_topics,
+        "notes": notes,
+        "entity_type": "conversation",
+        "entity_id": conversation_id,
     })
 
 

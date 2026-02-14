@@ -1,0 +1,12 @@
+{% if types %}
+<select name="relationship_type_id_select" onchange="onTypeSelected()">
+  <option value="">-- Select type --</option>
+  {% for t in types %}
+  <option value="{{ t.id }}">{{ t.forward_label or t.name }}</option>
+  {% endfor %}
+</select>
+{% else %}
+<p>No relationship types available for this combination.
+  <a href="/relationships/types">Manage types</a>
+</p>
+{% endif %}

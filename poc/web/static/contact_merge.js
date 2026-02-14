@@ -1,4 +1,4 @@
-/* Contact merge — checkbox tracking for the contacts list */
+/* Contact selection — checkbox tracking for the contacts list */
 (function () {
   var selectedIds = new Set();
 
@@ -38,11 +38,15 @@
 
   function updateToolbar() {
     var toolbar = document.getElementById("merge-toolbar");
-    var countEl = document.getElementById("merge-count");
+    var mergeBtn = document.getElementById("merge-btn");
+    var relateBtn = document.getElementById("relate-btn");
+    var countEls = document.querySelectorAll(".selected-count");
     if (!toolbar) return;
-    if (selectedIds.size >= 2) {
+    if (selectedIds.size >= 1) {
       toolbar.style.display = "";
-      if (countEl) countEl.textContent = selectedIds.size;
+      countEls.forEach(function (el) { el.textContent = selectedIds.size; });
+      if (mergeBtn) mergeBtn.style.display = selectedIds.size >= 2 ? "" : "none";
+      if (relateBtn) relateBtn.style.display = "";
     } else {
       toolbar.style.display = "none";
     }
@@ -56,6 +60,16 @@
       })
       .join("&");
     window.location.href = "/contacts/merge?" + params;
+  };
+
+  window.relateSelected = function () {
+    if (selectedIds.size < 1) return;
+    var params = Array.from(selectedIds)
+      .map(function (id) {
+        return "ids=" + encodeURIComponent(id);
+      })
+      .join("&");
+    window.location.href = "/contacts/relate?" + params;
   };
 
   // Bind on initial load

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Create Relationship — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Create Relationship</h1>
+
+<nav aria-label="breadcrumb">
+  <ul>
+    <li><a href="/contacts">Contacts</a></li>
+    <li>Create Relationship</li>
+  </ul>
+</nav>
+
+{% if not results %}
+{# ---- Form mode ---- #}
+<article>
+  <header>Selected Contacts ({{ contacts|length }})</header>
+  <ul>
+    {% for c in contacts %}
+    <li>{{ c.name or '(unnamed)' }}</li>
+    {% endfor %}
+  </ul>
+</article>
+
+<form method="post" action="/contacts/relate" id="relate-form">
+  {% for c in contacts %}
+  <input type="hidden" name="contact_ids" value="{{ c.id }}">
+  {% endfor %}
+
+  {# Step 1: Target type #}
+  <fieldset>
+    <legend>Step 1: Target Entity Type</legend>
+    <label>
+      <input type="radio" name="target_entity_type" value="contact" checked
+             hx-get="/contacts/relate/types" hx-target="#type-options"
+             hx-vals='{"to_entity_type": "contact"}'>
+      Contact
+    </label>
+    <label>
+      <input type="radio" name="target_entity_type" value="company"
+             hx-get="/contacts/relate/types" hx-target="#type-options"
+             hx-vals='{"to_entity_type": "company"}'>
+      Company
+    </label>
+  </fieldset>
+
+  {# Step 2: Relationship type #}
+  <fieldset>
+    <legend>Step 2: Relationship Type</legend>
+    <div id="type-options">
+      {% if default_types %}
+      <select name="relationship_type_id_select" onchange="onTypeSelected()">
+        <option value="">-- Select type --</option>
+        {% for t in default_types %}
+        <option value="{{ t.id }}">{{ t.forward_label or t.name }}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <p>No relationship types available for this combination.
+        <a href="/relationships/types">Manage types</a>
+      </p>
+      {% endif %}
+    </div>
+  </fieldset>
+
+  {# Step 3: Search for target #}
+  <fieldset id="step-search" style="display:none;">
+    <legend>Step 3: Search for Target</legend>
+    <input type="search" name="q" id="target-search" placeholder="Search by name..."
+           hx-get="/contacts/relate/search"
+           hx-trigger="input changed delay:300ms, search"
+           hx-target="#search-results"
+           hx-include="[name='target_entity_type'], [name='contact_ids']"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();}">
+    <div id="search-results"></div>
+  </fieldset>
+
+  {# Step 4: Confirm #}
+  <fieldset id="step-confirm" style="display:none;">
+    <legend>Step 4: Confirm</legend>
+    <input type="hidden" name="target_entity_id" id="target-entity-id" value="">
+    <input type="hidden" name="relationship_type_id" id="rel-type-id" value="">
+    <p>Create relationship with: <strong id="target-name"></strong></p>
+    <button type="submit" class="contrast">Create Relationships</button>
+    <a href="/contacts" role="button" class="outline" style="margin-left:.5rem;">Cancel</a>
+  </fieldset>
+</form>
+
+<script>
+function onTypeSelected() {
+  document.getElementById('step-search').style.display = '';
+  // Clear previous selection
+  document.getElementById('step-confirm').style.display = 'none';
+  document.getElementById('target-entity-id').value = '';
+  document.getElementById('target-name').textContent = '';
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('target-search').value = '';
+}
+
+function selectTarget(id, name) {
+  document.getElementById('target-entity-id').value = id;
+  document.getElementById('target-name').textContent = name;
+  // Copy relationship_type_id from select
+  var sel = document.querySelector('#type-options select');
+  if (sel) {
+    document.getElementById('rel-type-id').value = sel.value;
+  }
+  document.getElementById('step-confirm').style.display = '';
+}
+</script>
+
+{% else %}
+{# ---- Results mode ---- #}
+<article>
+  <header>Relationship Results</header>
+  <table>
+    <thead>
+      <tr>
+        <th>Contact</th>
+        <th>Relationship</th>
+        <th>Target</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in results %}
+      <tr>
+        <td>{{ r.contact_name }}</td>
+        <td>{{ r.type_label }}</td>
+        <td>{{ r.target_name }}</td>
+        <td>
+          {% if r.status == 'created' %}
+          <ins>Created</ins>
+          {% elif r.status == 'skipped' %}
+          <del>{{ r.reason }}</del>
+          {% else %}
+          <del>Error: {{ r.reason }}</del>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</article>
+
+<a href="/contacts" role="button">Back to Contacts</a>
+<a href="/relationships" role="button" class="outline" style="margin-left:.5rem;">View Relationships</a>
+{% endif %}
+
+{% endblock %}

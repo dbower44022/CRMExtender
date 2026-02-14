@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Notes — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Notes</h1>
+
+<form method="get" action="/notes/search" style="margin-bottom:1rem;">
+  <div style="display:flex;gap:0.5rem;">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search notes..."
+           style="flex:1;" autofocus>
+    <button type="submit">Search</button>
+  </div>
+</form>
+
+{% if q %}
+<p>{{ results|length }} result{{ 's' if results|length != 1 else '' }} for &ldquo;{{ q }}&rdquo;</p>
+{% elif results %}
+<h2>Recent Notes</h2>
+{% endif %}
+
+{% if results %}
+<div class="notes-search-results">
+  {% for note in results %}
+  <article style="margin-bottom:0.75rem;padding:0.75rem;">
+    <header style="padding:0;margin-bottom:0.25rem;">
+      {% if note.title %}<strong>{{ note.title }}</strong> &mdash; {% endif %}
+      <small>
+        <a href="/{{ note.entity_type }}{% if note.entity_type == 'company' %}ies{% else %}s{% endif %}/{{ note.entity_id }}">
+          {{ note.entity_type|title }} detail
+        </a>
+      </small>
+    </header>
+    <div>{{ note.snippet|safe if note.snippet else (note.content_html|safe if note.content_html else '') }}</div>
+    <footer style="padding:0;margin-top:0.25rem;">
+      <small style="color:var(--pico-muted-color);">
+        {% if note.author_name %}by {{ note.author_name }} &middot; {% endif %}
+        {{ note.updated_at|datetime }}
+      </small>
+    </footer>
+  </article>
+  {% endfor %}
+</div>
+{% elif q %}
+<p class="empty-state">No notes matching your search.</p>
+{% else %}
+<p class="empty-state">No notes yet. Add notes from any contact, company, conversation, event, or project detail page.</p>
+{% endif %}
+{% endblock %}

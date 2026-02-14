@@ -19,8 +19,11 @@
 </div>
 
 <div id="merge-toolbar" style="display:none; margin-bottom:1rem;">
-  <button onclick="mergeSelected()" class="contrast" style="padding:.4rem 1rem;font-size:.85rem;">
-    Merge Selected (<span id="merge-count">0</span>)
+  <button id="merge-btn" onclick="mergeSelected()" class="contrast" style="padding:.4rem 1rem;font-size:.85rem;">
+    Merge Selected (<span class="selected-count">0</span>)
+  </button>
+  <button id="relate-btn" onclick="relateSelected()" class="outline" style="padding:.4rem 1rem;font-size:.85rem;margin-left:.5rem;">
+    Create Relationship (<span class="selected-count">0</span>)
   </button>
 </div>
 

@@ -789,6 +789,55 @@ CREATE TABLE IF NOT EXISTS settings (
     created_at          TEXT NOT NULL,
     updated_at          TEXT NOT NULL
 );
+
+-- Notes (entity-agnostic, follows addresses/phone_numbers pattern)
+CREATE TABLE IF NOT EXISTS notes (
+    id                  TEXT PRIMARY KEY,
+    customer_id         TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    entity_type         TEXT NOT NULL CHECK (entity_type IN ('contact','company','conversation','event','project')),
+    entity_id           TEXT NOT NULL,
+    title               TEXT,
+    is_pinned           INTEGER NOT NULL DEFAULT 0,
+    current_revision_id TEXT,
+    created_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
+    updated_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL
+);
+
+-- Note revisions (append-only history)
+CREATE TABLE IF NOT EXISTS note_revisions (
+    id              TEXT PRIMARY KEY,
+    note_id         TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+    revision_number INTEGER NOT NULL,
+    content_json    TEXT,
+    content_html    TEXT,
+    revised_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at      TEXT NOT NULL,
+    UNIQUE(note_id, revision_number)
+);
+
+-- Note attachments (uploaded files)
+CREATE TABLE IF NOT EXISTS note_attachments (
+    id            TEXT PRIMARY KEY,
+    note_id       TEXT REFERENCES notes(id) ON DELETE CASCADE,
+    filename      TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    mime_type     TEXT NOT NULL,
+    size_bytes    INTEGER NOT NULL,
+    storage_path  TEXT NOT NULL,
+    uploaded_by   TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at    TEXT NOT NULL
+);
+
+-- Note mentions (extracted @mentions/entity links)
+CREATE TABLE IF NOT EXISTS note_mentions (
+    id           TEXT PRIMARY KEY,
+    note_id      TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+    mention_type TEXT NOT NULL CHECK (mention_type IN ('user','contact','company','conversation','event','project')),
+    mentioned_id TEXT NOT NULL,
+    created_at   TEXT NOT NULL
+);
 """
 
 _INDEX_SQL = """\
@@ -938,6 +987,15 @@ CREATE INDEX IF NOT EXISTS idx_settings_customer     ON settings(customer_id);
 CREATE INDEX IF NOT EXISTS idx_settings_user         ON settings(user_id);
 CREATE INDEX IF NOT EXISTS idx_settings_name         ON settings(setting_name);
 
+-- Notes
+CREATE INDEX IF NOT EXISTS idx_notes_entity              ON notes(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_notes_customer            ON notes(customer_id);
+CREATE INDEX IF NOT EXISTS idx_notes_pinned              ON notes(entity_type, entity_id, is_pinned DESC, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_note_revisions_note       ON note_revisions(note_id);
+CREATE INDEX IF NOT EXISTS idx_note_attachments_note     ON note_attachments(note_id);
+CREATE INDEX IF NOT EXISTS idx_note_mentions_note        ON note_mentions(note_id);
+CREATE INDEX IF NOT EXISTS idx_note_mentions_target      ON note_mentions(mention_type, mentioned_id);
+
 -- Tenant isolation (customer_id)
 CREATE INDEX IF NOT EXISTS idx_users_customer            ON users(customer_id);
 CREATE INDEX IF NOT EXISTS idx_provider_accounts_customer ON provider_accounts(customer_id);
@@ -965,7 +1023,12 @@ VALUES
     ('rt-reports-to', 'REPORTS_TO', 'contact', 'contact', 'Has direct report', 'Reports to',       0, 0, 'Reporting chain',                   '{now}', '{now}'),
     ('rt-works-with', 'WORKS_WITH', 'contact', 'contact', 'Works with',        'Works with',       0, 1, 'Peer / collaborator',               '{now}', '{now}'),
     ('rt-partner',    'PARTNER',    'company', 'company', 'Partners with',     'Partners with',    0, 1, 'Business partnership',              '{now}', '{now}'),
-    ('rt-vendor',     'VENDOR',     'company', 'company', 'Is a vendor of',    'Is a client of',   0, 0, 'Vendor / client relationship',      '{now}', '{now}');
+    ('rt-vendor',     'VENDOR',     'company', 'company', 'Is a vendor of',    'Is a client of',   0, 0, 'Vendor / client relationship',      '{now}', '{now}'),
+    ('rt-affiliated', 'AFFILIATED_WITH', 'contact', 'company', 'Affiliated with', 'Has affiliate',  0, 0, 'Contact-company affiliation',       '{now}', '{now}'),
+    ('rt-parent-of',  'PARENT_OF',       'contact', 'contact', 'Parent of',       'Child of',         0, 0, 'Parent / child',                    '{now}', '{now}'),
+    ('rt-spouse-of',  'SPOUSE_OF',       'contact', 'contact', 'Spouse of',       'Spouse of',        0, 1, 'Spousal relationship',              '{now}', '{now}'),
+    ('rt-sibling-of', 'SIBLING_OF',      'contact', 'contact', 'Sibling of',      'Sibling of',       0, 1, 'Sibling relationship',              '{now}', '{now}'),
+    ('rt-uncle-aunt', 'UNCLE_AUNT_OF',   'contact', 'contact', 'Uncle/Aunt of',   'Nephew/Niece of',  0, 0, 'Uncle-aunt / nephew-niece',         '{now}', '{now}');
 """
 
 _SEED_CONTACT_COMPANY_ROLES = [
@@ -996,6 +1059,11 @@ def init_db(db_path: Path | None = None) -> None:
         conn.executescript(_SCHEMA_SQL)
         conn.executescript(_INDEX_SQL)
         conn.executescript(_SETTINGS_INDEX_SQL)
+        # FTS5 virtual table (separate — CREATE VIRTUAL TABLE doesn't support executescript well)
+        conn.execute(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5("
+            "note_id UNINDEXED, title, content_text, tokenize='porter unicode61')"
+        )
         # Defensive: add is_archived column for existing DBs
         cols = {r[1] for r in conn.execute("PRAGMA table_info(communications)")}
         if "is_archived" not in cols:

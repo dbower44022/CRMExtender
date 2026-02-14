@@ -1,0 +1,13 @@
+{% if entities %}
+<div class="assign-results">
+  {% for e in entities %}
+  <a class="assign-conv-row" href="javascript:void(0)"
+     onclick="selectTarget('{{ e.id }}', '{{ e.name|e }}')">
+    {{ e.name }}
+    <small>{{ e.detail or '' }}</small>
+  </a>
+  {% endfor %}
+</div>
+{% elif query %}
+<p><em>No results found.</em></p>
+{% endif %}

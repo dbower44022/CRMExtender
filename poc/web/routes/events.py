@@ -297,9 +297,16 @@ def event_detail(request: Request, event_id: str):
         ).fetchall()
         conversations = [dict(r) for r in convs]
 
+    from ...notes import get_notes_for_entity
+    cid = request.state.customer_id
+    notes = get_notes_for_entity("event", event_id, customer_id=cid)
+
     return templates.TemplateResponse(request, "events/detail.html", {
         "active_nav": "events",
         "event": event,
         "participants": participants,
         "conversations": conversations,
+        "notes": notes,
+        "entity_type": "event",
+        "entity_id": event_id,
     })

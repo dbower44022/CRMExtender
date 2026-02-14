@@ -1,0 +1,47 @@
+<article id="note-{{ note.id }}" class="note-card" style="margin-bottom:0.75rem;padding:0.75rem;">
+  <header style="display:flex;justify-content:space-between;align-items:center;padding:0;margin-bottom:0.5rem;">
+    <div>
+      {% if note.title %}<strong>{{ note.title }}</strong>{% endif %}
+      {% if note.is_pinned %}
+      <span title="Pinned" style="color:var(--pico-primary);">&#128204;</span>
+      {% endif %}
+    </div>
+    <div style="display:flex;gap:0.25rem;">
+      <button class="outline" style="padding:2px 8px;font-size:.75em;"
+              hx-post="/notes/{{ note.id }}/pin"
+              hx-target="#note-{{ note.id }}"
+              hx-swap="outerHTML"
+              title="{{ 'Unpin' if note.is_pinned else 'Pin' }}">
+        {{ 'Unpin' if note.is_pinned else 'Pin' }}
+      </button>
+      <button class="outline" style="padding:2px 8px;font-size:.75em;"
+              hx-get="/notes/{{ note.id }}/edit"
+              hx-target="#note-{{ note.id }}"
+              hx-swap="outerHTML">
+        Edit
+      </button>
+      <button class="outline secondary" style="padding:2px 8px;font-size:.75em;"
+              hx-delete="/notes/{{ note.id }}"
+              hx-target="#note-{{ note.id }}"
+              hx-swap="outerHTML"
+              hx-confirm="Delete this note?">
+        Delete
+      </button>
+    </div>
+  </header>
+  <div class="note-content">{{ note.content_html|safe if note.content_html else '<em>No content</em>' }}</div>
+  <footer style="padding:0;margin-top:0.5rem;">
+    <small style="color:var(--pico-muted-color);">
+      {% if note.author_name %}by {{ note.author_name }}{% endif %}
+      &middot; {{ note.updated_at|datetime }}
+      {% if note.revision_number and note.revision_number > 1 %}
+      &middot;
+      <a href="#" hx-get="/notes/{{ note.id }}/revisions"
+         hx-target="#note-{{ note.id }}-revisions"
+         hx-swap="innerHTML"
+         style="font-size:.85em;">v{{ note.revision_number }}</a>
+      {% endif %}
+    </small>
+    <div id="note-{{ note.id }}-revisions"></div>
+  </footer>
+</article>

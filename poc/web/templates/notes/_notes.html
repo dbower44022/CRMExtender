@@ -1,0 +1,40 @@
+<div id="notes-section">
+  <h2>Notes ({{ notes|length }})</h2>
+
+  <!-- Add note form -->
+  <details id="new-note-form">
+    <summary role="button" class="outline" style="display:inline-block;padding:4px 12px;font-size:.85em;">
+      Add Note
+    </summary>
+    <form hx-post="/notes"
+          hx-target="#notes-section"
+          hx-swap="outerHTML"
+          style="margin-top:0.5rem;">
+      <input type="hidden" name="entity_type" value="{{ entity_type }}">
+      <input type="hidden" name="entity_id" value="{{ entity_id }}">
+      <label>
+        Title <small>(optional)</small>
+        <input type="text" name="title" placeholder="Note title...">
+      </label>
+      <div id="note-editor-new" class="note-editor-wrapper">
+        <div class="note-editor" data-editor="new"></div>
+        <input type="hidden" name="content_json" id="content_json_new">
+        <input type="hidden" name="content_html" id="content_html_new">
+        <noscript>
+          <textarea name="content_html" rows="4" placeholder="Write your note..."></textarea>
+        </noscript>
+      </div>
+      <button type="submit" style="margin-top:0.5rem;">Save Note</button>
+    </form>
+  </details>
+
+  {% if notes %}
+  <div class="notes-list" style="margin-top:1rem;">
+    {% for note in notes %}
+    {% include "notes/_note_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-state" style="margin-top:0.5rem;">No notes yet.</p>
+  {% endif %}
+</div>

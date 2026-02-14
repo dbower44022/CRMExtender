@@ -69,10 +69,17 @@ def project_detail(request: Request, project_id: str):
 
     topic_stats = get_topic_stats(project_id)
 
+    from ...notes import get_notes_for_entity
+    cid = request.state.customer_id
+    notes = get_notes_for_entity("project", project_id, customer_id=cid)
+
     return templates.TemplateResponse(request, "projects/detail.html", {
         "active_nav": "projects",
         "project": project,
         "topics": topic_stats,
+        "notes": notes,
+        "entity_type": "project",
+        "entity_id": project_id,
     })
 
 

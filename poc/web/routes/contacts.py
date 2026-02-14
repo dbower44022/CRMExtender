@@ -1,6 +1,9 @@
-"""Contact routes — list, search, detail, edit, sub-entity CRUD."""
+"""Contact routes — list, search, detail, edit, relate, sub-entity CRUD."""
 
 from __future__ import annotations
+
+import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -254,6 +257,244 @@ async def contact_import(request: Request):
     })
 
 
+# ---------------------------------------------------------------------------
+# Relate (batch create relationships)
+# ---------------------------------------------------------------------------
+
+def _entity_name_lookup(conn, entity_ids: set[str]) -> dict[str, str]:
+    if not entity_ids:
+        return {}
+    names: dict[str, str] = {}
+    placeholders = ",".join("?" for _ in entity_ids)
+    id_list = list(entity_ids)
+    for row in conn.execute(
+        f"SELECT id, name FROM contacts WHERE id IN ({placeholders})", id_list,
+    ).fetchall():
+        names[row["id"]] = row["name"] or row["id"][:8]
+    for row in conn.execute(
+        f"SELECT id, name FROM companies WHERE id IN ({placeholders})", id_list,
+    ).fetchall():
+        names[row["id"]] = row["name"] or row["id"][:8]
+    return names
+
+
+@router.get("/relate", response_class=HTMLResponse)
+def contact_relate_form(request: Request, ids: list[str] = Query(default=[])):
+    templates = request.app.state.templates
+
+    if not ids:
+        return RedirectResponse("/contacts", status_code=303)
+
+    with get_connection() as conn:
+        placeholders = ",".join("?" for _ in ids)
+        rows = conn.execute(
+            f"SELECT id, name FROM contacts WHERE id IN ({placeholders})", ids,
+        ).fetchall()
+        contacts = [dict(r) for r in rows]
+
+    if not contacts:
+        return RedirectResponse("/contacts", status_code=303)
+
+    # Pre-load default (contact→contact) relationship types
+    with get_connection() as conn:
+        type_rows = conn.execute(
+            "SELECT * FROM relationship_types "
+            "WHERE from_entity_type = 'contact' AND to_entity_type = 'contact' "
+            "ORDER BY name",
+        ).fetchall()
+        default_types = [dict(r) for r in type_rows]
+
+    return templates.TemplateResponse(request, "contacts/relate.html", {
+        "active_nav": "contacts",
+        "contacts": contacts,
+        "default_types": default_types,
+    })
+
+
+@router.get("/relate/types", response_class=HTMLResponse)
+def contact_relate_types(request: Request, to_entity_type: str = "contact"):
+    templates = request.app.state.templates
+
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM relationship_types "
+            "WHERE from_entity_type = 'contact' AND to_entity_type = ? "
+            "ORDER BY name",
+            (to_entity_type,),
+        ).fetchall()
+        types = [dict(r) for r in rows]
+
+    return templates.TemplateResponse(request, "contacts/_relate_type_options.html", {
+        "types": types,
+    })
+
+
+@router.get("/relate/search", response_class=HTMLResponse)
+def contact_relate_search(
+    request: Request,
+    q: str = "",
+    target_entity_type: str = "contact",
+    contact_ids: list[str] = Query(default=[]),
+):
+    templates = request.app.state.templates
+    cid = request.state.customer_id
+    entities: list[dict] = []
+
+    if q.strip():
+        with get_connection() as conn:
+            if target_entity_type == "contact":
+                exclude_placeholders = ",".join("?" for _ in contact_ids) if contact_ids else "''"
+                rows = conn.execute(
+                    f"""SELECT c.id, c.name,
+                               (SELECT ci.value FROM contact_identifiers ci
+                                WHERE ci.contact_id = c.id AND ci.type = 'email'
+                                ORDER BY ci.is_primary DESC LIMIT 1) AS email
+                        FROM contacts c
+                        WHERE c.name LIKE ?
+                          AND c.customer_id = ?
+                          AND c.id NOT IN ({exclude_placeholders})
+                        ORDER BY c.name LIMIT 20""",
+                    [f"%{q.strip()}%", cid] + list(contact_ids),
+                ).fetchall()
+                entities = [{"id": r["id"], "name": r["name"], "detail": r["email"] or ""} for r in rows]
+            else:
+                rows = conn.execute(
+                    """SELECT id, name, domain FROM companies
+                       WHERE name LIKE ? AND customer_id = ?
+                       ORDER BY name LIMIT 20""",
+                    (f"%{q.strip()}%", cid),
+                ).fetchall()
+                entities = [{"id": r["id"], "name": r["name"], "detail": r["domain"] or ""} for r in rows]
+
+    return templates.TemplateResponse(request, "contacts/_relate_search_results.html", {
+        "entities": entities,
+        "query": q.strip(),
+    })
+
+
+@router.post("/relate", response_class=HTMLResponse)
+async def contact_relate_confirm(request: Request):
+    templates = request.app.state.templates
+    form_data = await request.form()
+
+    contact_ids = form_data.getlist("contact_ids")
+    relationship_type_id = form_data.get("relationship_type_id", "")
+    target_entity_id = form_data.get("target_entity_id", "")
+    target_entity_type = form_data.get("target_entity_type", "contact")
+
+    if not contact_ids or not relationship_type_id or not target_entity_id:
+        return RedirectResponse("/contacts", status_code=303)
+
+    now = datetime.now(timezone.utc).isoformat()
+    results = []
+
+    with get_connection() as conn:
+        # Look up relationship type
+        rt = conn.execute(
+            "SELECT * FROM relationship_types WHERE id = ?",
+            (relationship_type_id,),
+        ).fetchone()
+        if not rt:
+            return RedirectResponse("/contacts", status_code=303)
+
+        is_bidi = bool(rt["is_bidirectional"])
+
+        # Look up names for display
+        all_ids = set(contact_ids) | {target_entity_id}
+        names = _entity_name_lookup(conn, all_ids)
+        target_name = names.get(target_entity_id, target_entity_id[:8])
+
+        for cid in contact_ids:
+            contact_name = names.get(cid, cid[:8])
+
+            # Skip self-relationships
+            if cid == target_entity_id:
+                results.append({
+                    "contact_name": contact_name,
+                    "type_label": rt["forward_label"] or rt["name"],
+                    "target_name": target_name,
+                    "status": "skipped",
+                    "reason": "Self-relationship",
+                })
+                continue
+
+            # Check existing (either direction)
+            existing = conn.execute(
+                """SELECT id FROM relationships
+                   WHERE relationship_type_id = ?
+                     AND ((from_entity_id = ? AND to_entity_id = ?)
+                       OR (from_entity_id = ? AND to_entity_id = ?))""",
+                (relationship_type_id, cid, target_entity_id,
+                 target_entity_id, cid),
+            ).fetchone()
+            if existing:
+                results.append({
+                    "contact_name": contact_name,
+                    "type_label": rt["forward_label"] or rt["name"],
+                    "target_name": target_name,
+                    "status": "skipped",
+                    "reason": "Already exists",
+                })
+                continue
+
+            try:
+                rel_id_1 = str(uuid.uuid4())
+                conn.execute(
+                    """INSERT INTO relationships
+                       (id, relationship_type_id, from_entity_type, from_entity_id,
+                        to_entity_type, to_entity_id, paired_relationship_id,
+                        source, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, NULL, 'manual', ?, ?)""",
+                    (rel_id_1, relationship_type_id,
+                     rt["from_entity_type"], cid,
+                     rt["to_entity_type"], target_entity_id,
+                     now, now),
+                )
+
+                if is_bidi:
+                    rel_id_2 = str(uuid.uuid4())
+                    conn.execute(
+                        """INSERT INTO relationships
+                           (id, relationship_type_id, from_entity_type, from_entity_id,
+                            to_entity_type, to_entity_id, paired_relationship_id,
+                            source, created_at, updated_at)
+                           VALUES (?, ?, ?, ?, ?, ?, NULL, 'manual', ?, ?)""",
+                        (rel_id_2, relationship_type_id,
+                         rt["to_entity_type"], target_entity_id,
+                         rt["from_entity_type"], cid,
+                         now, now),
+                    )
+                    conn.execute(
+                        "UPDATE relationships SET paired_relationship_id = ? WHERE id = ?",
+                        (rel_id_2, rel_id_1),
+                    )
+                    conn.execute(
+                        "UPDATE relationships SET paired_relationship_id = ? WHERE id = ?",
+                        (rel_id_1, rel_id_2),
+                    )
+
+                results.append({
+                    "contact_name": contact_name,
+                    "type_label": rt["forward_label"] or rt["name"],
+                    "target_name": target_name,
+                    "status": "created",
+                    "reason": "",
+                })
+            except Exception as exc:
+                results.append({
+                    "contact_name": contact_name,
+                    "type_label": rt["forward_label"] or rt["name"],
+                    "target_name": target_name,
+                    "status": "error",
+                    "reason": str(exc),
+                })
+
+    return templates.TemplateResponse(request, "contacts/relate.html", {
+        "active_nav": "contacts",
+        "results": results,
+    })
+
+
 @router.get("/{contact_id}", response_class=HTMLResponse)
 def contact_detail(request: Request, contact_id: str):
     templates = request.app.state.templates
@@ -345,6 +586,9 @@ def contact_detail(request: Request, contact_id: str):
     from ...scoring import get_entity_score
     score_data = get_entity_score("contact", contact_id)
 
+    from ...notes import get_notes_for_entity
+    notes = get_notes_for_entity("contact", contact_id, customer_id=cid)
+
     return templates.TemplateResponse(request, "contacts/detail.html", {
         "active_nav": "contacts",
         "contact": contact,
@@ -359,6 +603,9 @@ def contact_detail(request: Request, contact_id: str):
         "all_companies": all_companies,
         "score_data": score_data,
         "display_country": display_country,
+        "notes": notes,
+        "entity_type": "contact",
+        "entity_id": contact_id,
     })
 
 

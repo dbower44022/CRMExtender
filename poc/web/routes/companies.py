@@ -399,6 +399,9 @@ def company_detail(request: Request, company_id: str):
     from ...scoring import get_entity_score
     score_data = get_entity_score("company", company_id)
 
+    from ...notes import get_notes_for_entity
+    notes = get_notes_for_entity("company", company_id, customer_id=cid)
+
     return templates.TemplateResponse(request, "companies/detail.html", {
         "active_nav": "companies",
         "company": company,
@@ -414,6 +417,9 @@ def company_detail(request: Request, company_id: str):
         "social_profiles": social_profiles,
         "score_data": score_data,
         "display_country": display_country,
+        "notes": notes,
+        "entity_type": "company",
+        "entity_id": company_id,
     })
 
 

@@ -1,0 +1,133 @@
+/* Note card styles */
+.note-card {
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+}
+
+.note-card header {
+  border-bottom: none;
+}
+
+.note-content {
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+.note-content p:last-child {
+  margin-bottom: 0;
+}
+
+.note-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.note-content blockquote {
+  border-left: 3px solid var(--pico-muted-border-color);
+  padding-left: 1rem;
+  margin-left: 0;
+  color: var(--pico-muted-color);
+}
+
+.note-content pre {
+  background: var(--pico-code-background-color);
+  padding: 0.75rem;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.note-content table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.note-content td,
+.note-content th {
+  border: 1px solid var(--pico-muted-border-color);
+  padding: 0.25rem 0.5rem;
+}
+
+/* Tiptap editor */
+.note-editor-wrapper {
+  border: 1px solid var(--pico-form-element-border-color);
+  border-radius: var(--pico-border-radius);
+  overflow: hidden;
+}
+
+.note-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px;
+  border-bottom: 1px solid var(--pico-form-element-border-color);
+  background: var(--pico-card-background-color);
+}
+
+.note-editor-toolbar button {
+  padding: 2px 6px;
+  font-size: 0.8em;
+  margin: 0;
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+  border-radius: 3px;
+  color: var(--pico-color);
+  min-width: auto;
+  width: auto;
+}
+
+.note-editor-toolbar button:hover {
+  background: var(--pico-secondary-background);
+}
+
+.note-editor-toolbar button.is-active {
+  background: var(--pico-primary-background);
+  color: var(--pico-primary-inverse);
+}
+
+.note-editor-toolbar .separator {
+  width: 1px;
+  background: var(--pico-muted-border-color);
+  margin: 2px 4px;
+}
+
+.note-editor [contenteditable] {
+  padding: 0.75rem;
+  min-height: 120px;
+  outline: none;
+}
+
+.note-editor [contenteditable]:focus {
+  outline: none;
+}
+
+/* Placeholder text */
+.note-editor .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--pico-form-element-placeholder-color);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Mention chip */
+.mention {
+  background: var(--pico-primary-background);
+  color: var(--pico-primary-inverse);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 0.9em;
+  text-decoration: none;
+}
+
+/* Search result highlights */
+.notes-search-results mark {
+  background: var(--pico-mark-background-color, #ff0);
+  padding: 0 2px;
+}
+
+/* Notes section spacing */
+#notes-section {
+  margin-top: 1.5rem;
+}

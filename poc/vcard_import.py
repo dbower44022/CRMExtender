@@ -157,11 +157,16 @@ def extract_contact_data(vcard) -> dict | None:
         if child.name.upper() == "ADR":
             adr = child.value
             # vobject returns Address with box, extended, street, city, region, code, country
-            street = adr.street or ""
-            city = adr.city or ""
-            state = adr.region or ""
-            postal_code = adr.code or ""
-            country = adr.country or ""
+            # Some fields may be lists (e.g. multi-line street) — join with ", "
+            def _str(val):
+                if isinstance(val, list):
+                    return ", ".join(str(v) for v in val if v)
+                return val or ""
+            street = _str(adr.street)
+            city = _str(adr.city)
+            state = _str(adr.region)
+            postal_code = _str(adr.code)
+            country = _str(adr.country)
             if any([street, city, state, postal_code, country]):
                 types = child.params.get("TYPE", [])
                 addresses.append({

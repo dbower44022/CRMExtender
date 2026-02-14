@@ -505,7 +505,7 @@ class TestSyncScoping:
 
         with get_connection() as conn:
             company = conn.execute(
-                "SELECT * FROM companies WHERE name = 'New Corp'"
+                "SELECT * FROM companies WHERE name = 'newcorp.com'"
             ).fetchone()
             assert company is not None
             assert company["customer_id"] == CUST_A

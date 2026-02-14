@@ -1,0 +1,33 @@
+%% Flowchart for: poc/sync.py
+%% Function: _resolve_company_id(conn, email, now, *, customer_id, user_id)
+%% Brief: Domain-only company resolution — look up or auto-create by email domain
+
+flowchart TD
+    start(["_resolve_company_id(conn, email, now)"])
+    start --> extract_domain["Extract domain from email"]
+
+    extract_domain --> check_domain{Domain present\nand private?}
+    check_domain -->|"No domain / public\n(gmail, etc.)"| ret_none([Return None])
+    check_domain -->|Yes| lookup_domain[["resolve_company_by_domain(domain)"]]
+
+    lookup_domain --> found{Company\nfound?}
+    found -->|Yes| ret_existing([Return existing company ID])
+
+    found -->|No| create["Auto-create company\nname = domain, domain = domain"]
+    create --> check_user{user_id\nprovided?}
+    check_user -->|Yes| add_visibility["Insert user_companies\nvisibility row"]
+    check_user -->|No| register_domain
+    add_visibility --> register_domain[["ensure_domain_identifier(domain)"]]
+
+    register_domain --> ret_new([Return new company ID])
+
+    %% Styles
+    style start fill:#4a9eff,stroke:#2d7cd6,color:#fff
+    style ret_none fill:#ffa94d,stroke:#e67e22,color:#fff
+    style ret_existing fill:#51cf66,stroke:#2ecc71,color:#fff
+    style ret_new fill:#51cf66,stroke:#2ecc71,color:#fff
+    style check_domain fill:#fff3bf,stroke:#f59f00,color:#333
+    style found fill:#fff3bf,stroke:#f59f00,color:#333
+    style check_user fill:#fff3bf,stroke:#f59f00,color:#333
+    style lookup_domain fill:#e8f4fd,stroke:#4a9eff,color:#333
+    style register_domain fill:#e8f4fd,stroke:#4a9eff,color:#333

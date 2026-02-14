@@ -138,6 +138,14 @@ def _extract_meta(soup: BeautifulSoup) -> list[FieldValue]:
                 field_value=og_desc["content"].strip(),
                 confidence=0.6,
             ))
+    # og:site_name → company name
+    og_name = soup.find("meta", attrs={"property": "og:site_name"})
+    if og_name and og_name.get("content"):
+        results.append(FieldValue(
+            field_name="name",
+            field_value=og_name["content"].strip(),
+            confidence=0.8,
+        ))
     return results
 
 
@@ -169,6 +177,12 @@ def _extract_json_ld(soup: BeautifulSoup) -> list[FieldValue]:
             if item_type not in ("Organization", "LocalBusiness", "Corporation"):
                 continue
 
+            if item.get("name"):
+                results.append(FieldValue(
+                    field_name="name",
+                    field_value=str(item["name"]).strip(),
+                    confidence=0.9,
+                ))
             if item.get("description"):
                 results.append(FieldValue(
                     field_name="description",

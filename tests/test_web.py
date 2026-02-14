@@ -1529,21 +1529,14 @@ def _insert_company_social_profile(conn, profile_id, company_id, platform,
 
 
 class TestContactDetail:
-    def test_detail_shows_identifiers(self, client, tmp_db):
+    def test_detail_shows_email_identifiers(self, client, tmp_db):
         with get_connection() as conn:
             _insert_contact(conn, "ct-1", "Alice", "alice@example.com")
-            conn.execute(
-                "INSERT OR IGNORE INTO contact_identifiers "
-                "(id, contact_id, type, value, created_at, updated_at) "
-                "VALUES ('ci-extra', 'ct-1', 'linkedin', 'linkedin.com/alice', ?, ?)",
-                (_NOW, _NOW),
-            )
 
         resp = client.get("/contacts/ct-1")
         assert resp.status_code == 200
-        assert "Identifiers (2)" in resp.text
+        assert "Email Addresses (1)" in resp.text
         assert "alice@example.com" in resp.text
-        assert "linkedin.com/alice" in resp.text
 
     def test_detail_shows_phones(self, client, tmp_db):
         with get_connection() as conn:
@@ -1704,16 +1697,21 @@ class TestContactDetail:
             ).fetchall()
         assert len(rows) == 0
 
-    def test_detail_shows_emails(self, client, tmp_db):
+    def test_detail_shows_multiple_emails(self, client, tmp_db):
         with get_connection() as conn:
             _insert_contact(conn, "ct-1", "Alice", "alice@example.com")
-            _insert_email_address(conn, "em-1", "contact", "ct-1",
-                                  "alice@work.com", email_type="work")
+            conn.execute(
+                "INSERT OR IGNORE INTO contact_identifiers "
+                "(id, contact_id, type, value, label, created_at, updated_at) "
+                "VALUES ('ci-work', 'ct-1', 'email', 'alice@work.com', 'work', ?, ?)",
+                (_NOW, _NOW),
+            )
 
         resp = client.get("/contacts/ct-1")
         assert resp.status_code == 200
+        assert "Email Addresses (2)" in resp.text
         assert "alice@work.com" in resp.text
-        assert "Email Addresses" in resp.text
+        assert "alice@example.com" in resp.text
 
     def test_add_email_via_web(self, client, tmp_db):
         with get_connection() as conn:
@@ -1728,23 +1726,25 @@ class TestContactDetail:
 
         with get_connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM email_addresses WHERE entity_id = 'ct-1'"
+                "SELECT * FROM contact_identifiers "
+                "WHERE contact_id = 'ct-1' AND type = 'email'"
             ).fetchall()
-        assert len(rows) == 1
-        assert rows[0]["address"] == "alice@corp.com"
+        assert len(rows) == 2  # original + new
+        values = {r["value"] for r in rows}
+        assert "alice@corp.com" in values
 
     def test_remove_email_via_web(self, client, tmp_db):
         with get_connection() as conn:
             _insert_contact(conn, "ct-1", "Alice", "alice@example.com")
-            _insert_email_address(conn, "em-1", "contact", "ct-1",
-                                  "alice@work.com")
 
-        resp = client.delete("/contacts/ct-1/emails/em-1")
+        # Remove the email identifier created by _insert_contact
+        resp = client.delete("/contacts/ct-1/emails/ci-ct-1")
         assert resp.status_code == 200
 
         with get_connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM email_addresses WHERE entity_id = 'ct-1'"
+                "SELECT * FROM contact_identifiers "
+                "WHERE contact_id = 'ct-1' AND type = 'email'"
             ).fetchall()
         assert len(rows) == 0
 

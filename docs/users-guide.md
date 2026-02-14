@@ -229,8 +229,11 @@ python -m poc show-hierarchy
 ```
 
 Companies track the organizations your contacts belong to.  During
-contact sync, company records are auto-created from Google Contacts
-organization data.  You can also manage them manually:
+contact sync, company records are auto-created from email domains
+(e.g., a contact with `alice@acme.com` creates a company named
+"acme.com").  Newly created companies are then batch-enriched by
+scraping their websites to discover real names.  You can also manage
+them manually:
 
 - `create-company` — register a company with optional domain and industry
 - `list-companies` — display all companies sorted alphabetically
@@ -272,15 +275,16 @@ python3 -m poc resolve-domains [--dry-run]
 ```
 
 Links unlinked contacts to companies by matching their email domain against
-known company domains.  Contacts whose `company_id` is NULL are checked
-against both `companies.domain` and `company_identifiers` (multi-domain
-support).  Public email providers (gmail.com, outlook.com, etc.) are
-skipped.
+known company domains.  Contacts with no affiliation in `contact_companies`
+are checked against both `companies.domain` and `company_identifiers`
+(multi-domain support).  Public email providers (gmail.com, outlook.com,
+etc.) are skipped.  Matched contacts receive an Employee affiliation
+(is_primary=1, is_current=1).
 
 This is useful as a backfill after importing contacts or adding new
 companies with domains.  During normal contact sync, domain resolution
-happens automatically as a fallback when the contact has no Google
-organization set.
+happens automatically — the email domain is the sole source of truth
+for company identity (the Google Contacts organization field is ignored).
 
 **Output:**
 
@@ -365,18 +369,78 @@ python3 -m poc score-contacts
 python3 -m poc score-contacts --contact alice@acme.com
 ```
 
-### `enrich-company`
+### `import-vcards`
 
 ```bash
-python3 -m poc enrich-company COMPANY_ID [--provider website_scraper]
+python3 -m poc import-vcards PATH [--recursive]
 ```
 
-Enriches a company record by scraping its website for metadata.  Requires
-the company to have a `domain` or `website` set.
+Imports contacts from vCard (.vcf) files exported from other systems
+(e.g., iMazing, Outlook, Apple Contacts).  The `PATH` argument can be
+a single `.vcf` file or a directory containing `.vcf` files.
 
-The scraper crawls up to three pages (homepage, /about, /contact) and
-extracts:
+**Import logic:**
 
+1. **Find files** — If a directory, globs for `*.vcf` (add `--recursive`
+   to scan subdirectories).
+2. **Parse** — Each file is parsed with the `vobject` library.  Multi-vCard
+   files (multiple `BEGIN:VCARD` blocks in one file) are supported.
+3. **Extract data** — Name (FN, fallback to N), emails, phones, addresses,
+   organization, and title are extracted.
+4. **Duplicate detection** — If any email in the vCard already exists in
+   `contact_identifiers`, the contact is skipped.
+5. **Create contact** — New contact with `source='vcard_import'`, plus
+   email identifiers, phone numbers (E.164 normalized), and addresses.
+6. **Company resolution** — Email domain is checked first via
+   `_resolve_company_id()` (auto-creates company from domain if needed).
+   If the email domain is public (gmail.com, etc.) and the vCard has an
+   ORG field, the company is looked up or created by name.
+7. **Affiliation** — Contact is affiliated with the resolved company using
+   the Employee role, with the vCard TITLE stored on the affiliation.
+
+**Output** shows a summary table with counts (files processed, contacts
+created, skipped duplicates, companies created, etc.) followed by a table
+of imported contacts.
+
+**Flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--recursive` | Scan subdirectories for .vcf files (default: current directory only) |
+
+**Example:**
+
+```bash
+# Import a single file
+python3 -m poc import-vcards "Vcard Files/Contact - Earl R. Reinke.vcf"
+
+# Import all .vcf files in a directory
+python3 -m poc import-vcards "Vcard Files/"
+
+# Import including subdirectories
+python3 -m poc import-vcards "Vcard Files/" --recursive
+```
+
+### `enrich-new-companies`
+
+```bash
+python3 -m poc enrich-new-companies
+```
+
+Batch-enriches all companies that have a `domain` set but no completed
+enrichment run.  This is run automatically at the end of every web UI
+sync (Dashboard > Sync Now), but can also be triggered manually via CLI.
+
+Companies with failed enrichment runs are retried on the next invocation
+(only `status='completed'` runs are excluded).  The built-in website
+scraper rate limiter runs at 2 req/sec, so a batch of ~166 companies
+takes about 4-5 minutes.
+
+The enrichment scraper extracts:
+
+- **Company name** — from JSON-LD `Organization.name` and `og:site_name`
+  meta tag.  Only overwrites the name if it's still a domain placeholder
+  (e.g., "acme.com" → "Acme Corporation").
 - **Meta tags** — description from `<meta>` and Open Graph tags
 - **Schema.org JSON-LD** — description, founding date, employee count,
   address, social links
@@ -384,9 +448,21 @@ extracts:
   GitHub
 - **Contact info** — phone numbers, email addresses
 
+### `enrich-company`
+
+```bash
+python3 -m poc enrich-company COMPANY_ID [--provider website_scraper]
+```
+
+Enriches a single company record by scraping its website for metadata.
+Requires the company to have a `domain` or `website` set.  Use
+`enrich-new-companies` for batch processing.
+
 Discovered fields are stored in the `enrichment_runs` / `enrichment_field_values`
 audit trail, then applied to the company record if confidence >= 0.7.  Existing
 values at a higher trust tier (e.g., manual edits) are not overwritten.
+Company names are only overwritten if the current name equals the domain
+(i.e., it's still a domain placeholder).
 
 **Flags:**
 
@@ -413,7 +489,7 @@ all CRM data:
   projects, topics, events) scoped to the user's organization, top 5
   companies and contacts by relationship strength score with inline
   bars, and recent conversations.  "Sync Now" syncs only the user's
-  own provider accounts.
+  own provider accounts, then batch-enriches any newly created companies.
 - **Conversations** — browse, search, filter by status/topic, view
   detail with messages and participants.  Only conversations from
   the user's provider accounts or explicitly shared conversations
@@ -425,7 +501,29 @@ all CRM data:
   bars in the list grid and in the detail sidebar with factor
   breakdown; "Refresh Score" button recomputes on demand.  Column
   headers (Name, Email, Company, Score) are clickable to sort; click
-  again to reverse direction.
+  again to reverse direction.  The contact detail page shows
+  type-specific sections: "Email Addresses" (backed by
+  `contact_identifiers` where `type='email'`), "Phone Numbers",
+  and "Addresses".  The generic "Identifiers" section has been
+  removed — email identifiers are displayed and managed directly in
+  the Email Addresses section with label (Work/Personal/General) and
+  primary indicator.  Adding a duplicate email shows a merge link.
+  **Merge contacts** by selecting 2+ checkboxes in the list and
+  clicking "Merge Selected", or via the "Merge these contacts?" link
+  that appears when adding an email that already belongs to another
+  contact.  The merge preview shows side-by-side cards with conflict
+  resolution for name and source.  All sub-entities (identifiers,
+  affiliations, conversations, relationships, events, phones,
+  addresses, emails, social profiles) are transferred to the
+  surviving contact.  Post-merge, email domains are resolved to
+  auto-create missing company affiliations.
+  **Import vCards** via the "Import vCards" button on the contacts
+  list page.  Enter a filesystem path to a `.vcf` file or directory,
+  optionally enable recursive subdirectory scanning, and click
+  Import.  The results page shows a summary of what was imported
+  (contacts created, duplicates skipped, companies created, phones
+  and addresses added) plus a table of imported contacts with links
+  to their detail pages.
 - **Companies** — create, search, delete, view contacts and
   relationships.  **All / My** toggle filters between all visible
   companies and only companies you own.  Domain-based contact linking
@@ -477,12 +575,23 @@ shared `contacts` table.  These contacts are used later to identify
 which conversation participants are people you know (vs. unknown
 addresses).  Contacts are global -- shared across all accounts.
 
-Company resolution happens in two steps: first, the contact's Google
-organization name is matched against existing company records (auto-
-creating if needed).  If the contact has no organization set, a domain
-fallback checks whether the contact's email domain matches any known
-company domain (via `companies.domain` and `company_identifiers`).
-Public email providers (gmail.com, outlook.com, etc.) are skipped.
+Company resolution uses the **email domain as the sole source of truth**
+for company identity — the Google Contacts organization name field is
+ignored (it's hand-entered, often stale, and sometimes wrong).  For each
+contact, the email domain is extracted (e.g., `alice@acme.com` →
+`acme.com`).  If a company already exists with that domain, the contact
+is affiliated with it.  Otherwise, a new company is auto-created with
+`name = domain` and `domain = domain` (e.g., name "acme.com").  Public
+email providers (gmail.com, outlook.com, etc.) are skipped — contacts
+with only public-domain emails get no company affiliation.  Affiliations
+are created in the `contact_companies` junction table with the Employee
+role.  Duplicate affiliations are prevented by a NULL-safe unique index.
+
+After all accounts are synced, newly created companies (those with a
+domain but no completed enrichment run) are batch-enriched by scraping
+their websites to discover real company names, descriptions, social
+profiles, and contact info.  Domain-placeholder names (e.g., "acme.com")
+are replaced with the real company name found on the website.
 
 ### Stage 3 -- Email Sync
 
@@ -622,7 +731,12 @@ CRMExtender/
     summarizer.py                 # Claude AI summarization
     sync.py                       # Sync orchestration
     triage.py                     # Heuristic junk filtering
+    contact_merge.py              # Contact merge logic (preview, execute, audit)
+    contact_companies.py          # Contact-company affiliation CRUD
+    contact_company_roles.py      # Contact-company role type CRUD
+    company_merge.py              # Company merge logic (preview, execute, audit)
     domain_resolver.py            # Domain-to-company resolution logic
+    vcard_import.py               # vCard (.vcf) file import
     website_scraper.py            # Website scraper enrichment provider
     session.py                    # Session CRUD (create, get, delete, cleanup)
     settings.py                   # Settings CRUD with 4-level cascade resolution
@@ -639,6 +753,8 @@ CRMExtender/
     phone_utils.py                # Phone normalization (E.164), formatting, validation
     migrate_to_v8.py              # Migration: v7 to v8 (multi-user)
     migrate_to_v9.py              # Migration: v8 to v9 (phone normalization)
+    migrate_to_v10.py             # Migration: v9 to v10 (multi-company affiliations)
+    migrate_to_v11.py             # Migration: v10 to v11 (affiliation dedup)
     web/                          # Web UI (FastAPI + HTMX)
       app.py                      # Application factory (AuthTemplates, middleware)
       middleware.py               # AuthMiddleware (session validation, bypass mode)
@@ -655,10 +771,13 @@ CRMExtender/
         events.py                 # Event routes (list, detail, create, sync)
         communications.py         # Communications routes (list, detail, archive, assign)
         settings_routes.py        # Settings routes (profile, system, users, calendars)
+        contact_company_roles.py  # Contact-company role settings routes
       templates/                  # Jinja2 templates
         login.html                # Standalone login page
       static/                     # CSS, JS, and static assets
         dates.js                  # Client-side timezone formatting
+        contact_merge.js          # Contact merge checkbox tracking
+        communications.js         # Communications bulk actions
   .env                            # Environment variables (you create)
   .env.example                    # Template for .env
 ```
@@ -901,6 +1020,55 @@ are left as-is with a warning logged.
 ```bash
 python3 -m poc.migrate_to_v9 --dry-run
 python3 -m poc.migrate_to_v9
+```
+
+### `migrate-to-v10` (v9 → v10: multi-company affiliations)
+
+Replaces the single `contacts.company_id` foreign key with a many-to-many
+`contact_companies` junction table, enabling contacts to have multiple
+company affiliations with roles, titles, departments, and date ranges.
+
+Creates two new tables:
+
+- **`contact_company_roles`** — Role type definitions with 8 system
+  defaults (Employee, Contractor, Volunteer, Advisor, Board Member,
+  Investor, Founder, Intern).
+- **`contact_companies`** — Junction table (contact_id, company_id,
+  role_id, title, department, is_primary, is_current, started_at,
+  ended_at, notes, source).
+
+Migrates existing `contacts.company_id` values into `contact_companies`
+rows (is_primary=1, is_current=1, role=Employee), then rebuilds the
+contacts table without the `company_id` and `company` columns.  Also
+removes the `rt-employee` relationship type (replaced by affiliations).
+
+```bash
+python3 -m poc.migrate_to_v10 --dry-run
+python3 -m poc.migrate_to_v10
+```
+
+### `migrate-to-v11` (v10 → v11: affiliation dedup)
+
+Deduplicates `contact_companies` rows created by a SQLite UNIQUE
+constraint limitation: SQLite treats each NULL as distinct, so the
+original `UNIQUE(contact_id, company_id, role_id, started_at)` never
+prevented duplicate rows when `role_id` and `started_at` were NULL.
+
+Steps:
+
+1. **Dedup exact duplicates** — Groups rows by
+   `(contact_id, company_id, COALESCE(role_id, ''), COALESCE(started_at, ''))`,
+   keeps the earliest per group, deletes the rest.
+2. **Remove redundant NULL-role rows** — When a contact has both a
+   NULL-role affiliation and an explicit-role affiliation (e.g., Employee)
+   for the same company, the NULL-role row is removed.
+3. **Create NULL-safe unique index** —
+   `idx_cc_dedup ON contact_companies(contact_id, company_id, COALESCE(role_id, ''), COALESCE(started_at, ''))`.
+   This prevents future duplicates even when role_id or started_at are NULL.
+
+```bash
+python3 -m poc.migrate_to_v11 --dry-run
+python3 -m poc.migrate_to_v11
 ```
 
 All migration scripts create a timestamped backup before making changes

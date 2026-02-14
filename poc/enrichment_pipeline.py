@@ -29,7 +29,7 @@ AUTO_ACCEPT_THRESHOLD = 0.7
 
 # Direct company fields that map straight to update_company()
 DIRECT_FIELDS = {
-    "description", "industry", "website", "stock_symbol", "size_range",
+    "name", "description", "industry", "website", "stock_symbol", "size_range",
     "employee_count", "founded_year", "revenue_range", "funding_total",
     "funding_stage", "headquarters_location",
 }
@@ -181,6 +181,10 @@ def _should_accept(
     current = entity.get(field_name)
     if not current:
         return True
+
+    # For name: only overwrite domain-placeholder names (where name == domain)
+    if field_name == "name":
+        return current == entity.get("domain")
 
     # For now we accept if the field is a direct field and confidence is high enough
     # In future, we'd look up the previous enrichment source tier
@@ -401,3 +405,46 @@ def _run_single_provider(
         "fields_applied": applied,
         "error": None,
     }
+
+
+# ---------------------------------------------------------------------------
+# Batch enrichment for newly-created companies
+# ---------------------------------------------------------------------------
+
+def enrich_new_companies() -> dict:
+    """Find companies with a domain but no completed enrichment run, and enrich them.
+
+    Failed enrichment runs are retried (only ``status='completed'`` is excluded).
+
+    Returns a stats dict: ``{"found": N, "enriched": N, "failed": N}``.
+    """
+    # Import here to trigger provider auto-registration
+    from . import website_scraper  # noqa: F401
+
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT c.* FROM companies c
+               WHERE c.status = 'active'
+                 AND c.domain IS NOT NULL AND c.domain != ''
+                 AND c.id NOT IN (
+                     SELECT DISTINCT entity_id FROM enrichment_runs
+                     WHERE entity_type = 'company' AND status = 'completed'
+                 )""",
+        ).fetchall()
+
+    companies = [dict(r) for r in rows]
+    stats = {"found": len(companies), "enriched": 0, "failed": 0}
+
+    for company in companies:
+        result = execute_enrichment("company", company["id"])
+        if result["status"] == "completed":
+            stats["enriched"] += 1
+        else:
+            stats["failed"] += 1
+            log.warning(
+                "Enrichment failed for %s (%s): %s",
+                company["name"], company["id"], result.get("error"),
+            )
+
+    log.info("Batch enrichment complete: %s", stats)
+    return stats

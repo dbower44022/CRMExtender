@@ -602,3 +602,135 @@ class TestWebEnrich:
             )
             assert resp.status_code == 303
             assert f"/companies/{sample_company['id']}" in resp.headers.get("location", "")
+
+
+# ===========================================================================
+# Name extraction tests
+# ===========================================================================
+
+class TestNameExtraction:
+    def test_extract_json_ld_name(self):
+        """JSON-LD Organization.name is extracted."""
+        from poc.website_scraper import _extract_json_ld
+        from bs4 import BeautifulSoup
+        ld_data = json.dumps({
+            "@type": "Organization",
+            "name": "Acme Corporation",
+        })
+        html = f'<html><head><script type="application/ld+json">{ld_data}</script></head></html>'
+        soup = BeautifulSoup(html, "lxml")
+        results = _extract_json_ld(soup)
+        name_fv = next((fv for fv in results if fv.field_name == "name"), None)
+        assert name_fv is not None
+        assert name_fv.field_value == "Acme Corporation"
+        assert name_fv.confidence == 0.9
+
+    def test_extract_meta_og_site_name(self):
+        """og:site_name is extracted as company name."""
+        from poc.website_scraper import _extract_meta
+        from bs4 import BeautifulSoup
+        html = '<html><head><meta property="og:site_name" content="Acme Corp"></head></html>'
+        soup = BeautifulSoup(html, "lxml")
+        results = _extract_meta(soup)
+        name_fv = next((fv for fv in results if fv.field_name == "name"), None)
+        assert name_fv is not None
+        assert name_fv.field_value == "Acme Corp"
+        assert name_fv.confidence == 0.8
+
+    def test_name_not_overwritten_when_real(self, sample_company):
+        """Company with a real name should NOT be overwritten by enrichment."""
+        provider = MockProvider(field_values=[
+            FieldValue("name", "New Name Inc", 0.9),
+        ])
+        register_provider(provider)
+
+        result = execute_enrichment("company", sample_company["id"], "mock_provider")
+        assert result["status"] == "completed"
+        assert result["fields_applied"] == 0
+
+        company = get_company(sample_company["id"])
+        assert company["name"] == "Acme Corp"
+
+    def test_name_overwritten_when_domain_placeholder(self, tmp_db):
+        """Company whose name equals its domain (placeholder) gets name overwritten."""
+        company = create_company("acme.com", domain="acme.com",
+                                 customer_id="cust-test")
+
+        provider = MockProvider(field_values=[
+            FieldValue("name", "Acme Corporation", 0.9),
+        ])
+        register_provider(provider)
+
+        result = execute_enrichment("company", company["id"], "mock_provider")
+        assert result["status"] == "completed"
+        assert result["fields_applied"] == 1
+
+        updated = get_company(company["id"])
+        assert updated["name"] == "Acme Corporation"
+
+
+# ===========================================================================
+# Batch enrichment tests
+# ===========================================================================
+
+class TestEnrichNewCompanies:
+    def test_finds_unenriched(self, tmp_db):
+        """Batch enrichment finds companies with domain but no completed run."""
+        from poc.enrichment_pipeline import enrich_new_companies
+
+        company = create_company("example.com", domain="example.com",
+                                 customer_id="cust-test")
+
+        with patch("poc.enrichment_pipeline.execute_enrichment") as mock_exec:
+            mock_exec.return_value = {
+                "run_id": "r1", "status": "completed",
+                "fields_discovered": 1, "fields_applied": 1, "error": None,
+            }
+            stats = enrich_new_companies()
+
+        assert stats["found"] >= 1
+        assert stats["enriched"] >= 1
+        mock_exec.assert_called()
+
+    def test_skips_completed(self, tmp_db):
+        """Companies with a completed enrichment run are skipped."""
+        from poc.enrichment_pipeline import enrich_new_companies
+
+        company = create_company("example.com", domain="example.com",
+                                 customer_id="cust-test")
+
+        # Create a completed enrichment run
+        from poc.enrichment_pipeline import create_enrichment_run, _update_run_status
+        run = create_enrichment_run("company", company["id"], "website_scraper")
+        _update_run_status(run["id"], "running")
+        _update_run_status(run["id"], "completed")
+
+        with patch("poc.enrichment_pipeline.execute_enrichment") as mock_exec:
+            stats = enrich_new_companies()
+
+        # Should not call execute_enrichment for this company
+        assert stats["found"] == 0
+        mock_exec.assert_not_called()
+
+    def test_retries_failed(self, tmp_db):
+        """Companies with only failed enrichment runs get retried."""
+        from poc.enrichment_pipeline import enrich_new_companies
+
+        company = create_company("example.com", domain="example.com",
+                                 customer_id="cust-test")
+
+        # Create a failed enrichment run
+        from poc.enrichment_pipeline import create_enrichment_run, _update_run_status
+        run = create_enrichment_run("company", company["id"], "website_scraper")
+        _update_run_status(run["id"], "running")
+        _update_run_status(run["id"], "failed", "timeout")
+
+        with patch("poc.enrichment_pipeline.execute_enrichment") as mock_exec:
+            mock_exec.return_value = {
+                "run_id": "r2", "status": "completed",
+                "fields_discovered": 1, "fields_applied": 1, "error": None,
+            }
+            stats = enrich_new_companies()
+
+        assert stats["found"] >= 1
+        mock_exec.assert_called()

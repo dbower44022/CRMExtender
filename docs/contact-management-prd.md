@@ -161,7 +161,7 @@ CRMExtender closes this gap by making contacts **living intelligence objects** �
 | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | CM-12 | As a user, I want the system to automatically detect when two contact records refer to the same person and merge them, so I don't have duplicate records. | High-confidence matches (email or LinkedIn URL match) auto-merge. Medium-confidence matches auto-merge with review flag. Low-confidence matches queued for human review.                        |
 | CM-13 | As a user, I want to review suggested merges and approve or reject them, so the system doesn't merge contacts incorrectly.                                | Review queue UI showing candidate pairs with match signals, confidence score, and side-by-side comparison. Approve/reject actions with one click.                                               |
-| CM-14 | As a user, I want to manually merge two contacts when I notice duplicates, so I can clean up my data.                                                     | Manual merge UI with field-level conflict resolution. Pick the preferred value for each conflicting field. All identifiers, communications, and relationships transfer to the surviving record. |
+| CM-14 | As a user, I want to manually merge two contacts when I notice duplicates, so I can clean up my data.                                                     | **Implemented.** Merge UI at `/contacts/merge` with conflict resolution for name and source. All identifiers, affiliations, communications, relationships, events, phones, addresses, emails, and social profiles transfer to the surviving record. Post-merge domain resolution auto-creates missing company affiliations. Audit trail in `contact_merges` table. Entry points: list checkboxes and identifier-conflict merge link. |
 | CM-15 | As a user, I want to split a contact that was incorrectly merged, so I can undo a bad merge.                                                              | Split action restores original records from event history. Communications re-linked to the correct contact. Merge event reversed in audit trail.                                                |
 | CM-16 | As a user, I want to configure the auto-merge confidence threshold, so I can balance automation vs. review volume for my team's data quality needs.       | Tenant-level settings for high/medium/low confidence thresholds. Changes apply to future matches only, not retroactive.                                                                         |
 
@@ -452,7 +452,9 @@ INSERT INTO employment_history (id, contact_id, company_id, company_name, is_cur
 VALUES (:id, :contact_id, :company_id, 'acmecorp.com', 1, 'email_domain');
 ```
 
-**Free email provider exclusion:** The system maintains a list of free email providers (`gmail.com`, `yahoo.com`, `hotmail.com`, `outlook.com`, etc.) that are excluded from company-domain resolution. An email from `sarah@gmail.com` does not create a "gmail.com" company.
+**Free email provider exclusion:** The system maintains a list of free email providers (`gmail.com`, `yahoo.com`, `hotmail.com`, `outlook.com`, etc.) that are excluded from company-domain resolution. An email from `sarah@gmail.com` does not create a "gmail.com" company. Contacts with only public-domain emails receive no company affiliation.
+
+**Domain-only resolution (implemented):** The Google Contacts organization name field is ignored during sync — the email domain is the sole source of truth for company identity. This prevents misattribution when Google org names are stale or inconsistent (e.g., a contact's org field says "Ulmer & Berne LLP" but their email domain is `dbllaw.com`). Auto-created companies are initially named after their domain (e.g., "acme.com"); a batch website enrichment step scrapes the company's homepage to discover the real name (from JSON-LD `Organization.name` or `og:site_name`). The enrichment pipeline only overwrites the name when it's still a domain placeholder — manually-entered or previously-enriched names are preserved.
 
 ### 6.3 Company-to-Company Relationships (Neo4j)
 
@@ -625,27 +627,66 @@ Preserves the original data from each source before merge. Enables split (undo m
 
 ### 7.6 Merge & Split Semantics
 
-**Merge execution:**
+> **Implementation status:** Contact merge is fully implemented in `poc/contact_merge.py`.
+> Split (undo merge) is not yet implemented.
 
-1. Select the **survivor** contact (typically the record with the higher intelligence score, or the older record if scores are equal).
-2. Transfer all `contact_identifiers` from the duplicate to the survivor.
-3. Transfer all `contact_emails`, `contact_phones`, `contact_social_profiles`, `contact_addresses`, `contact_key_dates` from the duplicate to the survivor.
-4. Transfer all `employment_history` records, resolving temporal overlaps.
-5. Update all `communication_participants.contact_id` references.
-6. Update all `conversation_participants.contact_id` references.
-7. Update all `notes.contact_id`, `deals` contact associations, and any other FK references.
-8. Merge Neo4j graph nodes: transfer all edges from the duplicate node to the survivor node.
-9. Set the duplicate contact's `status='merged'` (soft delete — record preserved for audit).
-10. Emit `ContactsMerged` event with full details for the event store.
-11. Log the merge in `entity_match_candidates` with `status='approved'` or `status='auto_merged'`.
+**Entry points:**
 
-**Split execution (undo merge):**
+1. **List selection** — Select 2+ contacts via checkboxes on the Contacts list, click "Merge Selected".
+2. **Identifier conflict** — When adding an email in the Email Addresses section that belongs to another contact, the error message includes a "Merge these contacts?" link. (The generic Identifiers section has been removed from the contact detail page — email identifiers are managed via the type-specific Email Addresses section, backed by `contact_identifiers` where `type='email'`.)
 
-1. Replay `entity_source_records` for the merged entity to reconstruct original records.
-2. Create a new contact record for the split-off entity.
-3. Re-assign identifiers, communications, and relationships based on source record attribution.
-4. Emit `ContactsSplit` event.
-5. Update the original `entity_match_candidates` record with `status='rejected'`.
+**Merge preview** (`GET /contacts/merge?ids=X&ids=Y`):
+
+- Side-by-side contact cards with per-contact counts (identifiers, affiliations, conversations, relationships, events, phones, addresses, emails, social profiles).
+- Conflict resolution: radio buttons for `name` and `source` when distinct values exist across contacts.
+- Radio buttons to designate the surviving contact (which ID persists).
+- Combined/deduplicated totals showing the merged result.
+
+**Merge execution** (`POST /contacts/merge/confirm`):
+
+1. User designates the **survivor** contact via radio button selection.
+2. All absorbed contacts are processed in a single SQLite transaction.
+3. For each absorbed contact:
+   a. Snapshot the absorbed contact and all sub-entities as JSON (audit trail).
+   b. Transfer and deduplicate `contact_identifiers` (DELETE conflicts by type+value, UPDATE rest).
+   c. Transfer and deduplicate `contact_companies` affiliations (DELETE conflicts by company_id+role_id+started_at, UPDATE rest).
+   d. Transfer and deduplicate `contact_social_profiles` (DELETE conflicts by platform+profile_url, UPDATE rest).
+   e. Reassign `conversation_participants` (SET contact_id = surviving).
+   f. Reassign `communication_participants` (SET contact_id = surviving).
+   g. Transfer and deduplicate `relationships` (bidirectional pairs, delete self-referential, fix paired_relationship_id).
+   h. Reassign `event_participants` (entity_type='contact').
+   i. Transfer entity-agnostic tables (`phone_numbers`, `addresses`, `email_addresses`), deduplicate phones by normalized number.
+   j. Transfer `user_contacts` visibility (INSERT OR IGNORE).
+   k. Transfer `enrichment_runs`, delete `entity_scores` for absorbed.
+   l. Re-point prior `contact_merges` audit records.
+   m. DELETE absorbed contact (CASCADE handles remaining child rows).
+   n. Write audit record to `contact_merges` table.
+4. Apply chosen field values (`name`, `source`) on the surviving contact.
+5. **Post-merge domain resolution:** Resolve email domains from all merged identifiers and auto-create missing company affiliations via `domain_resolver`. This handles the common case where two contacts from different companies are merged — both affiliations are preserved.
+6. Redirect to the surviving contact's detail page.
+
+**Audit table** (`contact_merges`):
+
+| Column | Type | Description |
+| --- | --- | --- |
+| `id` | TEXT PK | UUID |
+| `surviving_contact_id` | TEXT FK | Contact that persists |
+| `absorbed_contact_id` | TEXT | Contact that was deleted |
+| `absorbed_contact_snapshot` | TEXT | Full JSON snapshot before deletion |
+| `identifiers_transferred` | INTEGER | Count of identifiers moved |
+| `affiliations_transferred` | INTEGER | Count of affiliations moved |
+| `conversations_reassigned` | INTEGER | Count of conversations reassigned |
+| `relationships_reassigned` | INTEGER | Count of relationships moved |
+| `events_reassigned` | INTEGER | Count of event participations moved |
+| `relationships_deduplicated` | INTEGER | Count of duplicate relationships removed |
+| `merged_by` | TEXT FK | User who performed the merge |
+| `merged_at` | TEXT | ISO 8601 timestamp |
+
+**Affiliation dedup during merge:** The merge deduplicates affiliations using `(company_id, COALESCE(role_id, ''), COALESCE(started_at, ''))` tuple comparison, so NULL roles and start dates are treated as equal. This matches the database-level `idx_cc_dedup` NULL-safe unique index (added in v11). After merge, email domain resolution auto-creates any missing affiliations for the surviving contact's email domains.
+
+**Contact list primary email:** When a contact has multiple email identifiers (common after merges), the contacts list uses a correlated subquery to display the primary email (`ORDER BY is_primary DESC, created_at ASC LIMIT 1`) rather than relying on `GROUP BY` which picks arbitrarily.
+
+**Split execution (undo merge):** Not yet implemented. The `absorbed_contact_snapshot` JSON preserves enough data for future reconstruction.
 
 ---
 
@@ -1049,7 +1090,7 @@ Suggested tags appear with a "suggested" badge. Users can accept (promoting to `
 | Format                  | Source                                   | Capabilities                                                                         |
 | ----------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------ |
 | **CSV**                 | Any CRM, spreadsheet                     | Column mapping UI. Supports name, email, phone, company, title, tags, custom fields. |
-| **vCard 3.0/4.0**       | Apple Contacts, Outlook, Google (export) | Standard contact interchange. Multi-value fields (multiple emails/phones) supported. |
+| **vCard 3.0/4.0**       | Apple Contacts, Outlook, Google (export) | Standard contact interchange. Multi-value fields (multiple emails/phones) supported. **Implemented** — `poc/vcard_import.py`, web UI at `/contacts/import`, CLI `import-vcards`. |
 | **Google Contacts API** | Google account                           | OAuth-based live sync. Ongoing incremental sync supported.                           |
 | **LinkedIn CSV**        | LinkedIn export                          | Structured export with name, company, title, email, connected date.                  |
 
@@ -1588,17 +1629,17 @@ Queued writes are displayed with a "pending" indicator. On reconnect, the queue 
 
 | Feature                        | Priority | Description                                        |
 | ------------------------------ | -------- | -------------------------------------------------- |
-| Enrichment engine              | P0       | Pluggable adapter framework, enrichment dispatcher |
+| Enrichment engine              | P0       | **Implemented.** Pluggable provider framework (`poc/enrichment_provider.py`, `poc/enrichment_pipeline.py`). Website scraper provider extracts name, description, social profiles, phones, emails from company websites. Batch enrichment via `enrich_new_companies()`. |
 | Apollo adapter                 | P0       | First enrichment integration                       |
 | Clearbit adapter               | P1       | Second enrichment integration                      |
 | People Data Labs adapter       | P2       | Third enrichment integration                       |
-| Auto-enrichment on creation    | P0       | Background enrichment for new contacts             |
+| Auto-enrichment on creation    | P0       | **Partially implemented.** Batch website enrichment runs after each sync, enriching companies with domains but no completed enrichment run. Company names are auto-populated from website metadata (JSON-LD, og:site_name). |
 | Intelligence score             | P0       | Computed score based on data completeness          |
 | Entity resolution pipeline     | P0       | Tiered matching, confidence scoring, pipeline      |
 | Auto-merge (high confidence)   | P0       | Automatic merge for exact identifier matches       |
 | Auto-merge (medium confidence) | P0       | Merge with review flag                             |
 | Human review queue             | P0       | UI for reviewing merge candidates                  |
-| Manual merge                   | P1       | User-initiated merge with conflict resolution      |
+| Manual merge                   | P1       | **Implemented.** User-initiated merge with conflict resolution (`poc/contact_merge.py`). Multi-contact merge, audit trail, post-merge domain resolution. |
 | Split (undo merge)             | P1       | Reverse a bad merge from event history             |
 | Configurable thresholds        | P2       | Tenant-level merge confidence settings             |
 | Browser extension (LinkedIn)   | P1       | Chrome/Firefox extension for LinkedIn capture      |

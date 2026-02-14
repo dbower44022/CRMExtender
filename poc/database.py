@@ -541,6 +541,22 @@ CREATE TABLE IF NOT EXISTS company_merges (
     merged_at                  TEXT NOT NULL
 );
 
+-- Contact merges audit log
+CREATE TABLE IF NOT EXISTS contact_merges (
+    id                         TEXT PRIMARY KEY,
+    surviving_contact_id       TEXT NOT NULL REFERENCES contacts(id),
+    absorbed_contact_id        TEXT NOT NULL,
+    absorbed_contact_snapshot  TEXT NOT NULL,
+    identifiers_transferred    INTEGER DEFAULT 0,
+    affiliations_transferred   INTEGER DEFAULT 0,
+    conversations_reassigned   INTEGER DEFAULT 0,
+    relationships_reassigned   INTEGER DEFAULT 0,
+    events_reassigned          INTEGER DEFAULT 0,
+    relationships_deduplicated INTEGER DEFAULT 0,
+    merged_by                  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    merged_at                  TEXT NOT NULL
+);
+
 -- Company social profiles
 CREATE TABLE IF NOT EXISTS company_social_profiles (
     id              TEXT PRIMARY KEY,
@@ -861,6 +877,14 @@ CREATE INDEX IF NOT EXISTS idx_ch_type               ON company_hierarchy(hierar
 -- Company merges
 CREATE INDEX IF NOT EXISTS idx_cm_surviving          ON company_merges(surviving_company_id);
 CREATE INDEX IF NOT EXISTS idx_cm_absorbed           ON company_merges(absorbed_company_id);
+
+-- Contact merges
+CREATE INDEX IF NOT EXISTS idx_ctm_surviving         ON contact_merges(surviving_contact_id);
+CREATE INDEX IF NOT EXISTS idx_ctm_absorbed          ON contact_merges(absorbed_contact_id);
+
+-- Contact-company affiliation dedup (NULL-safe; SQLite UNIQUE treats NULLs as distinct)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cc_dedup
+    ON contact_companies(contact_id, company_id, COALESCE(role_id, ''), COALESCE(started_at, ''));
 
 -- Company social profiles
 CREATE INDEX IF NOT EXISTS idx_csp_company           ON company_social_profiles(company_id);

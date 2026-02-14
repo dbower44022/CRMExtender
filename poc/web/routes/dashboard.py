@@ -229,6 +229,15 @@ def sync_now(request: Request):
             log.warning("Processing failed for %s: %s", email_addr, exc)
             errors.append(f"{email_addr}: processing failed ({exc})")
 
+    # Batch-enrich companies that have a domain but no completed enrichment run
+    total_enriched = 0
+    try:
+        from ...enrichment_pipeline import enrich_new_companies
+        enrich_result = enrich_new_companies()
+        total_enriched = enrich_result.get("enriched", 0)
+    except Exception as exc:
+        errors.append(f"batch enrichment failed ({exc})")
+
     parts = [
         f"Synced {len(accounts)} account(s):",
         f"{total_contacts} contacts,",
@@ -236,6 +245,8 @@ def sync_now(request: Request):
         f"{total_triaged} triaged,",
         f"{total_summarized} summarized.",
     ]
+    if total_enriched:
+        parts.append(f"{total_enriched} companies enriched.")
     summary = " ".join(parts)
 
     if errors:

@@ -127,7 +127,7 @@ def resolve_unlinked_contacts(*, dry_run: bool = False) -> DomainResolveResult:
 
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT c.id AS contact_id, c.name AS contact_name, ci.value AS email "
+            "SELECT c.id AS contact_id, c.customer_id, c.name AS contact_name, ci.value AS email "
             "FROM contacts c "
             "JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email' "
             "LEFT JOIN contact_companies cc ON cc.contact_id = c.id "
@@ -165,13 +165,20 @@ def resolve_unlinked_contacts(*, dry_run: bool = False) -> DomainResolveResult:
 
             if not dry_run:
                 import uuid as _uuid
+                # Use default Employee role for the customer
+                emp_role = conn.execute(
+                    "SELECT id FROM contact_company_roles "
+                    "WHERE name = 'Employee' AND customer_id = ?",
+                    (row["customer_id"],),
+                ).fetchone()
+                emp_role_id = emp_role["id"] if emp_role else None
                 conn.execute(
                     """INSERT OR IGNORE INTO contact_companies
-                       (id, contact_id, company_id, is_primary, is_current,
+                       (id, contact_id, company_id, role_id, is_primary, is_current,
                         source, created_at, updated_at)
-                       VALUES (?, ?, ?, 1, 1, 'domain_resolver', ?, ?)""",
+                       VALUES (?, ?, ?, ?, 1, 1, 'domain_resolver', ?, ?)""",
                     (str(_uuid.uuid4()), row["contact_id"], company["id"],
-                     now, now),
+                     emp_role_id, now, now),
                 )
 
     return result

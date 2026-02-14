@@ -5,8 +5,8 @@
 <h1>Contacts <small>({{ total }})</small></h1>
 
 {% set sc = scope|default('all', true) %}
-<div style="margin-bottom: 1rem;">
-  <div class="grid" style="max-width: 200px;">
+<div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
+  <div class="grid" style="max-width: 200px; margin-bottom: 0;">
     <a href="/contacts?scope=all" role="button"
        class="{{ 'secondary' if sc == 'mine' else '' }}"
        style="padding: .4rem .8rem; font-size: .85rem;">All</a>
@@ -14,6 +14,14 @@
        class="{{ 'secondary' if sc != 'mine' else '' }}"
        style="padding: .4rem .8rem; font-size: .85rem;">Mine</a>
   </div>
+  <a href="/contacts/import" role="button" class="outline"
+     style="padding: .4rem .8rem; font-size: .85rem;">Import vCards</a>
+</div>
+
+<div id="merge-toolbar" style="display:none; margin-bottom:1rem;">
+  <button onclick="mergeSelected()" class="contrast" style="padding:.4rem 1rem;font-size:.85rem;">
+    Merge Selected (<span id="merge-count">0</span>)
+  </button>
 </div>
 
 <div class="search-bar">
@@ -30,4 +38,6 @@
 <div id="results">
   {% include "contacts/_rows.html" %}
 </div>
+
+<script src="/static/contact_merge.js"></script>
 {% endblock %}

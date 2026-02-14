@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Merge Contacts — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Merge Contacts</h1>
+
+<nav aria-label="breadcrumb">
+  <ul>
+    <li><a href="/contacts">Contacts</a></li>
+    <li>Merge</li>
+  </ul>
+</nav>
+
+{% if error %}
+<article class="flash-error">
+  <p>{{ error }}</p>
+</article>
+{% endif %}
+
+{% if preview %}
+{# ---- Contact cards ---- #}
+<div class="grid">
+  {% for c in preview.contacts %}
+  <article>
+    <header>{{ c.name or '(unnamed)' }}</header>
+    <dl class="detail-sidebar">
+      <dt>Source</dt><dd>{{ c.source or '—' }}</dd>
+      <dt>Identifiers</dt><dd>{{ c.identifier_count }}</dd>
+      <dt>Affiliations</dt><dd>{{ c.affiliation_count }}</dd>
+      <dt>Conversations</dt><dd>{{ c.conversation_count }}</dd>
+      <dt>Relationships</dt><dd>{{ c.relationship_count }}</dd>
+    </dl>
+    {% if c.identifiers %}
+    <h6>Identifiers</h6>
+    <ul>
+      {% for ident in c.identifiers %}
+      <li><small>{{ ident.type }}: {{ ident.value }}</small></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if c.affiliations %}
+    <h6>Affiliations</h6>
+    <ul>
+      {% for aff in c.affiliations %}
+      <li><small>{{ aff.company_name }}{% if aff.role_name %} ({{ aff.role_name }}){% endif %}</small></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+
+{# ---- Merge impact ---- #}
+<article>
+  <header>Merge Impact</header>
+  <table>
+    <tbody>
+      <tr><td>Identifiers (combined, deduplicated)</td>
+          <td>{{ preview.totals.identifiers }} &rarr; {{ preview.totals.combined_identifiers }}</td></tr>
+      <tr><td>Affiliations (combined, deduplicated)</td>
+          <td>{{ preview.totals.affiliations }} &rarr; {{ preview.totals.combined_affiliations }}</td></tr>
+      <tr><td>Conversations to reassign</td><td>{{ preview.totals.conversations }}</td></tr>
+      <tr><td>Relationships to reassign</td><td>{{ preview.totals.relationships }}</td></tr>
+      <tr><td>Event participations to reassign</td><td>{{ preview.totals.events }}</td></tr>
+      <tr><td>Phone numbers to transfer</td><td>{{ preview.totals.phones }}</td></tr>
+      <tr><td>Addresses to transfer</td><td>{{ preview.totals.addresses }}</td></tr>
+      <tr><td>Email addresses to transfer</td><td>{{ preview.totals.emails }}</td></tr>
+      <tr><td>Social profiles to transfer</td><td>{{ preview.totals.social_profiles }}</td></tr>
+    </tbody>
+  </table>
+</article>
+
+{# ---- Confirm form ---- #}
+<form method="post" action="/contacts/merge/confirm">
+  <fieldset>
+    <legend>Choose surviving contact</legend>
+    {% for c in preview.contacts %}
+    <label>
+      <input type="radio" name="surviving_id" value="{{ c.id }}"
+             {% if loop.first %}checked{% endif %}>
+      Keep <strong>{{ c.name or '(unnamed)' }}</strong>
+    </label>
+    {% endfor %}
+  </fieldset>
+
+  {% if preview.conflicts.name|length > 1 %}
+  <fieldset>
+    <legend>Choose name</legend>
+    {% for name in preview.conflicts.name %}
+    <label>
+      <input type="radio" name="chosen_name" value="{{ name }}"
+             {% if loop.first %}checked{% endif %}>
+      {{ name }}
+    </label>
+    {% endfor %}
+  </fieldset>
+  {% endif %}
+
+  {% if preview.conflicts.source|length > 1 %}
+  <fieldset>
+    <legend>Choose source</legend>
+    {% for src in preview.conflicts.source %}
+    <label>
+      <input type="radio" name="chosen_source" value="{{ src }}"
+             {% if loop.first %}checked{% endif %}>
+      {{ src }}
+    </label>
+    {% endfor %}
+  </fieldset>
+  {% endif %}
+
+  {% for c in preview.contacts %}
+  <input type="hidden" name="contact_ids" value="{{ c.id }}">
+  {% endfor %}
+
+  <button type="submit" class="contrast">Confirm Merge</button>
+  <a href="/contacts" role="button" class="outline" style="margin-left:.5rem;">Cancel</a>
+</form>
+{% endif %}
+
+{% endblock %}

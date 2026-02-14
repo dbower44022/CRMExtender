@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...access import my_contacts_query, visible_contacts_query
@@ -17,7 +17,6 @@ from ...hierarchy import (
     add_contact_identifier, get_contact_identifiers, remove_contact_identifier,
     add_phone_number, get_phone_numbers, remove_phone_number,
     add_address, get_addresses, remove_address,
-    add_email_address, get_email_addresses, remove_email_address,
 )
 
 router = APIRouter()
@@ -81,7 +80,11 @@ def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
 
         offset = (page - 1) * per_page
         rows = conn.execute(
-            f"""SELECT c.*, ci.value AS email,
+            f"""SELECT c.*,
+                       (SELECT ci2.value FROM contact_identifiers ci2
+                        WHERE ci2.contact_id = c.id AND ci2.type = 'email'
+                        ORDER BY ci2.is_primary DESC, ci2.created_at ASC
+                        LIMIT 1) AS email,
                        co.name AS company_name, co.id AS company_id,
                        es.score_value AS score
                 FROM contacts c
@@ -94,6 +97,7 @@ def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
                  AND es.entity_id = c.id
                  AND es.score_type = 'relationship_strength'
                 {where}
+                GROUP BY c.id
                 ORDER BY {order}
                 LIMIT ? OFFSET ?""",
             params + [per_page, offset],
@@ -146,6 +150,107 @@ def contact_search(request: Request, q: str = "", page: int = 1,
         "q": q,
         "sort": sort,
         "scope": scope,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Merge
+# ---------------------------------------------------------------------------
+
+@router.get("/merge", response_class=HTMLResponse)
+def contact_merge_preview(request: Request, ids: list[str] = Query(default=[])):
+    from ...contact_merge import get_contact_merge_preview
+    templates = request.app.state.templates
+
+    if len(ids) < 2:
+        return RedirectResponse("/contacts", status_code=303)
+
+    try:
+        preview = get_contact_merge_preview(ids)
+    except ValueError as exc:
+        return RedirectResponse(f"/contacts?error={exc}", status_code=303)
+
+    return templates.TemplateResponse(request, "contacts/merge.html", {
+        "active_nav": "contacts",
+        "preview": preview,
+    })
+
+
+@router.post("/merge/confirm", response_class=HTMLResponse)
+async def contact_merge_confirm(request: Request):
+    from ...contact_merge import merge_contacts
+
+    form_data = await request.form()
+    surviving_id = form_data.get("surviving_id", "")
+    chosen_name = form_data.get("chosen_name", "")
+    chosen_source = form_data.get("chosen_source", "")
+    all_ids = form_data.getlist("contact_ids")
+
+    if not surviving_id or not all_ids or surviving_id not in all_ids:
+        return RedirectResponse("/contacts", status_code=303)
+
+    absorbed_ids = [cid for cid in all_ids if cid != surviving_id]
+    user = request.state.user
+
+    try:
+        result = merge_contacts(
+            surviving_id, absorbed_ids,
+            merged_by=user["id"],
+            chosen_name=chosen_name or None,
+            chosen_source=chosen_source or None,
+        )
+    except ValueError as exc:
+        return RedirectResponse(f"/contacts?error={exc}", status_code=303)
+
+    if _is_htmx(request):
+        return HTMLResponse("", headers={"HX-Redirect": f"/contacts/{surviving_id}"})
+    return RedirectResponse(f"/contacts/{surviving_id}", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# vCard Import
+# ---------------------------------------------------------------------------
+
+@router.get("/import", response_class=HTMLResponse)
+def contact_import_form(request: Request):
+    templates = request.app.state.templates
+    return templates.TemplateResponse(request, "contacts/import.html", {
+        "active_nav": "contacts",
+    })
+
+
+@router.post("/import", response_class=HTMLResponse)
+async def contact_import(request: Request):
+    from ...vcard_import import import_vcards
+
+    templates = request.app.state.templates
+    form_data = await request.form()
+    path = form_data.get("path", "").strip()
+    recursive = form_data.get("recursive") == "1"
+
+    if not path:
+        return templates.TemplateResponse(request, "contacts/import.html", {
+            "active_nav": "contacts",
+            "error": "Please enter a file or directory path.",
+        })
+
+    user = request.state.user
+    cid = request.state.customer_id
+
+    try:
+        result = import_vcards(
+            path, recursive=recursive,
+            customer_id=cid, user_id=user["id"],
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        return templates.TemplateResponse(request, "contacts/import.html", {
+            "active_nav": "contacts",
+            "error": str(exc),
+        })
+
+    return templates.TemplateResponse(request, "contacts/import.html", {
+        "active_nav": "contacts",
+        "result": result,
     })
 
 
@@ -231,7 +336,7 @@ def contact_detail(request: Request, contact_id: str):
     all_roles = list_roles(customer_id=cid)
     phones = get_phone_numbers("contact", contact_id)
     addresses = get_addresses("contact", contact_id)
-    emails = get_email_addresses("contact", contact_id)
+    email_identifiers = [i for i in contact["identifiers"] if i["type"] == "email"]
     all_companies = list_companies(customer_id=cid)
 
     from ...phone_utils import resolve_country_code
@@ -247,10 +352,9 @@ def contact_detail(request: Request, contact_id: str):
         "all_roles": all_roles,
         "conversations": conversations,
         "relationships": relationships,
-        "identifiers": contact["identifiers"],
+        "email_identifiers": email_identifiers,
         "phones": phones,
         "addresses": addresses,
-        "emails": emails,
         "social_profiles": social_profiles,
         "all_companies": all_companies,
         "score_data": score_data,
@@ -350,7 +454,9 @@ def contact_add_identifier(
         identifiers = get_contact_identifiers(contact_id)
         error = f"That {type} is already assigned to "
         if existing:
-            error += f'<a href="/contacts/{existing["contact_id"]}">{existing["name"]}</a>'
+            other_id = existing["contact_id"]
+            error += f'<a href="/contacts/{other_id}">{existing["name"]}</a>'
+            error += f' &mdash; <a href="/contacts/merge?ids={contact_id}&ids={other_id}">Merge these contacts?</a>'
         else:
             error += "another contact"
         return templates.TemplateResponse(request, "contacts/_identifiers.html", {
@@ -483,14 +589,32 @@ def contact_add_email(
     email_type: str = Form("general"),
     address: str = Form(...),
 ):
+    import sqlite3
     templates = request.app.state.templates
-    add_email_address("contact", contact_id, address, email_type=email_type)
-    emails = get_email_addresses("contact", contact_id)
+    error = None
+    try:
+        add_contact_identifier(contact_id, "email", address, label=email_type)
+    except sqlite3.IntegrityError:
+        with get_connection() as conn:
+            existing = conn.execute(
+                "SELECT ci.contact_id, c.name FROM contact_identifiers ci "
+                "JOIN contacts c ON c.id = ci.contact_id "
+                "WHERE ci.type = 'email' AND ci.value = ?",
+                (address,),
+            ).fetchone()
+        error = "That email is already assigned to "
+        if existing:
+            other_id = existing["contact_id"]
+            error += f'<a href="/contacts/{other_id}">{existing["name"]}</a>'
+            error += f' &mdash; <a href="/contacts/merge?ids={contact_id}&ids={other_id}">Merge these contacts?</a>'
+        else:
+            error += "another contact"
+    email_identifiers = [i for i in get_contact_identifiers(contact_id) if i["type"] == "email"]
 
-    return templates.TemplateResponse(request, "contacts/_emails.html", {
-        "contact": {"id": contact_id},
-        "emails": emails,
-    })
+    ctx = {"contact": {"id": contact_id}, "email_identifiers": email_identifiers}
+    if error:
+        ctx["email_error"] = error
+    return templates.TemplateResponse(request, "contacts/_emails.html", ctx)
 
 
 @router.delete("/{contact_id}/emails/{email_id}", response_class=HTMLResponse)
@@ -498,12 +622,12 @@ def contact_remove_email(
     request: Request, contact_id: str, email_id: str,
 ):
     templates = request.app.state.templates
-    remove_email_address(email_id)
-    emails = get_email_addresses("contact", contact_id)
+    remove_contact_identifier(email_id)
+    email_identifiers = [i for i in get_contact_identifiers(contact_id) if i["type"] == "email"]
 
     return templates.TemplateResponse(request, "contacts/_emails.html", {
         "contact": {"id": contact_id},
-        "emails": emails,
+        "email_identifiers": email_identifiers,
     })
 
 

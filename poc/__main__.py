@@ -16,6 +16,8 @@ Usage:
     python -m poc score-contacts             # score contacts for relationship strength
     python -m poc scan-duplicates            # scan for duplicate companies by domain
     python -m poc merge-companies ID1 ID2    # merge two companies
+    python -m poc import-vcards PATH          # import contacts from vCard files
+    python -m poc enrich-new-companies       # batch enrich companies with domains
 """
 
 from __future__ import annotations
@@ -1186,6 +1188,25 @@ def cmd_merge_companies(args: argparse.Namespace) -> None:
     console.print(f"  Merge ID: {result['merge_id']}")
 
 
+def cmd_enrich_new_companies(args: argparse.Namespace) -> None:
+    """Batch-enrich companies that have a domain but no completed enrichment run."""
+    # Import triggers provider registration
+    from . import website_scraper  # noqa: F401
+    from .enrichment_pipeline import enrich_new_companies
+
+    init_db()
+    console.print("\n[bold]Enriching new companies...[/bold]")
+
+    stats = enrich_new_companies()
+
+    console.print(
+        f"\n[bold green]Batch enrichment complete.[/bold green]\n"
+        f"  Found: {stats['found']}\n"
+        f"  Enriched: {stats['enriched']}\n"
+        f"  Failed: {stats['failed']}"
+    )
+
+
 def cmd_enrich_company(args: argparse.Namespace) -> None:
     """Enrich a company using a provider."""
     # Import triggers provider registration
@@ -1213,6 +1234,75 @@ def cmd_enrich_company(args: argparse.Namespace) -> None:
     else:
         console.print(f"\n[red]Enrichment failed:[/red] {result.get('error', 'unknown')}")
         sys.exit(1)
+
+
+def cmd_import_vcards(args: argparse.Namespace) -> None:
+    """Import contacts from vCard (.vcf) files."""
+    from .hierarchy import get_current_user
+    from .vcard_import import import_vcards
+
+    init_db()
+    user = get_current_user()
+    customer_id = user["customer_id"] if user else None
+    user_id = user["id"] if user else None
+
+    console.print(f"\n[bold]Importing vCards from:[/bold] {args.path}")
+    if args.recursive:
+        console.print("  Scanning subdirectories: [cyan]yes[/cyan]")
+
+    try:
+        result = import_vcards(
+            args.path, recursive=args.recursive,
+            customer_id=customer_id, user_id=user_id,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"\n[red]Error:[/red] {exc}")
+        sys.exit(1)
+
+    console.print(
+        f"\n[bold green]Import complete.[/bold green]\n"
+        f"  Files processed: {result.files_processed}\n"
+        f"  vCards parsed: {result.vcards_parsed}\n"
+        f"  [green]Contacts created: {result.contacts_created}[/green]\n"
+        f"  Skipped (duplicate): {result.contacts_skipped_duplicate}\n"
+        f"  Skipped (no name): {result.contacts_skipped_no_name}\n"
+        f"  Companies created: {result.companies_created}\n"
+        f"  Affiliations created: {result.affiliations_created}\n"
+        f"  Emails added: {result.emails_added}\n"
+        f"  Phones added: {result.phones_added}\n"
+        f"  Addresses added: {result.addresses_added}"
+    )
+
+    if result.invalid_files:
+        console.print(f"\n[yellow]Invalid files ({len(result.invalid_files)}):[/yellow]")
+        for f in result.invalid_files:
+            console.print(f"  {f}")
+
+    if result.errors:
+        console.print(f"\n[yellow]Errors ({len(result.errors)}):[/yellow]")
+        for e in result.errors:
+            console.print(f"  {e}")
+
+    if result.imported_contacts:
+        table = Table(title="Imported Contacts")
+        table.add_column("Name", style="bold")
+        table.add_column("Email")
+        table.add_column("Company")
+
+        for c in result.imported_contacts[:50]:
+            table.add_row(
+                c["name"],
+                ", ".join(c["emails"]) if c["emails"] else "",
+                c.get("company") or "",
+            )
+
+        console.print()
+        console.print(table)
+        if len(result.imported_contacts) > 50:
+            console.print(
+                f"  ... and {len(result.imported_contacts) - 50} more"
+            )
+        console.print()
 
 
 def cmd_reauth(args: argparse.Namespace) -> None:
@@ -1417,6 +1507,16 @@ def build_parser() -> argparse.ArgumentParser:
     mc.add_argument("absorbed_id", help="ID of the company to absorb and delete")
     mc.add_argument("--dry-run", action="store_true", help="Preview without applying")
 
+    # import-vcards
+    iv = sub.add_parser("import-vcards", help="Import contacts from vCard (.vcf) files")
+    iv.add_argument("path", help="Path to a .vcf file or directory of .vcf files")
+    iv.add_argument("--recursive", action="store_true",
+                    help="Scan subdirectories for .vcf files")
+
+    # enrich-new-companies
+    sub.add_parser("enrich-new-companies",
+                   help="Batch-enrich companies with domains but no completed enrichment")
+
     # enrich-company
     ec = sub.add_parser("enrich-company", help="Enrich a company from external sources")
     ec.add_argument("company_id", help="Company ID to enrich")
@@ -1494,6 +1594,8 @@ def main() -> None:
         "show-hierarchy": cmd_show_hierarchy,
         "list-relationship-types": cmd_list_relationship_types,
         "resolve-domains": cmd_resolve_domains,
+        "import-vcards": cmd_import_vcards,
+        "enrich-new-companies": cmd_enrich_new_companies,
         "enrich-company": cmd_enrich_company,
         "scan-duplicates": cmd_scan_duplicates,
         "merge-companies": cmd_merge_companies,

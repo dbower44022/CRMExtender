@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Import vCards — CRM Extender{% endblock %}
+
+{% block content %}
+<h1>Import vCards</h1>
+
+<nav aria-label="breadcrumb">
+  <ul>
+    <li><a href="/contacts">Contacts</a></li>
+    <li>Import vCards</li>
+  </ul>
+</nav>
+
+{% if error %}
+<article class="flash-error">
+  <p>{{ error }}</p>
+</article>
+{% endif %}
+
+{% if not result %}
+{# ---- Import form ---- #}
+<article>
+  <form method="post" action="/contacts/import">
+    <label for="path">File or directory path</label>
+    <input type="text" id="path" name="path" placeholder="/path/to/contacts.vcf or /path/to/directory/" required>
+    <label>
+      <input type="checkbox" name="recursive" value="1">
+      Scan subdirectories
+    </label>
+    <div style="margin-top:1rem;">
+      <button type="submit">Import</button>
+      <a href="/contacts" role="button" class="outline" style="margin-left:.5rem;">Cancel</a>
+    </div>
+  </form>
+</article>
+{% else %}
+{# ---- Results ---- #}
+<article>
+  <header>Import Summary</header>
+  <table>
+    <tbody>
+      <tr><td>Files processed</td><td>{{ result.files_processed }}</td></tr>
+      <tr><td>vCards parsed</td><td>{{ result.vcards_parsed }}</td></tr>
+      <tr><td>Contacts created</td><td><strong>{{ result.contacts_created }}</strong></td></tr>
+      <tr><td>Skipped (duplicate email)</td><td>{{ result.contacts_skipped_duplicate }}</td></tr>
+      <tr><td>Skipped (no name)</td><td>{{ result.contacts_skipped_no_name }}</td></tr>
+      <tr><td>Companies created</td><td>{{ result.companies_created }}</td></tr>
+      <tr><td>Affiliations created</td><td>{{ result.affiliations_created }}</td></tr>
+      <tr><td>Emails added</td><td>{{ result.emails_added }}</td></tr>
+      <tr><td>Phones added</td><td>{{ result.phones_added }}</td></tr>
+      <tr><td>Addresses added</td><td>{{ result.addresses_added }}</td></tr>
+    </tbody>
+  </table>
+</article>
+
+{% if result.invalid_files %}
+<article>
+  <header>Invalid Files</header>
+  <ul>
+    {% for f in result.invalid_files %}
+    <li>{{ f }}</li>
+    {% endfor %}
+  </ul>
+</article>
+{% endif %}
+
+{% if result.errors %}
+<article>
+  <header>Errors</header>
+  <ul>
+    {% for e in result.errors %}
+    <li>{{ e }}</li>
+    {% endfor %}
+  </ul>
+</article>
+{% endif %}
+
+{% if result.imported_contacts %}
+<article>
+  <header>Imported Contacts ({{ result.imported_contacts|length }})</header>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Company</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in result.imported_contacts %}
+      <tr>
+        <td><a href="/contacts/{{ c.id }}">{{ c.name }}</a></td>
+        <td>{{ c.emails|join(', ') }}</td>
+        <td>{{ c.company }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</article>
+{% endif %}
+
+<a href="/contacts" role="button">Back to Contacts</a>
+<a href="/contacts/import" role="button" class="outline" style="margin-left:.5rem;">Import More</a>
+{% endif %}
+
+{% endblock %}

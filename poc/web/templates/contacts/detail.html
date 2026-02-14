@@ -33,8 +33,6 @@
 
     {% include "contacts/_affiliations.html" %}
 
-    {% include "contacts/_identifiers.html" %}
-
     {% include "contacts/_phones.html" %}
 
     {% include "contacts/_emails.html" %}
@@ -51,8 +49,8 @@
            style="float:right;padding:4px 12px;font-size:.85em;">Edit</a>
       </header>
       <dl class="detail-sidebar">
-        {% for ident in contact.identifiers %}
-        <dt>{{ ident.type|title }}</dt>
+        {% for ident in email_identifiers %}
+        <dt>Email</dt>
         <dd>{{ ident.value }}{% if ident.is_primary %} <small>(primary)</small>{% endif %}</dd>
         {% endfor %}
 

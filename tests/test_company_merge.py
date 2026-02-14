@@ -766,34 +766,54 @@ class TestMergeWebRoutes:
 # ---------------------------------------------------------------------------
 
 class TestSyncDuplicateDetection:
-    """Verify that _resolve_company_id uses domain matching to prevent duplicates."""
+    """Verify that _resolve_company_id uses domain-only resolution."""
 
-    def test_domain_match_prevents_duplicate(self, tmp_db):
-        """Company exists with domain acme.com — contact with different org name
-        but same email domain should resolve to existing company, not create a new one."""
+    def test_domain_match_finds_existing(self, tmp_db):
+        """Email domain matches existing company — returns it."""
         from poc.sync import _resolve_company_id
 
         with get_connection() as conn:
             _insert_company(conn, "c1", "Acme Corp", "acme.com")
             _insert_identifier(conn, "c1", "acme.com")
 
-            result = _resolve_company_id(conn, "Acme Inc", "bob@acme.com", _NOW)
+            result = _resolve_company_id(conn, "bob@acme.com", _NOW)
 
         assert result == "c1"
-        # No new company should have been created
-        with get_connection() as conn:
-            count = conn.execute("SELECT COUNT(*) FROM companies").fetchone()[0]
-        assert count == 1
 
-    def test_auto_create_adds_domain_identifier(self, tmp_db):
-        """When a new company is auto-created, its email domain should be
-        registered in company_identifiers for future lookups."""
+    def test_auto_create_with_domain_name(self, tmp_db):
+        """No matching company — creates one named after the domain."""
         from poc.sync import _resolve_company_id
 
         with get_connection() as conn:
-            company_id = _resolve_company_id(conn, "NewCo", "alice@newco.io", _NOW)
+            result = _resolve_company_id(conn, "alice@newco.io", _NOW)
 
-        assert company_id is not None
+        assert result is not None
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT name FROM companies WHERE id = ?", (result,)
+            ).fetchone()
+        assert row["name"] == "newco.io"
+
+    def test_auto_create_sets_domain_column(self, tmp_db):
+        """Auto-created company has domain field set."""
+        from poc.sync import _resolve_company_id
+
+        with get_connection() as conn:
+            result = _resolve_company_id(conn, "alice@newco.io", _NOW)
+
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT domain FROM companies WHERE id = ?", (result,)
+            ).fetchone()
+        assert row["domain"] == "newco.io"
+
+    def test_auto_create_adds_domain_identifier(self, tmp_db):
+        """Auto-created company gets a company_identifiers domain row."""
+        from poc.sync import _resolve_company_id
+
+        with get_connection() as conn:
+            company_id = _resolve_company_id(conn, "alice@newco.io", _NOW)
+
         with get_connection() as conn:
             row = conn.execute(
                 "SELECT * FROM company_identifiers WHERE company_id = ? AND type = 'domain'",
@@ -802,42 +822,62 @@ class TestSyncDuplicateDetection:
         assert row is not None
         assert row["value"] == "newco.io"
 
-    def test_public_domain_no_identifier(self, tmp_db):
-        """Contact with a public domain email (gmail.com) should NOT get a
-        domain identifier added to the newly created company."""
+    def test_public_domain_returns_none(self, tmp_db):
+        """Public-domain email (gmail.com) returns None — no company."""
         from poc.sync import _resolve_company_id
 
         with get_connection() as conn:
-            company_id = _resolve_company_id(conn, "SomeCo", "user@gmail.com", _NOW)
-
-        assert company_id is not None
-        with get_connection() as conn:
-            row = conn.execute(
-                "SELECT * FROM company_identifiers WHERE company_id = ?",
-                (company_id,),
-            ).fetchone()
-        assert row is None
-
-    def test_exact_name_match_still_preferred(self, tmp_db):
-        """When the company name matches exactly, that company is returned even
-        if the domain could match a different company."""
-        from poc.sync import _resolve_company_id
-
-        with get_connection() as conn:
-            _insert_company(conn, "c1", "Alpha LLC", "alpha.com")
-            _insert_identifier(conn, "c1", "alpha.com")
-            _insert_company(conn, "c2", "Beta Inc", "beta.com")
-
-            # Name matches c2 exactly, even though email domain matches c1
-            result = _resolve_company_id(conn, "Beta Inc", "info@alpha.com", _NOW)
-
-        assert result == "c2"
-
-    def test_empty_company_name_returns_none(self, tmp_db):
-        """Empty company name should return None (existing behaviour)."""
-        from poc.sync import _resolve_company_id
-
-        with get_connection() as conn:
-            result = _resolve_company_id(conn, "", "user@example.com", _NOW)
+            result = _resolve_company_id(conn, "user@gmail.com", _NOW)
 
         assert result is None
+
+    def test_no_email_returns_none(self, tmp_db):
+        """Empty email returns None."""
+        from poc.sync import _resolve_company_id
+
+        with get_connection() as conn:
+            result = _resolve_company_id(conn, "", _NOW)
+
+        assert result is None
+
+    def test_second_contact_same_domain_reuses_company(self, tmp_db):
+        """Two contacts with the same domain don't create duplicate companies."""
+        from poc.sync import _resolve_company_id
+
+        with get_connection() as conn:
+            r1 = _resolve_company_id(conn, "alice@acme.com", _NOW)
+            r2 = _resolve_company_id(conn, "bob@acme.com", _NOW)
+
+        assert r1 == r2
+        with get_connection() as conn:
+            count = conn.execute("SELECT COUNT(*) FROM companies").fetchone()[0]
+        assert count == 1
+
+    def test_different_domains_create_separate_companies(self, tmp_db):
+        """Different domains create separate companies."""
+        from poc.sync import _resolve_company_id
+
+        with get_connection() as conn:
+            r1 = _resolve_company_id(conn, "alice@foo.com", _NOW)
+            r2 = _resolve_company_id(conn, "bob@bar.com", _NOW)
+
+        assert r1 != r2
+        with get_connection() as conn:
+            count = conn.execute("SELECT COUNT(*) FROM companies").fetchone()[0]
+        assert count == 2
+
+    def test_auto_create_with_user_id_creates_visibility(self, tmp_db):
+        """user_companies row created when user_id is provided."""
+        from poc.sync import _resolve_company_id
+
+        with get_connection() as conn:
+            company_id = _resolve_company_id(
+                conn, "alice@newco.io", _NOW, user_id="user-test",
+            )
+
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM user_companies WHERE user_id = 'user-test' AND company_id = ?",
+                (company_id,),
+            ).fetchone()
+        assert row is not None

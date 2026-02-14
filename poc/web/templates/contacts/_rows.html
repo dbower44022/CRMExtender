@@ -5,6 +5,7 @@
 <table>
   <thead>
     <tr>
+      <th style="width:2rem;"><input type="checkbox" id="select-all"></th>
       <th><a hx-get="/contacts/search?q={{ q_enc }}&sort={% if s == 'name' %}-name{% else %}name{% endif %}&scope={{ sc }}"
              hx-target="#results" href="/contacts?q={{ q_enc }}&sort={% if s == 'name' %}-name{% else %}name{% endif %}&scope={{ sc }}"
              style="text-decoration:none;color:inherit;cursor:pointer;">Name{% if s == 'name' %} &#9650;{% elif s == '-name' %} &#9660;{% endif %}</a></th>
@@ -23,6 +24,7 @@
   <tbody>
     {% for c in contacts %}
     <tr>
+      <td><input type="checkbox" class="contact-check" value="{{ c.id }}"></td>
       <td><a href="/contacts/{{ c.id }}">{{ c.name or '(unnamed)' }}</a></td>
       <td>{{ c.email or '' }}</td>
       <td>

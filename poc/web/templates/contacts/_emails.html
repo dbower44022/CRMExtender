@@ -1,21 +1,23 @@
 <div id="emails-section">
-  <h2>Email Addresses ({{ emails|length }})</h2>
-  {% if emails %}
+  <h2>Email Addresses ({{ email_identifiers|length }})</h2>
+  {% if email_identifiers %}
   <table>
     <thead>
       <tr>
-        <th>Type</th>
         <th>Address</th>
+        <th>Label</th>
+        <th>Primary</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
-      {% for em in emails %}
+      {% for ident in email_identifiers %}
       <tr>
-        <td>{{ em.email_type }}</td>
-        <td>{{ em.address }}</td>
+        <td>{{ ident.value }}</td>
+        <td>{{ ident.label or '' }}</td>
+        <td>{% if ident.is_primary %}Yes{% endif %}</td>
         <td>
-          <button hx-delete="/contacts/{{ contact.id }}/emails/{{ em.id }}"
+          <button hx-delete="/contacts/{{ contact.id }}/emails/{{ ident.id }}"
                   hx-target="#emails-section" hx-swap="outerHTML"
                   hx-confirm="Remove this email address?" class="outline"
                   style="padding:4px 10px;font-size:.85em;">Remove</button>
@@ -26,6 +28,10 @@
   </table>
   {% else %}
   <p class="empty-state">No email addresses.</p>
+  {% endif %}
+
+  {% if email_error %}
+  <p style="color:var(--pico-del-color);">{{ email_error | safe }}</p>
   {% endif %}
 
   <form hx-post="/contacts/{{ contact.id }}/emails"

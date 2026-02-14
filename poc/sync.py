@@ -38,7 +38,6 @@ from .domain_resolver import (
     extract_domain,
     is_public_domain,
     resolve_company_by_domain,
-    resolve_company_for_email,
 )
 from .rate_limiter import RateLimiter
 from .summarizer import summarize_conversation
@@ -114,43 +113,34 @@ def get_all_accounts() -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def _resolve_company_id(
-    conn, company_name: str, email: str, now: str,
+    conn, email: str, now: str,
     *, customer_id: str | None = None, user_id: str | None = None,
 ) -> str | None:
-    """Look up or auto-create a company by name. Returns company_id or None.
+    """Look up or auto-create a company by email domain. Returns company_id or None.
 
-    Resolution order:
-    1. Exact name match in ``companies.name``
-    2. Domain match via ``resolve_company_by_domain`` (prevents duplicates)
-    3. Auto-create and register domain identifier
+    Uses the email domain as the sole source of truth for company identity.
+    Public-domain emails (gmail.com, etc.) return None — no company affiliation.
+
+    Resolution:
+    1. Extract domain; return None for public/no domain
+    2. Domain match via ``resolve_company_by_domain`` — return if found
+    3. Auto-create company named after the domain
     """
-    if not company_name:
+    domain = extract_domain(email) if email else None
+    if not domain or is_public_domain(domain):
         return None
 
-    row = conn.execute(
-        "SELECT id FROM companies WHERE name = ?", (company_name,)
-    ).fetchone()
-    if row:
-        return row["id"]
+    # Step 1: look up existing company by domain
+    company = resolve_company_by_domain(conn, domain)
+    if company:
+        return company["id"]
 
-    # Try domain match before auto-creating (prevents duplicates like
-    # "Acme Corp" vs "Acme Inc" when both share acme.com).
-    domain = extract_domain(email) if email else None
-    if domain and not is_public_domain(domain):
-        company = resolve_company_by_domain(conn, domain)
-        if company:
-            log.info(
-                "Domain match: contact org %r matched existing company %r via %s",
-                company_name, company["name"], domain,
-            )
-            return company["id"]
-
-    # Auto-create
+    # Step 2: auto-create company named after the domain
     company_id = str(uuid.uuid4())
     conn.execute(
-        """INSERT INTO companies (id, name, status, customer_id, created_at, updated_at)
-           VALUES (?, ?, 'active', ?, ?, ?)""",
-        (company_id, company_name, customer_id, now, now),
+        """INSERT INTO companies (id, name, domain, status, customer_id, created_at, updated_at)
+           VALUES (?, ?, ?, 'active', ?, ?, ?)""",
+        (company_id, domain, domain, customer_id, now, now),
     )
 
     # Create user_companies linkage
@@ -162,9 +152,8 @@ def _resolve_company_id(
             (str(uuid.uuid4()), user_id, company_id, now, now),
         )
 
-    # Register email domain so future contacts with the same domain resolve here.
-    if domain and not is_public_domain(domain):
-        ensure_domain_identifier(conn, company_id, domain)
+    # Register email domain identifier
+    ensure_domain_identifier(conn, company_id, domain)
 
     return company_id
 
@@ -188,15 +177,9 @@ def sync_contacts(
         for kc in contacts:
             email_lower = kc.email.lower()
             company_id = _resolve_company_id(
-                conn, kc.company, kc.email, now,
+                conn, kc.email, now,
                 customer_id=customer_id, user_id=user_id,
             )
-
-            # Domain fallback: if Google org was empty, try matching by email domain
-            if company_id is None:
-                company = resolve_company_for_email(conn, email_lower)
-                if company:
-                    company_id = company["id"]
 
             # Check if identifier already exists
             existing = conn.execute(
@@ -238,12 +221,19 @@ def sync_contacts(
 
             # Create affiliation if company resolved
             if company_id:
+                # Use default Employee role for the customer
+                emp_role = conn.execute(
+                    "SELECT id FROM contact_company_roles "
+                    "WHERE name = 'Employee' AND customer_id = ?",
+                    (customer_id,),
+                ).fetchone()
+                emp_role_id = emp_role["id"] if emp_role else None
                 conn.execute(
                     """INSERT OR IGNORE INTO contact_companies
-                       (id, contact_id, company_id, is_primary, is_current,
+                       (id, contact_id, company_id, role_id, is_primary, is_current,
                         source, created_at, updated_at)
-                       VALUES (?, ?, ?, 1, 1, 'sync', ?, ?)""",
-                    (str(uuid.uuid4()), contact_id, company_id, now, now),
+                       VALUES (?, ?, ?, ?, 1, 1, 'sync', ?, ?)""",
+                    (str(uuid.uuid4()), contact_id, company_id, emp_role_id, now, now),
                 )
 
             count += 1
@@ -304,15 +294,17 @@ def _store_thread(
     for em in thread_emails:
         em.body_plain = strip_quotes(em.body_plain, em.body_html or None)
 
-    # Check if conversation already exists via communications + conversation_communications
+    # Check if conversation already exists via communications + conversation_communications.
+    # Search by provider_thread_id across ALL accounts so that the same Gmail thread
+    # synced from multiple accounts merges into a single conversation.
     existing = conn.execute(
         """SELECT cc.conversation_id, conv.communication_count
            FROM communications c
            JOIN conversation_communications cc ON cc.communication_id = c.id
            JOIN conversations conv ON conv.id = cc.conversation_id
-           WHERE c.account_id = ? AND c.provider_thread_id = ?
+           WHERE c.provider_thread_id = ?
            LIMIT 1""",
-        (account_id, thread_id),
+        (thread_id,),
     ).fetchone()
 
     # Compute date range

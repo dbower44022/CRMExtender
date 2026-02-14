@@ -718,6 +718,24 @@ END:VCARD
         assert result2.contacts_created == 1
         assert result2.contacts_skipped_duplicate == 0
 
+    def test_import_skips_duplicate_by_name_when_phone_unnormalizable(self, tmp_db, tmp_path):
+        """Contact with unnormalizable phone falls through to name match."""
+        vcf_text = """\
+BEGIN:VCARD
+VERSION:3.0
+FN:Gerrit Kraaijeveld
+TEL;TYPE=HOME:31-77-352-0553
+END:VCARD
+"""
+        vcf = _make_vcf(tmp_path / "unnorm.vcf", vcf_text)
+
+        result1 = import_vcards(vcf, customer_id=CUST_ID, user_id=USER_ID)
+        assert result1.contacts_created == 1
+
+        result2 = import_vcards(vcf, customer_id=CUST_ID, user_id=USER_ID)
+        assert result2.contacts_created == 0
+        assert result2.contacts_skipped_duplicate == 1
+
     def test_import_affiliation_has_title(self, tmp_db, tmp_path):
         vcf = _make_vcf(tmp_path / "test.vcf", """\
 BEGIN:VCARD

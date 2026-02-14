@@ -307,6 +307,7 @@ def _is_duplicate(data: dict, customer_id: str | None) -> bool:
                 return True
 
         # Tier 2: Normalized phone match
+        phone_checked = False
         if phones and not emails:
             from .phone_utils import normalize_phone, resolve_country_code
 
@@ -314,6 +315,7 @@ def _is_duplicate(data: dict, customer_id: str | None) -> bool:
             for phone in phones:
                 normalized = normalize_phone(phone["number"], country)
                 if normalized:
+                    phone_checked = True
                     existing = conn.execute(
                         "SELECT pn.entity_id FROM phone_numbers pn "
                         "JOIN contacts c ON c.id = pn.entity_id "
@@ -324,8 +326,8 @@ def _is_duplicate(data: dict, customer_id: str | None) -> bool:
                     if existing:
                         return True
 
-        # Tier 3: Exact name match (fallback for no-email, no-phone contacts)
-        if not emails and not phones:
+        # Tier 3: Exact name match (fallback when no unique identifiers matched)
+        if not emails and not phone_checked:
             existing = conn.execute(
                 "SELECT id FROM contacts WHERE name = ? AND customer_id = ?",
                 (data["name"], customer_id),

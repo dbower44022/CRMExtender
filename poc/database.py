@@ -790,14 +790,11 @@ CREATE TABLE IF NOT EXISTS settings (
     updated_at          TEXT NOT NULL
 );
 
--- Notes (entity-agnostic, follows addresses/phone_numbers pattern)
+-- Notes (entity links live in note_entities junction table)
 CREATE TABLE IF NOT EXISTS notes (
     id                  TEXT PRIMARY KEY,
     customer_id         TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
-    entity_type         TEXT NOT NULL CHECK (entity_type IN ('contact','company','conversation','event','project')),
-    entity_id           TEXT NOT NULL,
     title               TEXT,
-    is_pinned           INTEGER NOT NULL DEFAULT 0,
     current_revision_id TEXT,
     created_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
@@ -837,6 +834,16 @@ CREATE TABLE IF NOT EXISTS note_mentions (
     mention_type TEXT NOT NULL CHECK (mention_type IN ('user','contact','company','conversation','event','project')),
     mentioned_id TEXT NOT NULL,
     created_at   TEXT NOT NULL
+);
+
+-- Note-entity junction (allows linking a note to multiple entities)
+CREATE TABLE IF NOT EXISTS note_entities (
+    note_id     TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+    entity_type TEXT NOT NULL CHECK (entity_type IN ('contact','company','conversation','event','project')),
+    entity_id   TEXT NOT NULL,
+    is_pinned   INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL,
+    PRIMARY KEY (note_id, entity_type, entity_id)
 );
 """
 
@@ -988,13 +995,16 @@ CREATE INDEX IF NOT EXISTS idx_settings_user         ON settings(user_id);
 CREATE INDEX IF NOT EXISTS idx_settings_name         ON settings(setting_name);
 
 -- Notes
-CREATE INDEX IF NOT EXISTS idx_notes_entity              ON notes(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_notes_customer            ON notes(customer_id);
-CREATE INDEX IF NOT EXISTS idx_notes_pinned              ON notes(entity_type, entity_id, is_pinned DESC, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_note_revisions_note       ON note_revisions(note_id);
 CREATE INDEX IF NOT EXISTS idx_note_attachments_note     ON note_attachments(note_id);
 CREATE INDEX IF NOT EXISTS idx_note_mentions_note        ON note_mentions(note_id);
 CREATE INDEX IF NOT EXISTS idx_note_mentions_target      ON note_mentions(mention_type, mentioned_id);
+
+-- Note-entity junction
+CREATE INDEX IF NOT EXISTS idx_ne_entity                 ON note_entities(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_ne_note                   ON note_entities(note_id);
+CREATE INDEX IF NOT EXISTS idx_ne_pinned                 ON note_entities(entity_type, entity_id, is_pinned DESC);
 
 -- Tenant isolation (customer_id)
 CREATE INDEX IF NOT EXISTS idx_users_customer            ON users(customer_id);

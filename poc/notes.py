@@ -147,11 +147,16 @@ def create_note(
     with get_connection() as conn:
         conn.execute(
             "INSERT INTO notes "
-            "(id, customer_id, entity_type, entity_id, title, is_pinned, "
-            " current_revision_id, created_by, updated_by, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)",
-            (note_id, customer_id, entity_type, entity_id, title,
-             rev_id, created_by, created_by, now, now),
+            "(id, customer_id, title, current_revision_id, "
+            " created_by, updated_by, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (note_id, customer_id, title, rev_id, created_by, created_by, now, now),
+        )
+        conn.execute(
+            "INSERT INTO note_entities "
+            "(note_id, entity_type, entity_id, is_pinned, created_at) "
+            "VALUES (?, ?, ?, 0, ?)",
+            (note_id, entity_type, entity_id, now),
         )
         conn.execute(
             "INSERT INTO note_revisions "
@@ -235,7 +240,7 @@ def update_note(
 
 
 def get_note(note_id: str) -> dict[str, Any] | None:
-    """Get a single note with its current revision content."""
+    """Get a single note with its current revision content and linked entities."""
     with get_connection() as conn:
         row = conn.execute(
             "SELECT n.*, nr.content_json, nr.content_html, nr.revision_number "
@@ -244,7 +249,26 @@ def get_note(note_id: str) -> dict[str, Any] | None:
             "WHERE n.id = ?",
             (note_id,),
         ).fetchone()
-    return dict(row) if row else None
+        if not row:
+            return None
+        result = dict(row)
+        entities = conn.execute(
+            "SELECT entity_type, entity_id, is_pinned, created_at "
+            "FROM note_entities WHERE note_id = ? "
+            "ORDER BY created_at ASC",
+            (note_id,),
+        ).fetchall()
+        result["entities"] = [dict(e) for e in entities]
+        # Backward compat: expose first entity's fields at top level
+        if entities:
+            result["entity_type"] = entities[0]["entity_type"]
+            result["entity_id"] = entities[0]["entity_id"]
+            result["is_pinned"] = entities[0]["is_pinned"]
+        else:
+            result["entity_type"] = None
+            result["entity_id"] = None
+            result["is_pinned"] = 0
+    return result
 
 
 def get_notes_for_entity(
@@ -259,13 +283,15 @@ def get_notes_for_entity(
             params.append(customer_id)
 
         rows = conn.execute(
-            f"SELECT n.*, nr.content_json, nr.content_html, nr.revision_number, "
+            f"SELECT n.*, ne.entity_type, ne.entity_id, ne.is_pinned, "
+            f"       nr.content_json, nr.content_html, nr.revision_number, "
             f"       u.name AS author_name "
-            f"FROM notes n "
+            f"FROM note_entities ne "
+            f"JOIN notes n ON n.id = ne.note_id "
             f"LEFT JOIN note_revisions nr ON nr.id = n.current_revision_id "
             f"LEFT JOIN users u ON u.id = n.created_by "
-            f"WHERE n.entity_type = ? AND n.entity_id = ? {cust_clause} "
-            f"ORDER BY n.is_pinned DESC, n.updated_at DESC",
+            f"WHERE ne.entity_type = ? AND ne.entity_id = ? {cust_clause} "
+            f"ORDER BY ne.is_pinned DESC, n.updated_at DESC",
             params,
         ).fetchall()
     return [dict(r) for r in rows]
@@ -284,7 +310,11 @@ def get_recent_notes(
         params.append(limit)
 
         rows = conn.execute(
-            f"SELECT n.*, nr.content_html, nr.revision_number, "
+            f"SELECT n.*, "
+            f"       (SELECT ne.entity_type FROM note_entities ne WHERE ne.note_id = n.id LIMIT 1) AS entity_type, "
+            f"       (SELECT ne.entity_id FROM note_entities ne WHERE ne.note_id = n.id LIMIT 1) AS entity_id, "
+            f"       (SELECT ne.is_pinned FROM note_entities ne WHERE ne.note_id = n.id LIMIT 1) AS is_pinned, "
+            f"       nr.content_html, nr.revision_number, "
             f"       u.name AS author_name "
             f"FROM notes n "
             f"LEFT JOIN note_revisions nr ON nr.id = n.current_revision_id "
@@ -305,8 +335,16 @@ def delete_note(note_id: str) -> bool:
     return count > 0
 
 
-def toggle_pin(note_id: str) -> dict[str, Any] | None:
-    """Toggle the pinned state of a note. Returns updated note or None."""
+def toggle_pin(
+    note_id: str,
+    entity_type: str | None = None,
+    entity_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Toggle the pinned state of a note for a specific entity link.
+
+    If entity_type/entity_id are not provided, falls back to the first
+    linked entity (backward compatibility).
+    """
     now = _now()
     with get_connection() as conn:
         note = conn.execute(
@@ -314,12 +352,85 @@ def toggle_pin(note_id: str) -> dict[str, Any] | None:
         ).fetchone()
         if not note:
             return None
-        new_pin = 0 if note["is_pinned"] else 1
+
+        # Resolve entity context
+        if not entity_type or not entity_id:
+            first = conn.execute(
+                "SELECT entity_type, entity_id FROM note_entities "
+                "WHERE note_id = ? ORDER BY created_at ASC LIMIT 1",
+                (note_id,),
+            ).fetchone()
+            if not first:
+                return None
+            entity_type = first["entity_type"]
+            entity_id = first["entity_id"]
+
+        row = conn.execute(
+            "SELECT is_pinned FROM note_entities "
+            "WHERE note_id = ? AND entity_type = ? AND entity_id = ?",
+            (note_id, entity_type, entity_id),
+        ).fetchone()
+        if not row:
+            return None
+        new_pin = 0 if row["is_pinned"] else 1
         conn.execute(
-            "UPDATE notes SET is_pinned = ?, updated_at = ? WHERE id = ?",
-            (new_pin, now, note_id),
+            "UPDATE note_entities SET is_pinned = ? "
+            "WHERE note_id = ? AND entity_type = ? AND entity_id = ?",
+            (new_pin, note_id, entity_type, entity_id),
+        )
+        conn.execute(
+            "UPDATE notes SET updated_at = ? WHERE id = ?",
+            (now, note_id),
         )
     return get_note(note_id)
+
+
+def add_note_entity(note_id: str, entity_type: str, entity_id: str) -> bool:
+    """Link a note to an additional entity. Returns True if a new link was created."""
+    if entity_type not in VALID_ENTITY_TYPES:
+        raise ValueError(f"Invalid entity_type: {entity_type}")
+    now = _now()
+    with get_connection() as conn:
+        note = conn.execute("SELECT id FROM notes WHERE id = ?", (note_id,)).fetchone()
+        if not note:
+            raise ValueError(f"Note not found: {note_id}")
+        try:
+            conn.execute(
+                "INSERT INTO note_entities (note_id, entity_type, entity_id, is_pinned, created_at) "
+                "VALUES (?, ?, ?, 0, ?)",
+                (note_id, entity_type, entity_id, now),
+            )
+            return True
+        except Exception:
+            # Duplicate — already linked (INSERT OR IGNORE semantics)
+            return False
+
+
+def remove_note_entity(note_id: str, entity_type: str, entity_id: str) -> bool:
+    """Unlink a note from an entity. Raises ValueError if it's the last link."""
+    with get_connection() as conn:
+        count = conn.execute(
+            "SELECT COUNT(*) AS c FROM note_entities WHERE note_id = ?",
+            (note_id,),
+        ).fetchone()["c"]
+        if count <= 1:
+            raise ValueError("Cannot remove the last entity link from a note")
+        deleted = conn.execute(
+            "DELETE FROM note_entities WHERE note_id = ? AND entity_type = ? AND entity_id = ?",
+            (note_id, entity_type, entity_id),
+        ).rowcount
+        return deleted > 0
+
+
+def get_note_entities(note_id: str) -> list[dict[str, Any]]:
+    """List all entities linked to a note."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT entity_type, entity_id, is_pinned, created_at "
+            "FROM note_entities WHERE note_id = ? ORDER BY created_at ASC",
+            (note_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def get_revisions(note_id: str) -> list[dict[str, Any]]:
@@ -363,7 +474,11 @@ def search_notes(
         params.append(limit)
 
         rows = conn.execute(
-            f"SELECT n.*, nr.content_html, nr.revision_number, "
+            f"SELECT n.*, "
+            f"       (SELECT ne.entity_type FROM note_entities ne WHERE ne.note_id = n.id LIMIT 1) AS entity_type, "
+            f"       (SELECT ne.entity_id FROM note_entities ne WHERE ne.note_id = n.id LIMIT 1) AS entity_id, "
+            f"       (SELECT ne.is_pinned FROM note_entities ne WHERE ne.note_id = n.id LIMIT 1) AS is_pinned, "
+            f"       nr.content_html, nr.revision_number, "
             f"       u.name AS author_name, "
             f"       snippet(notes_fts, 2, '<mark>', '</mark>', '...', 40) AS snippet "
             f"FROM notes_fts fts "

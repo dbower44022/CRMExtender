@@ -2,6 +2,8 @@
   <form hx-put="/notes/{{ note.id }}"
         hx-target="#note-{{ note.id }}"
         hx-swap="outerHTML">
+    <input type="hidden" name="entity_type" value="{{ entity_type }}">
+    <input type="hidden" name="entity_id" value="{{ entity_id }}">
     <label>
       Title <small>(optional)</small>
       <input type="text" name="title" value="{{ note.title or '' }}" placeholder="Note title...">

@@ -59,15 +59,15 @@ The only text field available was the `notes` column on `contact_companies` (aff
 
 ## 3. Goals & Success Metrics
 
-| Goal | Metric |
-|------|--------|
-| Attach notes to any entity | Notes available on all 5 entity detail pages |
-| Rich formatting | Bold, italic, headings, lists, blockquotes, code, tables, images, links |
-| Revision history | Every edit creates a new revision; any version viewable |
-| File attachments | Paste/drop images into editor; upload documents |
-| Cross-entity search | Global FTS5 search across all notes from nav bar |
-| @Mentions | Reference users, contacts, companies in note content |
-| No regressions | Full test suite passes (1147 tests) |
+| Goal                       | Metric                                                                  |
+| -------------------------- | ----------------------------------------------------------------------- |
+| Attach notes to any entity | Notes available on all 5 entity detail pages                            |
+| Rich formatting            | Bold, italic, headings, lists, blockquotes, code, tables, images, links |
+| Revision history           | Every edit creates a new revision; any version viewable                 |
+| File attachments           | Paste/drop images into editor; upload documents                         |
+| Cross-entity search        | Global FTS5 search across all notes from nav bar                        |
+| @Mentions                  | Reference users, contacts, companies in note content                    |
+| No regressions             | Full test suite passes (1147 tests)                                     |
 
 ---
 
@@ -77,77 +77,77 @@ The only text field available was the `notes` column on `contact_companies` (aff
 
 #### `notes` — Entity-agnostic note header
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | TEXT PK | UUID |
-| `customer_id` | TEXT FK | Tenant isolation (direct column avoids entity-table joins) |
-| `entity_type` | TEXT | CHECK constraint: `contact`, `company`, `conversation`, `event`, `project` |
-| `entity_id` | TEXT | ID of the parent entity |
-| `title` | TEXT | Optional; short notes don't need one |
-| `is_pinned` | INTEGER | 0 or 1; pinned notes sort first |
-| `current_revision_id` | TEXT | Points to the latest `note_revisions` row |
-| `created_by` | TEXT FK | `users.id` |
-| `updated_by` | TEXT FK | `users.id` |
-| `created_at` | TEXT | ISO 8601 UTC |
-| `updated_at` | TEXT | ISO 8601 UTC |
+| Column                | Type    | Description                                                                |
+| --------------------- | ------- | -------------------------------------------------------------------------- |
+| `id`                  | TEXT PK | UUID                                                                       |
+| `customer_id`         | TEXT FK | Tenant isolation (direct column avoids entity-table joins)                 |
+| `entity_type`         | TEXT    | CHECK constraint: `contact`, `company`, `conversation`, `event`, `project` |
+| `entity_id`           | TEXT    | ID of the parent entity                                                    |
+| `title`               | TEXT    | Optional; short notes don't need one                                       |
+| `is_pinned`           | INTEGER | 0 or 1; pinned notes sort first                                            |
+| `current_revision_id` | TEXT    | Points to the latest `note_revisions` row                                  |
+| `created_by`          | TEXT FK | `users.id`                                                                 |
+| `updated_by`          | TEXT FK | `users.id`                                                                 |
+| `created_at`          | TEXT    | ISO 8601 UTC                                                               |
+| `updated_at`          | TEXT    | ISO 8601 UTC                                                               |
 
 #### `note_revisions` — Append-only revision history
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | TEXT PK | UUID |
-| `note_id` | TEXT FK CASCADE | Parent note |
-| `revision_number` | INTEGER | Monotonically increasing per note; UNIQUE(note_id, revision_number) |
-| `content_json` | TEXT | Tiptap JSON document (source of truth for editing) |
-| `content_html` | TEXT | Pre-rendered HTML (source of truth for display) |
-| `revised_by` | TEXT FK | `users.id` |
-| `created_at` | TEXT | ISO 8601 UTC |
+| Column            | Type            | Description                                                         |
+| ----------------- | --------------- | ------------------------------------------------------------------- |
+| `id`              | TEXT PK         | UUID                                                                |
+| `note_id`         | TEXT FK CASCADE | Parent note                                                         |
+| `revision_number` | INTEGER         | Monotonically increasing per note; UNIQUE(note_id, revision_number) |
+| `content_json`    | TEXT            | Tiptap JSON document (source of truth for editing)                  |
+| `content_html`    | TEXT            | Pre-rendered HTML (source of truth for display)                     |
+| `revised_by`      | TEXT FK         | `users.id`                                                          |
+| `created_at`      | TEXT            | ISO 8601 UTC                                                        |
 
 #### `note_attachments` — Uploaded files
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | TEXT PK | UUID |
-| `note_id` | TEXT FK CASCADE | Nullable for orphan uploads (linked when note saves) |
-| `filename` | TEXT | UUID-based filename on disk |
-| `original_name` | TEXT | User-facing filename |
-| `mime_type` | TEXT | Validated against allowlist |
-| `size_bytes` | INTEGER | File size |
-| `storage_path` | TEXT | Absolute path on disk |
-| `uploaded_by` | TEXT FK | `users.id` |
-| `created_at` | TEXT | ISO 8601 UTC |
+| Column          | Type            | Description                                          |
+| --------------- | --------------- | ---------------------------------------------------- |
+| `id`            | TEXT PK         | UUID                                                 |
+| `note_id`       | TEXT FK CASCADE | Nullable for orphan uploads (linked when note saves) |
+| `filename`      | TEXT            | UUID-based filename on disk                          |
+| `original_name` | TEXT            | User-facing filename                                 |
+| `mime_type`     | TEXT            | Validated against allowlist                          |
+| `size_bytes`    | INTEGER         | File size                                            |
+| `storage_path`  | TEXT            | Absolute path on disk                                |
+| `uploaded_by`   | TEXT FK         | `users.id`                                           |
+| `created_at`    | TEXT            | ISO 8601 UTC                                         |
 
 #### `note_mentions` — Extracted @mentions
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | TEXT PK | UUID |
-| `note_id` | TEXT FK CASCADE | Parent note |
-| `mention_type` | TEXT | CHECK: `user`, `contact`, `company`, `conversation`, `event`, `project` |
-| `mentioned_id` | TEXT | ID of the mentioned entity |
-| `created_at` | TEXT | ISO 8601 UTC |
+| Column         | Type            | Description                                                             |
+| -------------- | --------------- | ----------------------------------------------------------------------- |
+| `id`           | TEXT PK         | UUID                                                                    |
+| `note_id`      | TEXT FK CASCADE | Parent note                                                             |
+| `mention_type` | TEXT            | CHECK: `user`, `contact`, `company`, `conversation`, `event`, `project` |
+| `mentioned_id` | TEXT            | ID of the mentioned entity                                              |
+| `created_at`   | TEXT            | ISO 8601 UTC                                                            |
 
 #### `notes_fts` — FTS5 virtual table
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `note_id` | TEXT UNINDEXED | Join key (not searchable) |
-| `title` | TEXT | Note title, tokenized |
-| `content_text` | TEXT | Plain text extracted from HTML, tokenized |
+| Column         | Type           | Description                               |
+| -------------- | -------------- | ----------------------------------------- |
+| `note_id`      | TEXT UNINDEXED | Join key (not searchable)                 |
+| `title`        | TEXT           | Note title, tokenized                     |
+| `content_text` | TEXT           | Plain text extracted from HTML, tokenized |
 
 Tokenizer: `porter unicode61` (stemming + Unicode normalization).
 
 ### 4.2 Indexes
 
-| Index | Columns | Purpose |
-|-------|---------|---------|
-| `idx_notes_entity` | `(entity_type, entity_id)` | List notes for an entity |
-| `idx_notes_customer` | `(customer_id)` | Tenant-scoped queries |
-| `idx_notes_pinned` | `(entity_type, entity_id, is_pinned DESC, updated_at DESC)` | Sort pinned first |
-| `idx_note_revisions_note` | `(note_id)` | Revision lookup |
-| `idx_note_attachments_note` | `(note_id)` | Attachment lookup |
-| `idx_note_mentions_note` | `(note_id)` | Mentions for a note |
-| `idx_note_mentions_target` | `(mention_type, mentioned_id)` | "Where am I mentioned?" |
+| Index                       | Columns                                                     | Purpose                  |
+| --------------------------- | ----------------------------------------------------------- | ------------------------ |
+| `idx_notes_entity`          | `(entity_type, entity_id)`                                  | List notes for an entity |
+| `idx_notes_customer`        | `(customer_id)`                                             | Tenant-scoped queries    |
+| `idx_notes_pinned`          | `(entity_type, entity_id, is_pinned DESC, updated_at DESC)` | Sort pinned first        |
+| `idx_note_revisions_note`   | `(note_id)`                                                 | Revision lookup          |
+| `idx_note_attachments_note` | `(note_id)`                                                 | Attachment lookup        |
+| `idx_note_mentions_note`    | `(note_id)`                                                 | Mentions for a note      |
+| `idx_note_mentions_target`  | `(mention_type, mentioned_id)`                              | "Where am I mentioned?"  |
 
 ### 4.3 Entity Relationship Diagram
 
@@ -169,18 +169,18 @@ note_attachments ──> users    (uploaded_by)
 
 All CRUD lives in `poc/notes.py`. Functions follow the same patterns as `poc/hierarchy.py`.
 
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `create_note` | `(customer_id, entity_type, entity_id, *, title, content_json, content_html, created_by) -> dict` | Creates note + first revision + FTS + mentions |
-| `update_note` | `(note_id, *, title, content_json, content_html, updated_by) -> dict \| None` | Creates new revision, updates note header, re-syncs FTS + mentions |
-| `get_note` | `(note_id) -> dict \| None` | Note with current revision content |
-| `get_notes_for_entity` | `(entity_type, entity_id, *, customer_id) -> list[dict]` | All notes for an entity, pinned first |
-| `get_recent_notes` | `(*, customer_id, limit) -> list[dict]` | Most recent notes across all entities |
-| `delete_note` | `(note_id) -> bool` | Deletes note + cascades revisions/mentions + removes FTS entry |
-| `toggle_pin` | `(note_id) -> dict \| None` | Flips `is_pinned` between 0 and 1 |
-| `get_revisions` | `(note_id) -> list[dict]` | All revisions, newest first |
-| `get_revision` | `(revision_id) -> dict \| None` | Single revision by ID |
-| `search_notes` | `(query, *, customer_id, limit) -> list[dict]` | FTS5 MATCH with ranked results and snippets |
+| Function               | Signature                                                                                         | Description                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `create_note`          | `(customer_id, entity_type, entity_id, *, title, content_json, content_html, created_by) -> dict` | Creates note + first revision + FTS + mentions                     |
+| `update_note`          | `(note_id, *, title, content_json, content_html, updated_by) -> dict \| None`                     | Creates new revision, updates note header, re-syncs FTS + mentions |
+| `get_note`             | `(note_id) -> dict \| None`                                                                       | Note with current revision content                                 |
+| `get_notes_for_entity` | `(entity_type, entity_id, *, customer_id) -> list[dict]`                                          | All notes for an entity, pinned first                              |
+| `get_recent_notes`     | `(*, customer_id, limit) -> list[dict]`                                                           | Most recent notes across all entities                              |
+| `delete_note`          | `(note_id) -> bool`                                                                               | Deletes note + cascades revisions/mentions + removes FTS entry     |
+| `toggle_pin`           | `(note_id) -> dict \| None`                                                                       | Flips `is_pinned` between 0 and 1                                  |
+| `get_revisions`        | `(note_id) -> list[dict]`                                                                         | All revisions, newest first                                        |
+| `get_revision`         | `(revision_id) -> dict \| None`                                                                   | Single revision by ID                                              |
+| `search_notes`         | `(query, *, customer_id, limit) -> list[dict]`                                                    | FTS5 MATCH with ranked results and snippets                        |
 
 ### Update semantics
 
@@ -224,10 +224,10 @@ The `notes.js` ES module:
 
 ### 6.4 Dual Content Storage
 
-| Field | Format | Purpose |
-|-------|--------|---------|
-| `content_json` | Tiptap/ProseMirror JSON | Source of truth for re-editing; preserves structure, mentions, etc. |
-| `content_html` | Rendered HTML string | Display without server-side rendering; indexed for FTS after stripping |
+| Field          | Format                  | Purpose                                                                |
+| -------------- | ----------------------- | ---------------------------------------------------------------------- |
+| `content_json` | Tiptap/ProseMirror JSON | Source of truth for re-editing; preserves structure, mentions, etc.    |
+| `content_html` | Rendered HTML string    | Display without server-side rendering; indexed for FTS after stripping |
 
 On create/update, the editor populates both fields. On edit, the editor rehydrates from `content_json` (passed via `data-content` attribute).
 
@@ -259,6 +259,7 @@ data/uploads/
 ### 7.3 Serving
 
 `GET /notes/files/{attachment_id}/{filename}` serves files via `FileResponse` with:
+
 - MIME type from the `note_attachments` record
 - `Content-Disposition` with original filename
 - Tenant isolation check (`customer_id` must appear in storage path)
@@ -293,6 +294,7 @@ Every save creates a new `note_revisions` row. Revisions are:
 ### 8.3 Design: Versions Not Diffs
 
 The system stores and displays complete versions, not diffs. This was chosen because:
+
 - Simpler implementation and display
 - Each version is independently renderable
 - Diff computation can be added later as a view layer concern without schema changes
@@ -358,11 +360,11 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
 
 ### 10.2 Index Lifecycle
 
-| Event | Action |
-|-------|--------|
-| `create_note` | Insert into `notes_fts` |
+| Event         | Action                              |
+| ------------- | ----------------------------------- |
+| `create_note` | Insert into `notes_fts`             |
 | `update_note` | Delete + re-insert into `notes_fts` |
-| `delete_note` | Delete from `notes_fts` |
+| `delete_note` | Delete from `notes_fts`             |
 
 ### 10.3 Plain Text Extraction
 
@@ -375,6 +377,7 @@ CREATE VIRTUAL TABLE notes_fts USING fts5(
 ### 10.5 Notes Page
 
 The "Notes" nav link goes to `/notes/search`, which:
+
 - Shows **recent notes** (most recently updated, all entities) when no query is entered
 - Shows **FTS search results** with highlighted snippets when a query is provided
 - Each result links to the parent entity's detail page
@@ -407,20 +410,20 @@ All other tags (including `<script>`, `<iframe>`, `<style>`, `<form>`) are strip
 
 All routes are registered under the `/notes` prefix.
 
-| Method | Path | Purpose | Returns |
-|--------|------|---------|---------|
-| GET | `/notes?entity_type=X&entity_id=Y` | List notes for entity | `_notes.html` partial |
-| POST | `/notes` | Create note | `_notes.html` partial (full refresh) |
-| GET | `/notes/{id}/edit` | Get editor for existing note | `_note_editor.html` partial |
-| PUT | `/notes/{id}` | Update note (new revision) | `_note_card.html` partial |
-| DELETE | `/notes/{id}` | Delete note + revisions | Empty 200 |
-| POST | `/notes/{id}/pin` | Toggle pin | `_note_card.html` partial |
-| GET | `/notes/{id}/revisions` | Revision list | `_note_revisions.html` partial |
-| GET | `/notes/{id}/revisions/{rev_id}` | View old revision | HTML content |
-| POST | `/notes/upload` | Upload file (multipart) | JSON `{"id", "url", "original_name"}` |
-| GET | `/notes/files/{id}/{filename}` | Serve uploaded file | FileResponse |
-| GET | `/notes/mentions?q=X&type=Y` | Mention autocomplete | JSON array |
-| GET | `/notes/search?q=X` | Notes page / global search | `search.html` |
+| Method | Path                               | Purpose                      | Returns                               |
+| ------ | ---------------------------------- | ---------------------------- | ------------------------------------- |
+| GET    | `/notes?entity_type=X&entity_id=Y` | List notes for entity        | `_notes.html` partial                 |
+| POST   | `/notes`                           | Create note                  | `_notes.html` partial (full refresh)  |
+| GET    | `/notes/{id}/edit`                 | Get editor for existing note | `_note_editor.html` partial           |
+| PUT    | `/notes/{id}`                      | Update note (new revision)   | `_note_card.html` partial             |
+| DELETE | `/notes/{id}`                      | Delete note + revisions      | Empty 200                             |
+| POST   | `/notes/{id}/pin`                  | Toggle pin                   | `_note_card.html` partial             |
+| GET    | `/notes/{id}/revisions`            | Revision list                | `_note_revisions.html` partial        |
+| GET    | `/notes/{id}/revisions/{rev_id}`   | View old revision            | HTML content                          |
+| POST   | `/notes/upload`                    | Upload file (multipart)      | JSON `{"id", "url", "original_name"}` |
+| GET    | `/notes/files/{id}/{filename}`     | Serve uploaded file          | FileResponse                          |
+| GET    | `/notes/mentions?q=X&type=Y`       | Mention autocomplete         | JSON array                            |
+| GET    | `/notes/search?q=X`                | Notes page / global search   | `search.html`                         |
 
 All mutating routes check `customer_id` for tenant isolation. Edit/update/delete/pin routes return 404 if the note doesn't belong to the current customer.
 
@@ -430,13 +433,13 @@ All mutating routes check `customer_id` for tenant isolation. Edit/update/delete
 
 ### 14.1 Template Files
 
-| Template | Purpose |
-|----------|---------|
-| `notes/_notes.html` | Reusable partial: "Add Note" form + note list. Included in all entity detail pages via `{% include "notes/_notes.html" %}` |
-| `notes/_note_card.html` | Single note display with pin/edit/delete buttons, content, author, timestamp, revision link. HTMX-swappable by `id="note-{id}"` |
-| `notes/_note_editor.html` | Edit form with title input + Tiptap editor + Save/Cancel buttons. Replaces the card via HTMX swap |
-| `notes/_note_revisions.html` | Expandable revision history table, loaded inline below a note card |
-| `notes/search.html` | Full page: search input + recent notes or search results with snippets |
+| Template                     | Purpose                                                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `notes/_notes.html`          | Reusable partial: "Add Note" form + note list. Included in all entity detail pages via `{% include "notes/_notes.html" %}`      |
+| `notes/_note_card.html`      | Single note display with pin/edit/delete buttons, content, author, timestamp, revision link. HTMX-swappable by `id="note-{id}"` |
+| `notes/_note_editor.html`    | Edit form with title input + Tiptap editor + Save/Cancel buttons. Replaces the card via HTMX swap                               |
+| `notes/_note_revisions.html` | Expandable revision history table, loaded inline below a note card                                                              |
+| `notes/search.html`          | Full page: search input + recent notes or search results with snippets                                                          |
 
 ### 14.2 HTMX Interactions
 
@@ -453,6 +456,7 @@ All note interactions are HTMX-driven (no full page reloads):
 ### 14.3 Styling
 
 `notes.css` provides styles for:
+
 - Note cards (border, padding, header layout)
 - Editor wrapper, toolbar buttons (with active state), separator
 - Contenteditable area (min-height, focus outline)
@@ -467,13 +471,13 @@ All note interactions are HTMX-driven (no full page reloads):
 
 Notes are integrated into all 5 entity detail pages:
 
-| Entity | Route File | Template | Context Variables Added |
-|--------|-----------|----------|------------------------|
-| Contact | `poc/web/routes/contacts.py` | `contacts/detail.html` | `notes`, `entity_type`, `entity_id` |
-| Company | `poc/web/routes/companies.py` | `companies/detail.html` | `notes`, `entity_type`, `entity_id` |
+| Entity       | Route File                        | Template                    | Context Variables Added             |
+| ------------ | --------------------------------- | --------------------------- | ----------------------------------- |
+| Contact      | `poc/web/routes/contacts.py`      | `contacts/detail.html`      | `notes`, `entity_type`, `entity_id` |
+| Company      | `poc/web/routes/companies.py`     | `companies/detail.html`     | `notes`, `entity_type`, `entity_id` |
 | Conversation | `poc/web/routes/conversations.py` | `conversations/detail.html` | `notes`, `entity_type`, `entity_id` |
-| Event | `poc/web/routes/events.py` | `events/detail.html` | `notes`, `entity_type`, `entity_id` |
-| Project | `poc/web/routes/projects.py` | `projects/detail.html` | `notes`, `entity_type`, `entity_id` |
+| Event        | `poc/web/routes/events.py`        | `events/detail.html`        | `notes`, `entity_type`, `entity_id` |
+| Project      | `poc/web/routes/projects.py`      | `projects/detail.html`      | `notes`, `entity_type`, `entity_id` |
 
 Each detail route calls `get_notes_for_entity(entity_type, entity_id, customer_id=cid)` and passes the result to the template, which includes `notes/_notes.html` in the main content column.
 
@@ -483,23 +487,23 @@ Each detail route calls `get_notes_for_entity(entity_type, entity_id, customer_i
 
 Three new settings in `poc/config.py`:
 
-| Setting | Env Variable | Default | Description |
-|---------|-------------|---------|-------------|
-| `UPLOAD_DIR` | `CRM_UPLOAD_DIR` | `data/uploads/` | Root directory for uploaded files |
-| `MAX_UPLOAD_SIZE_MB` | `CRM_MAX_UPLOAD_SIZE_MB` | `10` | Maximum file upload size in MB |
-| `ALLOWED_UPLOAD_TYPES` | — | Set of MIME strings | Allowlist of uploadable MIME types |
+| Setting                | Env Variable             | Default             | Description                        |
+| ---------------------- | ------------------------ | ------------------- | ---------------------------------- |
+| `UPLOAD_DIR`           | `CRM_UPLOAD_DIR`         | `data/uploads/`     | Root directory for uploaded files  |
+| `MAX_UPLOAD_SIZE_MB`   | `CRM_MAX_UPLOAD_SIZE_MB` | `10`                | Maximum file upload size in MB     |
+| `ALLOWED_UPLOAD_TYPES` | —                        | Set of MIME strings | Allowlist of uploadable MIME types |
 
 ---
 
 ## 17. Security & Tenant Isolation
 
-| Concern | Mechanism |
-|---------|-----------|
-| Cross-tenant access | `customer_id` column on `notes`; all routes check `note.customer_id == request.state.customer_id` |
-| XSS via note content | `bleach.clean()` strips dangerous tags/attributes before storage; `content_html\|safe` is safe because content is pre-sanitized |
-| File upload attacks | MIME type validated against allowlist; filenames are UUID-generated (no user-controlled paths); size limit enforced |
-| File serving isolation | `/notes/files/` route verifies `customer_id` appears in storage path |
-| Authenticated access | All routes go through the existing `AuthMiddleware`; auth bypass mode respects `CRM_AUTH_ENABLED` |
+| Concern                | Mechanism                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Cross-tenant access    | `customer_id` column on `notes`; all routes check `note.customer_id == request.state.customer_id`                               |
+| XSS via note content   | `bleach.clean()` strips dangerous tags/attributes before storage; `content_html\|safe` is safe because content is pre-sanitized |
+| File upload attacks    | MIME type validated against allowlist; filenames are UUID-generated (no user-controlled paths); size limit enforced             |
+| File serving isolation | `/notes/files/` route verifies `customer_id` appears in storage path                                                            |
+| Authenticated access   | All routes go through the existing `AuthMiddleware`; auth bypass mode respects `CRM_AUTH_ENABLED`                               |
 
 ---
 
@@ -507,39 +511,39 @@ Three new settings in `poc/config.py`:
 
 ### New Files (11)
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| `poc/notes.py` | ~510 | Core CRUD, FTS, mentions, attachments, search |
-| `poc/migrate_to_v12.py` | ~155 | Schema migration v11 to v12 |
-| `poc/web/routes/notes.py` | ~340 | FastAPI router (12 endpoints) |
-| `poc/web/static/notes.js` | ~220 | Tiptap editor ES module |
-| `poc/web/static/notes.css` | ~110 | Editor and note card styles |
-| `poc/web/templates/notes/_notes.html` | ~30 | Note list + add form partial |
-| `poc/web/templates/notes/_note_card.html` | ~40 | Single note display partial |
-| `poc/web/templates/notes/_note_editor.html` | ~25 | Edit form partial |
-| `poc/web/templates/notes/_note_revisions.html` | ~30 | Revision history partial |
-| `poc/web/templates/notes/search.html` | ~48 | Global notes page |
-| `tests/test_notes.py` | ~470 | 71 tests |
+| File                                           | Lines | Purpose                                       |
+| ---------------------------------------------- | ----- | --------------------------------------------- |
+| `poc/notes.py`                                 | ~510  | Core CRUD, FTS, mentions, attachments, search |
+| `poc/migrate_to_v12.py`                        | ~155  | Schema migration v11 to v12                   |
+| `poc/web/routes/notes.py`                      | ~340  | FastAPI router (12 endpoints)                 |
+| `poc/web/static/notes.js`                      | ~220  | Tiptap editor ES module                       |
+| `poc/web/static/notes.css`                     | ~110  | Editor and note card styles                   |
+| `poc/web/templates/notes/_notes.html`          | ~30   | Note list + add form partial                  |
+| `poc/web/templates/notes/_note_card.html`      | ~40   | Single note display partial                   |
+| `poc/web/templates/notes/_note_editor.html`    | ~25   | Edit form partial                             |
+| `poc/web/templates/notes/_note_revisions.html` | ~30   | Revision history partial                      |
+| `poc/web/templates/notes/search.html`          | ~48   | Global notes page                             |
+| `tests/test_notes.py`                          | ~470  | 71 tests                                      |
 
 ### Modified Files (15)
 
-| File | Change |
-|------|--------|
-| `poc/database.py` | 5 table DDLs + 7 indexes + FTS5 virtual table in `init_db` |
-| `poc/config.py` | `UPLOAD_DIR`, `MAX_UPLOAD_SIZE_MB`, `ALLOWED_UPLOAD_TYPES` |
-| `poc/web/app.py` | Import + register `notes.router` with `prefix="/notes"` |
-| `poc/web/templates/base.html` | Tiptap import map, `notes.css` link, `notes.js` script, "Notes" nav link |
-| `poc/web/templates/contacts/detail.html` | `{% include "notes/_notes.html" %}` |
-| `poc/web/templates/companies/detail.html` | `{% include "notes/_notes.html" %}` |
-| `poc/web/templates/conversations/detail.html` | `{% include "notes/_notes.html" %}` |
-| `poc/web/templates/events/detail.html` | `{% include "notes/_notes.html" %}` |
-| `poc/web/templates/projects/detail.html` | `{% include "notes/_notes.html" %}` |
-| `poc/web/routes/contacts.py` | `notes` + `entity_type` + `entity_id` in detail context |
-| `poc/web/routes/companies.py` | Same |
-| `poc/web/routes/conversations.py` | Same |
-| `poc/web/routes/events.py` | Same |
-| `poc/web/routes/projects.py` | Same |
-| `pyproject.toml` | Added `bleach>=6.0.0` |
+| File                                          | Change                                                                   |
+| --------------------------------------------- | ------------------------------------------------------------------------ |
+| `poc/database.py`                             | 5 table DDLs + 7 indexes + FTS5 virtual table in `init_db`               |
+| `poc/config.py`                               | `UPLOAD_DIR`, `MAX_UPLOAD_SIZE_MB`, `ALLOWED_UPLOAD_TYPES`               |
+| `poc/web/app.py`                              | Import + register `notes.router` with `prefix="/notes"`                  |
+| `poc/web/templates/base.html`                 | Tiptap import map, `notes.css` link, `notes.js` script, "Notes" nav link |
+| `poc/web/templates/contacts/detail.html`      | `{% include "notes/_notes.html" %}`                                      |
+| `poc/web/templates/companies/detail.html`     | `{% include "notes/_notes.html" %}`                                      |
+| `poc/web/templates/conversations/detail.html` | `{% include "notes/_notes.html" %}`                                      |
+| `poc/web/templates/events/detail.html`        | `{% include "notes/_notes.html" %}`                                      |
+| `poc/web/templates/projects/detail.html`      | `{% include "notes/_notes.html" %}`                                      |
+| `poc/web/routes/contacts.py`                  | `notes` + `entity_type` + `entity_id` in detail context                  |
+| `poc/web/routes/companies.py`                 | Same                                                                     |
+| `poc/web/routes/conversations.py`             | Same                                                                     |
+| `poc/web/routes/events.py`                    | Same                                                                     |
+| `poc/web/routes/projects.py`                  | Same                                                                     |
+| `pyproject.toml`                              | Added `bleach>=6.0.0`                                                    |
 
 ---
 
@@ -547,33 +551,33 @@ Three new settings in `poc/config.py`:
 
 **71 tests** in `tests/test_notes.py`, organized by feature:
 
-| Test Class | Count | Covers |
-|-----------|-------|--------|
-| `TestCreateNote` | 5 | Basic create, no title, JSON content, invalid entity type, all entity types |
-| `TestGetNote` | 2 | Existing, nonexistent |
-| `TestGetNotesForEntity` | 4 | List, filtering, pinned-first sort, author name |
-| `TestUpdateNote` | 4 | Basic update, revision creation, nonexistent, title preservation |
-| `TestDeleteNote` | 3 | Existing, nonexistent, cascade |
-| `TestTogglePin` | 2 | Pin/unpin, nonexistent |
-| `TestRevisions` | 3 | List, single, nonexistent |
-| `TestSearch` | 6 | Basic, by title, empty query, no results, after edit, after delete |
-| `TestExtractPlainText` | 3 | Simple, nested, empty |
-| `TestMentions` | 4 | Extract from doc, no mentions, sync on create, sync on update |
-| `TestSearchMentionables` | 4 | Users, contacts, companies, empty query |
-| `TestAttachments` | 2 | Orphan, with note |
-| `TestNotesWebList` | 2 | With notes, empty |
-| `TestNotesWebCreate` | 2 | Success, missing entity |
-| `TestNotesWebEdit` | 2 | Form, nonexistent |
-| `TestNotesWebUpdate` | 2 | Success, nonexistent |
-| `TestNotesWebDelete` | 2 | Success, nonexistent |
-| `TestNotesWebPin` | 2 | Toggle, nonexistent |
-| `TestNotesWebRevisions` | 3 | List, detail, nonexistent |
-| `TestNotesWebUpload` | 4 | Image, disallowed type, too large, serve file |
-| `TestNotesWebMentions` | 2 | Autocomplete, empty query |
-| `TestNotesWebSearch` | 2 | With results, empty |
-| `TestEntityIntegration` | 3 | Contact, company, conversation detail pages show notes |
-| `TestSanitization` | 2 | Script stripped, allowed tags preserved |
-| `TestMigration` | 1 | All 5 tables created |
+| Test Class               | Count | Covers                                                                      |
+| ------------------------ | ----- | --------------------------------------------------------------------------- |
+| `TestCreateNote`         | 5     | Basic create, no title, JSON content, invalid entity type, all entity types |
+| `TestGetNote`            | 2     | Existing, nonexistent                                                       |
+| `TestGetNotesForEntity`  | 4     | List, filtering, pinned-first sort, author name                             |
+| `TestUpdateNote`         | 4     | Basic update, revision creation, nonexistent, title preservation            |
+| `TestDeleteNote`         | 3     | Existing, nonexistent, cascade                                              |
+| `TestTogglePin`          | 2     | Pin/unpin, nonexistent                                                      |
+| `TestRevisions`          | 3     | List, single, nonexistent                                                   |
+| `TestSearch`             | 6     | Basic, by title, empty query, no results, after edit, after delete          |
+| `TestExtractPlainText`   | 3     | Simple, nested, empty                                                       |
+| `TestMentions`           | 4     | Extract from doc, no mentions, sync on create, sync on update               |
+| `TestSearchMentionables` | 4     | Users, contacts, companies, empty query                                     |
+| `TestAttachments`        | 2     | Orphan, with note                                                           |
+| `TestNotesWebList`       | 2     | With notes, empty                                                           |
+| `TestNotesWebCreate`     | 2     | Success, missing entity                                                     |
+| `TestNotesWebEdit`       | 2     | Form, nonexistent                                                           |
+| `TestNotesWebUpdate`     | 2     | Success, nonexistent                                                        |
+| `TestNotesWebDelete`     | 2     | Success, nonexistent                                                        |
+| `TestNotesWebPin`        | 2     | Toggle, nonexistent                                                         |
+| `TestNotesWebRevisions`  | 3     | List, detail, nonexistent                                                   |
+| `TestNotesWebUpload`     | 4     | Image, disallowed type, too large, serve file                               |
+| `TestNotesWebMentions`   | 2     | Autocomplete, empty query                                                   |
+| `TestNotesWebSearch`     | 2     | With results, empty                                                         |
+| `TestEntityIntegration`  | 3     | Contact, company, conversation detail pages show notes                      |
+| `TestSanitization`       | 2     | Script stripped, allowed tags preserved                                     |
+| `TestMigration`          | 1     | All 5 tables created                                                        |
 
 **Full suite**: 1147 tests, 0 failures, 0 regressions.
 
@@ -594,6 +598,7 @@ Migrates from v11 to v12 in 7 steps:
 7. Bump `PRAGMA user_version = 12`
 
 **Usage**:
+
 ```bash
 # Dry run (applies to backup copy)
 python3 -m poc.migrate_to_v12 --dry-run --db data/crm_extender.db
@@ -608,15 +613,15 @@ The migration is additive (new tables only), so it's safe and fast. Backup is au
 
 ## 21. Design Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **Title field** | Optional | Short notes (quick observations) don't need titles; the first line of content suffices in the card display |
-| **Content storage** | JSON + HTML dual | JSON preserves Tiptap document structure for editing; HTML allows display without server-side rendering |
-| **FTS approach** | FTS5 with manual sync | Avoids trigger-based sync issues with WAL mode; explicit sync on CRUD is reliable and predictable |
-| **Attachment scope** | Note-level (not revision-level) | Files are stable references; only text content changes between revisions |
-| **Revision display** | Full versions (not diffs) | Simpler UX; each version is independently viewable; diff rendering can be added later as a view concern |
-| **`customer_id` on notes** | Direct column (not derived from entity) | Enables scoped queries without joining 5 different entity tables |
-| **Sanitization** | `bleach` library | Battle-tested HTML sanitizer; prevents XSS when rendering `content_html\|safe` |
-| **Editor delivery** | ESM import map via `esm.sh` | Consistent with existing CDN approach (PicoCSS, HTMX); no build tooling needed |
-| **Entity-agnostic design** | Polymorphic `entity_type`/`entity_id` | Same pattern as `addresses`, `phone_numbers`, `email_addresses`; one set of routes/templates serves all 5 entity types |
-| **Orphan uploads** | `note_id=NULL` until note saves | Images are uploaded mid-editing before the note exists; cleanup job handles abandoned uploads |
+| Decision                   | Choice                                  | Rationale                                                                                                              |
+| -------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Title field**            | Optional                                | Short notes (quick observations) don't need titles; the first line of content suffices in the card display             |
+| **Content storage**        | JSON + HTML dual                        | JSON preserves Tiptap document structure for editing; HTML allows display without server-side rendering                |
+| **FTS approach**           | FTS5 with manual sync                   | Avoids trigger-based sync issues with WAL mode; explicit sync on CRUD is reliable and predictable                      |
+| **Attachment scope**       | Note-level (not revision-level)         | Files are stable references; only text content changes between revisions                                               |
+| **Revision display**       | Full versions (not diffs)               | Simpler UX; each version is independently viewable; diff rendering can be added later as a view concern                |
+| **`customer_id` on notes** | Direct column (not derived from entity) | Enables scoped queries without joining 5 different entity tables                                                       |
+| **Sanitization**           | `bleach` library                        | Battle-tested HTML sanitizer; prevents XSS when rendering `content_html\|safe`                                         |
+| **Editor delivery**        | ESM import map via `esm.sh`             | Consistent with existing CDN approach (PicoCSS, HTMX); no build tooling needed                                         |
+| **Entity-agnostic design** | Polymorphic `entity_type`/`entity_id`   | Same pattern as `addresses`, `phone_numbers`, `email_addresses`; one set of routes/templates serves all 5 entity types |
+| **Orphan uploads**         | `note_id=NULL` until note saves         | Images are uploaded mid-editing before the note exists; cleanup job handles abandoned uploads                          |

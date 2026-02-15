@@ -13,15 +13,18 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from ... import config
 from ...database import get_connection
 from ...notes import (
+    add_note_entity,
     create_attachment,
     create_note,
     delete_note,
     get_attachment,
     get_note,
+    get_note_entities,
     get_notes_for_entity,
     get_recent_notes,
     get_revisions,
     get_revision,
+    remove_note_entity,
     search_mentionables,
     search_notes,
     toggle_pin,
@@ -117,7 +120,10 @@ async def notes_create(request: Request):
 # ---------------------------------------------------------------------------
 
 @router.get("/{note_id}/edit", response_class=HTMLResponse)
-def notes_edit(request: Request, note_id: str):
+def notes_edit(
+    request: Request, note_id: str,
+    entity_type: str = "", entity_id: str = "",
+):
     templates = request.app.state.templates
     cid = request.state.customer_id
 
@@ -125,10 +131,14 @@ def notes_edit(request: Request, note_id: str):
     if not note or note.get("customer_id") != cid:
         return HTMLResponse("Note not found", status_code=404)
 
+    # Use query params if provided, else fall back to first entity
+    et = entity_type or note.get("entity_type") or ""
+    eid = entity_id or note.get("entity_id") or ""
+
     return templates.TemplateResponse(request, "notes/_note_editor.html", {
         "note": note,
-        "entity_type": note["entity_type"],
-        "entity_id": note["entity_id"],
+        "entity_type": et,
+        "entity_id": eid,
     })
 
 
@@ -148,6 +158,10 @@ async def notes_update(request: Request, note_id: str):
     content_html = form.get("content_html", "").strip() or None
     content_html = _sanitize_html(content_html)
 
+    # Entity context from hidden fields (for cancel/redirect back)
+    et = form.get("entity_type", "") or note.get("entity_type") or ""
+    eid = form.get("entity_id", "") or note.get("entity_id") or ""
+
     update_note(
         note_id,
         title=title, content_json=content_json, content_html=content_html,
@@ -162,8 +176,8 @@ async def notes_update(request: Request, note_id: str):
 
     return templates.TemplateResponse(request, "notes/_note_card.html", {
         "note": updated,
-        "entity_type": note["entity_type"],
-        "entity_id": note["entity_id"],
+        "entity_type": et,
+        "entity_id": eid,
     })
 
 
@@ -187,7 +201,10 @@ def notes_delete(request: Request, note_id: str):
 # ---------------------------------------------------------------------------
 
 @router.post("/{note_id}/pin", response_class=HTMLResponse)
-def notes_pin(request: Request, note_id: str):
+def notes_pin(
+    request: Request, note_id: str,
+    entity_type: str = "", entity_id: str = "",
+):
     templates = request.app.state.templates
     cid = request.state.customer_id
 
@@ -195,16 +212,25 @@ def notes_pin(request: Request, note_id: str):
     if not note or note.get("customer_id") != cid:
         return HTMLResponse("Note not found", status_code=404)
 
-    updated = toggle_pin(note_id)
+    # Use query params if provided, else fall back to first entity
+    et = entity_type or note.get("entity_type") or ""
+    eid = entity_id or note.get("entity_id") or ""
+
+    updated = toggle_pin(note_id, et or None, eid or None)
     if updated:
         with get_connection() as conn:
             u = conn.execute("SELECT name FROM users WHERE id = ?", (updated["created_by"],)).fetchone()
             updated["author_name"] = u["name"] if u else None
+        # Override is_pinned with the value for this specific entity
+        for e in updated.get("entities", []):
+            if e["entity_type"] == et and e["entity_id"] == eid:
+                updated["is_pinned"] = e["is_pinned"]
+                break
 
     return templates.TemplateResponse(request, "notes/_note_card.html", {
         "note": updated,
-        "entity_type": note["entity_type"],
-        "entity_id": note["entity_id"],
+        "entity_type": et,
+        "entity_id": eid,
     })
 
 
@@ -310,6 +336,50 @@ def notes_serve_file(request: Request, attachment_id: str, filename: str):
         return HTMLResponse("File not found", status_code=404)
 
     return FileResponse(path, media_type=att["mime_type"], filename=att["original_name"])
+
+
+# ---------------------------------------------------------------------------
+# Entity linking
+# ---------------------------------------------------------------------------
+
+@router.post("/{note_id}/entities", response_class=HTMLResponse)
+async def notes_add_entity(request: Request, note_id: str):
+    form = await request.form()
+    cid = request.state.customer_id
+
+    note = get_note(note_id)
+    if not note or note.get("customer_id") != cid:
+        return HTMLResponse("Note not found", status_code=404)
+
+    et = form.get("entity_type", "")
+    eid = form.get("entity_id", "")
+    if not et or not eid:
+        return HTMLResponse("Missing entity_type or entity_id", status_code=400)
+
+    try:
+        add_note_entity(note_id, et, eid)
+    except ValueError as exc:
+        return HTMLResponse(str(exc), status_code=400)
+
+    return HTMLResponse("OK")
+
+
+@router.delete("/{note_id}/entities/{entity_type}/{entity_id}", response_class=HTMLResponse)
+def notes_remove_entity(
+    request: Request, note_id: str, entity_type: str, entity_id: str,
+):
+    cid = request.state.customer_id
+
+    note = get_note(note_id)
+    if not note or note.get("customer_id") != cid:
+        return HTMLResponse("Note not found", status_code=404)
+
+    try:
+        remove_note_entity(note_id, entity_type, entity_id)
+    except ValueError as exc:
+        return HTMLResponse(str(exc), status_code=400)
+
+    return HTMLResponse("OK")
 
 
 # ---------------------------------------------------------------------------

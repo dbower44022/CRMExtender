@@ -8,14 +8,14 @@
     </div>
     <div style="display:flex;gap:0.25rem;">
       <button class="outline" style="padding:2px 8px;font-size:.75em;"
-              hx-post="/notes/{{ note.id }}/pin"
+              hx-post="/notes/{{ note.id }}/pin?entity_type={{ entity_type }}&entity_id={{ entity_id }}"
               hx-target="#note-{{ note.id }}"
               hx-swap="outerHTML"
               title="{{ 'Unpin' if note.is_pinned else 'Pin' }}">
         {{ 'Unpin' if note.is_pinned else 'Pin' }}
       </button>
       <button class="outline" style="padding:2px 8px;font-size:.75em;"
-              hx-get="/notes/{{ note.id }}/edit"
+              hx-get="/notes/{{ note.id }}/edit?entity_type={{ entity_type }}&entity_id={{ entity_id }}"
               hx-target="#note-{{ note.id }}"
               hx-swap="outerHTML">
         Edit

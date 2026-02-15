@@ -1,7 +1,8 @@
-"""Tests for the Notes system — Phase 17.
+"""Tests for the Notes system — Phase 17 + Phase 18 (multi-entity notes).
 
 Covers: CRUD, revisions, pins, FTS search, mentions, file upload,
-sanitization, web routes, entity integration, and edge cases.
+sanitization, web routes, entity integration, multi-entity junction,
+and edge cases.
 """
 
 from __future__ import annotations
@@ -20,13 +21,16 @@ from poc.database import get_connection, init_db
 from poc.notes import (
     _extract_mentions_from_doc,
     _extract_plain_text,
+    add_note_entity,
     create_attachment,
     create_note,
     delete_note,
     get_note,
+    get_note_entities,
     get_notes_for_entity,
     get_revision,
     get_revisions,
+    remove_note_entity,
     search_mentionables,
     search_notes,
     toggle_pin,
@@ -156,6 +160,12 @@ class TestGetNote:
         assert note is not None
         assert note["title"] == "Fetch me"
         assert note["content_html"] == "<p>body</p>"
+        # Backward compat fields
+        assert note["entity_type"] == "contact"
+        assert note["entity_id"] == "ct-1"
+        # New entities list
+        assert len(note["entities"]) == 1
+        assert note["entities"][0]["entity_type"] == "contact"
 
     def test_get_nonexistent(self, tmp_db):
         assert get_note("no-such-id") is None
@@ -177,7 +187,7 @@ class TestGetNotesForEntity:
     def test_pinned_first(self, tmp_db):
         n1 = create_note(CUST_ID, "contact", "ct-1", title="Unpinned", content_html="a", created_by=USER_ID)
         n2 = create_note(CUST_ID, "contact", "ct-1", title="Pinned", content_html="b", created_by=USER_ID)
-        toggle_pin(n2["id"])
+        toggle_pin(n2["id"], "contact", "ct-1")
         notes = get_notes_for_entity("contact", "ct-1", customer_id=CUST_ID)
         assert notes[0]["title"] == "Pinned"
         assert notes[0]["is_pinned"] == 1
@@ -239,10 +249,18 @@ class TestTogglePin:
     def test_pin_unpin(self, tmp_db):
         note = create_note(CUST_ID, "contact", "ct-1",
                            content_html="<p>pin me</p>", created_by=USER_ID)
+        # With explicit entity params
+        result = toggle_pin(note["id"], "contact", "ct-1")
+        assert result["is_pinned"] == 1
+        result = toggle_pin(note["id"], "contact", "ct-1")
+        assert result["is_pinned"] == 0
+
+    def test_pin_fallback_to_first_entity(self, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>pin me</p>", created_by=USER_ID)
+        # Without entity params — falls back to first entity
         result = toggle_pin(note["id"])
         assert result["is_pinned"] == 1
-        result = toggle_pin(note["id"])
-        assert result["is_pinned"] == 0
 
     def test_pin_nonexistent(self, tmp_db):
         assert toggle_pin("no-such-id") is None
@@ -531,6 +549,14 @@ class TestNotesWebPin:
     def test_pin_toggle(self, client, tmp_db):
         note = create_note(CUST_ID, "contact", "ct-1",
                            content_html="<p>pin</p>", created_by=USER_ID)
+        resp = client.post(f"/notes/{note['id']}/pin?entity_type=contact&entity_id=ct-1")
+        assert resp.status_code == 200
+        assert "Unpin" in resp.text
+
+    def test_pin_toggle_without_entity_params(self, client, tmp_db):
+        """Falls back to first entity when no entity params given."""
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>pin</p>", created_by=USER_ID)
         resp = client.post(f"/notes/{note['id']}/pin")
         assert resp.status_code == 200
         assert "Unpin" in resp.text
@@ -622,7 +648,7 @@ class TestNotesWebSearch:
     def test_search_empty(self, client, tmp_db):
         resp = client.get("/notes/search")
         assert resp.status_code == 200
-        assert "Search Notes" in resp.text
+        assert "Search notes" in resp.text
 
 
 # ===================================================================
@@ -694,7 +720,7 @@ class TestSanitization:
 # Migration
 # ===================================================================
 
-class TestMigration:
+class TestMigrationV12:
     def test_migration_creates_tables(self, tmp_path):
         """Verify migrate_to_v12 creates all 5 tables."""
         from poc.migrate_to_v12 import migrate
@@ -722,3 +748,254 @@ class TestMigration:
         assert "note_attachments" in tables
         assert "note_mentions" in tables
         assert "notes_fts" in tables
+
+
+# ===================================================================
+# Multi-entity junction — Phase 18
+# ===================================================================
+
+class TestNoteEntities:
+    def test_create_note_creates_junction_row(self, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>body</p>", created_by=USER_ID)
+        entities = get_note_entities(note["id"])
+        assert len(entities) == 1
+        assert entities[0]["entity_type"] == "contact"
+        assert entities[0]["entity_id"] == "ct-1"
+        assert entities[0]["is_pinned"] == 0
+
+    def test_get_note_returns_entities_list(self, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        fetched = get_note(note["id"])
+        assert "entities" in fetched
+        assert len(fetched["entities"]) == 1
+        assert fetched["entities"][0]["entity_type"] == "contact"
+
+    def test_add_note_entity_links_second_entity(self, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        result = add_note_entity(note["id"], "company", "co-1")
+        assert result is True
+        entities = get_note_entities(note["id"])
+        assert len(entities) == 2
+        types = {e["entity_type"] for e in entities}
+        assert types == {"contact", "company"}
+
+    def test_add_note_entity_duplicate_is_idempotent(self, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        result = add_note_entity(note["id"], "contact", "ct-1")
+        assert result is False  # already linked
+        entities = get_note_entities(note["id"])
+        assert len(entities) == 1
+
+    def test_add_note_entity_invalid_type(self, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        with pytest.raises(ValueError, match="Invalid entity_type"):
+            add_note_entity(note["id"], "bogus", "x")
+
+    def test_add_note_entity_nonexistent_note(self, tmp_db):
+        with pytest.raises(ValueError, match="Note not found"):
+            add_note_entity("no-such-id", "contact", "ct-1")
+
+    def test_remove_note_entity_unlinks(self, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        add_note_entity(note["id"], "company", "co-1")
+        assert len(get_note_entities(note["id"])) == 2
+        result = remove_note_entity(note["id"], "contact", "ct-1")
+        assert result is True
+        entities = get_note_entities(note["id"])
+        assert len(entities) == 1
+        assert entities[0]["entity_type"] == "company"
+
+    def test_remove_note_entity_raises_on_last_link(self, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        with pytest.raises(ValueError, match="Cannot remove the last entity link"):
+            remove_note_entity(note["id"], "contact", "ct-1")
+
+    def test_note_appears_in_both_entity_lists(self, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           title="Shared Note", content_html="<p>x</p>",
+                           created_by=USER_ID)
+        add_note_entity(note["id"], "company", "co-1")
+
+        contact_notes = get_notes_for_entity("contact", "ct-1", customer_id=CUST_ID)
+        company_notes = get_notes_for_entity("company", "co-1", customer_id=CUST_ID)
+        assert any(n["id"] == note["id"] for n in contact_notes)
+        assert any(n["id"] == note["id"] for n in company_notes)
+
+    def test_pin_scoped_per_entity(self, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        add_note_entity(note["id"], "company", "co-1")
+
+        # Pin on contact entity
+        toggle_pin(note["id"], "contact", "ct-1")
+
+        # Check pin status per entity
+        contact_notes = get_notes_for_entity("contact", "ct-1", customer_id=CUST_ID)
+        company_notes = get_notes_for_entity("company", "co-1", customer_id=CUST_ID)
+        assert contact_notes[0]["is_pinned"] == 1
+        assert company_notes[0]["is_pinned"] == 0
+
+    def test_delete_note_cascades_junction(self, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        add_note_entity(note["id"], "company", "co-1")
+        delete_note(note["id"])
+        assert get_note_entities(note["id"]) == []
+
+    def test_web_pin_with_entity_params(self, client, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        resp = client.post(f"/notes/{note['id']}/pin?entity_type=contact&entity_id=ct-1")
+        assert resp.status_code == 200
+        assert "Unpin" in resp.text
+
+    def test_web_edit_with_entity_params(self, client, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           title="Edit Me", content_html="<p>x</p>",
+                           created_by=USER_ID)
+        resp = client.get(f"/notes/{note['id']}/edit?entity_type=contact&entity_id=ct-1")
+        assert resp.status_code == 200
+        assert "Edit Me" in resp.text
+
+    def test_web_add_entity(self, client, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        resp = client.post(f"/notes/{note['id']}/entities", data={
+            "entity_type": "company",
+            "entity_id": "co-1",
+        })
+        assert resp.status_code == 200
+        entities = get_note_entities(note["id"])
+        assert len(entities) == 2
+
+    def test_web_remove_entity(self, client, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        add_note_entity(note["id"], "company", "co-1")
+        resp = client.delete(f"/notes/{note['id']}/entities/contact/ct-1")
+        assert resp.status_code == 200
+        entities = get_note_entities(note["id"])
+        assert len(entities) == 1
+
+    def test_web_remove_last_entity_rejected(self, client, tmp_db):
+        note = create_note(CUST_ID, "contact", "ct-1",
+                           content_html="<p>x</p>", created_by=USER_ID)
+        resp = client.delete(f"/notes/{note['id']}/entities/contact/ct-1")
+        assert resp.status_code == 400
+
+
+# ===================================================================
+# Migration v13
+# ===================================================================
+
+class TestMigrationV13:
+    def _create_v12_db(self, db_path):
+        """Create a minimal v12 database with notes for migration testing."""
+        import sqlite3 as _sqlite3
+        conn = _sqlite3.connect(str(db_path))
+        conn.execute("PRAGMA user_version = 12")
+        conn.execute("CREATE TABLE customers (id TEXT PRIMARY KEY, name TEXT, slug TEXT, is_active INTEGER, created_at TEXT, updated_at TEXT)")
+        conn.execute("CREATE TABLE users (id TEXT PRIMARY KEY, customer_id TEXT, email TEXT, name TEXT, role TEXT, is_active INTEGER, password_hash TEXT, google_sub TEXT, created_at TEXT, updated_at TEXT)")
+        conn.execute("INSERT INTO customers VALUES ('c1','Test','test',1,'2026-01-01','2026-01-01')")
+        conn.execute("INSERT INTO users VALUES ('u1','c1','a@b.com','User','admin',1,NULL,NULL,'2026-01-01','2026-01-01')")
+        # v12 notes table (with entity_type, entity_id, is_pinned)
+        conn.execute("""\
+            CREATE TABLE notes (
+                id TEXT PRIMARY KEY,
+                customer_id TEXT NOT NULL REFERENCES customers(id),
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                title TEXT,
+                is_pinned INTEGER NOT NULL DEFAULT 0,
+                current_revision_id TEXT,
+                created_by TEXT,
+                updated_by TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+        conn.execute("CREATE TABLE note_revisions (id TEXT PRIMARY KEY, note_id TEXT, revision_number INTEGER, content_json TEXT, content_html TEXT, revised_by TEXT, created_at TEXT)")
+        conn.execute("CREATE TABLE note_attachments (id TEXT PRIMARY KEY, note_id TEXT, filename TEXT, original_name TEXT, mime_type TEXT, size_bytes INTEGER, storage_path TEXT, uploaded_by TEXT, created_at TEXT)")
+        conn.execute("CREATE TABLE note_mentions (id TEXT PRIMARY KEY, note_id TEXT, mention_type TEXT, mentioned_id TEXT, created_at TEXT)")
+        conn.execute("CREATE INDEX idx_notes_entity ON notes(entity_type, entity_id)")
+        conn.execute("CREATE INDEX idx_notes_pinned ON notes(entity_type, entity_id, is_pinned DESC, updated_at DESC)")
+        # Insert test notes
+        conn.execute(
+            "INSERT INTO notes VALUES ('n1','c1','contact','ct-1','Note A',1,'r1','u1','u1','2026-01-01','2026-01-01')"
+        )
+        conn.execute(
+            "INSERT INTO notes VALUES ('n2','c1','company','co-1','Note B',0,'r2','u1','u1','2026-01-02','2026-01-02')"
+        )
+        conn.execute(
+            "INSERT INTO note_revisions VALUES ('r1','n1',1,NULL,'<p>A</p>','u1','2026-01-01')"
+        )
+        conn.execute(
+            "INSERT INTO note_revisions VALUES ('r2','n2',1,NULL,'<p>B</p>','u1','2026-01-02')"
+        )
+        conn.commit()
+        conn.close()
+
+    def test_migration_creates_junction_and_populates(self, tmp_path):
+        import sqlite3 as _sqlite3
+        from poc.migrate_to_v13 import migrate
+
+        db_path = tmp_path / "test.db"
+        self._create_v12_db(db_path)
+
+        migrate(db_path, dry_run=False)
+
+        conn = _sqlite3.connect(str(db_path))
+        conn.row_factory = _sqlite3.Row
+        # Junction table exists and has data
+        rows = conn.execute("SELECT * FROM note_entities ORDER BY note_id").fetchall()
+        assert len(rows) == 2
+        assert rows[0]["note_id"] == "n1"
+        assert rows[0]["entity_type"] == "contact"
+        assert rows[0]["entity_id"] == "ct-1"
+        assert rows[0]["is_pinned"] == 1
+        assert rows[1]["note_id"] == "n2"
+        assert rows[1]["entity_type"] == "company"
+        assert rows[1]["is_pinned"] == 0
+        conn.close()
+
+    def test_migration_removes_entity_columns_from_notes(self, tmp_path):
+        import sqlite3 as _sqlite3
+        from poc.migrate_to_v13 import migrate
+
+        db_path = tmp_path / "test.db"
+        self._create_v12_db(db_path)
+
+        migrate(db_path, dry_run=False)
+
+        conn = _sqlite3.connect(str(db_path))
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(notes)").fetchall()}
+        assert "entity_type" not in cols
+        assert "entity_id" not in cols
+        assert "is_pinned" not in cols
+        # Remaining columns still there
+        assert "id" in cols
+        assert "customer_id" in cols
+        assert "title" in cols
+        assert "current_revision_id" in cols
+        conn.close()
+
+    def test_migration_bumps_version(self, tmp_path):
+        import sqlite3 as _sqlite3
+        from poc.migrate_to_v13 import migrate
+
+        db_path = tmp_path / "test.db"
+        self._create_v12_db(db_path)
+
+        migrate(db_path, dry_run=False)
+
+        conn = _sqlite3.connect(str(db_path))
+        version = conn.execute("PRAGMA user_version").fetchone()[0]
+        assert version == 13
+        conn.close()

@@ -764,6 +764,9 @@ CRMExtender/
     migrate_to_v9.py              # Migration: v8 to v9 (phone normalization)
     migrate_to_v10.py             # Migration: v9 to v10 (multi-company affiliations)
     migrate_to_v11.py             # Migration: v10 to v11 (affiliation dedup)
+    migrate_to_v12.py             # Migration: v11 to v12 (notes system)
+    migrate_to_v13.py             # Migration: v12 to v13 (multi-entity notes)
+    notes.py                      # Notes CRUD, FTS, mentions, attachments, search
     web/                          # Web UI (FastAPI + HTMX)
       app.py                      # Application factory (AuthTemplates, middleware)
       middleware.py               # AuthMiddleware (session validation, bypass mode)
@@ -779,6 +782,7 @@ CRMExtender/
         relationships.py          # Relationship routes
         events.py                 # Event routes (list, detail, create, sync)
         communications.py         # Communications routes (list, detail, archive, assign)
+        notes.py                  # Notes routes (CRUD, pin, revisions, upload, search)
         settings_routes.py        # Settings routes (profile, system, users, calendars)
         contact_company_roles.py  # Contact-company role settings routes
       templates/                  # Jinja2 templates
@@ -1078,6 +1082,29 @@ Steps:
 ```bash
 python3 -m poc.migrate_to_v11 --dry-run
 python3 -m poc.migrate_to_v11
+```
+
+### `migrate-to-v12` (v11 → v12: notes system)
+
+Adds the notes system: `notes`, `note_revisions`, `note_attachments`,
+`note_mentions` tables and `notes_fts` FTS5 virtual table for full-text
+search.
+
+```bash
+python3 -m poc.migrate_to_v12 --dry-run
+python3 -m poc.migrate_to_v12
+```
+
+### `migrate-to-v13` (v12 → v13: multi-entity notes)
+
+Introduces `note_entities` junction table to allow notes to link to
+multiple entities.  Moves `entity_type`, `entity_id`, and `is_pinned`
+from `notes` to the junction table with per-entity pin scope.  Existing
+notes are migrated automatically (each gets one junction row).
+
+```bash
+python3 -m poc.migrate_to_v13 --dry-run
+python3 -m poc.migrate_to_v13
 ```
 
 All migration scripts create a timestamped backup before making changes

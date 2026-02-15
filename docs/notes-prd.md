@@ -2,10 +2,10 @@
 
 ## CRMExtender — Entity-Agnostic Notes with Rich Text, Revisions & Search
 
-**Version:** 1.0
+**Version:** 2.0
 **Date:** 2026-02-14
-**Status:** Implemented (Phase 17)
-**Schema Version:** v12
+**Status:** Implemented (Phase 17 + Phase 18)
+**Schema Version:** v13
 
 ---
 
@@ -31,7 +31,8 @@
 18. [File Inventory](#18-file-inventory)
 19. [Testing](#19-testing)
 20. [Migration](#20-migration)
-21. [Design Decisions](#21-design-decisions)
+21. [Multi-Entity Notes (Phase 18)](#21-multi-entity-notes-phase-18)
+22. [Design Decisions](#22-design-decisions)
 
 ---
 
@@ -73,23 +74,34 @@ The only text field available was the `notes` column on `contact_companies` (aff
 
 ## 4. Data Model
 
-### 4.1 Tables (5 new, schema v12)
+### 4.1 Tables (6 tables, schema v13)
 
-#### `notes` — Entity-agnostic note header
+#### `notes` — Note header
 
-| Column                | Type    | Description                                                                |
-| --------------------- | ------- | -------------------------------------------------------------------------- |
-| `id`                  | TEXT PK | UUID                                                                       |
-| `customer_id`         | TEXT FK | Tenant isolation (direct column avoids entity-table joins)                 |
-| `entity_type`         | TEXT    | CHECK constraint: `contact`, `company`, `conversation`, `event`, `project` |
-| `entity_id`           | TEXT    | ID of the parent entity                                                    |
-| `title`               | TEXT    | Optional; short notes don't need one                                       |
-| `is_pinned`           | INTEGER | 0 or 1; pinned notes sort first                                            |
-| `current_revision_id` | TEXT    | Points to the latest `note_revisions` row                                  |
-| `created_by`          | TEXT FK | `users.id`                                                                 |
-| `updated_by`          | TEXT FK | `users.id`                                                                 |
-| `created_at`          | TEXT    | ISO 8601 UTC                                                               |
-| `updated_at`          | TEXT    | ISO 8601 UTC                                                               |
+| Column                | Type    | Description                                                |
+| --------------------- | ------- | ---------------------------------------------------------- |
+| `id`                  | TEXT PK | UUID                                                       |
+| `customer_id`         | TEXT FK | Tenant isolation (direct column avoids entity-table joins) |
+| `title`               | TEXT    | Optional; short notes don't need one                       |
+| `current_revision_id` | TEXT    | Points to the latest `note_revisions` row                  |
+| `created_by`          | TEXT FK | `users.id`                                                 |
+| `updated_by`          | TEXT FK | `users.id`                                                 |
+| `created_at`          | TEXT    | ISO 8601 UTC                                               |
+| `updated_at`          | TEXT    | ISO 8601 UTC                                               |
+
+> **Phase 18 change**: `entity_type`, `entity_id`, and `is_pinned` moved to `note_entities` junction table.
+
+#### `note_entities` — Multi-entity junction (Phase 18, v13)
+
+| Column        | Type            | Description                                                                |
+| ------------- | --------------- | -------------------------------------------------------------------------- |
+| `note_id`     | TEXT FK CASCADE | Parent note                                                                |
+| `entity_type` | TEXT            | CHECK constraint: `contact`, `company`, `conversation`, `event`, `project` |
+| `entity_id`   | TEXT            | ID of the linked entity                                                    |
+| `is_pinned`   | INTEGER         | 0 or 1; per-entity pin scope                                               |
+| `created_at`  | TEXT            | ISO 8601 UTC                                                               |
+
+**Primary key**: `(note_id, entity_type, entity_id)`
 
 #### `note_revisions` — Append-only revision history
 
@@ -139,20 +151,22 @@ Tokenizer: `porter unicode61` (stemming + Unicode normalization).
 
 ### 4.2 Indexes
 
-| Index                       | Columns                                                     | Purpose                  |
-| --------------------------- | ----------------------------------------------------------- | ------------------------ |
-| `idx_notes_entity`          | `(entity_type, entity_id)`                                  | List notes for an entity |
-| `idx_notes_customer`        | `(customer_id)`                                             | Tenant-scoped queries    |
-| `idx_notes_pinned`          | `(entity_type, entity_id, is_pinned DESC, updated_at DESC)` | Sort pinned first        |
-| `idx_note_revisions_note`   | `(note_id)`                                                 | Revision lookup          |
-| `idx_note_attachments_note` | `(note_id)`                                                 | Attachment lookup        |
-| `idx_note_mentions_note`    | `(note_id)`                                                 | Mentions for a note      |
-| `idx_note_mentions_target`  | `(mention_type, mentioned_id)`                              | "Where am I mentioned?"  |
+| Index                       | Table              | Columns                                    | Purpose                  |
+| --------------------------- | ------------------ | ------------------------------------------ | ------------------------ |
+| `idx_notes_customer`        | `notes`            | `(customer_id)`                            | Tenant-scoped queries    |
+| `idx_ne_entity`             | `note_entities`    | `(entity_type, entity_id)`                 | List notes for an entity |
+| `idx_ne_note`               | `note_entities`    | `(note_id)`                                | Find entities for a note |
+| `idx_ne_pinned`             | `note_entities`    | `(entity_type, entity_id, is_pinned DESC)` | Sort pinned first        |
+| `idx_note_revisions_note`   | `note_revisions`   | `(note_id)`                                | Revision lookup          |
+| `idx_note_attachments_note` | `note_attachments` | `(note_id)`                                | Attachment lookup        |
+| `idx_note_mentions_note`    | `note_mentions`    | `(note_id)`                                | Mentions for a note      |
+| `idx_note_mentions_target`  | `note_mentions`    | `(mention_type, mentioned_id)`             | "Where am I mentioned?"  |
 
 ### 4.3 Entity Relationship Diagram
 
 ```
-notes 1──* note_revisions    (CASCADE delete)
+notes 1──* note_entities      (CASCADE delete; multi-entity junction)
+notes 1──* note_revisions     (CASCADE delete)
 notes 1──* note_attachments   (CASCADE delete; nullable note_id for orphans)
 notes 1──* note_mentions      (CASCADE delete)
 notes ···> notes_fts          (manual sync; not FK-linked)
@@ -177,7 +191,10 @@ All CRUD lives in `poc/notes.py`. Functions follow the same patterns as `poc/hie
 | `get_notes_for_entity` | `(entity_type, entity_id, *, customer_id) -> list[dict]`                                          | All notes for an entity, pinned first                              |
 | `get_recent_notes`     | `(*, customer_id, limit) -> list[dict]`                                                           | Most recent notes across all entities                              |
 | `delete_note`          | `(note_id) -> bool`                                                                               | Deletes note + cascades revisions/mentions + removes FTS entry     |
-| `toggle_pin`           | `(note_id) -> dict \| None`                                                                       | Flips `is_pinned` between 0 and 1                                  |
+| `toggle_pin`           | `(note_id, entity_type=None, entity_id=None) -> dict \| None`                                     | Flips `is_pinned` per entity; falls back to first entity           |
+| `add_note_entity`      | `(note_id, entity_type, entity_id) -> bool`                                                       | Link note to additional entity (False if duplicate)                |
+| `remove_note_entity`   | `(note_id, entity_type, entity_id) -> bool`                                                       | Unlink note from entity (raises if last link)                      |
+| `get_note_entities`    | `(note_id) -> list[dict]`                                                                         | All entities linked to a note                                      |
 | `get_revisions`        | `(note_id) -> list[dict]`                                                                         | All revisions, newest first                                        |
 | `get_revision`         | `(revision_id) -> dict \| None`                                                                   | Single revision by ID                                              |
 | `search_notes`         | `(query, *, customer_id, limit) -> list[dict]`                                                    | FTS5 MATCH with ranked results and snippets                        |
@@ -387,8 +404,9 @@ The "Notes" nav link goes to `/notes/search`, which:
 ## 11. Pinning
 
 - Any note can be pinned via the "Pin" button on the note card
-- `toggle_pin()` flips `is_pinned` between 0 and 1
-- Pinned notes sort before unpinned in entity note lists (index: `is_pinned DESC, updated_at DESC`)
+- `toggle_pin(note_id, entity_type, entity_id)` flips `is_pinned` per entity in `note_entities`; falls back to first entity if params omitted
+- **Per-entity scope** (Phase 18): pinning a note on entity A does not affect its pin state on entity B
+- Pinned notes sort before unpinned in entity note lists (index: `is_pinned DESC` on `note_entities`)
 - Pin state is indicated by a pushpin icon in the card header
 - Button label toggles between "Pin" and "Unpin"
 
@@ -424,8 +442,12 @@ All routes are registered under the `/notes` prefix.
 | GET    | `/notes/files/{id}/{filename}`     | Serve uploaded file          | FileResponse                          |
 | GET    | `/notes/mentions?q=X&type=Y`       | Mention autocomplete         | JSON array                            |
 | GET    | `/notes/search?q=X`                | Notes page / global search   | `search.html`                         |
+| POST   | `/notes/{id}/entities`             | Link to additional entity    | JSON `{"ok": true}`                   |
+| DELETE | `/notes/{id}/entities/{et}/{eid}`  | Unlink from entity           | JSON `{"ok": true}`                   |
 
 All mutating routes check `customer_id` for tenant isolation. Edit/update/delete/pin routes return 404 if the note doesn't belong to the current customer.
+
+Pin and edit routes accept `entity_type`/`entity_id` query params for entity context (Phase 18). Update reads entity context from form hidden fields.
 
 ---
 
@@ -513,9 +535,10 @@ Three new settings in `poc/config.py`:
 
 | File                                           | Lines | Purpose                                       |
 | ---------------------------------------------- | ----- | --------------------------------------------- |
-| `poc/notes.py`                                 | ~510  | Core CRUD, FTS, mentions, attachments, search |
+| `poc/notes.py`                                 | ~580  | Core CRUD, FTS, mentions, attachments, search, multi-entity |
 | `poc/migrate_to_v12.py`                        | ~155  | Schema migration v11 to v12                   |
-| `poc/web/routes/notes.py`                      | ~340  | FastAPI router (12 endpoints)                 |
+| `poc/migrate_to_v13.py`                        | ~130  | Schema migration v12 to v13 (note_entities)   |
+| `poc/web/routes/notes.py`                      | ~380  | FastAPI router (14 endpoints)                 |
 | `poc/web/static/notes.js`                      | ~220  | Tiptap editor ES module                       |
 | `poc/web/static/notes.css`                     | ~110  | Editor and note card styles                   |
 | `poc/web/templates/notes/_notes.html`          | ~30   | Note list + add form partial                  |
@@ -523,13 +546,13 @@ Three new settings in `poc/config.py`:
 | `poc/web/templates/notes/_note_editor.html`    | ~25   | Edit form partial                             |
 | `poc/web/templates/notes/_note_revisions.html` | ~30   | Revision history partial                      |
 | `poc/web/templates/notes/search.html`          | ~48   | Global notes page                             |
-| `tests/test_notes.py`                          | ~470  | 71 tests                                      |
+| `tests/test_notes.py`                          | ~700  | 92 tests                                      |
 
 ### Modified Files (15)
 
 | File                                          | Change                                                                   |
 | --------------------------------------------- | ------------------------------------------------------------------------ |
-| `poc/database.py`                             | 5 table DDLs + 7 indexes + FTS5 virtual table in `init_db`               |
+| `poc/database.py`                             | 6 table DDLs + 8 indexes + FTS5 virtual table in `init_db`               |
 | `poc/config.py`                               | `UPLOAD_DIR`, `MAX_UPLOAD_SIZE_MB`, `ALLOWED_UPLOAD_TYPES`               |
 | `poc/web/app.py`                              | Import + register `notes.router` with `prefix="/notes"`                  |
 | `poc/web/templates/base.html`                 | Tiptap import map, `notes.css` link, `notes.js` script, "Notes" nav link |
@@ -549,16 +572,16 @@ Three new settings in `poc/config.py`:
 
 ## 19. Testing
 
-**71 tests** in `tests/test_notes.py`, organized by feature:
+**92 tests** in `tests/test_notes.py`, organized by feature:
 
 | Test Class               | Count | Covers                                                                      |
 | ------------------------ | ----- | --------------------------------------------------------------------------- |
 | `TestCreateNote`         | 5     | Basic create, no title, JSON content, invalid entity type, all entity types |
-| `TestGetNote`            | 2     | Existing, nonexistent                                                       |
+| `TestGetNote`            | 2     | Existing + entities list, nonexistent                                       |
 | `TestGetNotesForEntity`  | 4     | List, filtering, pinned-first sort, author name                             |
 | `TestUpdateNote`         | 4     | Basic update, revision creation, nonexistent, title preservation            |
 | `TestDeleteNote`         | 3     | Existing, nonexistent, cascade                                              |
-| `TestTogglePin`          | 2     | Pin/unpin, nonexistent                                                      |
+| `TestTogglePin`          | 3     | Pin/unpin with entity params, nonexistent, fallback to first entity         |
 | `TestRevisions`          | 3     | List, single, nonexistent                                                   |
 | `TestSearch`             | 6     | Basic, by title, empty query, no results, after edit, after delete          |
 | `TestExtractPlainText`   | 3     | Simple, nested, empty                                                       |
@@ -570,16 +593,18 @@ Three new settings in `poc/config.py`:
 | `TestNotesWebEdit`       | 2     | Form, nonexistent                                                           |
 | `TestNotesWebUpdate`     | 2     | Success, nonexistent                                                        |
 | `TestNotesWebDelete`     | 2     | Success, nonexistent                                                        |
-| `TestNotesWebPin`        | 2     | Toggle, nonexistent                                                         |
+| `TestNotesWebPin`        | 3     | Toggle with entity params, nonexistent, toggle without entity params        |
 | `TestNotesWebRevisions`  | 3     | List, detail, nonexistent                                                   |
 | `TestNotesWebUpload`     | 4     | Image, disallowed type, too large, serve file                               |
 | `TestNotesWebMentions`   | 2     | Autocomplete, empty query                                                   |
 | `TestNotesWebSearch`     | 2     | With results, empty                                                         |
 | `TestEntityIntegration`  | 3     | Contact, company, conversation detail pages show notes                      |
 | `TestSanitization`       | 2     | Script stripped, allowed tags preserved                                     |
-| `TestMigration`          | 1     | All 5 tables created                                                        |
+| `TestNoteEntities`       | 16    | Junction CRUD, multi-entity linking, per-entity pin scope, cascade, web routes |
+| `TestMigrationV12`       | 1     | All 5 tables created (v12)                                                  |
+| `TestMigrationV13`       | 3     | Junction populated, entity columns removed, version bumped (v13)            |
 
-**Full suite**: 1147 tests, 0 failures, 0 regressions.
+**Full suite**: 1168 tests, 0 failures, 0 regressions.
 
 ---
 
@@ -609,9 +634,54 @@ python3 -m poc.migrate_to_v12 --db data/crm_extender.db
 
 The migration is additive (new tables only), so it's safe and fast. Backup is automatically created before any changes.
 
+### `poc/migrate_to_v13.py` (Phase 18)
+
+Migrates from v12 to v13 — moves entity linkage from `notes` to `note_entities` junction table:
+
+1. Backup database
+2. `PRAGMA foreign_keys = OFF`
+3. Create `note_entities` table
+4. Populate from existing `notes` data: `INSERT INTO note_entities SELECT id, entity_type, entity_id, is_pinned, created_at FROM notes`
+5. `PRAGMA legacy_alter_table = ON` (prevents FK auto-rewrite)
+6. Rename `notes` → `notes_old`, recreate `notes` without `entity_type`/`entity_id`/`is_pinned`, copy data, drop `notes_old`
+7. `PRAGMA legacy_alter_table = OFF`
+8. Create indexes: `idx_ne_entity`, `idx_ne_note`, `idx_ne_pinned`
+9. Drop old indexes: `idx_notes_entity`, `idx_notes_pinned`
+10. `PRAGMA user_version = 13`
+
+**Usage**:
+
+```bash
+# Dry run (applies to backup copy)
+python3 -m poc.migrate_to_v13 --dry-run --db data/crm_extender.db
+
+# Production
+python3 -m poc.migrate_to_v13 --db data/crm_extender.db
+```
+
 ---
 
-## 21. Design Decisions
+## 21. Multi-Entity Notes (Phase 18)
+
+Phase 18 introduces the `note_entities` junction table, allowing a single note to be linked to multiple entities. This replaces the previous single `(entity_type, entity_id)` pair on the `notes` table.
+
+### Key Changes
+
+- **Junction table**: `note_entities(note_id, entity_type, entity_id, is_pinned, created_at)` with composite PK
+- **Per-entity pin scope**: `is_pinned` lives on the junction row, so pinning on entity A doesn't affect entity B
+- **Backward compatibility**: `create_note()` and `get_note()` return dicts that still include `entity_type`, `entity_id`, `is_pinned` at the top level (from the first linked entity), plus a new `entities` list
+- **New CRUD functions**: `add_note_entity()`, `remove_note_entity()`, `get_note_entities()`
+- **Correlated subqueries**: `search_notes()` and `get_recent_notes()` use correlated subqueries instead of JOIN+GROUP BY because FTS5 `snippet()` is incompatible with `GROUP BY`
+- **New web routes**: `POST /notes/{id}/entities` (link) and `DELETE /notes/{id}/entities/{et}/{eid}` (unlink)
+- **Template changes**: `_note_card.html` and `_note_editor.html` pass entity context through HTMX URLs and hidden form fields
+
+### Entity Detail Routes — No Changes
+
+All 5 entity detail routes continue to call `get_notes_for_entity(type, id)` unchanged. The junction JOIN is handled internally by the CRUD layer.
+
+---
+
+## 22. Design Decisions
 
 | Decision                   | Choice                                  | Rationale                                                                                                              |
 | -------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -625,3 +695,6 @@ The migration is additive (new tables only), so it's safe and fast. Backup is au
 | **Editor delivery**        | ESM import map via `esm.sh`             | Consistent with existing CDN approach (PicoCSS, HTMX); no build tooling needed                                         |
 | **Entity-agnostic design** | Polymorphic `entity_type`/`entity_id`   | Same pattern as `addresses`, `phone_numbers`, `email_addresses`; one set of routes/templates serves all 5 entity types |
 | **Orphan uploads**         | `note_id=NULL` until note saves         | Images are uploaded mid-editing before the note exists; cleanup job handles abandoned uploads                          |
+| **Multi-entity junction**  | `note_entities` table (Phase 18)        | Enables linking a single note to multiple entities; per-entity pin scope; ON DELETE CASCADE for cleanup               |
+| **Correlated subqueries**  | Instead of JOIN+GROUP BY for search     | FTS5 `snippet()` function is incompatible with `GROUP BY`; correlated subqueries avoid the limitation                  |
+| **Backward-compat dicts**  | Top-level entity fields from first link | Existing code expecting `note["entity_type"]` continues to work; new code uses `note["entities"]` list                |

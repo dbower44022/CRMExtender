@@ -20,14 +20,14 @@
           <small>(current)</small>
           {% else %}
           <a href="#" hx-get="/notes/{{ note.id }}/revisions/{{ rev.id }}"
-             hx-target="#rev-content-{{ rev.id }}"
+             hx-target="#revision-preview"
              hx-swap="innerHTML"
              style="font-size:.85em;">View</a>
           {% endif %}
         </td>
       </tr>
-      <tr id="rev-content-{{ rev.id }}" style="display:none;"></tr>
       {% endfor %}
     </tbody>
   </table>
+  <div id="revision-preview" class="note-content" style="margin-top:0.5rem;"></div>
 </div>

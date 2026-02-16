@@ -114,17 +114,13 @@ function initEditor(el) {
   const jsonInput = wrapper.querySelector(`[name="content_json"]`);
   const htmlInput = wrapper.querySelector(`[name="content_html"]`);
 
-  // Hide noscript textarea if present
-  const ns = wrapper.querySelector("noscript");
-  if (ns) ns.style.display = "none";
-  // Also hide any fallback textarea
-  const ta = wrapper.querySelector("textarea");
-  if (ta) ta.style.display = "none";
-
-  // Load existing content
+  // Load existing content — prefer JSON, fall back to HTML
   let initialContent = "";
   if (el.dataset.content) {
     try { initialContent = JSON.parse(el.dataset.content); } catch { initialContent = ""; }
+  }
+  if (!initialContent && el.dataset.contentHtml) {
+    initialContent = el.dataset.contentHtml;
   }
 
   const mentionSuggestion = {

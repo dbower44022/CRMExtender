@@ -11,12 +11,10 @@
     <div id="note-editor-{{ note.id }}" class="note-editor-wrapper">
       <div class="note-editor"
            data-editor="{{ note.id }}"
-           data-content="{{ note.content_json|e if note.content_json else '' }}"></div>
+           data-content="{{ note.content_json|e if note.content_json else '' }}"
+           data-content-html="{{ note.content_html|e if note.content_html else '' }}"></div>
       <input type="hidden" name="content_json" id="content_json_{{ note.id }}">
       <input type="hidden" name="content_html" id="content_html_{{ note.id }}">
-      <noscript>
-        <textarea name="content_html" rows="4">{{ note.content_html or '' }}</textarea>
-      </noscript>
     </div>
     <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
       <button type="submit">Save</button>

@@ -131,3 +131,136 @@
 #notes-section {
   margin-top: 1.5rem;
 }
+
+/* =============================================
+   Notes Browser — Master-Detail Layout
+   ============================================= */
+
+.notes-browser {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 0;
+  min-height: 70vh;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  overflow: hidden;
+}
+
+.notes-browser-list {
+  border-right: 1px solid var(--pico-muted-border-color);
+  overflow-y: auto;
+  max-height: 75vh;
+}
+
+.notes-browser-viewer {
+  overflow-y: auto;
+  max-height: 75vh;
+  padding: 1.25rem;
+}
+
+/* Notes grid table */
+.notes-grid {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+}
+
+.notes-grid th,
+.notes-grid td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.85em;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+.notes-grid th {
+  position: sticky;
+  top: 0;
+  background: var(--pico-card-background-color);
+  font-weight: 600;
+  text-align: left;
+  resize: horizontal;
+  overflow: auto;
+  border-bottom: 2px solid var(--pico-muted-border-color);
+  z-index: 1;
+}
+
+.notes-grid th a {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.notes-grid tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.notes-grid tbody tr:hover {
+  background: color-mix(in srgb, var(--pico-primary) 6%, transparent);
+}
+
+.notes-grid tbody tr.selected {
+  background: color-mix(in srgb, var(--pico-primary) 12%, transparent);
+}
+
+.notes-grid .empty-row td {
+  text-align: center;
+  color: var(--pico-muted-color);
+  padding: 2rem 0.5rem;
+  cursor: default;
+}
+
+.notes-grid .pin-icon {
+  color: var(--pico-primary);
+}
+
+/* Viewer empty state */
+.notes-viewer-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--pico-muted-color);
+  font-size: 1.05em;
+}
+
+/* Viewer header */
+.notes-viewer-header {
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+/* Viewer actions */
+.notes-viewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.notes-viewer-actions button {
+  padding: 2px 10px;
+  font-size: 0.8em;
+  margin: 0;
+}
+
+/* Responsive — single column on mobile */
+@media (max-width: 768px) {
+  .notes-browser {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  .notes-browser-list {
+    border-right: none;
+    border-bottom: 1px solid var(--pico-muted-border-color);
+    max-height: 40vh;
+  }
+  .notes-browser-viewer {
+    max-height: none;
+  }
+}

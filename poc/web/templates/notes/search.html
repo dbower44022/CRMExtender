@@ -4,45 +4,95 @@
 {% block content %}
 <h1>Notes</h1>
 
-<form method="get" action="/notes/search" style="margin-bottom:1rem;">
-  <div style="display:flex;gap:0.5rem;">
-    <input type="search" name="q" value="{{ q }}" placeholder="Search notes..."
-           style="flex:1;" autofocus>
-    <button type="submit">Search</button>
-  </div>
-</form>
+<input type="search" name="q" value="{{ q }}" placeholder="Search notes..."
+       hx-get="/notes/search/list"
+       hx-trigger="input changed delay:300ms, search"
+       hx-target="#notes-list"
+       hx-swap="innerHTML"
+       hx-push-url="/notes/search"
+       hx-include="[name='sort']"
+       autofocus
+       style="margin-bottom:0.5rem;">
+<input type="hidden" name="sort" value="{{ sort|default('-updated', true) }}">
 
 {% if q %}
-<p>{{ results|length }} result{{ 's' if results|length != 1 else '' }} for &ldquo;{{ q }}&rdquo;</p>
-{% elif results %}
-<h2>Recent Notes</h2>
+<p style="margin-bottom:0.5rem;">{{ results|length }} result{{ 's' if results|length != 1 else '' }} for &ldquo;{{ q }}&rdquo;</p>
 {% endif %}
 
-{% if results %}
-<div class="notes-search-results">
-  {% for note in results %}
-  <article style="margin-bottom:0.75rem;padding:0.75rem;">
-    <header style="padding:0;margin-bottom:0.25rem;">
-      {% if note.title %}<strong>{{ note.title }}</strong> &mdash; {% endif %}
-      <small>
-        <a href="/{{ note.entity_type }}{% if note.entity_type == 'company' %}ies{% else %}s{% endif %}/{{ note.entity_id }}">
-          {{ note.entity_type|title }} detail
-        </a>
-      </small>
-    </header>
-    <div>{{ note.snippet|safe if note.snippet else (note.content_html|safe if note.content_html else '') }}</div>
-    <footer style="padding:0;margin-top:0.25rem;">
-      <small style="color:var(--pico-muted-color);">
-        {% if note.author_name %}by {{ note.author_name }} &middot; {% endif %}
-        {{ note.updated_at|datetime }}
-      </small>
-    </footer>
-  </article>
-  {% endfor %}
+<div class="notes-browser">
+  <div class="notes-browser-list" id="notes-list"
+       hx-get="/notes/search/list{% if q %}?q={{ q|urlencode }}&sort={{ sort|default('-updated', true) }}{% else %}?sort={{ sort|default('-updated', true) }}{% endif %}"
+       hx-trigger="noteUpdated from:body, noteDeleted from:body, notePinned from:body"
+       hx-swap="innerHTML">
+    {% include "notes/_search_list.html" %}
+  </div>
+  <div class="notes-browser-viewer" id="notes-viewer">
+    <div class="notes-viewer-empty">Select a note to view</div>
+  </div>
 </div>
-{% elif q %}
-<p class="empty-state">No notes matching your search.</p>
-{% else %}
-<p class="empty-state">No notes yet. Add notes from any contact, company, conversation, event, or project detail page.</p>
-{% endif %}
+
+<script>
+function selectListItem(el) {
+  document.querySelectorAll('#notes-list .notes-grid tbody tr').forEach(
+    item => item.classList.remove('selected')
+  );
+  el.classList.add('selected');
+}
+
+function initNotesKeyboard() {
+  const list = document.getElementById('notes-list');
+  if (!list) return;
+
+  list.addEventListener('keydown', function(e) {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown' && e.key !== 'Enter') return;
+    e.preventDefault();
+
+    const items = Array.from(list.querySelectorAll('.notes-grid tbody tr:not(.empty-row)'));
+    if (!items.length) return;
+
+    const current = list.querySelector('.notes-grid tbody tr.selected');
+    let idx = current ? items.indexOf(current) : -1;
+
+    if (e.key === 'ArrowDown') {
+      idx = Math.min(idx + 1, items.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      idx = Math.max(idx - 1, 0);
+    } else if (e.key === 'Enter' && current) {
+      htmx.trigger(current, 'click');
+      return;
+    }
+
+    const target = items[idx];
+    if (target) {
+      selectListItem(target);
+      target.scrollIntoView({ block: 'nearest' });
+      htmx.ajax('GET', '/notes/' + target.dataset.noteId + '/view', '#notes-viewer');
+    }
+  });
+
+  // Make list focusable for keyboard events
+  if (!list.hasAttribute('tabindex')) {
+    list.setAttribute('tabindex', '0');
+  }
+}
+
+// Re-select current note after list refresh
+document.body.addEventListener('htmx:afterSettle', function(e) {
+  if (e.detail.target && e.detail.target.id === 'notes-list') {
+    const viewer = document.getElementById('notes-viewer');
+    const pinBtn = viewer ? viewer.querySelector('button[hx-post*="/pin"]') : null;
+    if (pinBtn) {
+      const match = pinBtn.getAttribute('hx-post').match(/\/notes\/([^/]+)\/pin/);
+      if (match) {
+        const noteId = match[1];
+        const item = document.querySelector('#notes-list .notes-grid tbody tr[data-note-id="' + noteId + '"]');
+        if (item) item.classList.add('selected');
+      }
+    }
+    initNotesKeyboard();
+  }
+});
+
+initNotesKeyboard();
+</script>
 {% endblock %}

@@ -1,0 +1,46 @@
+{% set q_enc = q|default('', true)|urlencode %}
+{% set s = sort|default('-updated', true) %}
+<table class="notes-grid">
+  <colgroup>
+    <col style="width:35%;">
+    <col style="width:16%;">
+    <col style="width:16%;">
+    <col style="width:13%;">
+    <col style="width:20%;">
+  </colgroup>
+  <thead>
+    <tr>
+      <th><a hx-get="/notes/search/list?q={{ q_enc }}&sort={% if s == 'name' %}-name{% else %}name{% endif %}"
+             hx-target="#notes-list" hx-swap="innerHTML">Name{% if s == 'name' %} &#9650;{% elif s == '-name' %} &#9660;{% endif %}</a></th>
+      <th><a hx-get="/notes/search/list?q={{ q_enc }}&sort={% if s == 'created' %}-created{% else %}created{% endif %}"
+             hx-target="#notes-list" hx-swap="innerHTML">Created{% if s == 'created' %} &#9650;{% elif s == '-created' %} &#9660;{% endif %}</a></th>
+      <th><a hx-get="/notes/search/list?q={{ q_enc }}&sort={% if s == '-updated' %}updated{% else %}-updated{% endif %}"
+             hx-target="#notes-list" hx-swap="innerHTML">Updated{% if s == '-updated' %} &#9660;{% elif s == 'updated' %} &#9650;{% endif %}</a></th>
+      <th><a hx-get="/notes/search/list?q={{ q_enc }}&sort={% if s == 'author' %}-author{% else %}author{% endif %}"
+             hx-target="#notes-list" hx-swap="innerHTML">Author{% if s == 'author' %} &#9650;{% elif s == '-author' %} &#9660;{% endif %}</a></th>
+      <th><a hx-get="/notes/search/list?q={{ q_enc }}&sort={% if s == 'entity' %}-entity{% else %}entity{% endif %}"
+             hx-target="#notes-list" hx-swap="innerHTML">Entity{% if s == 'entity' %} &#9650;{% elif s == '-entity' %} &#9660;{% endif %}</a></th>
+    </tr>
+  </thead>
+  <tbody>
+{% if results %}
+{% for note in results %}
+    <tr hx-get="/notes/{{ note.id }}/view"
+        hx-target="#notes-viewer"
+        hx-swap="innerHTML"
+        data-note-id="{{ note.id }}"
+        onclick="selectListItem(this)">
+      <td>{% if note.is_pinned %}<span class="pin-icon" title="Pinned">&#128204;</span> {% endif %}{{ note.title or 'Untitled' }}</td>
+      <td>{{ note.created_at|datetime }}</td>
+      <td>{{ note.updated_at|datetime }}</td>
+      <td>{{ note.author_name or '' }}</td>
+      <td>{% if note.entity_name %}{{ note.entity_type|title }}: {{ note.entity_name|truncate(20) }}{% endif %}</td>
+    </tr>
+{% endfor %}
+{% elif q %}
+    <tr class="empty-row"><td colspan="5">No notes matching your search.</td></tr>
+{% else %}
+    <tr class="empty-row"><td colspan="5">No notes yet.</td></tr>
+{% endif %}
+  </tbody>
+</table>

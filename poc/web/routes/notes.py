@@ -67,6 +67,59 @@ def _sanitize_html(html: str | None) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Entity name resolution (for browser display)
+# ---------------------------------------------------------------------------
+
+_ENTITY_NAME_SQL = {
+    "contact": "SELECT name FROM contacts WHERE id = ?",
+    "company": "SELECT name FROM companies WHERE id = ?",
+    "conversation": "SELECT title AS name FROM conversations WHERE id = ?",
+    "event": "SELECT title AS name FROM events WHERE id = ?",
+    "project": "SELECT name FROM projects WHERE id = ?",
+}
+
+
+def _entity_name(conn, entity_type: str, entity_id: str) -> str:
+    """Look up a display name for an entity."""
+    sql = _ENTITY_NAME_SQL.get(entity_type)
+    if not sql:
+        return entity_id
+    row = conn.execute(sql, (entity_id,)).fetchone()
+    return row["name"] if row and row["name"] else entity_id
+
+
+def _resolve_entity_names(conn, notes: list[dict]) -> list[dict]:
+    """Add entity_name and author_name to each note dict (for list display)."""
+    for note in notes:
+        et = note.get("entity_type") or ""
+        eid = note.get("entity_id") or ""
+        note["entity_name"] = _entity_name(conn, et, eid) if et and eid else ""
+        # Resolve author name
+        if not note.get("author_name") and note.get("created_by"):
+            u = conn.execute(
+                "SELECT name FROM users WHERE id = ?", (note["created_by"],)
+            ).fetchone()
+            note["author_name"] = u["name"] if u else None
+    return notes
+
+
+def _resolve_entity_names_for_note(conn, note: dict) -> dict:
+    """Add entity_name to each entity in note['entities'] (for viewer)."""
+    for entity in note.get("entities", []):
+        entity["entity_name"] = _entity_name(
+            conn, entity["entity_type"], entity["entity_id"],
+        )
+    return note
+
+
+def _entity_url(entity_type: str, entity_id: str) -> str:
+    """Build the detail page URL for an entity."""
+    if entity_type == "company":
+        return f"/companies/{entity_id}"
+    return f"/{entity_type}s/{entity_id}"
+
+
+# ---------------------------------------------------------------------------
 # List / Create
 # ---------------------------------------------------------------------------
 
@@ -116,6 +169,32 @@ async def notes_create(request: Request):
 
 
 # ---------------------------------------------------------------------------
+# Browser viewer
+# ---------------------------------------------------------------------------
+
+@router.get("/{note_id}/view", response_class=HTMLResponse)
+def notes_view(request: Request, note_id: str):
+    """Return the viewer partial for the browser right pane."""
+    templates = request.app.state.templates
+    cid = request.state.customer_id
+
+    note = get_note(note_id)
+    if not note or note.get("customer_id") != cid:
+        return HTMLResponse("Note not found", status_code=404)
+
+    with get_connection() as conn:
+        u = conn.execute(
+            "SELECT name FROM users WHERE id = ?", (note["created_by"],)
+        ).fetchone()
+        note["author_name"] = u["name"] if u else None
+        _resolve_entity_names_for_note(conn, note)
+
+    return templates.TemplateResponse(request, "notes/_viewer.html", {
+        "note": note,
+    })
+
+
+# ---------------------------------------------------------------------------
 # Edit / Update
 # ---------------------------------------------------------------------------
 
@@ -123,6 +202,7 @@ async def notes_create(request: Request):
 def notes_edit(
     request: Request, note_id: str,
     entity_type: str = "", entity_id: str = "",
+    source: str = "",
 ):
     templates = request.app.state.templates
     cid = request.state.customer_id
@@ -135,6 +215,11 @@ def notes_edit(
     et = entity_type or note.get("entity_type") or ""
     eid = entity_id or note.get("entity_id") or ""
 
+    if source == "browser":
+        return templates.TemplateResponse(request, "notes/_viewer_editor.html", {
+            "note": note,
+        })
+
     return templates.TemplateResponse(request, "notes/_note_editor.html", {
         "note": note,
         "entity_type": et,
@@ -143,7 +228,7 @@ def notes_edit(
 
 
 @router.put("/{note_id}", response_class=HTMLResponse)
-async def notes_update(request: Request, note_id: str):
+async def notes_update(request: Request, note_id: str, source: str = ""):
     templates = request.app.state.templates
     form = await request.form()
     user = request.state.user
@@ -174,6 +259,16 @@ async def notes_update(request: Request, note_id: str):
             u = conn.execute("SELECT name FROM users WHERE id = ?", (updated["created_by"],)).fetchone()
             updated["author_name"] = u["name"] if u else None
 
+    if source == "browser":
+        if updated:
+            with get_connection() as conn:
+                _resolve_entity_names_for_note(conn, updated)
+        resp = templates.TemplateResponse(request, "notes/_viewer.html", {
+            "note": updated,
+        })
+        resp.headers["HX-Trigger"] = "noteUpdated"
+        return resp
+
     return templates.TemplateResponse(request, "notes/_note_card.html", {
         "note": updated,
         "entity_type": et,
@@ -186,13 +281,21 @@ async def notes_update(request: Request, note_id: str):
 # ---------------------------------------------------------------------------
 
 @router.delete("/{note_id}", response_class=HTMLResponse)
-def notes_delete(request: Request, note_id: str):
+def notes_delete(request: Request, note_id: str, source: str = ""):
     cid = request.state.customer_id
     note = get_note(note_id)
     if not note or note.get("customer_id") != cid:
         return HTMLResponse("Note not found", status_code=404)
 
     delete_note(note_id)
+
+    if source == "browser":
+        resp = HTMLResponse(
+            '<div class="notes-viewer-empty">Note deleted. Select another note.</div>'
+        )
+        resp.headers["HX-Trigger"] = "noteDeleted"
+        return resp
+
     return HTMLResponse("")
 
 
@@ -204,6 +307,7 @@ def notes_delete(request: Request, note_id: str):
 def notes_pin(
     request: Request, note_id: str,
     entity_type: str = "", entity_id: str = "",
+    source: str = "",
 ):
     templates = request.app.state.templates
     cid = request.state.customer_id
@@ -226,6 +330,16 @@ def notes_pin(
             if e["entity_type"] == et and e["entity_id"] == eid:
                 updated["is_pinned"] = e["is_pinned"]
                 break
+
+    if source == "browser":
+        if updated:
+            with get_connection() as conn:
+                _resolve_entity_names_for_note(conn, updated)
+        resp = templates.TemplateResponse(request, "notes/_viewer.html", {
+            "note": updated,
+        })
+        resp.headers["HX-Trigger"] = "notePinned"
+        return resp
 
     return templates.TemplateResponse(request, "notes/_note_card.html", {
         "note": updated,
@@ -397,8 +511,25 @@ def notes_mentions(request: Request, q: str = "", type: str = "user"):
 # Global search
 # ---------------------------------------------------------------------------
 
+_NOTES_SORT_MAP = {
+    "name": "title",
+    "created": "created_at",
+    "updated": "updated_at",
+    "author": "author_name",
+    "entity": "entity_name",
+}
+
+
+def _sort_notes(notes: list[dict], sort: str) -> list[dict]:
+    """Sort notes list in-place using the sort map."""
+    desc = sort.startswith("-")
+    key = sort.lstrip("-")
+    attr = _NOTES_SORT_MAP.get(key, "updated_at")
+    return sorted(notes, key=lambda n: (n.get(attr) or "") or "", reverse=desc)
+
+
 @router.get("/search", response_class=HTMLResponse)
-def notes_search(request: Request, q: str = ""):
+def notes_search(request: Request, q: str = "", sort: str = "-updated"):
     templates = request.app.state.templates
     cid = request.state.customer_id
 
@@ -407,8 +538,37 @@ def notes_search(request: Request, q: str = ""):
     else:
         results = get_recent_notes(customer_id=cid)
 
+    with get_connection() as conn:
+        _resolve_entity_names(conn, results)
+
+    results = _sort_notes(results, sort)
+
     return templates.TemplateResponse(request, "notes/search.html", {
         "active_nav": "notes",
         "q": q,
+        "sort": sort,
         "results": results,
+    })
+
+
+@router.get("/search/list", response_class=HTMLResponse)
+def notes_search_list(request: Request, q: str = "", sort: str = "-updated"):
+    """Return the list-items partial for the browser left pane."""
+    templates = request.app.state.templates
+    cid = request.state.customer_id
+
+    if q.strip():
+        results = search_notes(q, customer_id=cid)
+    else:
+        results = get_recent_notes(customer_id=cid)
+
+    with get_connection() as conn:
+        _resolve_entity_names(conn, results)
+
+    results = _sort_notes(results, sort)
+
+    return templates.TemplateResponse(request, "notes/_search_list.html", {
+        "results": results,
+        "q": q,
+        "sort": sort,
     })

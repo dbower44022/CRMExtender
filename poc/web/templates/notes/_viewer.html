@@ -1,0 +1,50 @@
+<div class="notes-viewer-header">
+  <h3 style="margin-bottom:0.25rem;">{{ note.title or 'Untitled' }}</h3>
+  <div style="margin-bottom:0.35rem;">
+    {% for entity in note.entities %}
+    <a href="/{{ 'companies' if entity.entity_type == 'company' else entity.entity_type + 's' }}/{{ entity.entity_id }}"
+       class="entity-badge" style="text-decoration:none;">
+      {{ entity.entity_type|title }}: {{ entity.entity_name or entity.entity_id }}
+    </a>
+    {% endfor %}
+  </div>
+  <small style="color:var(--pico-muted-color);">
+    {% if note.author_name %}by {{ note.author_name }} &middot; {% endif %}
+    {{ note.updated_at|datetime }}
+    {% if note.revision_number and note.revision_number > 1 %} &middot; v{{ note.revision_number }}{% endif %}
+  </small>
+  <div class="notes-viewer-actions">
+    <button class="outline"
+            hx-post="/notes/{{ note.id }}/pin?source=browser"
+            hx-target="#notes-viewer"
+            hx-swap="innerHTML"
+            title="{{ 'Unpin' if note.is_pinned else 'Pin' }}">
+      {{ 'Unpin' if note.is_pinned else 'Pin' }}
+    </button>
+    <button class="outline"
+            hx-get="/notes/{{ note.id }}/edit?source=browser"
+            hx-target="#notes-viewer"
+            hx-swap="innerHTML">
+      Edit
+    </button>
+    <button class="outline secondary"
+            hx-delete="/notes/{{ note.id }}?source=browser"
+            hx-target="#notes-viewer"
+            hx-swap="innerHTML"
+            hx-confirm="Delete this note?">
+      Delete
+    </button>
+    {% if note.revision_number and note.revision_number > 1 %}
+    <button class="outline"
+            hx-get="/notes/{{ note.id }}/revisions"
+            hx-target="#notes-revisions"
+            hx-swap="innerHTML">
+      History
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="note-content">{{ note.content_html|safe if note.content_html else '<em>No content</em>' }}</div>
+
+<div id="notes-revisions" style="margin-top:1rem;"></div>

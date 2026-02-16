@@ -1,0 +1,25 @@
+<form hx-put="/notes/{{ note.id }}?source=browser"
+      hx-target="#notes-viewer"
+      hx-swap="innerHTML">
+  <label>
+    Title <small>(optional)</small>
+    <input type="text" name="title" value="{{ note.title or '' }}" placeholder="Note title...">
+  </label>
+  <div id="note-editor-{{ note.id }}" class="note-editor-wrapper">
+    <div class="note-editor"
+         data-editor="{{ note.id }}"
+         data-content="{{ note.content_json|e if note.content_json else '' }}"></div>
+    <input type="hidden" name="content_json" id="content_json_{{ note.id }}">
+    <input type="hidden" name="content_html" id="content_html_{{ note.id }}">
+    <noscript>
+      <textarea name="content_html" rows="6">{{ note.content_html or '' }}</textarea>
+    </noscript>
+  </div>
+  <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+    <button type="submit">Save</button>
+    <button type="button" class="outline secondary"
+            hx-get="/notes/{{ note.id }}/view"
+            hx-target="#notes-viewer"
+            hx-swap="innerHTML">Cancel</button>
+  </div>
+</form>

@@ -172,9 +172,9 @@ def _add_conversation_participant(conv_id, contact_id, address="a@b.com"):
     with get_connection() as conn:
         conn.execute(
             "INSERT INTO conversation_participants "
-            "(conversation_id, address, contact_id, communication_count, first_seen_at, last_seen_at) "
-            "VALUES (?, ?, ?, 1, ?, ?)",
-            (conv_id, address, contact_id, _NOW, _NOW),
+            "(conversation_id, email_address, address, contact_id, communication_count, first_seen_at, last_seen_at) "
+            "VALUES (?, ?, ?, ?, 1, ?, ?)",
+            (conv_id, address, address, contact_id, _NOW, _NOW),
         )
 
 

@@ -205,10 +205,10 @@ def _insert_participant(conn, conv_id, address, contact_id=None,
                          communication_count=1):
     conn.execute(
         "INSERT OR IGNORE INTO conversation_participants "
-        "(conversation_id, address, contact_id, communication_count, "
+        "(conversation_id, email_address, address, contact_id, communication_count, "
         "first_seen_at, last_seen_at) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (conv_id, address, contact_id, communication_count, _NOW, _NOW),
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (conv_id, address, address, contact_id, communication_count, _NOW, _NOW),
     )
 
 

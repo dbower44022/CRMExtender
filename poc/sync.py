@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -10,9 +9,7 @@ from datetime import datetime, timezone
 from google.oauth2.credentials import Credentials
 
 from . import config
-from .contact_matcher import build_contact_index, match_contacts
 from .contacts_client import fetch_contacts
-from .conversation_builder import build_conversations
 from .database import get_connection
 from .email_parser import strip_quotes
 from .gmail_client import (
@@ -25,13 +22,11 @@ from .gmail_client import (
 from .models import (
     Conversation,
     ConversationSummary,
-    FilterReason,
     KnownContact,
     ParsedEmail,
     TriageResult,
     _now_iso,
     filter_reason_from_db,
-    filter_reason_to_db,
 )
 from .domain_resolver import (
     ensure_domain_identifier,
@@ -41,7 +36,7 @@ from .domain_resolver import (
 )
 from .rate_limiter import RateLimiter
 from .summarizer import summarize_conversation
-from .triage import triage_conversations
+from .triage import AUTOMATED_SENDER_PATTERNS
 
 log = logging.getLogger(__name__)
 
@@ -267,6 +262,73 @@ def load_contact_index() -> dict[str, KnownContact]:
 
 
 # ---------------------------------------------------------------------------
+# Conversation creation rules
+# ---------------------------------------------------------------------------
+
+def _is_blocked_sender(addr: str) -> bool:
+    """Return True if the address matches an automated/blocked sender pattern."""
+    addr = addr.lower().strip()
+    return any(pat.search(addr) for pat in AUTOMATED_SENDER_PATTERNS)
+
+
+def _should_create_conversation(
+    comm_rows: list[dict],
+    account_email: str,
+    contact_index: dict[str, KnownContact],
+) -> bool:
+    """Decide whether a conversation should be created for this thread.
+
+    Implements three rules:
+      Rule 1 — Single inbound from a known, non-blocked contact → Yes
+      Rule 2 — Single outbound to a known contact → Yes (unknown recipient → No)
+      Rule 3 — Multi-email thread where user sent at least one, OR at least one
+               participant is a known, non-blocked contact → Yes
+    """
+    if not comm_rows:
+        return False
+
+    total = len(comm_rows)
+    account_lower = account_email.lower()
+
+    # Gather all participant addresses and directions
+    user_sent = False
+    has_known_nonblocked = False
+
+    for row in comm_rows:
+        sender = (row.get("sender_address") or "").lower()
+        direction = row.get("direction") or ("outbound" if sender == account_lower else "inbound")
+
+        if sender == account_lower:
+            user_sent = True
+
+        # Check sender (skip the user themselves)
+        if sender and sender != account_lower:
+            if not _is_blocked_sender(sender) and sender in contact_index:
+                has_known_nonblocked = True
+
+        # Check recipients from communication_participants
+        participants = row.get("_participants", [])
+        for p in participants:
+            addr = (p.get("address") or "").lower()
+            if addr and addr != account_lower:
+                if not _is_blocked_sender(addr) and addr in contact_index:
+                    has_known_nonblocked = True
+
+    if total == 1:
+        row = comm_rows[0]
+        sender = (row.get("sender_address") or "").lower()
+        if sender == account_lower:
+            # Rule 2: outbound — need a known recipient
+            return has_known_nonblocked
+        else:
+            # Rule 1: inbound — sender must be known AND not blocked
+            return has_known_nonblocked
+    else:
+        # Rule 3: multi-email — user participated OR any known non-blocked contact
+        return user_sent or has_known_nonblocked
+
+
+# ---------------------------------------------------------------------------
 # Conversation + communication persistence
 # ---------------------------------------------------------------------------
 
@@ -280,7 +342,13 @@ def _store_thread(
     customer_id: str | None = None,
     created_by: str | None = None,
 ) -> tuple[bool, bool]:
-    """Store a single thread's conversation and communications.
+    """Store a single thread's communications and conditionally create a conversation.
+
+    Communications are always stored. A conversation is only created when the
+    thread satisfies the conversation-creation rules (known contacts, user
+    participation, etc.).  When a previously-skipped thread later qualifies,
+    the conversation is created retroactively and ALL existing communications
+    for that thread are linked.
 
     Returns (conversation_created, conversation_updated).
     """
@@ -289,51 +357,16 @@ def _store_thread(
 
     thread_id = thread_emails[0].thread_id
     subject = thread_emails[0].subject or "(no subject)"
+    now = _now_iso()
 
     # Strip quotes from bodies
     for em in thread_emails:
         em.body_plain = strip_quotes(em.body_plain, em.body_html or None)
 
-    # Check if conversation already exists via communications + conversation_communications.
-    # Search by provider_thread_id across ALL accounts so that the same Gmail thread
-    # synced from multiple accounts merges into a single conversation.
-    existing = conn.execute(
-        """SELECT cc.conversation_id, conv.communication_count
-           FROM communications c
-           JOIN conversation_communications cc ON cc.communication_id = c.id
-           JOIN conversations conv ON conv.id = cc.conversation_id
-           WHERE c.provider_thread_id = ?
-           LIMIT 1""",
-        (thread_id,),
-    ).fetchone()
-
-    # Compute date range
-    dates = [e.date for e in thread_emails if e.date]
-    first_dt = min(dates).isoformat() if dates else None
-    last_dt = max(dates).isoformat() if dates else None
-    now = _now_iso()
-
-    if existing:
-        conv_id = existing["conversation_id"]
-        conversation_created = False
-    else:
-        conv_id = str(uuid.uuid4())
-        conn.execute(
-            """INSERT INTO conversations
-               (id, account_id, title, subject, status,
-                communication_count, message_count, participant_count,
-                first_activity_at, last_activity_at, first_message_at, last_message_at,
-                dismissed, customer_id, created_by, created_at, updated_at)
-               VALUES (?, ?, ?, ?, 'active', ?, ?, 0, ?, ?, ?, ?, 0, ?, ?, ?, ?)""",
-            (conv_id, account_id, subject, subject,
-             len(thread_emails), len(thread_emails),
-             first_dt, last_dt, first_dt, last_dt,
-             customer_id, created_by, now, now),
-        )
-        conversation_created = True
-
-    # Insert communications (skip duplicates)
-    new_comm_count = 0
+    # ------------------------------------------------------------------
+    # Step 1: Always store communications + participants first
+    # ------------------------------------------------------------------
+    new_comm_ids: list[str] = []
     for em in thread_emails:
         comm_id = str(uuid.uuid4())
         row = em.to_row(
@@ -362,24 +395,15 @@ def _store_thread(
                 ),
             )
         except Exception:
-            # Duplicate — already stored
             continue
 
         # Check if this was actually inserted (not ignored due to UNIQUE)
         if conn.execute(
             "SELECT 1 FROM communications WHERE id = ?", (comm_id,)
         ).fetchone():
-            new_comm_count += 1
+            new_comm_ids.append(comm_id)
 
-            # Insert into conversation_communications join table
-            conn.execute(
-                """INSERT OR IGNORE INTO conversation_communications
-                   (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at)
-                   VALUES (?, ?, 'sync', 1.0, 1, ?)""",
-                (conv_id, comm_id, now),
-            )
-
-            # Insert recipients
+            # Insert recipients into communication_participants
             for rec_row in em.recipient_rows(comm_id):
                 conn.execute(
                     """INSERT OR IGNORE INTO communication_participants
@@ -389,61 +413,164 @@ def _store_thread(
                      rec_row["name"], rec_row["role"]),
                 )
 
+    # ------------------------------------------------------------------
+    # Step 2: Check for existing conversation
+    # ------------------------------------------------------------------
+    existing = conn.execute(
+        """SELECT cc.conversation_id, conv.communication_count
+           FROM communications c
+           JOIN conversation_communications cc ON cc.communication_id = c.id
+           JOIN conversations conv ON conv.id = cc.conversation_id
+           WHERE c.provider_thread_id = ?
+           LIMIT 1""",
+        (thread_id,),
+    ).fetchone()
+
+    conversation_created = False
     conversation_updated = False
-    if existing and new_comm_count > 0:
-        # Update conversation counts and timestamps via join
-        actual_count = conn.execute(
-            """SELECT COUNT(*) as cnt FROM conversation_communications
-               WHERE conversation_id = ?""",
-            (conv_id,),
-        ).fetchone()["cnt"]
 
-        # Recalculate date range from stored communications
-        date_row = conn.execute(
-            """SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
+    if existing:
+        # Conversation already exists — link new communications to it
+        conv_id = existing["conversation_id"]
+        for cid in new_comm_ids:
+            conn.execute(
+                """INSERT OR IGNORE INTO conversation_communications
+                   (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at)
+                   VALUES (?, ?, 'sync', 1.0, 1, ?)""",
+                (conv_id, cid, now),
+            )
+
+        if new_comm_ids:
+            # Update conversation counts and timestamps
+            actual_count = conn.execute(
+                "SELECT COUNT(*) as cnt FROM conversation_communications WHERE conversation_id = ?",
+                (conv_id,),
+            ).fetchone()["cnt"]
+
+            date_row = conn.execute(
+                """SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
+                   FROM communications c
+                   JOIN conversation_communications cc ON cc.communication_id = c.id
+                   WHERE cc.conversation_id = ?""",
+                (conv_id,),
+            ).fetchone()
+
+            conn.execute(
+                """UPDATE conversations
+                   SET communication_count = ?, first_activity_at = ?, last_activity_at = ?,
+                       ai_summarized_at = NULL, updated_at = ?
+                   WHERE id = ?""",
+                (actual_count, date_row["first_dt"], date_row["last_dt"], now, conv_id),
+            )
+            conversation_updated = True
+    else:
+        # ------------------------------------------------------------------
+        # Step 3: No existing conversation — evaluate creation rules
+        # ------------------------------------------------------------------
+        # Load ALL communications for this thread (including previously stored ones)
+        all_thread_comms = conn.execute(
+            """SELECT c.id, c.sender_address, c.direction
                FROM communications c
-               JOIN conversation_communications cc ON cc.communication_id = c.id
-               WHERE cc.conversation_id = ?""",
-            (conv_id,),
-        ).fetchone()
+               WHERE c.provider_thread_id = ?""",
+            (thread_id,),
+        ).fetchall()
 
-        conn.execute(
-            """UPDATE conversations
-               SET communication_count = ?, first_activity_at = ?, last_activity_at = ?,
-                   ai_summarized_at = NULL, updated_at = ?
-               WHERE id = ?""",
-            (actual_count, date_row["first_dt"], date_row["last_dt"], now, conv_id),
-        )
-        conversation_updated = True
+        # Enrich with participant data for _should_create_conversation
+        comm_dicts = []
+        for cr in all_thread_comms:
+            d = dict(cr)
+            parts = conn.execute(
+                "SELECT address, role FROM communication_participants WHERE communication_id = ?",
+                (d["id"],),
+            ).fetchall()
+            d["_participants"] = [dict(p) for p in parts]
+            comm_dicts.append(d)
 
-    # Upsert conversation participants
+        if _should_create_conversation(comm_dicts, account_email, contact_index):
+            # Create conversation and link ALL thread communications (retroactive)
+            conv_id = str(uuid.uuid4())
+            all_comm_ids = [d["id"] for d in comm_dicts]
+            total_count = len(all_comm_ids)
+
+            # Calculate date range from all thread communications
+            date_row = conn.execute(
+                """SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
+                   FROM communications c
+                   WHERE c.provider_thread_id = ?""",
+                (thread_id,),
+            ).fetchone()
+
+            conn.execute(
+                """INSERT INTO conversations
+                   (id, account_id, title, subject, status,
+                    communication_count, message_count, participant_count,
+                    first_activity_at, last_activity_at, first_message_at, last_message_at,
+                    dismissed, customer_id, created_by, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, 'active', ?, ?, 0, ?, ?, ?, ?, 0, ?, ?, ?, ?)""",
+                (conv_id, account_id, subject, subject,
+                 total_count, total_count,
+                 date_row["first_dt"], date_row["last_dt"],
+                 date_row["first_dt"], date_row["last_dt"],
+                 customer_id, created_by, now, now),
+            )
+            conversation_created = True
+
+            # Link ALL thread communications to the new conversation
+            for cid in all_comm_ids:
+                conn.execute(
+                    """INSERT OR IGNORE INTO conversation_communications
+                       (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at)
+                       VALUES (?, ?, 'sync', 1.0, 1, ?)""",
+                    (conv_id, cid, now),
+                )
+        else:
+            # Rules say no conversation — communications stored but unlinked
+            return False, False
+
+    # ------------------------------------------------------------------
+    # Step 4: Upsert conversation participants
+    # ------------------------------------------------------------------
     all_participants: dict[str, None] = {}
-    for em in thread_emails:
-        for p in em.all_participants:
-            all_participants[p] = None
+    # Gather from ALL communications linked to this conversation
+    linked_comms = conn.execute(
+        """SELECT c.sender_address FROM communications c
+           JOIN conversation_communications cc ON cc.communication_id = c.id
+           WHERE cc.conversation_id = ?""",
+        (conv_id,),
+    ).fetchall()
+    for lc in linked_comms:
+        if lc["sender_address"]:
+            all_participants[lc["sender_address"].lower()] = None
+
+    linked_parts = conn.execute(
+        """SELECT cp.address FROM communication_participants cp
+           JOIN conversation_communications cc ON cc.communication_id = cp.communication_id
+           WHERE cc.conversation_id = ?""",
+        (conv_id,),
+    ).fetchall()
+    for lp in linked_parts:
+        if lp["address"]:
+            all_participants[lp["address"].lower()] = None
 
     for addr in all_participants:
-        # Look up contact_id via contact_identifiers
         contact_row = conn.execute(
             "SELECT contact_id FROM contact_identifiers WHERE type = 'email' AND value = ?",
             (addr.lower(),),
         ).fetchone()
         contact_id = contact_row["contact_id"] if contact_row else None
 
-        # Count messages from this participant in the conversation
         msg_count = conn.execute(
             """SELECT COUNT(*) as cnt FROM communications c
                JOIN conversation_communications cc ON cc.communication_id = c.id
-               WHERE cc.conversation_id = ? AND c.sender_address = ?""",
+               WHERE cc.conversation_id = ? AND LOWER(c.sender_address) = ?""",
             (conv_id, addr),
         ).fetchone()["cnt"]
 
-        # Get first/last seen dates
         date_row = conn.execute(
             """SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
                FROM communications c
                JOIN conversation_communications cc ON cc.communication_id = c.id
-               WHERE cc.conversation_id = ? AND c.sender_address = ?""",
+               WHERE cc.conversation_id = ? AND LOWER(c.sender_address) = ?""",
             (conv_id, addr),
         ).fetchone()
 
@@ -736,7 +863,7 @@ def incremental_sync(
 
 
 # ---------------------------------------------------------------------------
-# Conversation processing (triage + summarize)
+# Conversation processing (summarize)
 # ---------------------------------------------------------------------------
 
 def process_conversations(
@@ -746,19 +873,21 @@ def process_conversations(
     rate_limiter: RateLimiter | None = None,
     claude_limiter: RateLimiter | None = None,
 ) -> tuple[int, int, int]:
-    """Triage and summarize conversations that need processing.
+    """Summarize conversations that need processing.
+
+    Triage is no longer needed here — conversations are pre-filtered at
+    creation time by ``_should_create_conversation()``.
 
     Returns (triaged_count, summarized_count, tag_count).
+    triaged_count is always 0 (kept for backward-compatible return signature).
     """
-    contact_index = load_contact_index()
     import anthropic
 
-    # Find conversations needing processing (account-independent)
+    # Find conversations needing summarization
     with get_connection() as conn:
         rows = conn.execute(
             """SELECT * FROM conversations
-               WHERE triage_result IS NULL
-                 AND ai_summarized_at IS NULL
+               WHERE ai_summarized_at IS NULL
                  AND dismissed = 0
                ORDER BY last_activity_at DESC""",
         ).fetchall()
@@ -767,12 +896,15 @@ def process_conversations(
         log.info("No conversations need processing")
         return 0, 0, 0
 
-    triaged_count = 0
     summarized_count = 0
     tag_count = 0
 
     for conv_row in rows:
         conv_id = conv_row["id"]
+
+        # Summarize (only if API key is set)
+        if not config.ANTHROPIC_API_KEY:
+            continue
 
         # Load communications for this conversation via join
         with get_connection() as conn:
@@ -786,7 +918,6 @@ def process_conversations(
 
         emails = []
         for cr in comm_rows:
-            rec_rows = None
             with get_connection() as conn:
                 rec_rows = conn.execute(
                     "SELECT * FROM communication_participants WHERE communication_id = ?",
@@ -794,7 +925,7 @@ def process_conversations(
                 ).fetchall()
             emails.append(ParsedEmail.from_row(cr, recipients=rec_rows))
 
-        # Reconstruct Conversation object for triage/summarization
+        # Reconstruct Conversation object for summarization
         conv = Conversation(
             thread_id=conv_id,
             title=conv_row["title"] or "",
@@ -802,34 +933,12 @@ def process_conversations(
             participants=[],
         )
 
-        # Collect participants and match contacts
+        # Collect participants
         all_participants: dict[str, None] = {}
         for em in conv.emails:
             for p in em.all_participants:
                 all_participants[p] = None
         conv.participants = list(all_participants.keys())
-
-        # Match contacts
-        for p in conv.participants:
-            if p in contact_index:
-                conv.matched_contacts[p] = contact_index[p]
-
-        # Triage
-        kept, filtered = triage_conversations([conv], user_email)
-
-        if filtered:
-            reason = filtered[0].reason
-            with get_connection() as conn:
-                conn.execute(
-                    "UPDATE conversations SET triage_result = ?, updated_at = ? WHERE id = ?",
-                    (filter_reason_to_db(reason), _now_iso(), conv_id),
-                )
-            triaged_count += 1
-            continue
-
-        # Summarize (only if API key is set)
-        if not config.ANTHROPIC_API_KEY:
-            continue
 
         client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
         summary = summarize_conversation(conv, client, user_email, claude_limiter)
@@ -855,10 +964,10 @@ def process_conversations(
                 tag_count += _store_tags(conv_id, summary.key_topics)
 
     log.info(
-        "Processing complete: %d triaged, %d summarized, %d tags",
-        triaged_count, summarized_count, tag_count,
+        "Processing complete: %d summarized, %d tags",
+        summarized_count, tag_count,
     )
-    return triaged_count, summarized_count, tag_count
+    return 0, summarized_count, tag_count
 
 
 def _store_tags(conversation_id: str, tag_names: list[str]) -> int:

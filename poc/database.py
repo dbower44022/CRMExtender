@@ -182,13 +182,18 @@ CREATE TABLE IF NOT EXISTS topics (
 CREATE TABLE IF NOT EXISTS conversations (
     id                  TEXT PRIMARY KEY,
     customer_id         TEXT REFERENCES customers(id) ON DELETE CASCADE,
+    account_id          TEXT REFERENCES provider_accounts(id) ON DELETE SET NULL,
     topic_id            TEXT REFERENCES topics(id) ON DELETE SET NULL,
     title               TEXT,
+    subject             TEXT,
     status              TEXT DEFAULT 'active',
     communication_count INTEGER DEFAULT 0,
+    message_count       INTEGER DEFAULT 0,
     participant_count   INTEGER DEFAULT 0,
     first_activity_at   TEXT,
     last_activity_at    TEXT,
+    first_message_at    TEXT,
+    last_message_at     TEXT,
     ai_summary          TEXT,
     ai_status           TEXT,
     ai_action_items     TEXT,
@@ -208,13 +213,15 @@ CREATE TABLE IF NOT EXISTS conversations (
 -- Conversation participants
 CREATE TABLE IF NOT EXISTS conversation_participants (
     conversation_id     TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    email_address       TEXT NOT NULL,
     address             TEXT NOT NULL,
     name                TEXT,
     contact_id          TEXT REFERENCES contacts(id) ON DELETE SET NULL,
     communication_count INTEGER DEFAULT 0,
     first_seen_at       TEXT,
     last_seen_at        TEXT,
-    PRIMARY KEY (conversation_id, address)
+    PRIMARY KEY (conversation_id, address),
+    UNIQUE (conversation_id, email_address)
 );
 
 -- Communications (polymorphic, all channel types)

@@ -71,10 +71,10 @@ def _insert_participant(conn, conv_id, email, contact_id, message_count=1,
     now = datetime.now(timezone.utc).isoformat()
     conn.execute(
         "INSERT OR IGNORE INTO conversation_participants "
-        "(conversation_id, address, contact_id, communication_count, "
+        "(conversation_id, email_address, address, contact_id, communication_count, "
         " first_seen_at, last_seen_at) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (conv_id, email, contact_id, message_count,
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (conv_id, email, email, contact_id, message_count,
          first_seen or now, last_seen or now),
     )
 
@@ -295,8 +295,8 @@ class TestInferRelationships:
             # Participant with NULL contact_id
             conn.execute(
                 "INSERT INTO conversation_participants "
-                "(conversation_id, address, contact_id, communication_count) "
-                "VALUES ('conv-1', 'unknown@example.com', NULL, 1)",
+                "(conversation_id, email_address, address, contact_id, communication_count) "
+                "VALUES ('conv-1', 'unknown@example.com', 'unknown@example.com', NULL, 1)",
             )
 
         count = infer_relationships()

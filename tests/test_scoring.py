@@ -158,9 +158,9 @@ def _insert_conv_participant(conn, conv_id, address, contact_id=None) -> None:
     now = _now_iso()
     conn.execute(
         """INSERT OR IGNORE INTO conversation_participants
-               (conversation_id, address, contact_id, first_seen_at, last_seen_at)
-           VALUES (?, ?, ?, ?, ?)""",
-        (conv_id, address, contact_id, now, now),
+               (conversation_id, email_address, address, contact_id, first_seen_at, last_seen_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (conv_id, address, address, contact_id, now, now),
     )
 
 

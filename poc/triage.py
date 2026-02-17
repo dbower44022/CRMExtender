@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 # --- Layer 1: Heuristic patterns ---
 
-_AUTOMATED_SENDER_PATTERNS = [
+AUTOMATED_SENDER_PATTERNS = [
     re.compile(p, re.IGNORECASE)
     for p in (
         r"^no-?reply",              # noreply@, no-reply@, no-reply-xxx@
@@ -63,7 +63,7 @@ _UNSUBSCRIBE_PATTERN = re.compile(r"unsubscribe", re.IGNORECASE)
 
 def _is_automated_sender(addr: str) -> bool:
     addr = addr.lower().strip()
-    return any(pat.search(addr) for pat in _AUTOMATED_SENDER_PATTERNS)
+    return any(pat.search(addr) for pat in AUTOMATED_SENDER_PATTERNS)
 
 
 def _is_automated_subject(subject: str) -> bool:

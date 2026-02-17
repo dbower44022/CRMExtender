@@ -50,8 +50,8 @@ def _insert_contact(conn, contact_id, email, name=None):
     )
     conn.execute(
         "INSERT OR IGNORE INTO contact_identifiers "
-        "(id, contact_id, type, value, is_primary, status, source, verified, created_at, updated_at) "
-        "VALUES (?, ?, 'email', ?, 1, 'active', 'test', 1, ?, ?)",
+        "(id, contact_id, type, value, is_primary, is_current, source, verified, created_at, updated_at) "
+        "VALUES (?, ?, 'email', ?, 1, 1, 'test', 1, ?, ?)",
         (f"ci-{contact_id}", contact_id, email.lower(), now, now),
     )
 

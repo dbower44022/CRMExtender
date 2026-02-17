@@ -8,16 +8,36 @@
         <th>Value</th>
         <th>Label</th>
         <th>Primary</th>
+        <th>Period</th>
+        <th>Status</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
       {% for ident in identifiers %}
-      <tr>
+      <tr{% if not ident.is_current %} style="opacity:0.6;"{% endif %}>
         <td>{{ ident.type }}</td>
-        <td>{{ ident.value }}</td>
+        <td>{{ ident.value }}{% if not ident.is_current %} <small>(former)</small>{% endif %}</td>
         <td>{{ ident.label or '' }}</td>
         <td>{% if ident.is_primary %}Yes{% endif %}</td>
+        <td>
+          {% if ident.started_at %}{{ ident.started_at[:10] }}{% endif %}
+          {% if ident.started_at or ident.ended_at %}&ndash;{% endif %}
+          {% if ident.ended_at %}{{ ident.ended_at[:10] }}{% elif ident.started_at %}present{% endif %}
+        </td>
+        <td>
+          {% if ident.is_current %}
+          <button hx-post="/contacts/{{ contact.id }}/identifiers/{{ ident.id }}/edit"
+                  hx-vals='{"is_current":"0"}' hx-target="#identifiers-section" hx-swap="outerHTML"
+                  class="outline" style="padding:2px 8px;font-size:.8em;"
+                  title="Mark as former">&#128340;</button>
+          {% else %}
+          <button hx-post="/contacts/{{ contact.id }}/identifiers/{{ ident.id }}/edit"
+                  hx-vals='{"is_current":"1"}' hx-target="#identifiers-section" hx-swap="outerHTML"
+                  class="outline" style="padding:2px 8px;font-size:.8em;"
+                  title="Reactivate">&#8635;</button>
+          {% endif %}
+        </td>
         <td>
           <button hx-delete="/contacts/{{ contact.id }}/identifiers/{{ ident.id }}"
                   hx-target="#identifiers-section" hx-swap="outerHTML"

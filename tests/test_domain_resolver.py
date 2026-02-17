@@ -61,8 +61,8 @@ def _insert_contact(conn, contact_id, name, email):
     )
     conn.execute(
         "INSERT INTO contact_identifiers (id, contact_id, type, value, is_primary, "
-        "status, source, verified, created_at, updated_at) "
-        "VALUES (?, ?, 'email', ?, 1, 'active', 'test', 1, ?, ?)",
+        "is_current, source, verified, created_at, updated_at) "
+        "VALUES (?, ?, 'email', ?, 1, 1, 'test', 1, ?, ?)",
         (str(uuid.uuid4()), contact_id, email, now, now),
     )
 

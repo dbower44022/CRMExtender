@@ -11,14 +11,34 @@
       <tr>
         <th>Type</th>
         <th>Number</th>
+        <th>Period</th>
+        <th>Status</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
       {% for phone in phones %}
-      <tr>
-        <td>{{ phone.phone_type }}</td>
+      <tr{% if not phone.is_current %} style="opacity:0.6;"{% endif %}>
+        <td>{{ phone.phone_type }}{% if not phone.is_current %} <small>(former)</small>{% endif %}</td>
         <td>{{ phone.number | format_phone(display_country|default('US')) }}</td>
+        <td>
+          {% if phone.started_at %}{{ phone.started_at[:10] }}{% endif %}
+          {% if phone.started_at or phone.ended_at %}&ndash;{% endif %}
+          {% if phone.ended_at %}{{ phone.ended_at[:10] }}{% elif phone.started_at %}present{% endif %}
+        </td>
+        <td>
+          {% if phone.is_current %}
+          <button hx-post="/companies/{{ company.id }}/phones/{{ phone.id }}/edit"
+                  hx-vals='{"is_current":"0"}' hx-target="#phones-section" hx-swap="outerHTML"
+                  class="outline" style="padding:2px 8px;font-size:.8em;"
+                  title="Mark as former">&#128340;</button>
+          {% else %}
+          <button hx-post="/companies/{{ company.id }}/phones/{{ phone.id }}/edit"
+                  hx-vals='{"is_current":"1"}' hx-target="#phones-section" hx-swap="outerHTML"
+                  class="outline" style="padding:2px 8px;font-size:.8em;"
+                  title="Reactivate">&#8635;</button>
+          {% endif %}
+        </td>
         <td>
           <button hx-delete="/companies/{{ company.id }}/phones/{{ phone.id }}"
                   hx-target="#phones-section" hx-swap="outerHTML"

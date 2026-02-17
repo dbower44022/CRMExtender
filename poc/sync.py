@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from google.oauth2.credentials import Credentials
 
 from . import config
-from .contacts_client import fetch_contacts
+from .contacts_client import fetch_contact_groups, fetch_contacts
 from .database import get_connection
 from .email_parser import strip_quotes
 from .gmail_client import (
@@ -153,6 +153,74 @@ def _resolve_company_id(
     return company_id
 
 
+def _add_address_if_new(
+    contact_id: str,
+    addr: dict,
+) -> dict | None:
+    """Add an address if no matching address already exists. Returns the row or None."""
+    from .hierarchy import add_address, get_addresses
+
+    existing = get_addresses("contact", contact_id)
+    for ex in existing:
+        if (
+            ex.get("street") == addr.get("street", "")
+            and ex.get("city") == addr.get("city", "")
+            and ex.get("postal_code") == addr.get("postal_code", "")
+        ):
+            return None  # duplicate
+
+    return add_address(
+        "contact",
+        contact_id,
+        address_type=addr.get("type", "other"),
+        street=addr.get("street", ""),
+        city=addr.get("city", ""),
+        state=addr.get("state", ""),
+        postal_code=addr.get("postal_code", ""),
+        country=addr.get("country", ""),
+    )
+
+
+def _store_contact_labels(
+    contact_id: str,
+    labels: list[str],
+    *,
+    customer_id: str | None = None,
+) -> int:
+    """Upsert tags and create contact_tags rows. Returns count stored."""
+    now = _now_iso()
+    count = 0
+
+    with get_connection() as conn:
+        for raw_label in labels:
+            name = raw_label.strip().lower()
+            if not name:
+                continue
+
+            tag_id = str(uuid.uuid4())
+            conn.execute(
+                """INSERT INTO tags (id, customer_id, name, source, created_at)
+                   VALUES (?, ?, ?, 'google_contacts', ?)
+                   ON CONFLICT(name) DO NOTHING""",
+                (tag_id, customer_id, name, now),
+            )
+
+            tag_row = conn.execute(
+                "SELECT id FROM tags WHERE name = ?", (name,),
+            ).fetchone()
+            actual_id = tag_row["id"]
+
+            conn.execute(
+                """INSERT OR IGNORE INTO contact_tags
+                   (contact_id, tag_id, source, confidence, created_at)
+                   VALUES (?, ?, 'google_contacts', 1.0, ?)""",
+                (contact_id, actual_id, now),
+            )
+            count += 1
+
+    return count
+
+
 def sync_contacts(
     creds: Credentials,
     rate_limiter: RateLimiter | None = None,
@@ -162,12 +230,27 @@ def sync_contacts(
 ) -> int:
     """Fetch contacts from Google People API and UPSERT into contacts + contact_identifiers.
 
+    Two-pass approach:
+      Pass 1 — create/update contacts, identifiers, affiliations, titles (single transaction)
+      Pass 2 — store phones, addresses, biographies, labels (each uses own connection)
+
     Returns the number of contacts stored.
     """
-    contacts = fetch_contacts(creds, rate_limiter=rate_limiter)
+    from .hierarchy import add_phone_number
+    from .notes import create_note
+
+    # Fetch contact groups first, then contacts with the group map
+    group_map = fetch_contact_groups(creds, rate_limiter=rate_limiter)
+    contacts = fetch_contacts(creds, rate_limiter=rate_limiter, group_map=group_map)
     now = _now_iso()
     count = 0
 
+    # Accumulate (contact_id, kc, is_new) for pass 2
+    pass2_items: list[tuple[str, KnownContact, bool]] = []
+
+    # ------------------------------------------------------------------
+    # Pass 1: contacts, identifiers, affiliations, titles
+    # ------------------------------------------------------------------
     with get_connection() as conn:
         for kc in contacts:
             email_lower = kc.email.lower()
@@ -182,6 +265,7 @@ def sync_contacts(
                 (email_lower,),
             ).fetchone()
 
+            is_new = False
             if existing:
                 # Update existing contact
                 contact_id = existing["contact_id"]
@@ -191,6 +275,7 @@ def sync_contacts(
                 )
             else:
                 # Insert new contact + identifier
+                is_new = True
                 contact_id = str(uuid.uuid4())
                 conn.execute(
                     """INSERT INTO contacts (id, name, source, status,
@@ -201,8 +286,8 @@ def sync_contacts(
                 )
                 conn.execute(
                     """INSERT INTO contact_identifiers
-                       (id, contact_id, type, value, is_primary, status, source, verified, created_at, updated_at)
-                       VALUES (?, ?, 'email', ?, 1, 'active', 'google_contacts', 1, ?, ?)""",
+                       (id, contact_id, type, value, is_primary, is_current, source, verified, created_at, updated_at)
+                       VALUES (?, ?, 'email', ?, 1, 1, 'google_contacts', 1, ?, ?)""",
                     (str(uuid.uuid4()), contact_id, email_lower, now, now),
                 )
                 # Create user_contacts linkage
@@ -231,7 +316,50 @@ def sync_contacts(
                     (str(uuid.uuid4()), contact_id, company_id, emp_role_id, now, now),
                 )
 
+                # Update title on affiliation if provided and not already set
+                if kc.title:
+                    conn.execute(
+                        """UPDATE contact_companies SET title = ?
+                           WHERE contact_id = ? AND company_id = ?
+                             AND (title IS NULL OR title = '')""",
+                        (kc.title, contact_id, company_id),
+                    )
+
+            pass2_items.append((contact_id, kc, is_new))
             count += 1
+
+    # ------------------------------------------------------------------
+    # Pass 2: phones, addresses, biographies, labels
+    # ------------------------------------------------------------------
+    for contact_id, kc, is_new in pass2_items:
+        # Phones (add_phone_number has built-in E.164 normalization + dedup)
+        for phone in kc.phones:
+            add_phone_number(
+                "contact", contact_id, phone["number"],
+                phone_type=phone.get("type", "mobile"),
+                customer_id=customer_id,
+            )
+
+        # Addresses (dedup by street+city+postal_code)
+        for addr in kc.addresses:
+            _add_address_if_new(contact_id, addr)
+
+        # Biography → note (only for new contacts to avoid duplicates)
+        if kc.biography and is_new:
+            create_note(
+                customer_id or "",
+                "contact",
+                contact_id,
+                title="Google Biography",
+                content_html=f"<p>{kc.biography}</p>",
+                created_by=user_id,
+            )
+
+        # Labels → tags + contact_tags
+        if kc.labels:
+            _store_contact_labels(
+                contact_id, kc.labels, customer_id=customer_id,
+            )
 
     log.info("Synced %d contacts to database", count)
     return count

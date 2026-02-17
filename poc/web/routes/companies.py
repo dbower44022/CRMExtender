@@ -22,9 +22,9 @@ from ...hierarchy import (
     get_company_identifiers, add_company_identifier, remove_company_identifier,
     get_parent_companies, get_child_companies, add_company_hierarchy,
     remove_company_hierarchy,
-    get_phone_numbers, add_phone_number, remove_phone_number,
-    get_addresses, add_address, remove_address,
-    add_email_address, get_email_addresses, remove_email_address,
+    get_phone_numbers, add_phone_number, remove_phone_number, update_phone_number,
+    get_addresses, add_address, remove_address, update_address,
+    add_email_address, get_email_addresses, remove_email_address, update_email_address,
 )
 
 router = APIRouter()
@@ -843,6 +843,87 @@ def company_remove_email(
 ):
     templates = request.app.state.templates
     remove_email_address(email_id)
+    emails = get_email_addresses("company", company_id)
+
+    return templates.TemplateResponse(request, "companies/_emails.html", {
+        "company": {"id": company_id},
+        "emails": emails,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Sub-entity edit routes (temporal tracking)
+# ---------------------------------------------------------------------------
+
+@router.post("/{company_id}/phones/{phone_id}/edit", response_class=HTMLResponse)
+def company_edit_phone(
+    request: Request,
+    company_id: str,
+    phone_id: str,
+    is_current: str = Form("1"),
+    started_at: str = Form(""),
+    ended_at: str = Form(""),
+):
+    templates = request.app.state.templates
+    cid = request.state.customer_id
+    update_phone_number(
+        phone_id,
+        is_current=int(is_current == "1"),
+        started_at=started_at or None,
+        ended_at=ended_at or None,
+    )
+    phones = get_phone_numbers("company", company_id)
+
+    from ...phone_utils import resolve_country_code
+    display_country = resolve_country_code("company", company_id, customer_id=cid)
+
+    return templates.TemplateResponse(request, "companies/_phones.html", {
+        "company": {"id": company_id},
+        "phones": phones,
+        "display_country": display_country,
+    })
+
+
+@router.post("/{company_id}/addresses/{address_id}/edit", response_class=HTMLResponse)
+def company_edit_address(
+    request: Request,
+    company_id: str,
+    address_id: str,
+    is_current: str = Form("1"),
+    started_at: str = Form(""),
+    ended_at: str = Form(""),
+):
+    templates = request.app.state.templates
+    update_address(
+        address_id,
+        is_current=int(is_current == "1"),
+        started_at=started_at or None,
+        ended_at=ended_at or None,
+    )
+    addresses = get_addresses("company", company_id)
+
+    return templates.TemplateResponse(request, "companies/_addresses.html", {
+        "company": {"id": company_id},
+        "addresses": addresses,
+    })
+
+
+@router.post("/{company_id}/emails/{email_id}/edit", response_class=HTMLResponse)
+def company_edit_email(
+    request: Request,
+    company_id: str,
+    email_id: str,
+    is_current: str = Form("1"),
+    started_at: str = Form(""),
+    ended_at: str = Form(""),
+):
+    templates = request.app.state.templates
+    update_email_address(
+        email_id,
+        is_current=int(is_current == "1"),
+        started_at=started_at or None,
+        ended_at=ended_at or None,
+    )
     emails = get_email_addresses("company", company_id)
 
     return templates.TemplateResponse(request, "companies/_emails.html", {

@@ -6,14 +6,34 @@
       <tr>
         <th>Type</th>
         <th>Address</th>
+        <th>Period</th>
+        <th>Status</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
       {% for em in emails %}
-      <tr>
-        <td>{{ em.email_type }}</td>
+      <tr{% if not em.is_current %} style="opacity:0.6;"{% endif %}>
+        <td>{{ em.email_type }}{% if not em.is_current %} <small>(former)</small>{% endif %}</td>
         <td>{{ em.address }}</td>
+        <td>
+          {% if em.started_at %}{{ em.started_at[:10] }}{% endif %}
+          {% if em.started_at or em.ended_at %}&ndash;{% endif %}
+          {% if em.ended_at %}{{ em.ended_at[:10] }}{% elif em.started_at %}present{% endif %}
+        </td>
+        <td>
+          {% if em.is_current %}
+          <button hx-post="/companies/{{ company.id }}/emails/{{ em.id }}/edit"
+                  hx-vals='{"is_current":"0"}' hx-target="#emails-section" hx-swap="outerHTML"
+                  class="outline" style="padding:2px 8px;font-size:.8em;"
+                  title="Mark as former">&#128340;</button>
+          {% else %}
+          <button hx-post="/companies/{{ company.id }}/emails/{{ em.id }}/edit"
+                  hx-vals='{"is_current":"1"}' hx-target="#emails-section" hx-swap="outerHTML"
+                  class="outline" style="padding:2px 8px;font-size:.8em;"
+                  title="Reactivate">&#8635;</button>
+          {% endif %}
+        </td>
         <td>
           <button hx-delete="/companies/{{ company.id }}/emails/{{ em.id }}"
                   hx-target="#emails-section" hx-swap="outerHTML"

@@ -548,6 +548,9 @@ def add_contact_identifier(
     *,
     label: str = "",
     is_primary: bool = False,
+    is_current: int = 1,
+    started_at: str = "",
+    ended_at: str = "",
     source: str = "",
 ) -> dict:
     """Add an identifier to a contact. Returns the new row as a dict."""
@@ -559,6 +562,9 @@ def add_contact_identifier(
         "value": value,
         "label": label,
         "is_primary": int(is_primary),
+        "is_current": is_current,
+        "started_at": started_at or None,
+        "ended_at": ended_at or None,
         "source": source,
         "created_at": now,
         "updated_at": now,
@@ -566,9 +572,10 @@ def add_contact_identifier(
     with get_connection() as conn:
         conn.execute(
             "INSERT INTO contact_identifiers "
-            "(id, contact_id, type, value, label, is_primary, source, created_at, updated_at) "
-            "VALUES (:id, :contact_id, :type, :value, :label, :is_primary, :source, "
-            ":created_at, :updated_at)",
+            "(id, contact_id, type, value, label, is_primary, is_current, "
+            "started_at, ended_at, source, created_at, updated_at) "
+            "VALUES (:id, :contact_id, :type, :value, :label, :is_primary, :is_current, "
+            ":started_at, :ended_at, :source, :created_at, :updated_at)",
             row,
         )
     return row
@@ -579,7 +586,7 @@ def get_contact_identifiers(contact_id: str) -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
             "SELECT * FROM contact_identifiers WHERE contact_id = ? "
-            "ORDER BY is_primary DESC, type",
+            "ORDER BY is_current DESC, is_primary DESC, type",
             (contact_id,),
         ).fetchall()
     return [dict(r) for r in rows]
@@ -593,6 +600,24 @@ def remove_contact_identifier(identifier_id: str) -> None:
         )
 
 
+def update_contact_identifier(identifier_id: str, **fields) -> dict | None:
+    """Update a contact identifier's fields. Returns updated row dict or None."""
+    allowed = {"label", "is_primary", "is_current", "started_at", "ended_at"}
+    updates = {k: v for k, v in fields.items() if k in allowed}
+    if not updates:
+        return None
+    now = datetime.now(timezone.utc).isoformat()
+    updates["updated_at"] = now
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [identifier_id]
+    with get_connection() as conn:
+        conn.execute(f"UPDATE contact_identifiers SET {set_clause} WHERE id = ?", values)
+        row = conn.execute(
+            "SELECT * FROM contact_identifiers WHERE id = ?", (identifier_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
 # ---------------------------------------------------------------------------
 # Phone Numbers (entity-agnostic)
 # ---------------------------------------------------------------------------
@@ -603,6 +628,9 @@ def add_phone_number(
     number: str,
     *,
     phone_type: str = "mobile",
+    is_current: int = 1,
+    started_at: str = "",
+    ended_at: str = "",
     customer_id: str | None = None,
 ) -> dict | None:
     """Add a phone number with E.164 normalization and dedup.
@@ -635,16 +663,19 @@ def add_phone_number(
             "phone_type": phone_type,
             "number": normalized,
             "is_primary": 0,
+            "is_current": is_current,
+            "started_at": started_at or None,
+            "ended_at": ended_at or None,
             "source": "",
             "created_at": now,
             "updated_at": now,
         }
         conn.execute(
             "INSERT INTO phone_numbers "
-            "(id, entity_type, entity_id, phone_type, number, is_primary, source, "
-            "created_at, updated_at) "
+            "(id, entity_type, entity_id, phone_type, number, is_primary, "
+            "is_current, started_at, ended_at, source, created_at, updated_at) "
             "VALUES (:id, :entity_type, :entity_id, :phone_type, :number, :is_primary, "
-            ":source, :created_at, :updated_at)",
+            ":is_current, :started_at, :ended_at, :source, :created_at, :updated_at)",
             row,
         )
     return row
@@ -655,7 +686,7 @@ def get_phone_numbers(entity_type: str, entity_id: str) -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
             "SELECT * FROM phone_numbers WHERE entity_type = ? AND entity_id = ? "
-            "ORDER BY is_primary DESC, phone_type",
+            "ORDER BY is_current DESC, is_primary DESC, phone_type",
             (entity_type, entity_id),
         ).fetchall()
     return [dict(r) for r in rows]
@@ -665,6 +696,24 @@ def remove_phone_number(phone_id: str) -> None:
     """Delete a phone number by its ID."""
     with get_connection() as conn:
         conn.execute("DELETE FROM phone_numbers WHERE id = ?", (phone_id,))
+
+
+def update_phone_number(phone_id: str, **fields) -> dict | None:
+    """Update a phone number's fields. Returns updated row dict or None."""
+    allowed = {"phone_type", "is_primary", "is_current", "started_at", "ended_at"}
+    updates = {k: v for k, v in fields.items() if k in allowed}
+    if not updates:
+        return None
+    now = datetime.now(timezone.utc).isoformat()
+    updates["updated_at"] = now
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [phone_id]
+    with get_connection() as conn:
+        conn.execute(f"UPDATE phone_numbers SET {set_clause} WHERE id = ?", values)
+        row = conn.execute(
+            "SELECT * FROM phone_numbers WHERE id = ?", (phone_id,)
+        ).fetchone()
+    return dict(row) if row else None
 
 
 # ---------------------------------------------------------------------------
@@ -681,6 +730,9 @@ def add_address(
     state: str = "",
     postal_code: str = "",
     country: str = "",
+    is_current: int = 1,
+    started_at: str = "",
+    ended_at: str = "",
 ) -> dict:
     """Add an address. Returns the new row as a dict."""
     now = datetime.now(timezone.utc).isoformat()
@@ -695,6 +747,9 @@ def add_address(
         "postal_code": postal_code,
         "country": country,
         "is_primary": 0,
+        "is_current": is_current,
+        "started_at": started_at or None,
+        "ended_at": ended_at or None,
         "source": "",
         "created_at": now,
         "updated_at": now,
@@ -703,10 +758,11 @@ def add_address(
         conn.execute(
             "INSERT INTO addresses "
             "(id, entity_type, entity_id, address_type, street, city, state, "
-            "postal_code, country, is_primary, source, created_at, updated_at) "
+            "postal_code, country, is_primary, is_current, started_at, ended_at, "
+            "source, created_at, updated_at) "
             "VALUES (:id, :entity_type, :entity_id, :address_type, :street, :city, "
-            ":state, :postal_code, :country, :is_primary, :source, "
-            ":created_at, :updated_at)",
+            ":state, :postal_code, :country, :is_primary, :is_current, :started_at, "
+            ":ended_at, :source, :created_at, :updated_at)",
             row,
         )
     return row
@@ -717,7 +773,7 @@ def get_addresses(entity_type: str, entity_id: str) -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
             "SELECT * FROM addresses WHERE entity_type = ? AND entity_id = ? "
-            "ORDER BY is_primary DESC, address_type",
+            "ORDER BY is_current DESC, is_primary DESC, address_type",
             (entity_type, entity_id),
         ).fetchall()
     return [dict(r) for r in rows]
@@ -727,6 +783,27 @@ def remove_address(address_id: str) -> None:
     """Delete an address by its ID."""
     with get_connection() as conn:
         conn.execute("DELETE FROM addresses WHERE id = ?", (address_id,))
+
+
+def update_address(address_id: str, **fields) -> dict | None:
+    """Update an address's fields. Returns updated row dict or None."""
+    allowed = {
+        "address_type", "street", "city", "state", "postal_code", "country",
+        "is_primary", "is_current", "started_at", "ended_at",
+    }
+    updates = {k: v for k, v in fields.items() if k in allowed}
+    if not updates:
+        return None
+    now = datetime.now(timezone.utc).isoformat()
+    updates["updated_at"] = now
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [address_id]
+    with get_connection() as conn:
+        conn.execute(f"UPDATE addresses SET {set_clause} WHERE id = ?", values)
+        row = conn.execute(
+            "SELECT * FROM addresses WHERE id = ?", (address_id,)
+        ).fetchone()
+    return dict(row) if row else None
 
 
 # ---------------------------------------------------------------------------
@@ -739,6 +816,9 @@ def add_email_address(
     address: str,
     *,
     email_type: str = "general",
+    is_current: int = 1,
+    started_at: str = "",
+    ended_at: str = "",
 ) -> dict:
     """Add an email address. Returns the new row as a dict."""
     now = datetime.now(timezone.utc).isoformat()
@@ -749,6 +829,9 @@ def add_email_address(
         "email_type": email_type,
         "address": address,
         "is_primary": 0,
+        "is_current": is_current,
+        "started_at": started_at or None,
+        "ended_at": ended_at or None,
         "source": "",
         "created_at": now,
         "updated_at": now,
@@ -756,10 +839,10 @@ def add_email_address(
     with get_connection() as conn:
         conn.execute(
             "INSERT INTO email_addresses "
-            "(id, entity_type, entity_id, email_type, address, is_primary, source, "
-            "created_at, updated_at) "
+            "(id, entity_type, entity_id, email_type, address, is_primary, "
+            "is_current, started_at, ended_at, source, created_at, updated_at) "
             "VALUES (:id, :entity_type, :entity_id, :email_type, :address, :is_primary, "
-            ":source, :created_at, :updated_at)",
+            ":is_current, :started_at, :ended_at, :source, :created_at, :updated_at)",
             row,
         )
     return row
@@ -770,7 +853,7 @@ def get_email_addresses(entity_type: str, entity_id: str) -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
             "SELECT * FROM email_addresses WHERE entity_type = ? AND entity_id = ? "
-            "ORDER BY is_primary DESC, email_type",
+            "ORDER BY is_current DESC, is_primary DESC, email_type",
             (entity_type, entity_id),
         ).fetchall()
     return [dict(r) for r in rows]
@@ -780,6 +863,24 @@ def remove_email_address(email_id: str) -> None:
     """Delete an email address by its ID."""
     with get_connection() as conn:
         conn.execute("DELETE FROM email_addresses WHERE id = ?", (email_id,))
+
+
+def update_email_address(email_id: str, **fields) -> dict | None:
+    """Update an email address's fields. Returns updated row dict or None."""
+    allowed = {"email_type", "is_primary", "is_current", "started_at", "ended_at"}
+    updates = {k: v for k, v in fields.items() if k in allowed}
+    if not updates:
+        return None
+    now = datetime.now(timezone.utc).isoformat()
+    updates["updated_at"] = now
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [email_id]
+    with get_connection() as conn:
+        conn.execute(f"UPDATE email_addresses SET {set_clause} WHERE id = ?", values)
+        row = conn.execute(
+            "SELECT * FROM email_addresses WHERE id = ?", (email_id,)
+        ).fetchone()
+    return dict(row) if row else None
 
 
 # ---------------------------------------------------------------------------

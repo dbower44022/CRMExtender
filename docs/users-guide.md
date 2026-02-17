@@ -775,6 +775,8 @@ CRMExtender/
     migrate_to_v11.py             # Migration: v10 to v11 (affiliation dedup)
     migrate_to_v12.py             # Migration: v11 to v12 (notes system)
     migrate_to_v13.py             # Migration: v12 to v13 (multi-entity notes)
+    migrate_to_v14.py             # Migration: v13 to v14 (contact tags)
+    migrate_to_v15.py             # Migration: v14 to v15 (temporal tracking)
     notes.py                      # Notes CRUD, FTS, mentions, attachments, search
     web/                          # Web UI (FastAPI + HTMX)
       app.py                      # Application factory (AuthTemplates, middleware)
@@ -1114,6 +1116,29 @@ notes are migrated automatically (each gets one junction row).
 ```bash
 python3 -m poc.migrate_to_v13 --dry-run
 python3 -m poc.migrate_to_v13
+```
+
+### `migrate-to-v14` (v13 → v14: contact tags)
+
+Adds the `contact_tags` junction table so that tags can be associated
+with individual contacts (in addition to conversations).
+
+```bash
+python3 -m poc.migrate_to_v14 --dry-run
+python3 -m poc.migrate_to_v14
+```
+
+### `migrate-to-v15` (v14 → v15: temporal tracking)
+
+Adds temporal tracking columns (`is_current`, `started_at`, `ended_at`)
+to `phone_numbers`, `addresses`, `email_addresses`, and
+`contact_identifiers`.  Replaces `contact_identifiers.status` TEXT
+with `is_current` INTEGER (maps `'active'` → 1, all else → 0).
+Existing records default to `is_current = 1`.
+
+```bash
+python3 -m poc.migrate_to_v15 --dry-run
+python3 -m poc.migrate_to_v15
 ```
 
 All migration scripts create a timestamped backup before making changes

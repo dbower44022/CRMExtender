@@ -18,8 +18,9 @@ from ...database import get_connection
 from ...hierarchy import (
     update_contact, list_companies,
     add_contact_identifier, get_contact_identifiers, remove_contact_identifier,
-    add_phone_number, get_phone_numbers, remove_phone_number,
-    add_address, get_addresses, remove_address,
+    update_contact_identifier,
+    add_phone_number, get_phone_numbers, remove_phone_number, update_phone_number,
+    add_address, get_addresses, remove_address, update_address,
 )
 
 router = APIRouter()
@@ -875,6 +876,111 @@ def contact_remove_email(
     return templates.TemplateResponse(request, "contacts/_emails.html", {
         "contact": {"id": contact_id},
         "email_identifiers": email_identifiers,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Sub-entity edit routes (temporal tracking)
+# ---------------------------------------------------------------------------
+
+@router.post("/{contact_id}/phones/{phone_id}/edit", response_class=HTMLResponse)
+def contact_edit_phone(
+    request: Request,
+    contact_id: str,
+    phone_id: str,
+    is_current: str = Form("1"),
+    started_at: str = Form(""),
+    ended_at: str = Form(""),
+):
+    templates = request.app.state.templates
+    cid = request.state.customer_id
+    update_phone_number(
+        phone_id,
+        is_current=int(is_current == "1"),
+        started_at=started_at or None,
+        ended_at=ended_at or None,
+    )
+    phones = get_phone_numbers("contact", contact_id)
+
+    from ...phone_utils import resolve_country_code
+    display_country = resolve_country_code("contact", contact_id, customer_id=cid)
+
+    return templates.TemplateResponse(request, "contacts/_phones.html", {
+        "contact": {"id": contact_id},
+        "phones": phones,
+        "display_country": display_country,
+    })
+
+
+@router.post("/{contact_id}/addresses/{address_id}/edit", response_class=HTMLResponse)
+def contact_edit_address(
+    request: Request,
+    contact_id: str,
+    address_id: str,
+    is_current: str = Form("1"),
+    started_at: str = Form(""),
+    ended_at: str = Form(""),
+):
+    templates = request.app.state.templates
+    update_address(
+        address_id,
+        is_current=int(is_current == "1"),
+        started_at=started_at or None,
+        ended_at=ended_at or None,
+    )
+    addresses = get_addresses("contact", contact_id)
+
+    return templates.TemplateResponse(request, "contacts/_addresses.html", {
+        "contact": {"id": contact_id},
+        "addresses": addresses,
+    })
+
+
+@router.post("/{contact_id}/emails/{email_id}/edit", response_class=HTMLResponse)
+def contact_edit_email(
+    request: Request,
+    contact_id: str,
+    email_id: str,
+    is_current: str = Form("1"),
+    started_at: str = Form(""),
+    ended_at: str = Form(""),
+):
+    templates = request.app.state.templates
+    update_contact_identifier(
+        email_id,
+        is_current=int(is_current == "1"),
+        started_at=started_at or None,
+        ended_at=ended_at or None,
+    )
+    email_identifiers = [i for i in get_contact_identifiers(contact_id) if i["type"] == "email"]
+
+    return templates.TemplateResponse(request, "contacts/_emails.html", {
+        "contact": {"id": contact_id},
+        "email_identifiers": email_identifiers,
+    })
+
+
+@router.post("/{contact_id}/identifiers/{identifier_id}/edit", response_class=HTMLResponse)
+def contact_edit_identifier(
+    request: Request,
+    contact_id: str,
+    identifier_id: str,
+    is_current: str = Form("1"),
+    started_at: str = Form(""),
+    ended_at: str = Form(""),
+):
+    templates = request.app.state.templates
+    update_contact_identifier(
+        identifier_id,
+        is_current=int(is_current == "1"),
+        started_at=started_at or None,
+        ended_at=ended_at or None,
+    )
+    identifiers = get_contact_identifiers(contact_id)
+
+    return templates.TemplateResponse(request, "contacts/_identifiers.html", {
+        "contact": {"id": contact_id},
+        "identifiers": identifiers,
     })
 
 

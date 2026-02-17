@@ -141,9 +141,11 @@ CREATE TABLE IF NOT EXISTS contact_identifiers (
     value      TEXT NOT NULL,
     label      TEXT,
     is_primary INTEGER DEFAULT 0,
-    status     TEXT DEFAULT 'active',
+    is_current INTEGER NOT NULL DEFAULT 1,
     source     TEXT,
     verified   INTEGER DEFAULT 0,
+    started_at TEXT,
+    ended_at   TEXT,
     created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL,
@@ -699,6 +701,9 @@ CREATE TABLE IF NOT EXISTS addresses (
     postal_code  TEXT,
     country      TEXT,
     is_primary   INTEGER DEFAULT 0,
+    is_current   INTEGER NOT NULL DEFAULT 1,
+    started_at   TEXT,
+    ended_at     TEXT,
     source       TEXT,
     confidence   REAL,
     created_at   TEXT NOT NULL,
@@ -714,6 +719,9 @@ CREATE TABLE IF NOT EXISTS phone_numbers (
     phone_type  TEXT NOT NULL DEFAULT 'main',
     number      TEXT NOT NULL,
     is_primary  INTEGER DEFAULT 0,
+    is_current  INTEGER NOT NULL DEFAULT 1,
+    started_at  TEXT,
+    ended_at    TEXT,
     source      TEXT,
     confidence  REAL,
     created_at  TEXT NOT NULL,
@@ -729,6 +737,9 @@ CREATE TABLE IF NOT EXISTS email_addresses (
     email_type  TEXT NOT NULL DEFAULT 'general',
     address     TEXT NOT NULL,
     is_primary  INTEGER DEFAULT 0,
+    is_current  INTEGER NOT NULL DEFAULT 1,
+    started_at  TEXT,
+    ended_at    TEXT,
     source      TEXT,
     confidence  REAL,
     created_at  TEXT NOT NULL,
@@ -895,7 +906,7 @@ CREATE INDEX IF NOT EXISTS idx_commpart_contact    ON communication_participants
 
 -- Contact resolution
 CREATE INDEX IF NOT EXISTS idx_ci_contact          ON contact_identifiers(contact_id);
-CREATE INDEX IF NOT EXISTS idx_ci_status           ON contact_identifiers(status);
+CREATE INDEX IF NOT EXISTS idx_ci_current          ON contact_identifiers(is_current);
 
 -- Companies
 CREATE INDEX IF NOT EXISTS idx_companies_domain    ON companies(domain);
@@ -987,6 +998,9 @@ CREATE INDEX IF NOT EXISTS idx_ea_hash               ON entity_assets(hash);
 CREATE INDEX IF NOT EXISTS idx_addr_entity           ON addresses(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_phone_entity          ON phone_numbers(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_email_entity          ON email_addresses(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_phone_current         ON phone_numbers(entity_type, entity_id, is_current);
+CREATE INDEX IF NOT EXISTS idx_addr_current          ON addresses(entity_type, entity_id, is_current);
+CREATE INDEX IF NOT EXISTS idx_email_current         ON email_addresses(entity_type, entity_id, is_current);
 
 -- Sessions
 CREATE INDEX IF NOT EXISTS idx_sessions_user         ON sessions(user_id);

@@ -9,17 +9,38 @@
         <th>City</th>
         <th>State</th>
         <th>Country</th>
+        <th>Period</th>
+        <th>Status</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
       {% for addr in addresses %}
-      <tr title="{{ addr.street or '' }}{% if addr.street and addr.postal_code %}, {% endif %}{{ addr.postal_code or '' }}">
-        <td>{{ addr.address_type }}</td>
+      <tr{% if not addr.is_current %} style="opacity:0.6;"{% endif %}
+          title="{{ addr.street or '' }}{% if addr.street and addr.postal_code %}, {% endif %}{{ addr.postal_code or '' }}">
+        <td>{{ addr.address_type }}{% if not addr.is_current %} <small>(former)</small>{% endif %}</td>
         <td>{{ addr.street or '' }}</td>
         <td>{{ addr.city or '' }}</td>
         <td>{{ addr.state or '' }}</td>
         <td>{{ addr.country or '' }}</td>
+        <td>
+          {% if addr.started_at %}{{ addr.started_at[:10] }}{% endif %}
+          {% if addr.started_at or addr.ended_at %}&ndash;{% endif %}
+          {% if addr.ended_at %}{{ addr.ended_at[:10] }}{% elif addr.started_at %}present{% endif %}
+        </td>
+        <td>
+          {% if addr.is_current %}
+          <button hx-post="/contacts/{{ contact.id }}/addresses/{{ addr.id }}/edit"
+                  hx-vals='{"is_current":"0"}' hx-target="#addresses-section" hx-swap="outerHTML"
+                  class="outline" style="padding:2px 8px;font-size:.8em;"
+                  title="Mark as former">&#128340;</button>
+          {% else %}
+          <button hx-post="/contacts/{{ contact.id }}/addresses/{{ addr.id }}/edit"
+                  hx-vals='{"is_current":"1"}' hx-target="#addresses-section" hx-swap="outerHTML"
+                  class="outline" style="padding:2px 8px;font-size:.8em;"
+                  title="Reactivate">&#8635;</button>
+          {% endif %}
+        </td>
         <td>
           <button hx-delete="/contacts/{{ contact.id }}/addresses/{{ addr.id }}"
                   hx-target="#addresses-section" hx-swap="outerHTML"

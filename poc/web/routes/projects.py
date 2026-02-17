@@ -7,12 +7,15 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...database import get_connection
 from ...hierarchy import (
+    add_address,
     create_project,
     create_topic,
     delete_project,
     delete_topic,
+    get_addresses,
     get_hierarchy_stats,
     get_project,
+    remove_address,
     get_topic_stats,
 )
 
@@ -69,6 +72,8 @@ def project_detail(request: Request, project_id: str):
 
     topic_stats = get_topic_stats(project_id)
 
+    addresses = get_addresses("project", project_id)
+
     from ...notes import get_notes_for_entity
     cid = request.state.customer_id
     notes = get_notes_for_entity("project", project_id, customer_id=cid)
@@ -77,6 +82,7 @@ def project_detail(request: Request, project_id: str):
         "active_nav": "projects",
         "project": project,
         "topics": topic_stats,
+        "addresses": addresses,
         "notes": notes,
         "entity_type": "project",
         "entity_id": project_id,
@@ -136,3 +142,46 @@ def auto_assign_apply(request: Request, project_id: str):
         count = 0
 
     return HTMLResponse(f"<p><strong>{count}</strong> conversation(s) assigned.</p>")
+
+
+# ---------------------------------------------------------------------------
+# Addresses
+# ---------------------------------------------------------------------------
+
+@router.post("/{project_id}/addresses", response_class=HTMLResponse)
+def project_add_address(
+    request: Request,
+    project_id: str,
+    address_type: str = Form("work"),
+    street: str = Form(""),
+    city: str = Form(""),
+    state: str = Form(""),
+    postal_code: str = Form(""),
+    country: str = Form(""),
+):
+    templates = request.app.state.templates
+    add_address(
+        "project", project_id,
+        address_type=address_type, street=street, city=city,
+        state=state, postal_code=postal_code, country=country,
+    )
+    addresses = get_addresses("project", project_id)
+
+    return templates.TemplateResponse(request, "projects/_addresses.html", {
+        "project": {"id": project_id},
+        "addresses": addresses,
+    })
+
+
+@router.delete("/{project_id}/addresses/{address_id}", response_class=HTMLResponse)
+def project_remove_address(
+    request: Request, project_id: str, address_id: str,
+):
+    templates = request.app.state.templates
+    remove_address(address_id)
+    addresses = get_addresses("project", project_id)
+
+    return templates.TemplateResponse(request, "projects/_addresses.html", {
+        "project": {"id": project_id},
+        "addresses": addresses,
+    })

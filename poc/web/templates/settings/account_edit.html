@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Edit Account - Settings{% endblock %}
+{% block content %}
+{% include "settings/_nav.html" %}
+
+<h2>Edit Account</h2>
+<p>{{ account.email_address }} ({{ account.provider }})</p>
+
+{% if error %}
+<article style="padding:0.5rem 1rem; background:var(--pico-del-color);">
+  <p>{{ error }}</p>
+</article>
+{% endif %}
+
+<form method="post" action="/settings/accounts/{{ account.id }}/edit">
+  <label>Display Name
+    <input type="text" name="display_name" value="{{ account.display_name or '' }}"
+           placeholder="Optional display name">
+  </label>
+  <button type="submit">Save</button>
+  <a href="/settings/accounts" role="button" class="secondary outline">Cancel</a>
+</form>
+{% endblock %}

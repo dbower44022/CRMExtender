@@ -1,14 +1,18 @@
-"""Settings routes: profile, system settings, user management, calendars."""
+"""Settings routes: profile, system settings, user management, accounts, calendars."""
 
 from __future__ import annotations
 
 import json
 import logging
+import uuid
+from datetime import datetime, timezone
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ..dependencies import require_admin
+from ... import config
 from ...database import get_connection
 from ...hierarchy import (
     create_user,
@@ -167,6 +171,7 @@ async def system_page(request: Request):
     default_tz = get_setting(cid, "default_timezone") or "UTC"
     sync_enabled = get_setting(cid, "sync_enabled") or "true"
     default_phone_country = get_setting(cid, "default_phone_country") or "US"
+    allow_self_registration = get_setting(cid, "allow_self_registration") or "false"
 
     return templates.TemplateResponse(request, "settings/system.html", {
         "active_nav": "settings",
@@ -177,6 +182,7 @@ async def system_page(request: Request):
         "default_tz": default_tz,
         "sync_enabled": sync_enabled,
         "default_phone_country": default_phone_country,
+        "allow_self_registration": allow_self_registration,
         "saved": request.query_params.get("saved"),
     })
 
@@ -196,6 +202,9 @@ async def system_save(request: Request):
 
     sync_enabled = "true" if form.get("sync_enabled") else "false"
     set_setting(cid, "sync_enabled", sync_enabled, scope="system")
+
+    allow_self_registration = "true" if form.get("allow_self_registration") else "false"
+    set_setting(cid, "allow_self_registration", allow_self_registration, scope="system")
 
     default_phone_country = form.get("default_phone_country", "US")
     set_setting(cid, "default_phone_country", default_phone_country, scope="system")
@@ -344,6 +353,149 @@ async def user_toggle_active(request: Request, user_id: str):
 
 
 # ---------------------------------------------------------------------------
+# Provider Accounts (all users)
+# ---------------------------------------------------------------------------
+
+_GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+
+
+@router.get("/settings/accounts")
+async def accounts_page(request: Request):
+    templates = request.app.state.templates
+    user = request.state.user
+    uid = user["id"]
+    cid = user["customer_id"]
+
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT pa.* FROM provider_accounts pa
+               JOIN user_provider_accounts upa ON upa.account_id = pa.id
+               WHERE upa.user_id = ?
+               ORDER BY pa.created_at""",
+            (uid,),
+        ).fetchall()
+        accounts = [dict(r) for r in rows]
+
+    # Fallback: if no user_provider_accounts, use customer's accounts
+    if not accounts:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM provider_accounts WHERE customer_id = ? ORDER BY created_at",
+                (cid,),
+            ).fetchall()
+            accounts = [dict(r) for r in rows]
+
+    return templates.TemplateResponse(request, "settings/accounts.html", {
+        "active_nav": "settings",
+        "settings_tab": "accounts",
+        "accounts": accounts,
+        "google_oauth_configured": bool(config.GOOGLE_OAUTH_CLIENT_ID),
+        "saved": request.query_params.get("saved"),
+        "error": request.query_params.get("error"),
+    })
+
+
+@router.get("/settings/accounts/connect")
+async def accounts_connect(request: Request):
+    if not config.GOOGLE_OAUTH_CLIENT_ID:
+        return RedirectResponse(
+            "/settings/accounts?error=Google+OAuth+not+configured", status_code=302,
+        )
+
+    user = getattr(request.state, "user", None)
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+
+    state = str(uuid.uuid4())
+    scopes = config.GOOGLE_SCOPES + ["openid", "email"]
+    base = str(request.base_url).rstrip("/")
+    redirect_uri = f"{base}/auth/google/callback"
+
+    params = {
+        "client_id": config.GOOGLE_OAUTH_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "scope": " ".join(scopes),
+        "response_type": "code",
+        "state": state,
+        "access_type": "offline",
+        "prompt": "consent",
+    }
+    url = f"{_GOOGLE_AUTH_URL}?{urlencode(params)}"
+
+    response = RedirectResponse(url, status_code=302)
+    response.set_cookie(
+        "oauth_state", state,
+        httponly=True, samesite="lax", max_age=600,
+    )
+    response.set_cookie(
+        "oauth_purpose", "add-account",
+        httponly=True, samesite="lax", max_age=600,
+    )
+    return response
+
+
+@router.get("/settings/accounts/{account_id}/edit")
+async def account_edit_form(request: Request, account_id: str):
+    templates = request.app.state.templates
+    user = request.state.user
+
+    with get_connection() as conn:
+        account = conn.execute(
+            "SELECT * FROM provider_accounts WHERE id = ?",
+            (account_id,),
+        ).fetchone()
+
+    if not account:
+        return RedirectResponse("/settings/accounts", status_code=303)
+
+    return templates.TemplateResponse(request, "settings/account_edit.html", {
+        "active_nav": "settings",
+        "settings_tab": "accounts",
+        "account": dict(account),
+        "error": request.query_params.get("error"),
+    })
+
+
+@router.post("/settings/accounts/{account_id}/edit")
+async def account_edit_save(request: Request, account_id: str):
+    form = await request.form()
+    display_name = form.get("display_name", "").strip()
+    now = datetime.now(timezone.utc).isoformat()
+
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE provider_accounts SET display_name = ?, updated_at = ? WHERE id = ?",
+            (display_name or None, now, account_id),
+        )
+
+    return RedirectResponse("/settings/accounts?saved=1", status_code=303)
+
+
+@router.post("/settings/accounts/{account_id}/toggle-active")
+async def account_toggle_active(request: Request, account_id: str):
+    user = request.state.user
+    uid = user["id"]
+    now = datetime.now(timezone.utc).isoformat()
+
+    with get_connection() as conn:
+        # Verify account belongs to user (or is a customer account)
+        account = conn.execute(
+            "SELECT * FROM provider_accounts WHERE id = ?",
+            (account_id,),
+        ).fetchone()
+        if not account:
+            return RedirectResponse("/settings/accounts", status_code=303)
+
+        new_active = 0 if account["is_active"] else 1
+        conn.execute(
+            "UPDATE provider_accounts SET is_active = ?, updated_at = ? WHERE id = ?",
+            (new_active, now, account_id),
+        )
+
+    return RedirectResponse("/settings/accounts?saved=1", status_code=303)
+
+
+# ---------------------------------------------------------------------------
 # Calendar Settings
 # ---------------------------------------------------------------------------
 
@@ -359,7 +511,7 @@ async def calendars_page(request: Request):
         rows = conn.execute(
             """SELECT pa.* FROM provider_accounts pa
                JOIN user_provider_accounts upa ON upa.account_id = pa.id
-               WHERE upa.user_id = ? AND pa.provider = 'gmail'
+               WHERE upa.user_id = ? AND pa.provider = 'gmail' AND pa.is_active = 1
                ORDER BY pa.created_at""",
             (uid,),
         ).fetchall()
@@ -379,7 +531,7 @@ async def calendars_page(request: Request):
     if not accounts:
         with get_connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM provider_accounts WHERE customer_id = ? AND provider = 'gmail' ORDER BY created_at",
+                "SELECT * FROM provider_accounts WHERE customer_id = ? AND provider = 'gmail' AND is_active = 1 ORDER BY created_at",
                 (cid,),
             ).fetchall()
         for row in rows:

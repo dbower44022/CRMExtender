@@ -498,7 +498,8 @@ all CRM data:
   projects, topics, events) scoped to the user's organization, top 5
   companies and contacts by relationship strength score with inline
   bars, and recent conversations.  "Sync Now" syncs only the user's
-  own provider accounts, then batch-enriches any newly created companies.
+  own **active** provider accounts (inactive accounts are skipped),
+  then batch-enriches any newly created companies.
 - **Conversations** — browse, search, filter by status/topic, view
   detail with messages and participants.  Only conversations from
   the user's provider accounts or explicitly shared conversations
@@ -557,6 +558,14 @@ all CRM data:
   calendar name.  The detail page sidebar shows full source provenance.
   "Sync Events" button pulls events from connected Google Calendar
   accounts.  Calendar selection is configured under Settings > Calendars.
+- **Settings > Accounts** — connect, view, edit, and manage Google
+  accounts.  "Connect Google Account" initiates a web-based OAuth
+  flow that saves credentials and registers the account for sync.
+  Each account shows email, display name, provider, status
+  (Active/Inactive), initial sync status, last synced date, and
+  connected date.  Edit to set a display name; toggle
+  Activate/Deactivate for soft-delete (inactive accounts are excluded
+  from all sync operations).  Available to all users (not admin-only).
 
 All dates and timestamps are stored in UTC and converted to the
 configured `CRM_TIMEZONE` for display.  The conversion happens
@@ -783,7 +792,7 @@ CRMExtender/
         events.py                 # Event routes (list, detail, create, sync)
         communications.py         # Communications routes (list, detail, archive, assign)
         notes.py                  # Notes routes (CRUD, pin, revisions, upload, search)
-        settings_routes.py        # Settings routes (profile, system, users, calendars)
+        settings_routes.py        # Settings routes (profile, accounts, system, users, calendars)
         contact_company_roles.py  # Contact-company role settings routes
       templates/                  # Jinja2 templates
         login.html                # Standalone login page
@@ -1175,6 +1184,37 @@ Under **APIs & Services > Credentials**:
 
 ---
 
+## Web-Based Account Management
+
+In addition to the CLI `add-account` command, you can connect Google
+accounts directly from the web UI:
+
+### Connecting an Account
+
+1. Navigate to **Settings > Accounts**
+2. Click **Connect Google Account**
+3. Sign in with the Google account you want to connect
+4. Grant read-only access to Gmail, Contacts, and Calendar
+5. You are redirected back to the Accounts page with the new account listed
+
+The OAuth flow requests offline access with a refresh token, so the
+account remains connected across server restarts.  Token files are
+saved as `credentials/token_<email>.json`.
+
+### Managing Accounts
+
+- **Edit** — set a display name for the account (shown in calendar
+  settings and sync output)
+- **Deactivate** — soft-disables the account.  Inactive accounts are
+  skipped during all sync operations (email, contacts, calendar) but
+  the account data is preserved.  Reactivate at any time.
+- **Activate** — re-enables a previously deactivated account
+
+Accounts cannot be hard-deleted from the web UI.  Use the CLI
+`remove-account` command for permanent deletion.
+
+---
+
 ## Calendar Sync Workflow
 
 Once Google Calendar API is enabled and the account is authorized:
@@ -1225,7 +1265,8 @@ for creating OAuth credentials.
 
 ### "No accounts registered"
 
-Run `python -m poc add-account` before running `python -m poc`.
+Connect a Google account via **Settings > Accounts > Connect Google
+Account** in the web UI, or run `python -m poc add-account` from the CLI.
 
 ### Authentication fails for one account
 

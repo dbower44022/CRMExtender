@@ -1,6 +1,7 @@
 <nav aria-label="Settings">
   <ul>
     <li><a href="/settings/profile" {% if settings_tab == 'profile' %}class="active"{% endif %}>Profile</a></li>
+    <li><a href="/settings/accounts" {% if settings_tab == 'accounts' %}class="active"{% endif %}>Accounts</a></li>
     <li><a href="/settings/calendars" {% if settings_tab == 'calendars' %}class="active"{% endif %}>Calendars</a></li>
     {% if user and user.role == 'admin' %}
     <li><a href="/settings/system" {% if settings_tab == 'system' %}class="active"{% endif %}>System</a></li>

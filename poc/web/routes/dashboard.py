@@ -147,7 +147,7 @@ def sync_now(request: Request):
         rows = conn.execute(
             """SELECT pa.* FROM provider_accounts pa
                JOIN user_provider_accounts upa ON upa.account_id = pa.id
-               WHERE upa.user_id = ?
+               WHERE upa.user_id = ? AND pa.is_active = 1
                ORDER BY pa.created_at""",
             (uid,),
         ).fetchall()
@@ -157,7 +157,7 @@ def sync_now(request: Request):
         # Fallback: if no user_provider_accounts rows, use customer's accounts
         with get_connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM provider_accounts WHERE customer_id = ? ORDER BY created_at",
+                "SELECT * FROM provider_accounts WHERE customer_id = ? AND is_active = 1 ORDER BY created_at",
                 (cid,),
             ).fetchall()
             accounts = [dict(a) for a in rows]

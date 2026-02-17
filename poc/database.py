@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS provider_accounts (
     sync_cursor       TEXT,
     last_synced_at    TEXT,
     initial_sync_done INTEGER DEFAULT 0,
+    is_active         INTEGER DEFAULT 1,
     backfill_query    TEXT DEFAULT 'newer_than:90d',
     created_at        TEXT NOT NULL,
     updated_at        TEXT NOT NULL,
@@ -316,6 +317,16 @@ CREATE TABLE IF NOT EXISTS conversation_tags (
     source          TEXT DEFAULT 'ai',
     created_at      TEXT NOT NULL,
     PRIMARY KEY (conversation_id, tag_id)
+);
+
+-- Contact ↔ Tag M:N join
+CREATE TABLE IF NOT EXISTS contact_tags (
+    contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    tag_id     TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    source     TEXT DEFAULT 'manual',
+    confidence REAL DEFAULT 1.0,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (contact_id, tag_id)
 );
 
 -- Views (user-defined saved queries)
@@ -1021,6 +1032,8 @@ CREATE INDEX IF NOT EXISTS idx_companies_customer        ON companies(customer_i
 CREATE INDEX IF NOT EXISTS idx_conversations_customer    ON conversations(customer_id);
 CREATE INDEX IF NOT EXISTS idx_projects_customer         ON projects(customer_id);
 CREATE INDEX IF NOT EXISTS idx_tags_customer             ON tags(customer_id);
+CREATE INDEX IF NOT EXISTS idx_contact_tags_contact      ON contact_tags(contact_id);
+CREATE INDEX IF NOT EXISTS idx_contact_tags_tag          ON contact_tags(tag_id);
 """
 
 _SETTINGS_INDEX_SQL = """\
@@ -1089,6 +1102,12 @@ def init_db(db_path: Path | None = None) -> None:
             )
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_comm_archived ON communications(is_archived)"
+            )
+        # Defensive: add is_active column to provider_accounts for existing DBs
+        pa_cols = {r[1] for r in conn.execute("PRAGMA table_info(provider_accounts)")}
+        if "is_active" not in pa_cols:
+            conn.execute(
+                "ALTER TABLE provider_accounts ADD COLUMN is_active INTEGER DEFAULT 1"
             )
         now = datetime.now(timezone.utc).isoformat()
         conn.executescript(_SEED_RELATIONSHIP_TYPES_SQL.format(now=now))

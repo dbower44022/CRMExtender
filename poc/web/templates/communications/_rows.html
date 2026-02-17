@@ -6,6 +6,7 @@
     <col style="width:10rem;">
     <col style="width:10rem;">
     <col>
+    <col style="width:14rem;">
     <col style="width:12rem;">
   </colgroup>
   <thead>
@@ -35,6 +36,7 @@
           Subject {% if sort == 'subject' %}&#9650;{% elif sort == '-subject' %}&#9660;{% endif %}
         </a>
       </th>
+      <th>Conversation</th>
       <th class="comm-col-date">
         <a href="#" class="sort-header" data-sort="date"
            onclick="toggleSort('date'); return false;">
@@ -57,8 +59,10 @@
            hx-on::after-request="document.getElementById('comm-detail-dialog').showModal()">
           {{ comm.subject or '(no subject)' }}
         </a>
+      </td>
+      <td>
         {% if comm.conversation_id %}
-        <a href="/conversations/{{ comm.conversation_id }}" class="conv-link" title="View conversation">&#128279;</a>
+        <a href="/conversations/{{ comm.conversation_id }}">{{ comm.conversation_title }}</a>
         {% endif %}
       </td>
       <td class="comm-col-date">{{ comm.timestamp|datetime }}</td>

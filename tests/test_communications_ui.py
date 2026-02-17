@@ -526,6 +526,25 @@ class TestSchemaMigration:
             cols = {r[1] for r in conn.execute("PRAGMA table_info(communications)")}
             assert "is_archived" in cols
 
+    def test_conversation_column_shows_linked_title(self, client, tmp_db):
+        """Linked communications show conversation title as a link."""
+        with get_connection() as conn:
+            comm_id = _insert_comm(conn, subject="Linked Email")
+            conv_id = _insert_conversation(conn, title="Sales Discussion")
+            _link_comm_to_conv(conn, comm_id, conv_id)
+        resp = client.get("/communications")
+        assert "Sales Discussion" in resp.text
+        assert f"/conversations/{conv_id}" in resp.text
+
+    def test_conversation_column_empty_when_unlinked(self, client, tmp_db):
+        """Unlinked communications have an empty conversation cell."""
+        with get_connection() as conn:
+            _insert_comm(conn, subject="Standalone Email")
+        resp = client.get("/communications")
+        assert "Standalone Email" in resp.text
+        # The Conversation header exists but no conversation link in the row
+        assert "Conversation</th>" in resp.text
+
     def test_is_archived_index_exists(self, tmp_db):
         with get_connection() as conn:
             indexes = conn.execute(

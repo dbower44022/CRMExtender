@@ -137,7 +137,13 @@ def _list_communications(
                         FROM conversation_communications cc
                         WHERE cc.communication_id = comm.id
                         LIMIT 1
-                       ) AS conversation_id
+                       ) AS conversation_id,
+                       (SELECT conv.title
+                        FROM conversations conv
+                        JOIN conversation_communications cc ON cc.conversation_id = conv.id
+                        WHERE cc.communication_id = comm.id
+                        LIMIT 1
+                       ) AS conversation_title
                 FROM communications comm
                 {where}
                 ORDER BY {sort_col} {sort_dir}

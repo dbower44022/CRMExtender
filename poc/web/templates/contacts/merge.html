@@ -75,10 +75,11 @@
   <fieldset>
     <legend>Choose surviving contact</legend>
     {% for c in preview.contacts %}
+    {% set emails = c.identifiers|selectattr('type', 'equalto', 'email')|list %}
     <label>
       <input type="radio" name="surviving_id" value="{{ c.id }}"
              {% if loop.first %}checked{% endif %}>
-      Keep <strong>{{ c.name or '(unnamed)' }}</strong>
+      Keep <strong>{{ c.name or '(unnamed)' }}</strong>{% if emails %} <small>({{ emails[0].value }}{% if emails|length > 1 %} +{{ emails|length - 1 }} more{% endif %})</small>{% endif %}
     </label>
     {% endfor %}
   </fieldset>

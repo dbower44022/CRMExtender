@@ -5,6 +5,7 @@
     <thead>
       <tr>
         <th>Type</th>
+        <th>Street</th>
         <th>City</th>
         <th>State</th>
         <th>Country</th>
@@ -15,6 +16,7 @@
       {% for addr in addresses %}
       <tr title="{{ addr.street or '' }}{% if addr.street and addr.postal_code %}, {% endif %}{{ addr.postal_code or '' }}">
         <td>{{ addr.address_type }}</td>
+        <td>{{ addr.street or '' }}</td>
         <td>{{ addr.city or '' }}</td>
         <td>{{ addr.state or '' }}</td>
         <td>{{ addr.country or '' }}</td>

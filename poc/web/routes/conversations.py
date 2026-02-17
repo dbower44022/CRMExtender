@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...access import visible_conversations_query
 from ...database import get_connection
+from ...hierarchy import get_addresses, add_address, remove_address
 
 router = APIRouter()
 
@@ -224,6 +225,8 @@ def conversation_detail(request: Request, conversation_id: str):
         ).fetchall()
         all_topics = [dict(t) for t in all_topics]
 
+    addresses = get_addresses("conversation", conversation_id)
+
     from ...notes import get_notes_for_entity
     cid = request.state.customer_id
     notes = get_notes_for_entity("conversation", conversation_id, customer_id=cid)
@@ -236,6 +239,7 @@ def conversation_detail(request: Request, conversation_id: str):
         "participants": participants,
         "tags": tag_names,
         "all_topics": all_topics,
+        "addresses": addresses,
         "notes": notes,
         "entity_type": "conversation",
         "entity_id": conversation_id,
@@ -260,3 +264,46 @@ def unassign_conversation(request: Request, conversation_id: str):
     except ValueError:
         pass
     return RedirectResponse(f"/conversations/{conversation_id}", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Addresses
+# ---------------------------------------------------------------------------
+
+@router.post("/{conversation_id}/addresses", response_class=HTMLResponse)
+def conversation_add_address(
+    request: Request,
+    conversation_id: str,
+    address_type: str = Form("work"),
+    street: str = Form(""),
+    city: str = Form(""),
+    state: str = Form(""),
+    postal_code: str = Form(""),
+    country: str = Form(""),
+):
+    templates = request.app.state.templates
+    add_address(
+        "conversation", conversation_id,
+        address_type=address_type, street=street, city=city,
+        state=state, postal_code=postal_code, country=country,
+    )
+    addresses = get_addresses("conversation", conversation_id)
+
+    return templates.TemplateResponse(request, "conversations/_addresses.html", {
+        "conv": {"id": conversation_id},
+        "addresses": addresses,
+    })
+
+
+@router.delete("/{conversation_id}/addresses/{address_id}", response_class=HTMLResponse)
+def conversation_remove_address(
+    request: Request, conversation_id: str, address_id: str,
+):
+    templates = request.app.state.templates
+    remove_address(address_id)
+    addresses = get_addresses("conversation", conversation_id)
+
+    return templates.TemplateResponse(request, "conversations/_addresses.html", {
+        "conv": {"id": conversation_id},
+        "addresses": addresses,
+    })

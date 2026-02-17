@@ -1,0 +1,397 @@
+<mxfile host="Claude" modified="2026-02-16T00:00:00.000Z" agent="Claude Code" version="1.0">
+  <diagram id="overview" name="1. Sync Pipeline Overview">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1200">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="p1_start" value="User clicks Sync (Dashboard)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="340" y="30" width="260" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_loop" value="For each provider_account" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="100" width="260" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_auth" value="Authenticate &amp; sync_contacts()&lt;br&gt;&lt;i&gt;Google Contacts &amp;rarr; contact_identifiers table&lt;/i&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="330" y="190" width="280" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_check" value="initial_sync&lt;br&gt;_done?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="390" y="290" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_initial" value="initial_sync()" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="70" y="420" width="220" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_fetch_t" value="fetch_threads(query)&lt;br&gt;&lt;i&gt;Gmail query: 'newer_than:7d'&lt;br&gt;Up to 50 threads per batch&lt;/i&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="50" y="500" width="260" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_incr" value="incremental_sync()" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="650" y="420" width="220" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_fetch_h" value="fetch_history(cursor)&lt;br&gt;&lt;i&gt;Gets added/deleted message IDs&lt;br&gt;since last sync&lt;/i&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="630" y="500" width="260" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_loop_t" value="For each Gmail thread" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="620" width="260" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_store" value="&lt;b&gt;_store_thread()&lt;/b&gt;&lt;br&gt;&lt;i&gt;See page 2 for detail&lt;/i&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="720" width="260" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_process" value="&lt;b&gt;process_conversations()&lt;/b&gt;&lt;br&gt;&lt;i&gt;Summarize only (no triage)&lt;/i&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="830" width="260" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_enrich" value="enrich_new_companies()" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="340" y="940" width="260" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_end" value="Sync complete" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="340" y="1020" width="260" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_note1" value="&lt;b&gt;PRE-FILTERED (Phase 19)&lt;/b&gt;&lt;br&gt;Communications always stored. Conversations&lt;br&gt;only created when 3-rule check passes.&lt;br&gt;&lt;i&gt;See page 3 for rule details.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;dashed=1;dashPattern=8 8;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="680" y="705" width="310" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1_note2" value="&lt;b&gt;SUMMARIZE ONLY&lt;/b&gt;&lt;br&gt;Triage removed &amp;mdash; conversations are already&lt;br&gt;pre-filtered at creation time. This step only&lt;br&gt;runs AI summarization on unsummarized rows." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;dashed=1;dashPattern=8 8;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="680" y="815" width="310" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_01" style="endArrow=classic;" edge="1" source="p1_start" target="p1_loop" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_02" style="endArrow=classic;" edge="1" source="p1_loop" target="p1_auth" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_03" style="endArrow=classic;" edge="1" source="p1_auth" target="p1_check" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_04" value="No" style="endArrow=classic;" edge="1" source="p1_check" target="p1_initial" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_05" value="Yes" style="endArrow=classic;" edge="1" source="p1_check" target="p1_incr" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_06" style="endArrow=classic;" edge="1" source="p1_initial" target="p1_fetch_t" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_07" style="endArrow=classic;" edge="1" source="p1_incr" target="p1_fetch_h" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_08" style="endArrow=classic;" edge="1" source="p1_fetch_t" target="p1_loop_t" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_09" style="endArrow=classic;" edge="1" source="p1_fetch_h" target="p1_loop_t" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_10" style="endArrow=classic;" edge="1" source="p1_loop_t" target="p1_store" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_11" style="endArrow=classic;" edge="1" source="p1_store" target="p1_process" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_12" style="endArrow=classic;" edge="1" source="p1_process" target="p1_enrich" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_13" style="endArrow=classic;" edge="1" source="p1_enrich" target="p1_end" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_c1" style="endArrow=none;dashed=1;strokeColor=#82B366;" edge="1" source="p1_store" target="p1_note1" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p1_c2" style="endArrow=none;dashed=1;strokeColor=#82B366;" edge="1" source="p1_process" target="p1_note2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="store_thread" name="2. _store_thread() Detail">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1600">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="p2_start" value="_store_thread(conn, thread_emails, contact_index)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="310" y="30" width="380" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_empty" value="thread_emails&lt;br&gt;empty?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="420" y="110" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_ret" value="Return (False, False)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="730" y="130" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_strip" value="Strip quoted text from email bodies" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="350" y="240" width="300" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Step 1: Always store comms -->
+        <mxCell id="p2_step1" value="&lt;b&gt;Step 1: ALWAYS store communications&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=13;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="60" y="310" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_loop" value="For each email in thread" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="350" y="330" width="300" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_insert_comm" value="INSERT OR IGNORE INTO &lt;b&gt;communications&lt;/b&gt;&lt;br&gt;INSERT OR IGNORE INTO &lt;b&gt;communication_participants&lt;/b&gt;&lt;br&gt;&lt;i&gt;Raw emails always persisted regardless of rules&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="310" y="420" width="380" height="65" as="geometry"/>
+        </mxCell>
+
+        <!-- Step 2: Check existing conv -->
+        <mxCell id="p2_step2" value="&lt;b&gt;Step 2: Check for existing conversation&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=13;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="60" y="520" width="310" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_lookup" value="SELECT by provider_thread_id&lt;br&gt;&lt;i&gt;Searches across ALL accounts (multi-account merge)&lt;/i&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="310" y="550" width="380" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_exists" value="Conversation&lt;br&gt;exists?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="420" y="640" width="160" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Left branch: existing conv -->
+        <mxCell id="p2_link_new" value="Link new communications&lt;br&gt;to existing conversation&lt;br&gt;&lt;i&gt;INSERT conversation_communications&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="60" y="755" width="270" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_update_counts" value="Update counts &amp; dates&lt;br&gt;&lt;i&gt;Reset ai_summarized_at = NULL&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="60" y="850" width="270" height="45" as="geometry"/>
+        </mxCell>
+
+        <!-- Right branch: new → evaluate rules -->
+        <mxCell id="p2_step3" value="&lt;b&gt;Step 3: Evaluate creation rules&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=13;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="670" y="640" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_load_all" value="Load ALL communications&lt;br&gt;for this provider_thread_id&lt;br&gt;&lt;i&gt;Including previously-stored ones&lt;/i&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="670" y="680" width="300" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_should" value="_should_create_&lt;br&gt;conversation()?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="730" y="785" width="180" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_rules_note" value="&lt;b&gt;3-Rule Decision&lt;/b&gt;&lt;br&gt;&lt;i&gt;See page 3 for full rules&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;dashed=1;dashPattern=8 8;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="960" y="805" width="180" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_create" value="&lt;b&gt;CREATE conversation&lt;/b&gt;&lt;br&gt;Link ALL thread communications&lt;br&gt;&lt;i&gt;(retroactive linkage)&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="620" y="920" width="260" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_skip" value="No conversation created&lt;br&gt;&lt;i&gt;Communications remain unlinked&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="930" y="920" width="230" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_skip_ret" value="Return (False, False)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="940" y="1010" width="200" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Step 4: Participants -->
+        <mxCell id="p2_step4" value="&lt;b&gt;Step 4: Upsert participants&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=13;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1050" width="280" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_parts" value="Upsert conversation_participants&lt;br&gt;&lt;i&gt;From ALL linked communications&lt;br&gt;Match emails &amp;rarr; contact_identifiers for contact_id&lt;/i&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="310" y="1080" width="380" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_part_count" value="UPDATE conversation participant_count" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="350" y="1180" width="300" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2_end" value="Return (created, updated)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="350" y="1260" width="300" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e_p2_01" style="endArrow=classic;" edge="1" source="p2_start" target="p2_empty" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_02" value="Yes" style="endArrow=classic;" edge="1" source="p2_empty" target="p2_ret" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_03" value="No" style="endArrow=classic;" edge="1" source="p2_empty" target="p2_strip" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_04" style="endArrow=classic;" edge="1" source="p2_strip" target="p2_loop" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_05" style="endArrow=classic;" edge="1" source="p2_loop" target="p2_insert_comm" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_06" style="endArrow=classic;" edge="1" source="p2_insert_comm" target="p2_lookup" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_07" style="endArrow=classic;" edge="1" source="p2_lookup" target="p2_exists" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_08" value="Yes" style="endArrow=classic;" edge="1" source="p2_exists" target="p2_link_new" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_09" value="No" style="endArrow=classic;" edge="1" source="p2_exists" target="p2_load_all" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_10" style="endArrow=classic;" edge="1" source="p2_link_new" target="p2_update_counts" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_11" style="endArrow=classic;" edge="1" source="p2_update_counts" target="p2_parts" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_12" style="endArrow=classic;" edge="1" source="p2_load_all" target="p2_should" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_13" value="Yes" style="endArrow=classic;" edge="1" source="p2_should" target="p2_create" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_14" value="No" style="endArrow=classic;" edge="1" source="p2_should" target="p2_skip" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_15" style="endArrow=classic;" edge="1" source="p2_create" target="p2_parts" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_16" style="endArrow=classic;" edge="1" source="p2_skip" target="p2_skip_ret" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_17" style="endArrow=classic;" edge="1" source="p2_parts" target="p2_part_count" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_18" style="endArrow=classic;" edge="1" source="p2_part_count" target="p2_end" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p2_c1" style="endArrow=none;dashed=1;strokeColor=#D6B656;" edge="1" source="p2_should" target="p2_rules_note" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="rules" name="3. Conversation Creation Rules">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1400">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="p3_start" value="_should_create_conversation(comm_rows, account_email, contact_index)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="270" y="30" width="460" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_empty" value="comm_rows&lt;br&gt;empty?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="420" y="110" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_ret_false0" value="Return False" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="730" y="130" width="140" height="35" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="p3_gather" value="Gather participant info:&lt;br&gt;&lt;b&gt;user_sent&lt;/b&gt; = did account_email send any?&lt;br&gt;&lt;b&gt;has_known_nonblocked&lt;/b&gt; = any non-user participant&lt;br&gt;that is known AND not blocked?" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="310" y="240" width="380" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="p3_blocked_note" value="&lt;b&gt;_is_blocked_sender()&lt;/b&gt;&lt;br&gt;16 regex patterns from triage.py:&lt;br&gt;noreply@, no-reply@, notification@,&lt;br&gt;billing@, bounces@, alerts@,&lt;br&gt;invoice@, receipts@, etc." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;dashed=1;dashPattern=8 8;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="770" y="240" width="270" height="85" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="p3_count" value="total emails&lt;br&gt;== 1?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="420" y="380" width="160" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- LEFT BRANCH: Single email -->
+        <mxCell id="p3_single_label" value="&lt;b&gt;Single-Email Thread&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=13;fontStyle=1;fontColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="50" y="380" width="200" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_direction" value="sender ==&lt;br&gt;account_email?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="90" y="510" width="170" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Rule 2: Outbound -->
+        <mxCell id="p3_r2_label" value="&lt;b&gt;Rule 2: Outbound&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="10" y="620" width="140" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r2_known" value="has_known_&lt;br&gt;nonblocked?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="20" y="650" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r2_yes" value="Return True&lt;br&gt;&lt;i&gt;Known recipient&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="10" y="790" width="160" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r2_no" value="Return False&lt;br&gt;&lt;i&gt;Unknown recipient&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="10" y="890" width="160" height="45" as="geometry"/>
+        </mxCell>
+
+        <!-- Rule 1: Inbound -->
+        <mxCell id="p3_r1_label" value="&lt;b&gt;Rule 1: Inbound&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="235" y="620" width="140" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r1_known" value="has_known_&lt;br&gt;nonblocked?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="225" y="650" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r1_yes" value="Return True&lt;br&gt;&lt;i&gt;Known sender&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="215" y="790" width="160" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r1_no" value="Return False&lt;br&gt;&lt;i&gt;Unknown or blocked&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="215" y="890" width="160" height="45" as="geometry"/>
+        </mxCell>
+
+        <!-- RIGHT BRANCH: Multi-email -->
+        <mxCell id="p3_multi_label" value="&lt;b&gt;Multi-Email Thread (2+)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=13;fontStyle=1;fontColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="670" y="380" width="240" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r3_label" value="&lt;b&gt;Rule 3&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="740" y="420" width="100" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r3_user" value="user_sent?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="720" y="460" width="140" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r3_user_yes" value="Return True&lt;br&gt;&lt;i&gt;User participated&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="550" y="580" width="170" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r3_contact" value="has_known_&lt;br&gt;nonblocked?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="870" y="560" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r3_yes" value="Return True&lt;br&gt;&lt;i&gt;Known contact in thread&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="800" y="700" width="190" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3_r3_no" value="Return False&lt;br&gt;&lt;i&gt;No user, no known contacts&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="700" width="190" height="45" as="geometry"/>
+        </mxCell>
+
+        <!-- Retroactive note -->
+        <mxCell id="p3_retro" value="&lt;b&gt;Retroactive Creation&lt;/b&gt;&lt;br&gt;When a reply arrives to a previously-skipped thread,&lt;br&gt;Rule 3 triggers and the conversation is created&lt;br&gt;linking ALL existing communications in that thread." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;dashed=1;dashPattern=8 8;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="510" y="810" width="340" height="75" as="geometry"/>
+        </mxCell>
+
+        <!-- Summary table -->
+        <mxCell id="p3_table" value="&lt;table style='font-size:11px;border-collapse:collapse;width:100%'&gt;&lt;tr style='background:#DAE8FC'&gt;&lt;th style='border:1px solid #6C8EBF;padding:4px'&gt;Rule&lt;/th&gt;&lt;th style='border:1px solid #6C8EBF;padding:4px'&gt;Condition&lt;/th&gt;&lt;th style='border:1px solid #6C8EBF;padding:4px'&gt;Creates?&lt;/th&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;1&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;Single inbound from known, non-blocked contact&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px;color:green'&gt;&lt;b&gt;Yes&lt;/b&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;2&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;Single outbound to known contact&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px;color:green'&gt;&lt;b&gt;Yes&lt;/b&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;2b&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;Single outbound to unknown&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px;color:red'&gt;No&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;3&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;Multi-email: user sent OR known contact&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px;color:green'&gt;&lt;b&gt;Yes&lt;/b&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;&amp;mdash;&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;Single inbound from unknown/blocked&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px;color:red'&gt;No&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;&amp;mdash;&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px'&gt;Multi-email: no user, no known contacts&lt;/td&gt;&lt;td style='border:1px solid #ccc;padding:4px;color:red'&gt;No&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" style="shape=mxgraph.basic.rect;fillColor=#FFFFFF;strokeColor=#333333;overflow=fill;html=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1020" width="470" height="190" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e_p3_01" style="endArrow=classic;" edge="1" source="p3_start" target="p3_empty" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_02" value="Yes" style="endArrow=classic;" edge="1" source="p3_empty" target="p3_ret_false0" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_03" value="No" style="endArrow=classic;" edge="1" source="p3_empty" target="p3_gather" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_04" style="endArrow=classic;" edge="1" source="p3_gather" target="p3_count" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_05" value="Yes (1)" style="endArrow=classic;" edge="1" source="p3_count" target="p3_direction" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_06" value="No (2+)" style="endArrow=classic;" edge="1" source="p3_count" target="p3_r3_user" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_07" value="Yes (outbound)" style="endArrow=classic;fontSize=10;" edge="1" source="p3_direction" target="p3_r2_known" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_08" value="No (inbound)" style="endArrow=classic;fontSize=10;" edge="1" source="p3_direction" target="p3_r1_known" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_09" value="Yes" style="endArrow=classic;" edge="1" source="p3_r2_known" target="p3_r2_yes" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_10" value="No" style="endArrow=classic;" edge="1" source="p3_r2_known" target="p3_r2_no" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_11" value="Yes" style="endArrow=classic;" edge="1" source="p3_r1_known" target="p3_r1_yes" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_12" value="No" style="endArrow=classic;" edge="1" source="p3_r1_known" target="p3_r1_no" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_13" value="Yes" style="endArrow=classic;" edge="1" source="p3_r3_user" target="p3_r3_user_yes" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_14" value="No" style="endArrow=classic;" edge="1" source="p3_r3_user" target="p3_r3_contact" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_15" value="Yes" style="endArrow=classic;" edge="1" source="p3_r3_contact" target="p3_r3_yes" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_16" value="No" style="endArrow=classic;" edge="1" source="p3_r3_contact" target="p3_r3_no" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_p3_c1" style="endArrow=none;dashed=1;strokeColor=#D6B656;" edge="1" source="p3_gather" target="p3_blocked_note" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

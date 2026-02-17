@@ -11,6 +11,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...database import get_connection
+from ...hierarchy import get_addresses, add_address, remove_address
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -297,6 +298,8 @@ def event_detail(request: Request, event_id: str):
         ).fetchall()
         conversations = [dict(r) for r in convs]
 
+    addresses = get_addresses("event", event_id)
+
     from ...notes import get_notes_for_entity
     cid = request.state.customer_id
     notes = get_notes_for_entity("event", event_id, customer_id=cid)
@@ -306,7 +309,51 @@ def event_detail(request: Request, event_id: str):
         "event": event,
         "participants": participants,
         "conversations": conversations,
+        "addresses": addresses,
         "notes": notes,
         "entity_type": "event",
         "entity_id": event_id,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Addresses
+# ---------------------------------------------------------------------------
+
+@router.post("/{event_id}/addresses", response_class=HTMLResponse)
+def event_add_address(
+    request: Request,
+    event_id: str,
+    address_type: str = Form("venue"),
+    street: str = Form(""),
+    city: str = Form(""),
+    state: str = Form(""),
+    postal_code: str = Form(""),
+    country: str = Form(""),
+):
+    templates = request.app.state.templates
+    add_address(
+        "event", event_id,
+        address_type=address_type, street=street, city=city,
+        state=state, postal_code=postal_code, country=country,
+    )
+    addresses = get_addresses("event", event_id)
+
+    return templates.TemplateResponse(request, "events/_addresses.html", {
+        "event": {"id": event_id},
+        "addresses": addresses,
+    })
+
+
+@router.delete("/{event_id}/addresses/{address_id}", response_class=HTMLResponse)
+def event_remove_address(
+    request: Request, event_id: str, address_id: str,
+):
+    templates = request.app.state.templates
+    remove_address(address_id)
+    addresses = get_addresses("event", event_id)
+
+    return templates.TemplateResponse(request, "events/_addresses.html", {
+        "event": {"id": event_id},
+        "addresses": addresses,
     })

@@ -5,14 +5,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from ...access import visible_conversations_query
 from ...database import get_connection
 from ...hierarchy import get_addresses, add_address, remove_address
 
 router = APIRouter()
 
 
-def _list_conversations(
+def _query_conversations(
     *,
     status_filter: str = "open",
     topic_id: str = "",
@@ -22,57 +21,38 @@ def _list_conversations(
     customer_id: str = "",
     user_id: str = "",
 ) -> tuple[list[dict], int]:
-    """Query conversations with filters. Returns (rows, total_count)."""
-    clauses: list[str] = []
-    params: list = []
+    from ...views.engine import execute_view
+    from ...views.registry import ENTITY_TYPES
 
-    # Visibility scoping
-    if customer_id and user_id:
-        vis_where, vis_params = visible_conversations_query(customer_id, user_id)
-        clauses.append(vis_where)
-        params.extend(vis_params)
+    extra_where: list[tuple[str, list]] = []
 
     if status_filter == "open":
-        clauses.append("conv.triage_result IS NULL AND conv.dismissed = 0")
+        extra_where.append(("conv.triage_result IS NULL AND conv.dismissed = 0", []))
     elif status_filter == "closed":
-        clauses.append("conv.dismissed = 1")
+        extra_where.append(("conv.dismissed = 1", []))
     elif status_filter == "triaged":
-        clauses.append("conv.triage_result IS NOT NULL")
+        extra_where.append(("conv.triage_result IS NOT NULL", []))
 
     if topic_id:
-        clauses.append("conv.topic_id = ?")
-        params.append(topic_id)
+        extra_where.append(("conv.topic_id = ?", [topic_id]))
 
-    if search:
-        clauses.append("conv.title LIKE ?")
-        params.append(f"%{search}%")
-
-    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    columns = [{"field_key": c} for c in ENTITY_TYPES["conversation"].default_columns]
 
     with get_connection() as conn:
-        total = conn.execute(
-            f"SELECT COUNT(*) AS cnt FROM conversations conv {where}", params
-        ).fetchone()["cnt"]
+        rows, total = execute_view(
+            conn,
+            entity_type="conversation",
+            columns=columns,
+            filters=[],
+            search=search,
+            page=page,
+            per_page=per_page,
+            customer_id=customer_id,
+            user_id=user_id,
+            extra_where=extra_where or None,
+        )
 
-        offset = (page - 1) * per_page
-        rows = conn.execute(
-            f"""SELECT conv.*, t.name AS topic_name,
-                       (SELECT COALESCE(pa.display_name, pa.email_address, pa.phone_number)
-                        FROM conversation_communications cc2
-                        JOIN communications comm2 ON comm2.id = cc2.communication_id
-                        JOIN provider_accounts pa ON pa.id = comm2.account_id
-                        WHERE cc2.conversation_id = conv.id
-                        LIMIT 1
-                       ) AS account_name
-                FROM conversations conv
-                LEFT JOIN topics t ON t.id = conv.topic_id
-                {where}
-                ORDER BY conv.last_activity_at DESC
-                LIMIT ? OFFSET ?""",
-            params + [per_page, offset],
-        ).fetchall()
-
-    return [dict(r) for r in rows], total
+    return rows, total
 
 
 def _get_topics_for_filter() -> list[dict]:
@@ -98,7 +78,7 @@ def conversation_list(
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    conversations, total = _list_conversations(
+    conversations, total = _query_conversations(
         status_filter=status, topic_id=topic_id, search=q, page=page,
         customer_id=cid, user_id=user["id"],
     )
@@ -130,7 +110,7 @@ def conversation_search(
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    conversations, total = _list_conversations(
+    conversations, total = _query_conversations(
         status_filter=status, topic_id=topic_id, search=q, page=page,
         customer_id=cid, user_id=user["id"],
     )

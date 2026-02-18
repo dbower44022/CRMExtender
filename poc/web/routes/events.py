@@ -17,49 +17,31 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _list_events(*, search: str = "", event_type: str = "",
-                 page: int = 1, per_page: int = 50,
-                 customer_id: str = ""):
-    clauses = []
-    params: list = []
+def _query_events(*, search: str = "", event_type: str = "",
+                  page: int = 1, per_page: int = 50,
+                  customer_id: str = ""):
+    from ...views.engine import execute_view
+    from ...views.registry import ENTITY_TYPES
 
-    # Scope events: synced events via provider_accounts.customer_id,
-    # manual events (account_id IS NULL) are visible to all.
-    if customer_id:
-        clauses.append(
-            "(e.account_id IS NULL OR e.account_id IN "
-            "(SELECT id FROM provider_accounts WHERE customer_id = ?))"
-        )
-        params.append(customer_id)
-
-    if search:
-        clauses.append("(e.title LIKE ? OR e.location LIKE ?)")
-        params.extend([f"%{search}%", f"%{search}%"])
+    filters: list[dict] = []
     if event_type:
-        clauses.append("e.event_type = ?")
-        params.append(event_type)
+        filters.append({"field_key": "event_type", "operator": "equals", "value": event_type})
 
-    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    columns = [{"field_key": c} for c in ENTITY_TYPES["event"].default_columns]
 
     with get_connection() as conn:
-        total = conn.execute(
-            f"SELECT COUNT(*) AS cnt FROM events e {where}",
-            params,
-        ).fetchone()["cnt"]
+        rows, total = execute_view(
+            conn,
+            entity_type="event",
+            columns=columns,
+            filters=filters,
+            search=search,
+            page=page,
+            per_page=per_page,
+            customer_id=customer_id,
+        )
 
-        offset = (page - 1) * per_page
-        rows = conn.execute(
-            f"""SELECT e.*,
-                       COALESCE(pa.display_name, pa.email_address) AS account_name
-                FROM events e
-                LEFT JOIN provider_accounts pa ON pa.id = e.account_id
-                {where}
-                ORDER BY COALESCE(e.start_datetime, e.start_date) DESC
-                LIMIT ? OFFSET ?""",
-            params + [per_page, offset],
-        ).fetchall()
-
-    return [dict(r) for r in rows], total
+    return rows, total
 
 
 @router.get("", response_class=HTMLResponse)
@@ -67,7 +49,7 @@ def event_list(request: Request, q: str = "", event_type: str = "",
                page: int = 1):
     templates = request.app.state.templates
     cid = request.state.customer_id
-    events, total = _list_events(
+    events, total = _query_events(
         search=q, event_type=event_type, page=page, customer_id=cid,
     )
     total_pages = max(1, (total + 49) // 50)
@@ -88,7 +70,7 @@ def event_search(request: Request, q: str = "", event_type: str = "",
                  page: int = 1):
     templates = request.app.state.templates
     cid = request.state.customer_id
-    events, total = _list_events(
+    events, total = _query_events(
         search=q, event_type=event_type, page=page, customer_id=cid,
     )
     total_pages = max(1, (total + 49) // 50)

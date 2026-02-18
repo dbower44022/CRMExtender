@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from ...access import my_contacts_query, visible_contacts_query
 from ...contact_companies import (
     add_affiliation, list_affiliations_for_contact, remove_affiliation,
     set_primary, update_affiliation,
@@ -30,84 +29,40 @@ def _is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request") == "true"
 
 
-_CONTACT_SORT_MAP = {
-    "name": "c.name", "email": "ci.value",
-    "company": "co.name", "score": "es.score_value",
-}
+_CONTACT_SORT_ALIASES = {"company": "company_name"}
 
 
-def _list_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
-                   sort: str = "name",
-                   customer_id: str = "", user_id: str = "",
-                   scope: str = "all"):
-    clauses: list[str] = []
-    params: list = []
-
-    # Visibility scoping
-    if scope == "mine" and customer_id and user_id:
-        my_where, my_params = my_contacts_query(customer_id, user_id)
-        clauses.append(my_where)
-        params.extend(my_params)
-    elif customer_id and user_id:
-        vis_where, vis_params = visible_contacts_query(customer_id, user_id)
-        clauses.append(vis_where)
-        params.extend(vis_params)
-
-    if search:
-        clauses.append("(c.name LIKE ? OR ci.value LIKE ? OR co.name LIKE ?)")
-        params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
-
-    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+def _query_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
+                    sort: str = "name",
+                    customer_id: str = "", user_id: str = "",
+                    scope: str = "all"):
+    from ...views.engine import execute_view
+    from ...views.registry import ENTITY_TYPES
 
     desc = sort.startswith("-")
     key = sort.lstrip("-")
-    col = _CONTACT_SORT_MAP.get(key, "c.name")
-    direction = "DESC" if desc else "ASC"
-    order = f"{col} IS NULL, {col} {direction}" if key == "score" else f"{col} {direction}"
+    sort_field = _CONTACT_SORT_ALIASES.get(key, key)
+    sort_direction = "desc" if desc else "asc"
 
-    # Extra JOIN for "mine" scope
-    mine_join = ""
-    if scope == "mine" and customer_id and user_id:
-        mine_join = "JOIN user_contacts uc ON uc.contact_id = c.id"
+    columns = [{"field_key": c} for c in ENTITY_TYPES["contact"].default_columns]
 
     with get_connection() as conn:
-        total = conn.execute(
-            f"""SELECT COUNT(DISTINCT c.id) AS cnt
-                FROM contacts c
-                {mine_join}
-                LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
-                LEFT JOIN contact_companies ccx ON ccx.contact_id = c.id AND ccx.is_primary = 1 AND ccx.is_current = 1
-                LEFT JOIN companies co ON co.id = ccx.company_id
-                {where}""",
-            params,
-        ).fetchone()["cnt"]
+        rows, total = execute_view(
+            conn,
+            entity_type="contact",
+            columns=columns,
+            filters=[],
+            sort_field=sort_field,
+            sort_direction=sort_direction,
+            search=search,
+            page=page,
+            per_page=per_page,
+            customer_id=customer_id,
+            user_id=user_id,
+            scope=scope,
+        )
 
-        offset = (page - 1) * per_page
-        rows = conn.execute(
-            f"""SELECT c.*,
-                       (SELECT ci2.value FROM contact_identifiers ci2
-                        WHERE ci2.contact_id = c.id AND ci2.type = 'email'
-                        ORDER BY ci2.is_primary DESC, ci2.created_at ASC
-                        LIMIT 1) AS email,
-                       co.name AS company_name, co.id AS company_id,
-                       es.score_value AS score
-                FROM contacts c
-                {mine_join}
-                LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
-                LEFT JOIN contact_companies ccx ON ccx.contact_id = c.id AND ccx.is_primary = 1 AND ccx.is_current = 1
-                LEFT JOIN companies co ON co.id = ccx.company_id
-                LEFT JOIN entity_scores es
-                  ON es.entity_type = 'contact'
-                 AND es.entity_id = c.id
-                 AND es.score_type = 'relationship_strength'
-                {where}
-                GROUP BY c.id
-                ORDER BY {order}
-                LIMIT ? OFFSET ?""",
-            params + [per_page, offset],
-        ).fetchall()
-
-    return [dict(r) for r in rows], total
+    return rows, total
 
 
 @router.get("", response_class=HTMLResponse)
@@ -116,7 +71,7 @@ def contact_list(request: Request, q: str = "", page: int = 1,
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    contacts, total = _list_contacts(
+    contacts, total = _query_contacts(
         search=q, page=page, sort=sort,
         customer_id=cid, user_id=user["id"], scope=scope,
     )
@@ -140,7 +95,7 @@ def contact_search(request: Request, q: str = "", page: int = 1,
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    contacts, total = _list_contacts(
+    contacts, total = _query_contacts(
         search=q, page=page, sort=sort,
         customer_id=cid, user_id=user["id"], scope=scope,
     )

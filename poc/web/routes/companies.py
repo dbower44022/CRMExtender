@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from ...access import my_companies_query, visible_companies_query
 from ...company_merge import (
     detect_all_duplicates,
     find_duplicates_for_domain,
@@ -53,61 +52,37 @@ def _find_contacts_by_domain(domain: str, *, customer_id: str | None = None) -> 
     return [dict(r) for r in rows]
 
 
-_COMPANY_SORT_MAP = {
-    "name": "co.name", "domain": "co.domain",
-    "industry": "co.industry", "score": "es.score_value",
-}
-
-
-def _list_companies_with_scores(
+def _query_companies(
     q: str = "", sort: str = "name",
     *, customer_id: str = "", user_id: str = "", scope: str = "all",
 ) -> list[dict]:
-    """Return companies with their relationship strength scores."""
+    from ...views.engine import execute_view
+    from ...views.registry import ENTITY_TYPES
+
     desc = sort.startswith("-")
     key = sort.lstrip("-")
-    col = _COMPANY_SORT_MAP.get(key, "co.name")
-    direction = "DESC" if desc else "ASC"
-    order = f"{col} IS NULL, {col} {direction}" if key == "score" else f"{col} {direction}"
+    sort_direction = "desc" if desc else "asc"
 
-    clauses: list[str] = ["co.status = 'active'"]
-    params: list = []
-
-    # Visibility scoping
-    if scope == "mine" and customer_id and user_id:
-        my_where, my_params = my_companies_query(customer_id, user_id)
-        clauses.append(my_where)
-        params.extend(my_params)
-    elif customer_id and user_id:
-        vis_where, vis_params = visible_companies_query(customer_id, user_id)
-        clauses.append(vis_where)
-        params.extend(vis_params)
-
-    if q:
-        clauses.append("(co.name LIKE ? OR co.domain LIKE ?)")
-        params.extend([f"%{q}%", f"%{q}%"])
-
-    where = f"WHERE {' AND '.join(clauses)}"
-
-    # Extra JOIN for "mine" scope
-    mine_join = ""
-    if scope == "mine" and customer_id and user_id:
-        mine_join = "JOIN user_companies uco ON uco.company_id = co.id"
+    columns = [{"field_key": c} for c in ENTITY_TYPES["company"].default_columns]
 
     with get_connection() as conn:
-        rows = conn.execute(
-            f"""SELECT co.*, es.score_value AS score
-               FROM companies co
-               {mine_join}
-               LEFT JOIN entity_scores es
-                 ON es.entity_type = 'company'
-                AND es.entity_id = co.id
-                AND es.score_type = 'relationship_strength'
-               {where}
-               ORDER BY {order}""",
-            params,
-        ).fetchall()
-    return [dict(r) for r in rows]
+        rows, _total = execute_view(
+            conn,
+            entity_type="company",
+            columns=columns,
+            filters=[],
+            sort_field=key,
+            sort_direction=sort_direction,
+            search=q,
+            page=1,
+            per_page=10000,
+            customer_id=customer_id,
+            user_id=user_id,
+            scope=scope,
+            extra_where=[("co.status = 'active'", [])],
+        )
+
+    return rows
 
 
 @router.get("", response_class=HTMLResponse)
@@ -116,7 +91,7 @@ def company_list(request: Request, q: str = "", sort: str = "name",
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    companies = _list_companies_with_scores(
+    companies = _query_companies(
         q, sort, customer_id=cid, user_id=user["id"], scope=scope,
     )
 
@@ -135,7 +110,7 @@ def company_search(request: Request, q: str = "", sort: str = "name",
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    companies = _list_companies_with_scores(
+    companies = _query_companies(
         q, sort, customer_id=cid, user_id=user["id"], scope=scope,
     )
 

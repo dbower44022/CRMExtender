@@ -2,156 +2,61 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse
 
-from ...access import visible_communications_query
 from ...database import get_connection
 
 router = APIRouter()
-log = logging.getLogger(__name__)
 
-# Sort whitelist to prevent SQL injection
-_SORT_MAP = {
-    "channel": "comm.channel",
-    "from": "comm.sender_address",
-    "to": "to_addresses",
-    "subject": "comm.subject",
-    "date": "comm.timestamp",
-}
-_DEFAULT_SORT = "date"
-_DEFAULT_DIR = "DESC"
+_COMM_SORT_ALIASES = {"date": "timestamp", "from": "sender"}
 
 
-def _ensure_schema():
-    """Ensure is_archived column exists (for existing DBs without migration)."""
-    with get_connection() as conn:
-        cols = {r[1] for r in conn.execute("PRAGMA table_info(communications)")}
-        if "is_archived" not in cols:
-            conn.execute(
-                "ALTER TABLE communications ADD COLUMN is_archived INTEGER DEFAULT 0"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_comm_archived "
-                "ON communications(is_archived)"
-            )
-
-
-_schema_checked = False
-
-
-def _check_schema_once():
-    global _schema_checked
-    if not _schema_checked:
-        try:
-            _ensure_schema()
-        except Exception:
-            log.debug("Schema check skipped", exc_info=True)
-        _schema_checked = True
-
-
-def _parse_sort(sort_param: str) -> tuple[str, str]:
-    """Parse sort parameter (e.g. '-date') into (column, direction)."""
-    if sort_param.startswith("-"):
-        key = sort_param[1:]
-        direction = "DESC"
-    else:
-        key = sort_param
-        direction = "ASC"
-    column = _SORT_MAP.get(key, _SORT_MAP[_DEFAULT_SORT])
-    return column, direction
-
-
-def _list_communications(
+def _query_communications(
     *,
     search: str = "",
     channel: str = "",
     direction: str = "",
-    show_archived: bool = False,
     sort: str = "-date",
     page: int = 1,
     per_page: int = 50,
     customer_id: str = "",
     user_id: str = "",
 ) -> tuple[list[dict], int]:
-    """Query communications with filters. Returns (rows, total_count)."""
-    _check_schema_once()
+    from ...views.engine import execute_view
+    from ...views.registry import ENTITY_TYPES
 
-    clauses: list[str] = []
-    params: list = []
+    desc = sort.startswith("-")
+    key = sort.lstrip("-")
+    sort_field = _COMM_SORT_ALIASES.get(key, key)
+    sort_direction = "desc" if desc else "asc"
 
-    # Visibility scoping
-    if customer_id and user_id:
-        vis_where, vis_params = visible_communications_query(customer_id, user_id)
-        clauses.append(vis_where)
-        params.extend(vis_params)
-
-    # Only current revisions
-    clauses.append("comm.is_current = 1")
-
-    # Archive filter
-    if not show_archived:
-        clauses.append("comm.is_archived = 0")
-
-    # Search
-    if search:
-        clauses.append(
-            "(comm.subject LIKE ? OR comm.sender_address LIKE ? "
-            "OR comm.sender_name LIKE ?)"
-        )
-        like = f"%{search}%"
-        params.extend([like, like, like])
-
-    # Channel filter
+    filters: list[dict] = []
     if channel:
-        clauses.append("comm.channel = ?")
-        params.append(channel)
-
-    # Direction filter
+        filters.append({"field_key": "channel", "operator": "equals", "value": channel})
     if direction:
-        clauses.append("comm.direction = ?")
-        params.append(direction)
+        filters.append({"field_key": "direction", "operator": "equals", "value": direction})
 
-    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-    sort_col, sort_dir = _parse_sort(sort)
+    columns = [{"field_key": c} for c in ENTITY_TYPES["communication"].default_columns]
 
     with get_connection() as conn:
-        total = conn.execute(
-            f"SELECT COUNT(*) AS cnt FROM communications comm {where}",
-            params,
-        ).fetchone()["cnt"]
+        rows, total = execute_view(
+            conn,
+            entity_type="communication",
+            columns=columns,
+            filters=filters,
+            sort_field=sort_field,
+            sort_direction=sort_direction,
+            search=search,
+            page=page,
+            per_page=per_page,
+            customer_id=customer_id,
+            user_id=user_id,
+        )
 
-        offset = (page - 1) * per_page
-        rows = conn.execute(
-            f"""SELECT comm.id, comm.channel, comm.sender_address,
-                       comm.sender_name, comm.subject, comm.timestamp,
-                       comm.direction, comm.snippet,
-                       (SELECT GROUP_CONCAT(cp.address, ', ')
-                        FROM communication_participants cp
-                        WHERE cp.communication_id = comm.id AND cp.role = 'to'
-                       ) AS to_addresses,
-                       (SELECT cc.conversation_id
-                        FROM conversation_communications cc
-                        WHERE cc.communication_id = comm.id
-                        LIMIT 1
-                       ) AS conversation_id,
-                       (SELECT conv.title
-                        FROM conversations conv
-                        JOIN conversation_communications cc ON cc.conversation_id = conv.id
-                        WHERE cc.communication_id = comm.id
-                        LIMIT 1
-                       ) AS conversation_title
-                FROM communications comm
-                {where}
-                ORDER BY {sort_col} {sort_dir}
-                LIMIT ? OFFSET ?""",
-            params + [per_page, offset],
-        ).fetchall()
-
-    return [dict(r) for r in rows], total
+    return rows, total
 
 
 @router.get("", response_class=HTMLResponse)
@@ -167,7 +72,7 @@ def communication_list(
     user = request.state.user
     cid = request.state.customer_id
 
-    communications, total = _list_communications(
+    communications, total = _query_communications(
         search=q, channel=channel, direction=direction,
         sort=sort, page=page,
         customer_id=cid, user_id=user["id"],
@@ -201,7 +106,7 @@ def communication_search(
     user = request.state.user
     cid = request.state.customer_id
 
-    communications, total = _list_communications(
+    communications, total = _query_communications(
         search=q, channel=channel, direction=direction,
         sort=sort, page=page,
         customer_id=cid, user_id=user["id"],
@@ -317,7 +222,7 @@ def bulk_archive(
                     )
 
     # Return updated rows
-    communications, total = _list_communications(
+    communications, total = _query_communications(
         search=q, channel=channel, direction=direction,
         sort=sort, page=page,
         customer_id=cid, user_id=user["id"],
@@ -399,7 +304,7 @@ def bulk_assign(
             )
 
     # Return updated rows
-    communications, total = _list_communications(
+    communications, total = _query_communications(
         search=q, channel=channel, direction=direction,
         sort=sort, page=page,
         customer_id=cid, user_id=user["id"],
@@ -458,7 +363,7 @@ def delete_conversation(
                 )
 
     # Return updated rows
-    communications, total = _list_communications(
+    communications, total = _query_communications(
         search=q, channel=channel, direction=direction,
         sort=sort, page=page,
         customer_id=cid, user_id=user["id"],

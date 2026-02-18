@@ -24,6 +24,7 @@ from ...hierarchy import (
 from ...passwords import verify_password
 from ...session import delete_user_sessions
 from ...settings import get_setting, set_setting
+from ...sync import EMAIL_HISTORY_OPTIONS
 
 log = logging.getLogger(__name__)
 
@@ -172,6 +173,7 @@ async def system_page(request: Request):
     sync_enabled = get_setting(cid, "sync_enabled") or "true"
     default_phone_country = get_setting(cid, "default_phone_country") or "US"
     allow_self_registration = get_setting(cid, "allow_self_registration") or "false"
+    email_history_window = get_setting(cid, "email_history_window") or "90d"
 
     return templates.TemplateResponse(request, "settings/system.html", {
         "active_nav": "settings",
@@ -183,6 +185,8 @@ async def system_page(request: Request):
         "sync_enabled": sync_enabled,
         "default_phone_country": default_phone_country,
         "allow_self_registration": allow_self_registration,
+        "email_history_window": email_history_window,
+        "email_history_options": EMAIL_HISTORY_OPTIONS,
         "saved": request.query_params.get("saved"),
     })
 
@@ -208,6 +212,9 @@ async def system_save(request: Request):
 
     default_phone_country = form.get("default_phone_country", "US")
     set_setting(cid, "default_phone_country", default_phone_country, scope="system")
+
+    email_history_window = form.get("email_history_window", "90d")
+    set_setting(cid, "email_history_window", email_history_window, scope="system")
 
     return RedirectResponse("/settings/system?saved=1", status_code=303)
 

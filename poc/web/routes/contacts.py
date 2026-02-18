@@ -496,6 +496,78 @@ async def contact_relate_confirm(request: Request):
     })
 
 
+# ---------------------------------------------------------------------------
+# Contact-level email sync
+# ---------------------------------------------------------------------------
+
+@router.post("/{contact_id}/sync-email", response_class=HTMLResponse)
+async def contact_sync_email(
+    request: Request,
+    contact_id: str,
+    window: str = Form(...),
+):
+    from ...sync import EMAIL_HISTORY_OPTIONS, _VALID_WINDOWS, sync_contact_email
+
+    templates = request.app.state.templates
+    cid = request.state.customer_id
+    user = request.state.user
+
+    # Validate contact exists
+    with get_connection() as conn:
+        contact = conn.execute(
+            "SELECT * FROM contacts WHERE id = ?", (contact_id,)
+        ).fetchone()
+    if not contact:
+        return HTMLResponse("Contact not found", status_code=404)
+
+    # Validate window value
+    if window not in _VALID_WINDOWS:
+        return HTMLResponse("Invalid time window", status_code=400)
+
+    # Run the sync
+    try:
+        result = sync_contact_email(
+            contact_id, window,
+            customer_id=cid, user_id=user["id"],
+        )
+    except Exception as exc:
+        # Return conversations section with error message
+        with get_connection() as conn:
+            convs = conn.execute(
+                """SELECT conv.* FROM conversations conv
+                   JOIN conversation_participants cp ON cp.conversation_id = conv.id
+                   WHERE cp.contact_id = ?
+                   ORDER BY conv.last_activity_at DESC LIMIT 50""",
+                (contact_id,),
+            ).fetchall()
+            conversations = [dict(r) for r in convs]
+
+        return templates.TemplateResponse(request, "contacts/_conversations.html", {
+            "contact": dict(contact),
+            "conversations": conversations,
+            "email_history_options": EMAIL_HISTORY_OPTIONS,
+            "sync_error": str(exc),
+        })
+
+    # Reload conversations after sync
+    with get_connection() as conn:
+        convs = conn.execute(
+            """SELECT conv.* FROM conversations conv
+               JOIN conversation_participants cp ON cp.conversation_id = conv.id
+               WHERE cp.contact_id = ?
+               ORDER BY conv.last_activity_at DESC LIMIT 50""",
+            (contact_id,),
+        ).fetchall()
+        conversations = [dict(r) for r in convs]
+
+    return templates.TemplateResponse(request, "contacts/_conversations.html", {
+        "contact": dict(contact),
+        "conversations": conversations,
+        "email_history_options": EMAIL_HISTORY_OPTIONS,
+        "sync_result": result,
+    })
+
+
 @router.get("/{contact_id}", response_class=HTMLResponse)
 def contact_detail(request: Request, contact_id: str):
     templates = request.app.state.templates
@@ -588,6 +660,7 @@ def contact_detail(request: Request, contact_id: str):
     score_data = get_entity_score("contact", contact_id)
 
     from ...notes import get_notes_for_entity
+    from ...sync import EMAIL_HISTORY_OPTIONS
     notes = get_notes_for_entity("contact", contact_id, customer_id=cid)
 
     return templates.TemplateResponse(request, "contacts/detail.html", {
@@ -607,6 +680,7 @@ def contact_detail(request: Request, contact_id: str):
         "notes": notes,
         "entity_type": "contact",
         "entity_id": contact_id,
+        "email_history_options": EMAIL_HISTORY_OPTIONS,
     })
 
 

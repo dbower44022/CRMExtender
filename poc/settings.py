@@ -16,6 +16,8 @@ _HARDCODED_DEFAULTS = {
     "start_of_week": "monday",
     "date_format": "ISO",
     "default_phone_country": "US",
+    "allow_self_registration": "false",
+    "email_history_window": "90d",
 }
 
 

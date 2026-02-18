@@ -29,10 +29,22 @@
       {% endfor %}
     </select>
   </label>
+  <label>Email history to retrieve
+    <select name="email_history_window">
+      {% for value, label in email_history_options %}
+      <option value="{{ value }}" {% if value == email_history_window %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
   <label>
     <input type="checkbox" name="sync_enabled" value="true"
            {% if sync_enabled == 'true' %}checked{% endif %}>
     Sync enabled
+  </label>
+  <label>
+    <input type="checkbox" name="allow_self_registration" value="true"
+           {% if allow_self_registration == 'true' %}checked{% endif %}>
+    Allow self-registration
   </label>
   <button type="submit">Save</button>
 </form>

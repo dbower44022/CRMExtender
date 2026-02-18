@@ -6,30 +6,7 @@
 
 <div class="grid">
   <div>
-    <!-- Conversations -->
-    <h2>Conversations ({{ conversations|length }})</h2>
-    {% if conversations %}
-    <table>
-      <thead>
-        <tr>
-          <th>Subject</th>
-          <th>Status</th>
-          <th>Last Activity</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for conv in conversations %}
-        <tr>
-          <td><a href="/conversations/{{ conv.id }}">{{ conv.title or '(no subject)' }}</a></td>
-          <td>{{ conv.ai_status or conv.status or 'active' }}</td>
-          <td>{{ conv.last_activity_at|datetime }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p class="empty-state">No conversations.</p>
-    {% endif %}
+    {% include "contacts/_conversations.html" %}
 
     {% include "contacts/_affiliations.html" %}
 

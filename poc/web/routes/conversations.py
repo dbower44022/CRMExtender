@@ -197,10 +197,9 @@ def conversation_detail(request: Request, conversation_id: str):
 
         # Participants
         parts = conn.execute(
-            """SELECT cp.*, c.name AS contact_name, ci.value AS contact_email
+            """SELECT cp.*, c.name AS contact_name
                FROM conversation_participants cp
                LEFT JOIN contacts c ON c.id = cp.contact_id
-               LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
                WHERE cp.conversation_id = ?
                ORDER BY cp.communication_count DESC""",
             (conversation_id,),

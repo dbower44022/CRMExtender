@@ -331,30 +331,57 @@ CREATE TABLE IF NOT EXISTS contact_tags (
     PRIMARY KEY (contact_id, tag_id)
 );
 
--- Views (user-defined saved queries)
-CREATE TABLE IF NOT EXISTS views (
+-- Data sources (entity-type definitions for views)
+CREATE TABLE IF NOT EXISTS data_sources (
     id          TEXT PRIMARY KEY,
-    owner_id    TEXT REFERENCES users(id) ON DELETE SET NULL,
+    customer_id TEXT REFERENCES customers(id),
+    entity_type TEXT NOT NULL,
     name        TEXT NOT NULL,
-    description TEXT,
-    query_def   TEXT NOT NULL,
-    is_shared   INTEGER DEFAULT 0,
+    is_system   INTEGER DEFAULT 0,
+    created_by  TEXT,
     created_at  TEXT NOT NULL,
     updated_at  TEXT NOT NULL
 );
 
--- Alerts (notification triggers on views)
-CREATE TABLE IF NOT EXISTS alerts (
+-- Views (configurable saved grid views)
+CREATE TABLE IF NOT EXISTS views (
     id              TEXT PRIMARY KEY,
-    view_id         TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
-    owner_id        TEXT REFERENCES users(id) ON DELETE SET NULL,
-    is_active       INTEGER DEFAULT 1,
-    frequency       TEXT NOT NULL,
-    aggregation     TEXT DEFAULT 'batched',
-    delivery_method TEXT NOT NULL,
-    last_triggered  TEXT,
+    customer_id     TEXT REFERENCES customers(id),
+    data_source_id  TEXT NOT NULL REFERENCES data_sources(id),
+    name            TEXT NOT NULL,
+    view_type       TEXT NOT NULL DEFAULT 'list'
+        CHECK(view_type IN ('list')),
+    owner_id        TEXT NOT NULL REFERENCES users(id),
+    visibility      TEXT DEFAULT 'personal'
+        CHECK(visibility IN ('personal', 'shared')),
+    is_default      INTEGER DEFAULT 0,
+    sort_field       TEXT,
+    sort_direction   TEXT DEFAULT 'asc'
+        CHECK(sort_direction IN ('asc', 'desc')),
+    search_query    TEXT DEFAULT '',
+    per_page        INTEGER DEFAULT 50,
     created_at      TEXT NOT NULL,
     updated_at      TEXT NOT NULL
+);
+
+-- View columns (ordered field selections per view)
+CREATE TABLE IF NOT EXISTS view_columns (
+    id             TEXT PRIMARY KEY,
+    view_id        TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
+    field_key      TEXT NOT NULL,
+    position       INTEGER NOT NULL,
+    width_px       INTEGER,
+    label_override TEXT
+);
+
+-- View filters (saved filter conditions per view)
+CREATE TABLE IF NOT EXISTS view_filters (
+    id        TEXT PRIMARY KEY,
+    view_id   TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
+    field_key TEXT NOT NULL,
+    operator  TEXT NOT NULL,
+    value     TEXT,
+    position  INTEGER NOT NULL
 );
 
 -- Relationship type definitions
@@ -921,8 +948,11 @@ CREATE INDEX IF NOT EXISTS idx_projects_parent     ON projects(parent_id);
 CREATE INDEX IF NOT EXISTS idx_topics_project      ON topics(project_id);
 CREATE INDEX IF NOT EXISTS idx_attachments_comm    ON attachments(communication_id);
 CREATE INDEX IF NOT EXISTS idx_sync_log_account    ON sync_log(account_id);
-CREATE INDEX IF NOT EXISTS idx_views_owner         ON views(owner_id);
-CREATE INDEX IF NOT EXISTS idx_alerts_view         ON alerts(view_id);
+CREATE INDEX IF NOT EXISTS idx_views_owner         ON views(owner_id, data_source_id);
+CREATE INDEX IF NOT EXISTS idx_views_customer      ON views(customer_id, data_source_id);
+CREATE INDEX IF NOT EXISTS idx_view_columns_view   ON view_columns(view_id, position);
+CREATE INDEX IF NOT EXISTS idx_view_filters_view   ON view_filters(view_id, position);
+CREATE INDEX IF NOT EXISTS idx_data_sources_entity ON data_sources(customer_id, entity_type);
 CREATE INDEX IF NOT EXISTS idx_triage_rules_match  ON triage_rules(match_type, match_value);
 
 -- Correction tables

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}New View — CRM Extender{% endblock %}
+{% block content %}
+<h2>Create New View</h2>
+<p><a href="/views">&larr; Back to Views</a></p>
+
+<form method="post" action="/views/new">
+  <label for="entity_type">Entity Type</label>
+  <select id="entity_type" name="entity_type" required>
+    <option value="">Select...</option>
+    {% for et_key, et_def in entity_types.items() %}
+    <option value="{{ et_key }}" {% if selected_entity_type == et_key %}selected{% endif %}>{{ et_def.label }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="name">View Name</label>
+  <input type="text" id="name" name="name" placeholder="e.g. Active Contacts" required>
+
+  <button type="submit">Create View</button>
+</form>
+{% endblock %}

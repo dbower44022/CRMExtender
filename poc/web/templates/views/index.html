@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Views — CRM Extender{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+  <h2 style="margin:0;">{% if filter_entity_type %}{{ entity_types[filter_entity_type].label }} Views{% else %}Views{% endif %}</h2>
+  <a href="/views/new{% if filter_entity_type %}?entity_type={{ filter_entity_type }}{% endif %}" role="button" class="outline" style="white-space:nowrap;">+ New View</a>
+</div>
+
+{% if filter_entity_type %}
+<p><a href="/views">&larr; All entity types</a></p>
+{% endif %}
+
+{% for et, views in grouped_views.items() %}
+{% if views %}
+<details open>
+  <summary><strong>{{ entity_types[et].label if et in entity_types else et }}</strong> ({{ views|length }})</summary>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th style="width:8rem;">Type</th>
+        <th style="width:8rem;">Columns</th>
+        <th style="width:8rem;">Visibility</th>
+        <th style="width:6rem;">Default</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in views %}
+      <tr>
+        <td><a href="/views/{{ v.id }}">{{ v.name }}</a></td>
+        <td>{{ v.view_type }}</td>
+        <td>—</td>
+        <td>{{ v.visibility }}</td>
+        <td>{% if v.is_default %}&#9733;{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endif %}
+{% endfor %}
+
+{% if not grouped_views %}
+<p class="empty-state">No views found. <a href="/views/new">Create your first view.</a></p>
+{% endif %}
+{% endblock %}

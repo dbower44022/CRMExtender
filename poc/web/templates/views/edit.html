@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Edit View: {{ view.name }} — CRM Extender{% endblock %}
+{% block content %}
+<h2>Edit View</h2>
+<p><a href="/views/{{ view.id }}">&larr; Back to {{ view.name }}</a></p>
+
+<form method="post" action="/views/{{ view.id }}/edit">
+  {# View name #}
+  <label for="name">View Name</label>
+  <input type="text" id="name" name="name" value="{{ view.name }}" required>
+
+  {# Sort #}
+  <fieldset>
+    <legend>Sort</legend>
+    <div style="display:flex;gap:1rem;align-items:end;">
+      <div style="flex:1;">
+        <label for="sort_field">Sort By</label>
+        <select id="sort_field" name="sort_field">
+          {% for fk, fdef in entity_def.fields.items() %}
+          {% if fdef.sortable %}
+          <option value="{{ fk }}" {% if view.sort_field == fk %}selected{% endif %}>{{ fdef.label }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="sort_direction">Direction</label>
+        <select id="sort_direction" name="sort_direction">
+          <option value="asc" {% if view.sort_direction == 'asc' %}selected{% endif %}>Ascending</option>
+          <option value="desc" {% if view.sort_direction == 'desc' %}selected{% endif %}>Descending</option>
+        </select>
+      </div>
+    </div>
+  </fieldset>
+
+  {# Per-page #}
+  <label for="per_page">Results Per Page</label>
+  <select id="per_page" name="per_page">
+    {% for n in [25, 50, 100, 200] %}
+    <option value="{{ n }}" {% if view.per_page == n %}selected{% endif %}>{{ n }}</option>
+    {% endfor %}
+  </select>
+
+  {# Columns #}
+  <fieldset>
+    <legend>Columns (check to include, order top-to-bottom)</legend>
+    {% for fk, fdef in entity_def.fields.items() %}
+    {% if fdef.type != 'hidden' %}
+    <label>
+      <input type="checkbox" name="columns" value="{{ fk }}"
+             {% if fk in active_column_keys %}checked{% endif %}>
+      {{ fdef.label }}
+    </label>
+    {% endif %}
+    {% endfor %}
+  </fieldset>
+
+  {# Filters #}
+  <fieldset>
+    <legend>Filters</legend>
+    <div id="filter-rows">
+      {% for f in view.filters %}
+      <div class="filter-row" style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:end;">
+        <select class="filter-field" style="flex:1;">
+          {% for fk, fdef in entity_def.fields.items() %}
+          {% if fdef.filterable %}
+          <option value="{{ fk }}" {% if f.field_key == fk %}selected{% endif %}>{{ fdef.label }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+        <select class="filter-op" style="width:10rem;">
+          {% for op in ['equals','not_equals','contains','not_contains','starts_with','is_empty','is_not_empty','gt','lt','gte','lte','is_before','is_after'] %}
+          <option value="{{ op }}" {% if f.operator == op %}selected{% endif %}>{{ op }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" class="filter-val" value="{{ f.value or '' }}" placeholder="Value" style="flex:1;">
+        <button type="button" class="outline secondary remove-filter" style="padding:0.3rem 0.5rem;">&times;</button>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" id="add-filter" class="outline secondary" style="font-size:0.85rem;">+ Add Filter</button>
+  </fieldset>
+
+  <input type="hidden" id="filters_json" name="filters_json" value="[]">
+
+  <button type="submit">Save View</button>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const filterRows = document.getElementById('filter-rows');
+  const filtersInput = document.getElementById('filters_json');
+  const addBtn = document.getElementById('add-filter');
+
+  // Available filterable fields
+  const fields = [
+    {% for fk, fdef in entity_def.fields.items() %}
+    {% if fdef.filterable %}
+    {key: "{{ fk }}", label: "{{ fdef.label }}"},
+    {% endif %}
+    {% endfor %}
+  ];
+
+  const ops = ['equals','not_equals','contains','not_contains','starts_with',
+               'is_empty','is_not_empty','gt','lt','gte','lte','is_before','is_after'];
+
+  function addFilterRow(fieldKey, op, val) {
+    const row = document.createElement('div');
+    row.className = 'filter-row';
+    row.style.cssText = 'display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:end;';
+    row.innerHTML = `
+      <select class="filter-field" style="flex:1;">
+        ${fields.map(f => `<option value="${f.key}" ${f.key === fieldKey ? 'selected' : ''}>${f.label}</option>`).join('')}
+      </select>
+      <select class="filter-op" style="width:10rem;">
+        ${ops.map(o => `<option value="${o}" ${o === op ? 'selected' : ''}>${o}</option>`).join('')}
+      </select>
+      <input type="text" class="filter-val" value="${val || ''}" placeholder="Value" style="flex:1;">
+      <button type="button" class="outline secondary remove-filter" style="padding:0.3rem 0.5rem;">&times;</button>
+    `;
+    filterRows.appendChild(row);
+    row.querySelector('.remove-filter').addEventListener('click', function() {
+      row.remove();
+    });
+  }
+
+  addBtn.addEventListener('click', function() {
+    addFilterRow(fields.length ? fields[0].key : '', 'equals', '');
+  });
+
+  // Wire up existing remove buttons
+  filterRows.querySelectorAll('.remove-filter').forEach(btn => {
+    btn.addEventListener('click', function() {
+      btn.closest('.filter-row').remove();
+    });
+  });
+
+  // On form submit, serialize filters to JSON
+  document.querySelector('form').addEventListener('submit', function() {
+    const rows = filterRows.querySelectorAll('.filter-row');
+    const filters = [];
+    rows.forEach(row => {
+      const field_key = row.querySelector('.filter-field').value;
+      const operator = row.querySelector('.filter-op').value;
+      const value = row.querySelector('.filter-val').value;
+      filters.push({field_key, operator, value: value || null});
+    });
+    filtersInput.value = JSON.stringify(filters);
+  });
+});
+</script>
+{% endblock %}

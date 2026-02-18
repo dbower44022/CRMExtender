@@ -1,0 +1,88 @@
+{% set q_enc = q|default('', true)|urlencode %}
+{% set s = sort|default('', true) %}
+{% if rows %}
+<table style="table-layout:fixed;">
+  <thead>
+    <tr>
+      {% for col in view.columns %}
+      {% set fk = col.field_key %}
+      {% set fdef = entity_def.fields[fk] if fk in entity_def.fields else None %}
+      {% if fdef and fdef.type != 'hidden' %}
+      <th>
+        {% if fdef.sortable %}
+        {% set is_asc = (s == fk) %}
+        {% set is_desc = (s == '-' + fk) %}
+        {% set next_sort = ('-' + fk) if is_asc else fk %}
+        <a hx-get="/views/{{ view.id }}/search?q={{ q_enc }}&sort={{ next_sort }}"
+           hx-target="#results"
+           style="text-decoration:none;color:inherit;cursor:pointer;">
+          {{ col.label_override or fdef.label }}{% if is_asc %} &#9650;{% elif is_desc %} &#9660;{% endif %}
+        </a>
+        {% else %}
+        {{ col.label_override or fdef.label }}
+        {% endif %}
+      </th>
+      {% endif %}
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      {% for col in view.columns %}
+      {% set fk = col.field_key %}
+      {% set fdef = entity_def.fields[fk] if fk in entity_def.fields else None %}
+      {% if fdef and fdef.type != 'hidden' %}
+      <td>
+        {% set val = row[fk] if fk in row else '' %}
+        {% if fdef.type == 'number' and fk == 'score' and val is not none and val != '' %}
+          {# Score rendering as progress bar #}
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="background:#e0e0e0;border-radius:3px;height:6px;width:60px;">
+              <div style="background:var(--pico-primary-color, #1095c1);height:100%;border-radius:3px;width:{{ (val * 100)|int }}%;"></div>
+            </div>
+            <small>{{ '%.0f'|format(val * 100) }}%</small>
+          </div>
+        {% elif fdef.type == 'number' and val is not none and val != '' %}
+          <span style="text-align:right;display:block;">{{ val }}</span>
+        {% elif fdef.type == 'datetime' and val %}
+          <span class="local-date">{{ val }}</span>
+        {% elif fdef.link and val %}
+          {# Build link URL by substituting row values #}
+          {% set link_url = fdef.link.replace('{id}', row.id|string) %}
+          {% if '{company_id}' in fdef.link and 'company_id' in row and row.company_id %}
+            {% set link_url = fdef.link.replace('{company_id}', row.company_id|string) %}
+          {% endif %}
+          <a href="{{ link_url }}">{{ val }}</a>
+        {% elif val is not none and val != '' %}
+          {{ val }}
+        {% else %}
+          <small style="color:var(--pico-muted-color);">&mdash;</small>
+        {% endif %}
+      </td>
+      {% endif %}
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if total_pages > 1 %}
+<nav>
+  <ul>
+    {% if page > 1 %}
+    <li><a hx-get="/views/{{ view.id }}/search?q={{ q_enc }}&sort={{ s }}&page={{ page - 1 }}"
+           hx-target="#results"
+           href="/views/{{ view.id }}?q={{ q_enc }}&sort={{ s }}&page={{ page - 1 }}">Previous</a></li>
+    {% endif %}
+    <li>Page {{ page }} of {{ total_pages }} ({{ total }} total)</li>
+    {% if page < total_pages %}
+    <li><a hx-get="/views/{{ view.id }}/search?q={{ q_enc }}&sort={{ s }}&page={{ page + 1 }}"
+           hx-target="#results"
+           href="/views/{{ view.id }}?q={{ q_enc }}&sort={{ s }}&page={{ page + 1 }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% else %}
+<p class="empty-state">No results found.</p>
+{% endif %}

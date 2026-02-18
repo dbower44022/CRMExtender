@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ view.name }} — CRM Extender{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+  <h2 style="margin:0;">{{ view.name }}</h2>
+  <div style="display:flex;gap:0.5rem;">
+    <a href="/views/{{ view.id }}/edit" role="button" class="outline secondary" style="padding:0.3rem 0.7rem;font-size:0.85rem;">Edit View</a>
+    <form method="post" action="/views/{{ view.id }}/duplicate" style="margin:0;">
+      <button type="submit" class="outline secondary" style="padding:0.3rem 0.7rem;font-size:0.85rem;">Duplicate</button>
+    </form>
+    {% if not view.is_default %}
+    <form method="post" action="/views/{{ view.id }}/delete" style="margin:0;"
+          onsubmit="return confirm('Delete this view?');">
+      <button type="submit" class="outline secondary" style="padding:0.3rem 0.7rem;font-size:0.85rem;color:var(--pico-del-color);">Delete</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{# View tab bar #}
+{% if sibling_views|length > 1 %}
+<nav style="margin-bottom:0.5rem;">
+  <ul style="list-style:none;padding:0;display:flex;gap:0.25rem;flex-wrap:wrap;margin:0;">
+    {% for sv in sibling_views %}
+    <li>
+      <a href="/views/{{ sv.id }}"
+         role="button"
+         {% if sv.id == view.id %}class="contrast"{% else %}class="outline"{% endif %}
+         style="padding:0.2rem 0.6rem;font-size:0.8rem;">{{ sv.name }}</a>
+    </li>
+    {% endfor %}
+    <li>
+      <a href="/views/new?entity_type={{ entity_type }}" role="button" class="outline secondary"
+         style="padding:0.2rem 0.6rem;font-size:0.8rem;">+ New</a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
+{# Filter pills #}
+{% if view.filters %}
+<div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+  {% for f in view.filters %}
+  <span style="background:var(--pico-secondary-background);padding:0.15rem 0.5rem;border-radius:1rem;font-size:0.8rem;">
+    {{ f.field_key }} {{ f.operator }} {% if f.value %}"{{ f.value }}"{% endif %}
+  </span>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# Search bar #}
+<div style="margin-bottom:0.5rem;">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search..."
+         hx-get="/views/{{ view.id }}/search"
+         hx-trigger="input changed delay:300ms, search"
+         hx-target="#results"
+         hx-include="this"
+         style="max-width:20rem;">
+</div>
+
+{# Grid results #}
+<div id="results">
+  {% include "views/_rows.html" %}
+</div>
+{% endblock %}

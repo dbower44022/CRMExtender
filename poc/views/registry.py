@@ -363,19 +363,19 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 filterable=True,
             ),
             "sender": FieldDef(
-                label="From",
+                label="Sender (Name or Email)",
                 sql="COALESCE(comm.sender_name, comm.sender_address)",
                 type="text",
                 sortable=True,
                 filterable=True,
             ),
             "sender_name": FieldDef(
-                label="Sender Name",
+                label="Sender",
                 sql="comm.sender_name",
                 type="text",
             ),
             "sender_address": FieldDef(
-                label="From Address",
+                label="Email",
                 sql="comm.sender_address",
                 type="text",
                 filterable=True,

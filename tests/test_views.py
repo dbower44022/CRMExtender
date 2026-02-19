@@ -850,7 +850,7 @@ class TestWebRoutes:
             "sort_field": "name",
             "sort_direction": "desc",
             "per_page": "25",
-            "columns": ["name", "email"],
+            "columns_json": json.dumps(["name", "email"]),
             "filters_json": json.dumps([]),
         })
         assert resp.status_code == 200  # redirect followed
@@ -961,3 +961,119 @@ class TestWebRoutes:
         resp = client.get("/views?entity_type=contact")
         assert resp.status_code == 200
         assert "Contact" in resp.text
+
+    def test_edit_view_shows_ordered_columns(self, client, tmp_db):
+        """GET edit page lists selected columns in view column order."""
+        from poc.views.crud import (
+            create_view, ensure_system_data_sources, update_view_columns,
+        )
+        with get_connection() as conn:
+            ensure_system_data_sources(conn, CUST_ID)
+            view_id = create_view(
+                conn, customer_id=CUST_ID, user_id=USER_ID,
+                data_source_id=f"ds-contact-{CUST_ID}", name="Ordered Test",
+                columns=["email", "name", "source"],
+            )
+        resp = client.get(f"/views/{view_id}/edit")
+        assert resp.status_code == 200
+        html = resp.text
+        # Columns should appear in order: Email, Name, Source
+        email_pos = html.index('data-key="email"')
+        name_pos = html.index('data-key="name"')
+        source_pos = html.index('data-key="source"')
+        assert email_pos < name_pos < source_pos
+
+    def test_save_view_preserves_column_order(self, client, tmp_db):
+        """POST with columns_json preserves the specified order."""
+        from poc.views.crud import (
+            create_view, ensure_system_data_sources, get_view_with_config,
+        )
+        with get_connection() as conn:
+            ensure_system_data_sources(conn, CUST_ID)
+            view_id = create_view(
+                conn, customer_id=CUST_ID, user_id=USER_ID,
+                data_source_id=f"ds-contact-{CUST_ID}", name="Order Save",
+                columns=["name", "email"],
+            )
+        resp = client.post(f"/views/{view_id}/edit", data={
+            "name": "Order Save",
+            "sort_field": "name",
+            "sort_direction": "asc",
+            "per_page": "50",
+            "columns_json": json.dumps(["email", "name", "score"]),
+            "filters_json": json.dumps([]),
+        })
+        assert resp.status_code == 200
+        with get_connection() as conn:
+            view = get_view_with_config(conn, view_id)
+        col_keys = [c["field_key"] for c in view["columns"]]
+        assert col_keys == ["email", "name", "score"]
+
+    def test_save_view_auto_includes_hidden_deps(self, client, tmp_db):
+        """POST with company_name auto-adds company_id hidden dep."""
+        from poc.views.crud import (
+            create_view, ensure_system_data_sources, get_view_with_config,
+        )
+        with get_connection() as conn:
+            ensure_system_data_sources(conn, CUST_ID)
+            view_id = create_view(
+                conn, customer_id=CUST_ID, user_id=USER_ID,
+                data_source_id=f"ds-contact-{CUST_ID}", name="Dep Test",
+                columns=["name"],
+            )
+        # Submit with company_name but NOT company_id
+        resp = client.post(f"/views/{view_id}/edit", data={
+            "name": "Dep Test",
+            "sort_field": "name",
+            "sort_direction": "asc",
+            "per_page": "50",
+            "columns_json": json.dumps(["name", "company_name"]),
+            "filters_json": json.dumps([]),
+        })
+        assert resp.status_code == 200
+        with get_connection() as conn:
+            view = get_view_with_config(conn, view_id)
+        col_keys = [c["field_key"] for c in view["columns"]]
+        assert "company_name" in col_keys
+        assert "company_id" in col_keys  # auto-added
+
+    def test_save_view_redirects_with_saved(self, client, tmp_db):
+        """POST save redirects to edit page with ?saved=1."""
+        from poc.views.crud import create_view, ensure_system_data_sources
+        with get_connection() as conn:
+            ensure_system_data_sources(conn, CUST_ID)
+            view_id = create_view(
+                conn, customer_id=CUST_ID, user_id=USER_ID,
+                data_source_id=f"ds-contact-{CUST_ID}", name="Redirect Test",
+                columns=["name"],
+            )
+        resp = client.post(f"/views/{view_id}/edit", data={
+            "name": "Redirect Test",
+            "sort_field": "name",
+            "sort_direction": "asc",
+            "per_page": "50",
+            "columns_json": json.dumps(["name"]),
+            "filters_json": json.dumps([]),
+        }, follow_redirects=False)
+        assert resp.status_code == 303
+        assert f"/views/{view_id}/edit?saved=1" in resp.headers["location"]
+
+    def test_edit_view_available_columns(self, client, tmp_db):
+        """GET edit page shows non-selected, non-hidden fields as available."""
+        from poc.views.crud import create_view, ensure_system_data_sources
+        with get_connection() as conn:
+            ensure_system_data_sources(conn, CUST_ID)
+            view_id = create_view(
+                conn, customer_id=CUST_ID, user_id=USER_ID,
+                data_source_id=f"ds-contact-{CUST_ID}", name="Available Test",
+                columns=["name"],
+            )
+        resp = client.get(f"/views/{view_id}/edit")
+        assert resp.status_code == 200
+        html = resp.text
+        # "email" should be in the available dropdown (not selected)
+        assert 'id="add-column-select"' in html
+        assert '<option value="email">' in html
+        # "name" should NOT be in the available dropdown (already selected)
+        # It should be in the selected list instead
+        assert 'data-key="name"' in html

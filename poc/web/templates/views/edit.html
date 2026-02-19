@@ -4,7 +4,13 @@
 <h2>Edit View</h2>
 <p><a href="/views/{{ view.id }}">&larr; Back to {{ view.name }}</a></p>
 
-<form method="post" action="/views/{{ view.id }}/edit">
+{% if saved %}
+<article style="background:var(--pico-ins-color);padding:0.5rem 1rem;margin-bottom:1rem;">
+  View saved successfully.
+</article>
+{% endif %}
+
+<form method="post" action="/views/{{ view.id }}/edit" id="edit-view-form">
   {# View name #}
   <label for="name">View Name</label>
   <input type="text" id="name" name="name" value="{{ view.name }}" required>
@@ -41,19 +47,35 @@
     {% endfor %}
   </select>
 
-  {# Columns #}
+  {# Columns — ordered list with add/remove/reorder #}
   <fieldset>
-    <legend>Columns (check to include, order top-to-bottom)</legend>
-    {% for fk, fdef in entity_def.fields.items() %}
-    {% if fdef.type != 'hidden' %}
-    <label>
-      <input type="checkbox" name="columns" value="{{ fk }}"
-             {% if fk in active_column_keys %}checked{% endif %}>
-      {{ fdef.label }}
-    </label>
-    {% endif %}
-    {% endfor %}
+    <legend>Columns</legend>
+    <label style="font-size:0.85rem;color:var(--pico-muted-color);">Drag or use arrows to reorder. Remove columns with &times;.</label>
+    <ul id="selected-columns" style="list-style:none;padding:0;margin:0.5rem 0;">
+      {% for col in selected_columns %}
+      <li data-key="{{ col.key }}" data-deps='{{ field_deps.get(col.key, [])|tojson }}' style="display:flex;align-items:center;gap:0.25rem;padding:0.3rem 0.5rem;margin-bottom:0.25rem;background:var(--pico-card-background-color);border:1px solid var(--pico-muted-border-color);border-radius:4px;cursor:grab;">
+        <span style="flex:1;">{{ col.label }}</span>
+        <button type="button" class="outline secondary move-up" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Move up">&#9650;</button>
+        <button type="button" class="outline secondary move-down" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Move down">&#9660;</button>
+        <button type="button" class="outline secondary remove-col" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Remove">&times;</button>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <div style="display:flex;gap:0.5rem;align-items:end;">
+      <select id="add-column-select" style="flex:1;margin-bottom:0;">
+        {% for col in available_columns %}
+        <option value="{{ col.key }}">{{ col.label }}</option>
+        {% endfor %}
+        {% if not available_columns %}
+        <option value="" disabled>All columns added</option>
+        {% endif %}
+      </select>
+      <button type="button" id="add-column-btn" class="outline secondary" style="margin-bottom:0;white-space:nowrap;" {% if not available_columns %}disabled{% endif %}>+ Add</button>
+    </div>
   </fieldset>
+
+  <input type="hidden" name="columns_json" id="columns_json" value="[]">
 
   {# Filters #}
   <fieldset>
@@ -68,9 +90,9 @@
           {% endif %}
           {% endfor %}
         </select>
-        <select class="filter-op" style="width:10rem;">
-          {% for op in ['equals','not_equals','contains','not_contains','starts_with','is_empty','is_not_empty','gt','lt','gte','lte','is_before','is_after'] %}
-          <option value="{{ op }}" {% if f.operator == op %}selected{% endif %}>{{ op }}</option>
+        <select class="filter-op" style="width:12rem;">
+          {% for op_key, op_label in operator_labels.items() %}
+          <option value="{{ op_key }}" {% if f.operator == op_key %}selected{% endif %}>{{ op_label }}</option>
           {% endfor %}
         </select>
         <input type="text" class="filter-val" value="{{ f.value or '' }}" placeholder="Value" style="flex:1;">
@@ -88,12 +110,28 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  const selectedList = document.getElementById('selected-columns');
+  const addSelect = document.getElementById('add-column-select');
+  const addBtn = document.getElementById('add-column-btn');
+  const columnsInput = document.getElementById('columns_json');
   const filterRows = document.getElementById('filter-rows');
   const filtersInput = document.getElementById('filters_json');
-  const addBtn = document.getElementById('add-filter');
+  const addFilterBtn = document.getElementById('add-filter');
 
-  // Available filterable fields
-  const fields = [
+  // Field labels for dynamic add (all non-hidden fields)
+  const allFields = {
+    {% for fk, fdef in entity_def.fields.items() %}
+    {% if fdef.type != 'hidden' %}
+    "{{ fk }}": "{{ fdef.label }}",
+    {% endif %}
+    {% endfor %}
+  };
+
+  // Field deps for auto-include
+  const fieldDeps = {{ field_deps_json|safe }};
+
+  // Filterable fields
+  const filterableFields = [
     {% for fk, fdef in entity_def.fields.items() %}
     {% if fdef.filterable %}
     {key: "{{ fk }}", label: "{{ fdef.label }}"},
@@ -101,8 +139,71 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endfor %}
   ];
 
-  const ops = ['equals','not_equals','contains','not_contains','starts_with',
-               'is_empty','is_not_empty','gt','lt','gte','lte','is_before','is_after'];
+  // Operator labels
+  const opLabels = {
+    {% for op_key, op_label in operator_labels.items() %}
+    "{{ op_key }}": "{{ op_label }}",
+    {% endfor %}
+  };
+
+  // ---- Column management ----
+
+  function wireColumnButtons(li) {
+    li.querySelector('.move-up').addEventListener('click', function() {
+      const prev = li.previousElementSibling;
+      if (prev) selectedList.insertBefore(li, prev);
+    });
+    li.querySelector('.move-down').addEventListener('click', function() {
+      const next = li.nextElementSibling;
+      if (next) selectedList.insertBefore(next, li);
+    });
+    li.querySelector('.remove-col').addEventListener('click', function() {
+      const key = li.dataset.key;
+      li.remove();
+      // Add back to available dropdown
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = allFields[key] || key;
+      addSelect.appendChild(opt);
+      addBtn.disabled = false;
+    });
+  }
+
+  // Wire existing column buttons
+  selectedList.querySelectorAll('li').forEach(wireColumnButtons);
+
+  addBtn.addEventListener('click', function() {
+    const key = addSelect.value;
+    if (!key) return;
+    const label = addSelect.options[addSelect.selectedIndex].text;
+
+    // Create li
+    const li = document.createElement('li');
+    li.dataset.key = key;
+    li.dataset.deps = JSON.stringify(fieldDeps[key] || []);
+    li.style.cssText = 'display:flex;align-items:center;gap:0.25rem;padding:0.3rem 0.5rem;margin-bottom:0.25rem;background:var(--pico-card-background-color);border:1px solid var(--pico-muted-border-color);border-radius:4px;cursor:grab;';
+    li.innerHTML = `
+      <span style="flex:1;">${label}</span>
+      <button type="button" class="outline secondary move-up" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Move up">&#9650;</button>
+      <button type="button" class="outline secondary move-down" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Move down">&#9660;</button>
+      <button type="button" class="outline secondary remove-col" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Remove">&times;</button>
+    `;
+    selectedList.appendChild(li);
+    wireColumnButtons(li);
+
+    // Remove from dropdown
+    addSelect.querySelector(`option[value="${key}"]`).remove();
+    if (addSelect.options.length === 0) {
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.disabled = true;
+      placeholder.textContent = 'All columns added';
+      addSelect.appendChild(placeholder);
+      addBtn.disabled = true;
+    }
+  });
+
+  // ---- Filter management ----
 
   function addFilterRow(fieldKey, op, val) {
     const row = document.createElement('div');
@@ -110,10 +211,10 @@ document.addEventListener('DOMContentLoaded', function() {
     row.style.cssText = 'display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:end;';
     row.innerHTML = `
       <select class="filter-field" style="flex:1;">
-        ${fields.map(f => `<option value="${f.key}" ${f.key === fieldKey ? 'selected' : ''}>${f.label}</option>`).join('')}
+        ${filterableFields.map(f => `<option value="${f.key}" ${f.key === fieldKey ? 'selected' : ''}>${f.label}</option>`).join('')}
       </select>
-      <select class="filter-op" style="width:10rem;">
-        ${ops.map(o => `<option value="${o}" ${o === op ? 'selected' : ''}>${o}</option>`).join('')}
+      <select class="filter-op" style="width:12rem;">
+        ${Object.entries(opLabels).map(([k,v]) => `<option value="${k}" ${k === op ? 'selected' : ''}>${v}</option>`).join('')}
       </select>
       <input type="text" class="filter-val" value="${val || ''}" placeholder="Value" style="flex:1;">
       <button type="button" class="outline secondary remove-filter" style="padding:0.3rem 0.5rem;">&times;</button>
@@ -124,8 +225,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  addBtn.addEventListener('click', function() {
-    addFilterRow(fields.length ? fields[0].key : '', 'equals', '');
+  addFilterBtn.addEventListener('click', function() {
+    addFilterRow(filterableFields.length ? filterableFields[0].key : '', 'equals', '');
   });
 
   // Wire up existing remove buttons
@@ -135,8 +236,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // On form submit, serialize filters to JSON
-  document.querySelector('form').addEventListener('submit', function() {
+  // ---- Form submit: serialize columns + filters ----
+
+  document.getElementById('edit-view-form').addEventListener('submit', function() {
+    // Serialize column order
+    const cols = [];
+    selectedList.querySelectorAll('li').forEach(li => {
+      cols.push(li.dataset.key);
+    });
+    columnsInput.value = JSON.stringify(cols);
+
+    // Serialize filters
     const rows = filterRows.querySelectorAll('.filter-row');
     const filters = [];
     rows.forEach(row => {

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -38,6 +39,36 @@ def _user(request: Request) -> dict:
 
 def _is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request") == "true"
+
+
+_OPERATOR_LABELS = {
+    "equals": "Equals",
+    "not_equals": "Does Not Equal",
+    "contains": "Contains",
+    "not_contains": "Does Not Contain",
+    "starts_with": "Starts With",
+    "is_empty": "Is Empty",
+    "is_not_empty": "Is Not Empty",
+    "gt": "Greater Than",
+    "lt": "Less Than",
+    "gte": "Greater Than or Equal",
+    "lte": "Less Than or Equal",
+    "is_before": "Is Before",
+    "is_after": "Is After",
+}
+
+
+def _extract_link_deps(entity_def):
+    """Map visible fields to hidden fields required by their link templates."""
+    deps = {}
+    hidden_keys = {k for k, f in entity_def.fields.items() if f.type == "hidden"}
+    for fk, fdef in entity_def.fields.items():
+        if fdef.link:
+            refs = set(re.findall(r'\{(\w+)\}', fdef.link))
+            needed = [r for r in refs if r in hidden_keys and r != "id"]
+            if needed:
+                deps[fk] = needed
+    return deps
 
 
 # -----------------------------------------------------------------------
@@ -280,7 +311,7 @@ def view_search(
 # -----------------------------------------------------------------------
 
 @router.get("/{view_id}/edit")
-def edit_view_form(request: Request, view_id: str):
+def edit_view_form(request: Request, view_id: str, saved: str = ""):
     user = _user(request)
     customer_id = user.get("customer_id", "")
     templates = _templates(request)
@@ -294,12 +325,35 @@ def edit_view_form(request: Request, view_id: str):
     entity_def = ENTITY_TYPES.get(entity_type)
     active_column_keys = [c["field_key"] for c in view.get("columns", [])]
 
+    # Build ordered selected columns list
+    selected_columns = [
+        {"key": c["field_key"], "label": entity_def.fields[c["field_key"]].label}
+        for c in view.get("columns", [])
+        if c["field_key"] in entity_def.fields and entity_def.fields[c["field_key"]].type != "hidden"
+    ]
+
+    # Build available (non-selected, non-hidden) columns
+    selected_keys = {sc["key"] for sc in selected_columns}
+    available_columns = [
+        {"key": fk, "label": fdef.label}
+        for fk, fdef in entity_def.fields.items()
+        if fdef.type != "hidden" and fk not in selected_keys
+    ]
+
+    field_deps = _extract_link_deps(entity_def)
+
     return templates.TemplateResponse(request, "views/edit.html", {
         "active_nav": "views",
         "view": view,
         "entity_def": entity_def,
         "entity_type": entity_type,
         "active_column_keys": active_column_keys,
+        "selected_columns": selected_columns,
+        "available_columns": available_columns,
+        "field_deps": field_deps,
+        "field_deps_json": json.dumps(field_deps),
+        "saved": saved == "1",
+        "operator_labels": _OPERATOR_LABELS,
     })
 
 
@@ -312,6 +366,7 @@ def save_view(
     sort_direction: str = Form("asc"),
     per_page: int = Form(50),
     columns: list[str] = Form(None),
+    columns_json: str = Form(""),
     filters_json: str = Form("[]"),
 ):
     """Save view settings from form data."""
@@ -328,6 +383,9 @@ def save_view(
         if not view or view.get("customer_id") != customer_id:
             return HTMLResponse("View not found", status_code=404)
 
+        entity_type = view.get("entity_type", "")
+        entity_def = ENTITY_TYPES.get(entity_type)
+
         update_view(
             conn, view_id,
             name=name,
@@ -335,12 +393,38 @@ def save_view(
             sort_direction=sort_direction,
             per_page=per_page,
         )
-        if columns:
-            update_view_columns(conn, view_id, columns)
+
+        # Prefer columns_json (ordered list) over legacy columns checkboxes
+        col_list = None
+        if columns_json:
+            try:
+                col_list = json.loads(columns_json)
+            except (json.JSONDecodeError, TypeError):
+                col_list = None
+
+        if col_list is None and columns:
+            col_list = columns
+
+        if col_list and entity_def:
+            # Validate keys exist in entity_def
+            valid_keys = set(entity_def.fields.keys())
+            col_list = [k for k in col_list if k in valid_keys]
+
+            # Auto-append hidden dependency fields
+            field_deps = _extract_link_deps(entity_def)
+            col_set = set(col_list)
+            for visible_key in list(col_list):
+                for dep_key in field_deps.get(visible_key, []):
+                    if dep_key not in col_set:
+                        col_list.append(dep_key)
+                        col_set.add(dep_key)
+
+            update_view_columns(conn, view_id, col_list)
+
         if filters is not None:
             update_view_filters(conn, view_id, filters)
 
-    return RedirectResponse(f"/views/{view_id}", status_code=303)
+    return RedirectResponse(f"/views/{view_id}/edit?saved=1", status_code=303)
 
 
 # -----------------------------------------------------------------------

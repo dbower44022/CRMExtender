@@ -1,59 +1,32 @@
-{% if events %}
+{% from "_grid_macros.html" import grid_headers, grid_cells, grid_pagination %}
+{% set s = sort|default('', true) %}
+{% if rows %}
 <table class="events-table">
-  <colgroup>
-    <col>
-    <col style="width:7rem">
-    <col style="width:12rem">
-    <col style="width:10rem">
-    <col style="width:6rem">
-    <col style="width:2.5rem">
-    <col style="width:5rem">
-  </colgroup>
   <thead>
     <tr>
-      <th>Title</th>
-      <th>Type</th>
-      <th>Date</th>
-      <th>Location</th>
-      <th>Status</th>
-      <th></th>
-      <th></th>
+      {{ grid_headers(view, entity_def, s, "/events/search", {"q": q|default('', true), "event_type": event_type|default('', true)}) }}
+      <th></th><th></th>
     </tr>
   </thead>
   <tbody>
-    {% for e in events %}
-    <tr id="event-{{ e.id }}">
-      <td><a href="/events/{{ e.id }}">{{ e.title }}</a></td>
-      <td>{{ e.event_type }}</td>
-      <td>{% if e.start_datetime %}{{ e.start_datetime|datetime }}{% else %}{{ e.start_date|dateonly }}{% endif %}</td>
-      <td>{{ e.location or '' }}</td>
-      <td>{{ e.status or 'confirmed' }}</td>
-      <td>{{ e.source|source_icon(e.account_name, e.provider_calendar_id) }}</td>
+    {% for row in rows %}
+    <tr id="event-{{ row.id }}">
+      {{ grid_cells(row, view, entity_def) }}
+      <td>{{ row.source|source_icon(row.account_name, row.provider_calendar_id) }}</td>
       <td>
         <button class="outline secondary"
                 style="padding:0.2rem 0.5rem;font-size:0.75rem"
-                hx-delete="/events/{{ e.id }}"
-                hx-target="#event-{{ e.id }}"
+                hx-delete="/events/{{ row.id }}"
+                hx-target="#event-{{ row.id }}"
                 hx-swap="outerHTML"
-                hx-confirm="Delete event '{{ e.title }}'?">Delete</button>
+                hx-confirm="Delete event '{{ row.title }}'?">Delete</button>
       </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
-{% if total_pages > 1 %}
-<nav>
-  <ul>
-    {% if page > 1 %}
-    <li><a href="/events?q={{ q }}&event_type={{ event_type }}&page={{ page - 1 }}">Previous</a></li>
-    {% endif %}
-    <li>Page {{ page }} of {{ total_pages }}</li>
-    {% if page < total_pages %}
-    <li><a href="/events?q={{ q }}&event_type={{ event_type }}&page={{ page + 1 }}">Next</a></li>
-    {% endif %}
-  </ul>
-</nav>
-{% endif %}
+{{ grid_pagination(page, total_pages, "/events",
+                    {"q": q|default('', true), "sort": s, "event_type": event_type|default('', true)}) }}
 {% else %}
 <p class="empty-state">No events found.</p>
 {% endif %}

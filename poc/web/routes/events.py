@@ -17,71 +17,103 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _parse_sort(url_sort, view):
+    """Return (sort_field, sort_direction) — URL param overrides view default."""
+    if url_sort:
+        desc = url_sort.startswith("-")
+        key = url_sort.lstrip("-")
+        return (key, "desc" if desc else "asc")
+    if view:
+        sf = view.get("sort_field")
+        if sf:
+            return (sf, view.get("sort_direction", "asc"))
+    return (None, "asc")
+
+
 def _query_events(*, search: str = "", event_type: str = "",
+                  sort: str = "",
                   page: int = 1, per_page: int = 50,
-                  customer_id: str = ""):
+                  customer_id: str = "", user_id: str = ""):
+    from ...views.crud import get_default_view_for_entity
     from ...views.engine import execute_view
-    from ...views.registry import ENTITY_TYPES
-
-    filters: list[dict] = []
-    if event_type:
-        filters.append({"field_key": "event_type", "operator": "equals", "value": event_type})
-
-    columns = [{"field_key": c} for c in ENTITY_TYPES["event"].default_columns]
 
     with get_connection() as conn:
+        view = get_default_view_for_entity(conn, customer_id, user_id, "event")
+        columns = view["columns"] if view else []
+        filters = list(view["filters"]) if view and view.get("filters") else []
+        sort_field, sort_direction = _parse_sort(sort, view)
+
+        if event_type:
+            filters.append({"field_key": "event_type", "operator": "equals", "value": event_type})
+
         rows, total = execute_view(
             conn,
             entity_type="event",
             columns=columns,
             filters=filters,
+            sort_field=sort_field,
+            sort_direction=sort_direction,
             search=search,
             page=page,
             per_page=per_page,
             customer_id=customer_id,
         )
 
-    return rows, total
+    return rows, total, view
 
 
 @router.get("", response_class=HTMLResponse)
 def event_list(request: Request, q: str = "", event_type: str = "",
-               page: int = 1):
+               sort: str = "", page: int = 1):
+    from ...views.registry import ENTITY_TYPES
+
     templates = request.app.state.templates
+    user = request.state.user
     cid = request.state.customer_id
-    events, total = _query_events(
-        search=q, event_type=event_type, page=page, customer_id=cid,
+    events, total, view = _query_events(
+        search=q, event_type=event_type, sort=sort, page=page,
+        customer_id=cid, user_id=user["id"],
     )
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "events/list.html", {
         "active_nav": "events",
-        "events": events,
+        "rows": events,
         "total": total,
         "page": page,
         "total_pages": total_pages,
         "q": q,
+        "sort": sort,
         "event_type": event_type,
+        "view": view,
+        "entity_def": ENTITY_TYPES["event"],
     })
 
 
 @router.get("/search", response_class=HTMLResponse)
 def event_search(request: Request, q: str = "", event_type: str = "",
-                 page: int = 1):
+                 sort: str = "", page: int = 1):
+    from ...views.registry import ENTITY_TYPES
+
     templates = request.app.state.templates
+    user = request.state.user
     cid = request.state.customer_id
-    events, total = _query_events(
-        search=q, event_type=event_type, page=page, customer_id=cid,
+    events, total, view = _query_events(
+        search=q, event_type=event_type, sort=sort, page=page,
+        customer_id=cid, user_id=user["id"],
     )
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "events/_rows.html", {
-        "events": events,
+        "rows": events,
         "total": total,
         "page": page,
         "total_pages": total_pages,
         "q": q,
+        "sort": sort,
         "event_type": event_type,
+        "view": view,
+        "entity_def": ENTITY_TYPES["event"],
     })
 
 

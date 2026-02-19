@@ -52,26 +52,38 @@ def _find_contacts_by_domain(domain: str, *, customer_id: str | None = None) -> 
     return [dict(r) for r in rows]
 
 
+def _parse_sort(url_sort, view):
+    """Return (sort_field, sort_direction) — URL param overrides view default."""
+    if url_sort:
+        desc = url_sort.startswith("-")
+        key = url_sort.lstrip("-")
+        return (key, "desc" if desc else "asc")
+    if view:
+        sf = view.get("sort_field")
+        if sf:
+            return (sf, view.get("sort_direction", "asc"))
+    return (None, "asc")
+
+
 def _query_companies(
     q: str = "", sort: str = "name",
     *, customer_id: str = "", user_id: str = "", scope: str = "all",
-) -> list[dict]:
+) -> tuple[list[dict], dict | None]:
+    from ...views.crud import get_default_view_for_entity
     from ...views.engine import execute_view
-    from ...views.registry import ENTITY_TYPES
-
-    desc = sort.startswith("-")
-    key = sort.lstrip("-")
-    sort_direction = "desc" if desc else "asc"
-
-    columns = [{"field_key": c} for c in ENTITY_TYPES["company"].default_columns]
 
     with get_connection() as conn:
+        view = get_default_view_for_entity(conn, customer_id, user_id, "company")
+        columns = view["columns"] if view else []
+        filters = list(view["filters"]) if view and view.get("filters") else []
+        sort_field, sort_direction = _parse_sort(sort, view)
+
         rows, _total = execute_view(
             conn,
             entity_type="company",
             columns=columns,
-            filters=[],
-            sort_field=key,
+            filters=filters,
+            sort_field=sort_field,
             sort_direction=sort_direction,
             search=q,
             page=1,
@@ -82,43 +94,51 @@ def _query_companies(
             extra_where=[("co.status = 'active'", [])],
         )
 
-    return rows
+    return rows, view
 
 
 @router.get("", response_class=HTMLResponse)
 def company_list(request: Request, q: str = "", sort: str = "name",
                  scope: str = "all"):
+    from ...views.registry import ENTITY_TYPES
+
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    companies = _query_companies(
+    companies, view = _query_companies(
         q, sort, customer_id=cid, user_id=user["id"], scope=scope,
     )
 
     return templates.TemplateResponse(request, "companies/list.html", {
         "active_nav": "companies",
-        "companies": companies,
+        "rows": companies,
         "q": q,
         "sort": sort,
         "scope": scope,
+        "view": view,
+        "entity_def": ENTITY_TYPES["company"],
     })
 
 
 @router.get("/search", response_class=HTMLResponse)
 def company_search(request: Request, q: str = "", sort: str = "name",
                    scope: str = "all"):
+    from ...views.registry import ENTITY_TYPES
+
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    companies = _query_companies(
+    companies, view = _query_companies(
         q, sort, customer_id=cid, user_id=user["id"], scope=scope,
     )
 
     return templates.TemplateResponse(request, "companies/_rows.html", {
-        "companies": companies,
+        "rows": companies,
         "q": q,
         "sort": sort,
         "scope": scope,
+        "view": view,
+        "entity_def": ENTITY_TYPES["company"],
     })
 
 

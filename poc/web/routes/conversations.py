@@ -11,18 +11,32 @@ from ...hierarchy import get_addresses, add_address, remove_address
 router = APIRouter()
 
 
+def _parse_sort(url_sort, view):
+    """Return (sort_field, sort_direction) — URL param overrides view default."""
+    if url_sort:
+        desc = url_sort.startswith("-")
+        key = url_sort.lstrip("-")
+        return (key, "desc" if desc else "asc")
+    if view:
+        sf = view.get("sort_field")
+        if sf:
+            return (sf, view.get("sort_direction", "asc"))
+    return (None, "asc")
+
+
 def _query_conversations(
     *,
     status_filter: str = "open",
     topic_id: str = "",
     search: str = "",
+    sort: str = "",
     page: int = 1,
     per_page: int = 50,
     customer_id: str = "",
     user_id: str = "",
-) -> tuple[list[dict], int]:
+) -> tuple[list[dict], int, dict | None]:
+    from ...views.crud import get_default_view_for_entity
     from ...views.engine import execute_view
-    from ...views.registry import ENTITY_TYPES
 
     extra_where: list[tuple[str, list]] = []
 
@@ -36,14 +50,19 @@ def _query_conversations(
     if topic_id:
         extra_where.append(("conv.topic_id = ?", [topic_id]))
 
-    columns = [{"field_key": c} for c in ENTITY_TYPES["conversation"].default_columns]
-
     with get_connection() as conn:
+        view = get_default_view_for_entity(conn, customer_id, user_id, "conversation")
+        columns = view["columns"] if view else []
+        filters = list(view["filters"]) if view and view.get("filters") else []
+        sort_field, sort_direction = _parse_sort(sort, view)
+
         rows, total = execute_view(
             conn,
             entity_type="conversation",
             columns=columns,
-            filters=[],
+            filters=filters,
+            sort_field=sort_field,
+            sort_direction=sort_direction,
             search=search,
             page=page,
             per_page=per_page,
@@ -52,7 +71,7 @@ def _query_conversations(
             extra_where=extra_where or None,
         )
 
-    return rows, total
+    return rows, total, view
 
 
 def _get_topics_for_filter() -> list[dict]:
@@ -74,12 +93,15 @@ def conversation_list(
     topic_id: str = "",
     q: str = "",
     page: int = 1,
+    sort: str = "",
 ):
+    from ...views.registry import ENTITY_TYPES
+
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    conversations, total = _query_conversations(
-        status_filter=status, topic_id=topic_id, search=q, page=page,
+    conversations, total, view = _query_conversations(
+        status_filter=status, topic_id=topic_id, search=q, sort=sort, page=page,
         customer_id=cid, user_id=user["id"],
     )
     topics = _get_topics_for_filter()
@@ -87,7 +109,7 @@ def conversation_list(
 
     return templates.TemplateResponse(request, "conversations/list.html", {
         "active_nav": "conversations",
-        "conversations": conversations,
+        "rows": conversations,
         "topics": topics,
         "total": total,
         "page": page,
@@ -95,6 +117,9 @@ def conversation_list(
         "status": status,
         "topic_id": topic_id,
         "q": q,
+        "sort": sort,
+        "view": view,
+        "entity_def": ENTITY_TYPES["conversation"],
     })
 
 
@@ -105,25 +130,31 @@ def conversation_search(
     topic_id: str = "",
     q: str = "",
     page: int = 1,
+    sort: str = "",
 ):
     """HTMX partial — returns just the table rows."""
+    from ...views.registry import ENTITY_TYPES
+
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    conversations, total = _query_conversations(
-        status_filter=status, topic_id=topic_id, search=q, page=page,
+    conversations, total, view = _query_conversations(
+        status_filter=status, topic_id=topic_id, search=q, sort=sort, page=page,
         customer_id=cid, user_id=user["id"],
     )
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "conversations/_rows.html", {
-        "conversations": conversations,
+        "rows": conversations,
         "total": total,
         "page": page,
         "total_pages": total_pages,
         "status": status,
         "topic_id": topic_id,
         "q": q,
+        "sort": sort,
+        "view": view,
+        "entity_def": ENTITY_TYPES["conversation"],
     })
 
 

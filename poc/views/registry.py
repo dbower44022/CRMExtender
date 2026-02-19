@@ -253,6 +253,34 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 ),
                 type="text",
             ),
+            "initiator": FieldDef(
+                label="Initiator",
+                sql=(
+                    "(SELECT COALESCE(c_init.name, comm_init.sender_name, comm_init.sender_address) "
+                    "FROM conversation_communications cc_init "
+                    "JOIN communications comm_init ON comm_init.id = cc_init.communication_id "
+                    "LEFT JOIN contact_identifiers ci_init "
+                    "ON ci_init.type = 'email' AND ci_init.value = comm_init.sender_address "
+                    "LEFT JOIN contacts c_init ON c_init.id = ci_init.contact_id "
+                    "WHERE cc_init.conversation_id = conv.id "
+                    "ORDER BY comm_init.timestamp ASC LIMIT 1)"
+                ),
+                type="text",
+                link="/contacts/{initiator_contact_id}",
+            ),
+            "initiator_contact_id": FieldDef(
+                label="Initiator Contact ID",
+                sql=(
+                    "(SELECT ci_init2.contact_id "
+                    "FROM conversation_communications cc_init2 "
+                    "JOIN communications comm_init2 ON comm_init2.id = cc_init2.communication_id "
+                    "LEFT JOIN contact_identifiers ci_init2 "
+                    "ON ci_init2.type = 'email' AND ci_init2.value = comm_init2.sender_address "
+                    "WHERE cc_init2.conversation_id = conv.id "
+                    "ORDER BY comm_init2.timestamp ASC LIMIT 1)"
+                ),
+                type="hidden",
+            ),
             "topic_name": FieldDef(
                 label="Topic",
                 sql="t.name",
@@ -306,7 +334,7 @@ ENTITY_TYPES: dict[str, EntityDef] = {
             ),
         },
         default_columns=[
-            "title", "account_name", "ai_status", "status",
+            "title", "initiator", "initiator_contact_id", "ai_status", "status",
             "topic_name", "communication_count", "last_activity_at",
         ],
         default_sort=("last_activity_at", "desc"),
@@ -367,7 +395,6 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 type="text",
                 sortable=True,
                 filterable=True,
-                link="/communications/{id}",
             ),
             "conversation_id": FieldDef(
                 label="Conversation ID",
@@ -387,6 +414,7 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                     "WHERE cc.communication_id = comm.id LIMIT 1)"
                 ),
                 type="text",
+                link="/conversations/{conversation_id}",
             ),
             "snippet": FieldDef(
                 label="Preview",

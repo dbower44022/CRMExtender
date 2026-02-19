@@ -1,52 +1,25 @@
-{% set q_enc = q|default('', true)|urlencode %}
+{% from "_grid_macros.html" import grid_headers, grid_cells %}
 {% set s = sort|default('name', true) %}
 {% set sc = scope|default('all', true) %}
-{% if companies %}
+{% if rows %}
 <table>
   <thead>
     <tr>
-      <th><a hx-get="/companies/search?q={{ q_enc }}&sort={% if s == 'name' %}-name{% else %}name{% endif %}&scope={{ sc }}"
-             hx-target="#results" href="/companies?q={{ q_enc }}&sort={% if s == 'name' %}-name{% else %}name{% endif %}&scope={{ sc }}"
-             style="text-decoration:none;color:inherit;cursor:pointer;">Name{% if s == 'name' %} &#9650;{% elif s == '-name' %} &#9660;{% endif %}</a></th>
-      <th><a hx-get="/companies/search?q={{ q_enc }}&sort={% if s == 'domain' %}-domain{% else %}domain{% endif %}&scope={{ sc }}"
-             hx-target="#results" href="/companies?q={{ q_enc }}&sort={% if s == 'domain' %}-domain{% else %}domain{% endif %}&scope={{ sc }}"
-             style="text-decoration:none;color:inherit;cursor:pointer;">Domain{% if s == 'domain' %} &#9650;{% elif s == '-domain' %} &#9660;{% endif %}</a></th>
-      <th><a hx-get="/companies/search?q={{ q_enc }}&sort={% if s == 'industry' %}-industry{% else %}industry{% endif %}&scope={{ sc }}"
-             hx-target="#results" href="/companies?q={{ q_enc }}&sort={% if s == 'industry' %}-industry{% else %}industry{% endif %}&scope={{ sc }}"
-             style="text-decoration:none;color:inherit;cursor:pointer;">Industry{% if s == 'industry' %} &#9650;{% elif s == '-industry' %} &#9660;{% endif %}</a></th>
-      <th><a hx-get="/companies/search?q={{ q_enc }}&sort={% if s == '-score' %}score{% else %}-score{% endif %}&scope={{ sc }}"
-             hx-target="#results" href="/companies?q={{ q_enc }}&sort={% if s == '-score' %}score{% else %}-score{% endif %}&scope={{ sc }}"
-             style="text-decoration:none;color:inherit;cursor:pointer;">Score{% if s == '-score' %} &#9660;{% elif s == 'score' %} &#9650;{% endif %}</a></th>
-      <th>Status</th>
+      {{ grid_headers(view, entity_def, s, "/companies/search", {"q": q|default('', true), "scope": sc}) }}
       <th></th>
     </tr>
   </thead>
   <tbody>
-    {% for c in companies %}
-    <tr id="company-{{ c.id }}">
-      <td><a href="/companies/{{ c.id }}">{{ c.name }}</a></td>
-      <td>{{ c.domain or '' }}</td>
-      <td>{{ c.industry or '' }}</td>
-      <td>
-        {% if c.score is not none %}
-        <div style="display:flex;align-items:center;gap:6px;">
-          <div style="background:#e0e0e0;border-radius:3px;height:6px;width:60px;">
-            <div style="background:var(--pico-primary-color, #1095c1);height:100%;border-radius:3px;width:{{ (c.score * 100)|int }}%;"></div>
-          </div>
-          <small>{{ '%.0f'|format(c.score * 100) }}%</small>
-        </div>
-        {% else %}
-        <small style="color:var(--pico-muted-color);">&mdash;</small>
-        {% endif %}
-      </td>
-      <td>{{ c.status or 'active' }}</td>
+    {% for row in rows %}
+    <tr id="company-{{ row.id }}">
+      {{ grid_cells(row, view, entity_def) }}
       <td>
         <button class="outline secondary"
                 style="padding:0.2rem 0.5rem;font-size:0.75rem"
-                hx-delete="/companies/{{ c.id }}"
-                hx-target="#company-{{ c.id }}"
+                hx-delete="/companies/{{ row.id }}"
+                hx-target="#company-{{ row.id }}"
                 hx-swap="outerHTML"
-                hx-confirm="Delete company '{{ c.name }}'?">Delete</button>
+                hx-confirm="Delete company '{{ row.name }}'?">Delete</button>
       </td>
     </tr>
     {% endfor %}

@@ -100,11 +100,28 @@ def source_icon_filter(source, account_name=None, calendar_id=None):
     )
 
 
+def resolve_link_filter(template, row):
+    """Substitute {key} placeholders in a link template from row values."""
+    try:
+        url = template
+        for key, val in (row.items() if hasattr(row, 'items') else []):
+            placeholder = '{' + key + '}'
+            if placeholder in url and val:
+                url = url.replace(placeholder, str(val))
+        # Return None if any unresolved placeholders remain
+        if '{' in url:
+            return None
+        return url
+    except Exception:
+        return None
+
+
 def register_filters(templates):
     """Register date/time filters on a Jinja2Templates instance."""
     templates.env.filters["datetime"] = datetime_filter
     templates.env.filters["dateonly"] = dateonly_filter
     templates.env.filters["source_icon"] = source_icon_filter
+    templates.env.filters["resolve_link"] = resolve_link_filter
 
     from ..phone_utils import format_phone
     templates.env.filters["format_phone"] = format_phone

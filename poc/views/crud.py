@@ -65,11 +65,15 @@ def get_data_sources_for_customer(
 # -----------------------------------------------------------------------
 
 _DEFAULT_COLUMNS = {
-    "contact": ["name", "email", "company_name", "score", "source"],
+    "contact": ["name", "email", "company_name", "company_id", "score", "source"],
     "company": ["name", "domain", "industry", "score", "status"],
-    "conversation": ["title", "status", "message_count", "last_activity_at"],
-    "communication": ["channel", "sender", "subject", "timestamp"],
-    "event": ["title", "event_type", "start", "location", "status"],
+    "conversation": ["title", "initiator", "initiator_contact_id", "ai_status", "status",
+                      "topic_name", "communication_count", "last_activity_at"],
+    "communication": ["channel", "sender_name", "sender_address", "to_addresses",
+                       "subject", "conversation_id", "conversation_title",
+                       "timestamp", "direction", "snippet"],
+    "event": ["title", "event_type", "start", "start_datetime", "start_date",
+              "location", "status", "source", "account_name", "provider_calendar_id"],
 }
 
 _DEFAULT_SORT = {
@@ -158,6 +162,32 @@ def get_all_views_for_user(
         (customer_id, user_id),
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+def get_default_view_for_entity(
+    conn: sqlite3.Connection,
+    customer_id: str,
+    user_id: str,
+    entity_type: str,
+) -> dict | None:
+    """Load the user's default view for an entity type (with columns + filters).
+
+    Ensures default views exist, then picks the best match:
+    user's own default first, then any visible view.
+    """
+    ensure_default_views(conn, customer_id, user_id)
+    row = conn.execute(
+        "SELECT v.id FROM views v "
+        "JOIN data_sources ds ON ds.id = v.data_source_id "
+        "WHERE v.customer_id = ? AND ds.entity_type = ? "
+        "AND (v.owner_id = ? OR v.visibility = 'shared') "
+        "ORDER BY v.is_default DESC, v.name "
+        "LIMIT 1",
+        (customer_id, entity_type, user_id),
+    ).fetchone()
+    if not row:
+        return None
+    return get_view_with_config(conn, row["id"])
 
 
 def get_view(conn: sqlite3.Connection, view_id: str) -> dict | None:

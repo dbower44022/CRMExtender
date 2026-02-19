@@ -32,26 +32,38 @@ def _is_htmx(request: Request) -> bool:
 _CONTACT_SORT_ALIASES = {"company": "company_name"}
 
 
+def _parse_sort(url_sort, view):
+    """Return (sort_field, sort_direction) — URL param overrides view default."""
+    if url_sort:
+        desc = url_sort.startswith("-")
+        key = url_sort.lstrip("-")
+        key = _CONTACT_SORT_ALIASES.get(key, key)
+        return (key, "desc" if desc else "asc")
+    if view:
+        sf = view.get("sort_field")
+        if sf:
+            return (sf, view.get("sort_direction", "asc"))
+    return (None, "asc")
+
+
 def _query_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
                     sort: str = "name",
                     customer_id: str = "", user_id: str = "",
                     scope: str = "all"):
+    from ...views.crud import get_default_view_for_entity
     from ...views.engine import execute_view
-    from ...views.registry import ENTITY_TYPES
-
-    desc = sort.startswith("-")
-    key = sort.lstrip("-")
-    sort_field = _CONTACT_SORT_ALIASES.get(key, key)
-    sort_direction = "desc" if desc else "asc"
-
-    columns = [{"field_key": c} for c in ENTITY_TYPES["contact"].default_columns]
 
     with get_connection() as conn:
+        view = get_default_view_for_entity(conn, customer_id, user_id, "contact")
+        columns = view["columns"] if view else []
+        filters = list(view["filters"]) if view and view.get("filters") else []
+        sort_field, sort_direction = _parse_sort(sort, view)
+
         rows, total = execute_view(
             conn,
             entity_type="contact",
             columns=columns,
-            filters=[],
+            filters=filters,
             sort_field=sort_field,
             sort_direction=sort_direction,
             search=search,
@@ -62,16 +74,18 @@ def _query_contacts(*, search: str = "", page: int = 1, per_page: int = 50,
             scope=scope,
         )
 
-    return rows, total
+    return rows, total, view
 
 
 @router.get("", response_class=HTMLResponse)
 def contact_list(request: Request, q: str = "", page: int = 1,
                  sort: str = "name", scope: str = "all"):
+    from ...views.registry import ENTITY_TYPES
+
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    contacts, total = _query_contacts(
+    contacts, total, view = _query_contacts(
         search=q, page=page, sort=sort,
         customer_id=cid, user_id=user["id"], scope=scope,
     )
@@ -79,36 +93,42 @@ def contact_list(request: Request, q: str = "", page: int = 1,
 
     return templates.TemplateResponse(request, "contacts/list.html", {
         "active_nav": "contacts",
-        "contacts": contacts,
+        "rows": contacts,
         "total": total,
         "page": page,
         "total_pages": total_pages,
         "q": q,
         "sort": sort,
         "scope": scope,
+        "view": view,
+        "entity_def": ENTITY_TYPES["contact"],
     })
 
 
 @router.get("/search", response_class=HTMLResponse)
 def contact_search(request: Request, q: str = "", page: int = 1,
                    sort: str = "name", scope: str = "all"):
+    from ...views.registry import ENTITY_TYPES
+
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
-    contacts, total = _query_contacts(
+    contacts, total, view = _query_contacts(
         search=q, page=page, sort=sort,
         customer_id=cid, user_id=user["id"], scope=scope,
     )
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "contacts/_rows.html", {
-        "contacts": contacts,
+        "rows": contacts,
         "total": total,
         "page": page,
         "total_pages": total_pages,
         "q": q,
         "sort": sort,
         "scope": scope,
+        "view": view,
+        "entity_def": ENTITY_TYPES["contact"],
     })
 
 

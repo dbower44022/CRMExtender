@@ -14,6 +14,20 @@ router = APIRouter()
 _COMM_SORT_ALIASES = {"date": "timestamp", "from": "sender"}
 
 
+def _parse_sort(url_sort, view):
+    """Return (sort_field, sort_direction) — URL param overrides view default."""
+    if url_sort:
+        desc = url_sort.startswith("-")
+        key = url_sort.lstrip("-")
+        key = _COMM_SORT_ALIASES.get(key, key)
+        return (key, "desc" if desc else "asc")
+    if view:
+        sf = view.get("sort_field")
+        if sf:
+            return (sf, view.get("sort_direction", "asc"))
+    return (None, "asc")
+
+
 def _query_communications(
     *,
     search: str = "",
@@ -24,24 +38,22 @@ def _query_communications(
     per_page: int = 50,
     customer_id: str = "",
     user_id: str = "",
-) -> tuple[list[dict], int]:
+) -> tuple[list[dict], int, dict | None]:
+    from ...views.crud import get_default_view_for_entity
     from ...views.engine import execute_view
-    from ...views.registry import ENTITY_TYPES
-
-    desc = sort.startswith("-")
-    key = sort.lstrip("-")
-    sort_field = _COMM_SORT_ALIASES.get(key, key)
-    sort_direction = "desc" if desc else "asc"
-
-    filters: list[dict] = []
-    if channel:
-        filters.append({"field_key": "channel", "operator": "equals", "value": channel})
-    if direction:
-        filters.append({"field_key": "direction", "operator": "equals", "value": direction})
-
-    columns = [{"field_key": c} for c in ENTITY_TYPES["communication"].default_columns]
 
     with get_connection() as conn:
+        view = get_default_view_for_entity(conn, customer_id, user_id, "communication")
+        columns = view["columns"] if view else []
+        filters = list(view["filters"]) if view and view.get("filters") else []
+        sort_field, sort_direction = _parse_sort(sort, view)
+
+        # Route-level filters (channel/direction dropdowns)
+        if channel:
+            filters.append({"field_key": "channel", "operator": "equals", "value": channel})
+        if direction:
+            filters.append({"field_key": "direction", "operator": "equals", "value": direction})
+
         rows, total = execute_view(
             conn,
             entity_type="communication",
@@ -56,7 +68,7 @@ def _query_communications(
             user_id=user_id,
         )
 
-    return rows, total
+    return rows, total, view
 
 
 @router.get("", response_class=HTMLResponse)
@@ -68,11 +80,13 @@ def communication_list(
     sort: str = "-date",
     page: int = 1,
 ):
+    from ...views.registry import ENTITY_TYPES
+
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
 
-    communications, total = _query_communications(
+    communications, total, view = _query_communications(
         search=q, channel=channel, direction=direction,
         sort=sort, page=page,
         customer_id=cid, user_id=user["id"],
@@ -81,7 +95,7 @@ def communication_list(
 
     return templates.TemplateResponse(request, "communications/list.html", {
         "active_nav": "communications",
-        "communications": communications,
+        "rows": communications,
         "total": total,
         "page": page,
         "total_pages": total_pages,
@@ -89,6 +103,8 @@ def communication_list(
         "channel": channel,
         "direction": direction,
         "sort": sort,
+        "view": view,
+        "entity_def": ENTITY_TYPES["communication"],
     })
 
 
@@ -102,11 +118,13 @@ def communication_search(
     page: int = 1,
 ):
     """HTMX partial — returns just the table rows."""
+    from ...views.registry import ENTITY_TYPES
+
     templates = request.app.state.templates
     user = request.state.user
     cid = request.state.customer_id
 
-    communications, total = _query_communications(
+    communications, total, view = _query_communications(
         search=q, channel=channel, direction=direction,
         sort=sort, page=page,
         customer_id=cid, user_id=user["id"],
@@ -114,7 +132,7 @@ def communication_search(
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "communications/_rows.html", {
-        "communications": communications,
+        "rows": communications,
         "total": total,
         "page": page,
         "total_pages": total_pages,
@@ -122,6 +140,8 @@ def communication_search(
         "channel": channel,
         "direction": direction,
         "sort": sort,
+        "view": view,
+        "entity_def": ENTITY_TYPES["communication"],
     })
 
 
@@ -222,7 +242,9 @@ def bulk_archive(
                     )
 
     # Return updated rows
-    communications, total = _query_communications(
+    from ...views.registry import ENTITY_TYPES
+
+    communications, total, view = _query_communications(
         search=q, channel=channel, direction=direction,
         sort=sort, page=page,
         customer_id=cid, user_id=user["id"],
@@ -230,7 +252,7 @@ def bulk_archive(
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "communications/_rows.html", {
-        "communications": communications,
+        "rows": communications,
         "total": total,
         "page": page,
         "total_pages": total_pages,
@@ -238,6 +260,8 @@ def bulk_archive(
         "channel": channel,
         "direction": direction,
         "sort": sort,
+        "view": view,
+        "entity_def": ENTITY_TYPES["communication"],
     })
 
 
@@ -304,7 +328,9 @@ def bulk_assign(
             )
 
     # Return updated rows
-    communications, total = _query_communications(
+    from ...views.registry import ENTITY_TYPES
+
+    communications, total, view = _query_communications(
         search=q, channel=channel, direction=direction,
         sort=sort, page=page,
         customer_id=cid, user_id=user["id"],
@@ -312,7 +338,7 @@ def bulk_assign(
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "communications/_rows.html", {
-        "communications": communications,
+        "rows": communications,
         "total": total,
         "page": page,
         "total_pages": total_pages,
@@ -320,6 +346,8 @@ def bulk_assign(
         "channel": channel,
         "direction": direction,
         "sort": sort,
+        "view": view,
+        "entity_def": ENTITY_TYPES["communication"],
     })
 
 
@@ -363,7 +391,9 @@ def delete_conversation(
                 )
 
     # Return updated rows
-    communications, total = _query_communications(
+    from ...views.registry import ENTITY_TYPES
+
+    communications, total, view = _query_communications(
         search=q, channel=channel, direction=direction,
         sort=sort, page=page,
         customer_id=cid, user_id=user["id"],
@@ -371,7 +401,7 @@ def delete_conversation(
     total_pages = max(1, (total + 49) // 50)
 
     return templates.TemplateResponse(request, "communications/_rows.html", {
-        "communications": communications,
+        "rows": communications,
         "total": total,
         "page": page,
         "total_pages": total_pages,
@@ -379,4 +409,6 @@ def delete_conversation(
         "channel": channel,
         "direction": direction,
         "sort": sort,
+        "view": view,
+        "entity_def": ENTITY_TYPES["communication"],
     })

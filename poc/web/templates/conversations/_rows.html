@@ -1,49 +1,23 @@
-{% if conversations %}
+{% from "_grid_macros.html" import grid_headers, grid_cells, grid_pagination %}
+{% set s = sort|default('', true) %}
+{% if rows %}
 <table class="conv-table">
-  <colgroup>
-    <col>
-    <col style="width:12rem;">
-    <col style="width:8rem;">
-    <col style="width:12rem;">
-    <col style="width:6rem;">
-    <col style="width:12rem;">
-  </colgroup>
   <thead>
     <tr>
-      <th>Subject</th>
-      <th>Account</th>
-      <th>Status</th>
-      <th>Topic</th>
-      <th>Messages</th>
-      <th>Last Activity</th>
+      {{ grid_headers(view, entity_def, s, "/conversations/search",
+                       {"q": q|default('', true), "status": status|default('open', true), "topic_id": topic_id|default('', true)}) }}
     </tr>
   </thead>
   <tbody>
-    {% for conv in conversations %}
+    {% for row in rows %}
     <tr>
-      <td><a href="/conversations/{{ conv.id }}">{{ conv.title or '(no subject)' }}</a></td>
-      <td>{{ conv.account_name or '' }}</td>
-      <td>{{ conv.ai_status or conv.status or 'active' }}</td>
-      <td>{{ conv.topic_name or '' }}</td>
-      <td>{{ conv.communication_count }}</td>
-      <td>{{ conv.last_activity_at|datetime }}</td>
+      {{ grid_cells(row, view, entity_def) }}
     </tr>
     {% endfor %}
   </tbody>
 </table>
-{% if total_pages > 1 %}
-<nav>
-  <ul>
-    {% if page > 1 %}
-    <li><a href="/conversations?status={{ status }}&topic_id={{ topic_id }}&q={{ q }}&page={{ page - 1 }}">Previous</a></li>
-    {% endif %}
-    <li>Page {{ page }} of {{ total_pages }}</li>
-    {% if page < total_pages %}
-    <li><a href="/conversations?status={{ status }}&topic_id={{ topic_id }}&q={{ q }}&page={{ page + 1 }}">Next</a></li>
-    {% endif %}
-  </ul>
-</nav>
-{% endif %}
+{{ grid_pagination(page, total_pages, "/conversations",
+                    {"q": q|default('', true), "sort": s, "status": status|default('open', true), "topic_id": topic_id|default('', true)}) }}
 {% else %}
 <p class="empty-state">No conversations found.</p>
 {% endif %}

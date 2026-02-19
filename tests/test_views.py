@@ -106,6 +106,31 @@ def _seed_companies(n=3):
 
 
 # ===========================================================================
+# Filter Tests
+# ===========================================================================
+
+class TestResolveLink:
+    def test_resolve_link_basic(self):
+        from poc.web.filters import resolve_link_filter
+        assert resolve_link_filter("/contacts/{id}", {"id": "abc"}) == "/contacts/abc"
+
+    def test_resolve_link_multiple_placeholders(self):
+        from poc.web.filters import resolve_link_filter
+        assert resolve_link_filter(
+            "/contacts/{contact_id}/emails/{email_id}",
+            {"contact_id": "c1", "email_id": "e1"},
+        ) == "/contacts/c1/emails/e1"
+
+    def test_resolve_link_returns_none_on_unresolved(self):
+        from poc.web.filters import resolve_link_filter
+        assert resolve_link_filter("/contacts/{id}", {"name": "abc"}) is None
+
+    def test_resolve_link_returns_none_on_null_value(self):
+        from poc.web.filters import resolve_link_filter
+        assert resolve_link_filter("/contacts/{id}", {"id": None}) is None
+
+
+# ===========================================================================
 # Registry Tests
 # ===========================================================================
 
@@ -328,6 +353,45 @@ class TestCRUD:
             views = get_views_for_entity(conn, CUST_ID, USER_ID, "contact")
         assert len(views) >= 1
         assert all(v["entity_type"] == "contact" for v in views)
+
+    def test_get_default_view_for_entity(self, tmp_db):
+        from poc.views.crud import get_default_view_for_entity
+        with get_connection() as conn:
+            view = get_default_view_for_entity(conn, CUST_ID, USER_ID, "contact")
+        assert view is not None
+        assert view["entity_type"] == "contact"
+        assert "columns" in view
+        assert "filters" in view
+        assert len(view["columns"]) > 0
+
+    def test_get_default_view_creates_if_missing(self, tmp_db):
+        """Auto-creates views if none exist for the user."""
+        from poc.views.crud import get_default_view_for_entity
+        # No views exist yet — should auto-create
+        with get_connection() as conn:
+            view = get_default_view_for_entity(conn, CUST_ID, USER_ID, "company")
+        assert view is not None
+        assert view["entity_type"] == "company"
+        assert len(view["columns"]) > 0
+
+    def test_default_columns_match_registry(self, tmp_db):
+        """_DEFAULT_COLUMNS keys match ENTITY_TYPES default_columns."""
+        from poc.views.crud import _DEFAULT_COLUMNS
+        from poc.views.registry import ENTITY_TYPES
+        for et in ENTITY_TYPES:
+            assert et in _DEFAULT_COLUMNS, f"Missing {et} in _DEFAULT_COLUMNS"
+            assert _DEFAULT_COLUMNS[et] == ENTITY_TYPES[et].default_columns, (
+                f"{et}: _DEFAULT_COLUMNS doesn't match registry default_columns"
+            )
+
+    def test_get_default_view_returns_all_entity_types(self, tmp_db):
+        """All 5 entity types return a default view."""
+        from poc.views.crud import get_default_view_for_entity
+        for et in ("contact", "company", "conversation", "communication", "event"):
+            with get_connection() as conn:
+                view = get_default_view_for_entity(conn, CUST_ID, USER_ID, et)
+            assert view is not None, f"No default view for {et}"
+            assert view["entity_type"] == et
 
 
 # ===========================================================================

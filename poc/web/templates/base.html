@@ -38,6 +38,7 @@
       <li><a href="/relationships" {% if active_nav == 'relationships' %}class="active"{% endif %}>Relationships</a></li>
       <li><a href="/events" {% if active_nav == 'events' %}class="active"{% endif %}>Events</a></li>
       <li><a href="/notes/search" {% if active_nav == 'notes' %}class="active"{% endif %}>Notes</a></li>
+      <li><a href="/views" {% if active_nav == 'views' %}class="active"{% endif %}>Views</a></li>
     </ul>
     {% if user %}
     <ul>
@@ -69,6 +70,7 @@
     <small>CRM Extender</small>
   </footer>
   <script src="/static/dates.js"></script>
+  <script src="/static/inline_edit.js"></script>
   <script type="module" src="/static/notes.js"></script>
 </body>
 </html>

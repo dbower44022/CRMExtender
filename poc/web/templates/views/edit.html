@@ -55,6 +55,8 @@
       {% for col in selected_columns %}
       <li data-key="{{ col.key }}" data-deps='{{ field_deps.get(col.key, [])|tojson }}' style="display:flex;align-items:center;gap:0.25rem;padding:0.3rem 0.5rem;margin-bottom:0.25rem;background:var(--pico-card-background-color);border:1px solid var(--pico-muted-border-color);border-radius:4px;cursor:grab;">
         <span style="flex:1;">{{ col.label }}</span>
+        <input type="text" class="col-label" value="{{ col.label_override }}" placeholder="Custom label" style="width:8rem;padding:0.15rem 0.3rem;font-size:0.8rem;margin:0;">
+        <input type="number" class="col-width" value="{{ col.width_px }}" placeholder="Width" min="50" max="800" style="width:5rem;padding:0.15rem 0.3rem;font-size:0.8rem;margin:0;">
         <button type="button" class="outline secondary move-up" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Move up">&#9650;</button>
         <button type="button" class="outline secondary move-down" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Move down">&#9660;</button>
         <button type="button" class="outline secondary remove-col" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Remove">&times;</button>
@@ -184,6 +186,8 @@ document.addEventListener('DOMContentLoaded', function() {
     li.style.cssText = 'display:flex;align-items:center;gap:0.25rem;padding:0.3rem 0.5rem;margin-bottom:0.25rem;background:var(--pico-card-background-color);border:1px solid var(--pico-muted-border-color);border-radius:4px;cursor:grab;';
     li.innerHTML = `
       <span style="flex:1;">${label}</span>
+      <input type="text" class="col-label" value="" placeholder="Custom label" style="width:8rem;padding:0.15rem 0.3rem;font-size:0.8rem;margin:0;">
+      <input type="number" class="col-width" value="" placeholder="Width" min="50" max="800" style="width:5rem;padding:0.15rem 0.3rem;font-size:0.8rem;margin:0;">
       <button type="button" class="outline secondary move-up" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Move up">&#9650;</button>
       <button type="button" class="outline secondary move-down" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Move down">&#9660;</button>
       <button type="button" class="outline secondary remove-col" style="padding:0.1rem 0.4rem;font-size:0.75rem;" title="Remove">&times;</button>
@@ -239,10 +243,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // ---- Form submit: serialize columns + filters ----
 
   document.getElementById('edit-view-form').addEventListener('submit', function() {
-    // Serialize column order
+    // Serialize column order with label/width overrides
     const cols = [];
     selectedList.querySelectorAll('li').forEach(li => {
-      cols.push(li.dataset.key);
+      const obj = {key: li.dataset.key};
+      const labelInput = li.querySelector('.col-label');
+      const widthInput = li.querySelector('.col-width');
+      if (labelInput && labelInput.value.trim()) obj.label = labelInput.value.trim();
+      if (widthInput && widthInput.value) obj.width = parseInt(widthInput.value, 10);
+      cols.push(obj);
     });
     columnsInput.value = JSON.stringify(cols);
 

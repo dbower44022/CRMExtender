@@ -20,6 +20,9 @@ class FieldDef:
     sortable: bool = False
     filterable: bool = False
     link: str | None = None  # URL template, e.g. "/contacts/{id}"
+    editable: bool = False
+    db_column: str | None = None  # actual DB column name for UPDATE
+    select_options: list[str] | None = None  # valid options for select dropdowns
 
 
 @dataclass(frozen=True)
@@ -62,6 +65,8 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 sortable=True,
                 filterable=True,
                 link="/contacts/{id}",
+                editable=True,
+                db_column="name",
             ),
             "email": FieldDef(
                 label="Email",
@@ -101,12 +106,17 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 sql="c.source",
                 type="text",
                 filterable=True,
+                editable=True,
+                db_column="source",
             ),
             "status": FieldDef(
                 label="Status",
                 sql="c.status",
                 type="text",
                 filterable=True,
+                editable=True,
+                db_column="status",
+                select_options=["active", "inactive", "archived"],
             ),
             "score": FieldDef(
                 label="Score",
@@ -151,6 +161,8 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 sortable=True,
                 filterable=True,
                 link="/companies/{id}",
+                editable=True,
+                db_column="name",
             ),
             "domain": FieldDef(
                 label="Domain",
@@ -158,6 +170,8 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 type="text",
                 sortable=True,
                 filterable=True,
+                editable=True,
+                db_column="domain",
             ),
             "industry": FieldDef(
                 label="Industry",
@@ -165,28 +179,39 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 type="text",
                 sortable=True,
                 filterable=True,
+                editable=True,
+                db_column="industry",
             ),
             "website": FieldDef(
                 label="Website",
                 sql="co.website",
                 type="text",
+                editable=True,
+                db_column="website",
             ),
             "status": FieldDef(
                 label="Status",
                 sql="co.status",
                 type="text",
                 filterable=True,
+                editable=True,
+                db_column="status",
+                select_options=["active", "inactive", "archived"],
             ),
             "size_range": FieldDef(
                 label="Size",
                 sql="co.size_range",
                 type="text",
                 filterable=True,
+                editable=True,
+                db_column="size_range",
             ),
             "headquarters_location": FieldDef(
                 label="HQ Location",
                 sql="co.headquarters_location",
                 type="text",
+                editable=True,
+                db_column="headquarters_location",
             ),
             "score": FieldDef(
                 label="Score",

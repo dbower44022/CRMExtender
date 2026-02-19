@@ -297,15 +297,31 @@ def update_view(
 
 
 def update_view_columns(
-    conn: sqlite3.Connection, view_id: str, columns: list[str],
+    conn: sqlite3.Connection, view_id: str, columns: list[str | dict],
 ) -> None:
-    """Replace all columns for a view."""
+    """Replace all columns for a view.
+
+    Accepts either plain strings or dicts with key/label/width:
+      ["name", "email"]
+      [{"key": "name", "label": "Full Name", "width": 200}, {"key": "email"}]
+    """
     conn.execute("DELETE FROM view_columns WHERE view_id = ?", (view_id,))
-    for pos, fk in enumerate(columns):
+    for pos, col in enumerate(columns):
+        if isinstance(col, dict):
+            fk = col["key"]
+            label_override = col.get("label") or None
+            width_px = col.get("width") or None
+            if width_px is not None:
+                width_px = int(width_px)
+        else:
+            fk = col
+            label_override = None
+            width_px = None
         conn.execute(
-            "INSERT INTO view_columns (id, view_id, field_key, position) "
-            "VALUES (?, ?, ?, ?)",
-            (_uuid(), view_id, fk, pos),
+            "INSERT INTO view_columns "
+            "(id, view_id, field_key, position, label_override, width_px) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (_uuid(), view_id, fk, pos, label_override, width_px),
         )
     conn.execute(
         "UPDATE views SET updated_at = ? WHERE id = ?", (_now(), view_id),

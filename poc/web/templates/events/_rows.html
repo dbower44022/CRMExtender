@@ -11,7 +11,7 @@
   <tbody>
     {% for row in rows %}
     <tr id="event-{{ row.id }}">
-      {{ grid_cells(row, view, entity_def) }}
+      {{ grid_cells(row, view, entity_def, 'event') }}
       <td>{{ row.source|source_icon(row.account_name, row.provider_calendar_id) }}</td>
       <td>
         <button class="outline secondary"

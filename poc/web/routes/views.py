@@ -6,7 +6,7 @@ import json
 import re
 
 from fastapi import APIRouter, Form, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from ...database import get_connection
 from ...views.crud import (
@@ -156,6 +156,82 @@ def create_new_view(
         )
 
     return RedirectResponse(f"/views/{view_id}", status_code=303)
+
+
+# -----------------------------------------------------------------------
+# Inline cell edit
+# -----------------------------------------------------------------------
+
+@router.post("/cell-edit")
+async def cell_edit(request: Request):
+    """Update a single field on a contact or company via inline edit."""
+    from ...hierarchy import update_company, update_contact
+
+    _UPDATE_DISPATCHERS = {
+        "contact": ("contacts", update_contact),
+        "company": ("companies", update_company),
+    }
+
+    user = _user(request)
+    customer_id = user.get("customer_id", "")
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
+
+    entity_type = body.get("entity_type", "")
+    entity_id = body.get("entity_id", "")
+    field_key = body.get("field_key", "")
+    value = body.get("value", "")
+
+    if entity_type not in _UPDATE_DISPATCHERS:
+        return JSONResponse(
+            {"ok": False, "error": f"Entity type '{entity_type}' is not editable"},
+            status_code=400,
+        )
+
+    entity_def = ENTITY_TYPES.get(entity_type)
+    if not entity_def:
+        return JSONResponse({"ok": False, "error": "Unknown entity type"}, status_code=400)
+
+    # Find the editable field by db_column
+    fdef = None
+    for fk, fd in entity_def.fields.items():
+        if fd.db_column == field_key and fd.editable:
+            fdef = fd
+            break
+
+    if not fdef:
+        return JSONResponse(
+            {"ok": False, "error": f"Field '{field_key}' is not editable"},
+            status_code=400,
+        )
+
+    # Validate select options
+    if fdef.select_options and value and value not in fdef.select_options:
+        return JSONResponse(
+            {"ok": False, "error": f"Invalid option '{value}'. Must be one of: {', '.join(fdef.select_options)}"},
+            status_code=400,
+        )
+
+    # Verify entity belongs to this customer
+    table_name, update_fn = _UPDATE_DISPATCHERS[entity_type]
+    with get_connection() as conn:
+        row = conn.execute(
+            f"SELECT id FROM {table_name} WHERE id = ? AND customer_id = ?",
+            (entity_id, customer_id),
+        ).fetchone()
+
+    if not row:
+        return JSONResponse({"ok": False, "error": "Entity not found"}, status_code=404)
+
+    # Perform the update
+    updated = update_fn(entity_id, **{field_key: value})
+    if not updated:
+        return JSONResponse({"ok": False, "error": "Update failed"}, status_code=500)
+
+    return JSONResponse({"ok": True, "value": updated.get(field_key, value)})
 
 
 # -----------------------------------------------------------------------
@@ -327,7 +403,12 @@ def edit_view_form(request: Request, view_id: str, saved: str = ""):
 
     # Build ordered selected columns list
     selected_columns = [
-        {"key": c["field_key"], "label": entity_def.fields[c["field_key"]].label}
+        {
+            "key": c["field_key"],
+            "label": entity_def.fields[c["field_key"]].label,
+            "label_override": c.get("label_override") or "",
+            "width_px": c.get("width_px") or "",
+        }
         for c in view.get("columns", [])
         if c["field_key"] in entity_def.fields and entity_def.fields[c["field_key"]].type != "hidden"
     ]
@@ -406,17 +487,23 @@ def save_view(
             col_list = columns
 
         if col_list and entity_def:
+            # Normalise: could be list of strings or list of dicts
+            is_object_format = col_list and isinstance(col_list[0], dict)
+
+            def _col_key(item):
+                return item["key"] if isinstance(item, dict) else item
+
             # Validate keys exist in entity_def
             valid_keys = set(entity_def.fields.keys())
-            col_list = [k for k in col_list if k in valid_keys]
+            col_list = [c for c in col_list if _col_key(c) in valid_keys]
 
             # Auto-append hidden dependency fields
             field_deps = _extract_link_deps(entity_def)
-            col_set = set(col_list)
-            for visible_key in list(col_list):
-                for dep_key in field_deps.get(visible_key, []):
+            col_set = {_col_key(c) for c in col_list}
+            for item in list(col_list):
+                for dep_key in field_deps.get(_col_key(item), []):
                     if dep_key not in col_set:
-                        col_list.append(dep_key)
+                        col_list.append({"key": dep_key} if is_object_format else dep_key)
                         col_set.add(dep_key)
 
             update_view_columns(conn, view_id, col_list)

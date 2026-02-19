@@ -12,7 +12,7 @@
   <tbody>
     {% for row in rows %}
     <tr id="company-{{ row.id }}">
-      {{ grid_cells(row, view, entity_def) }}
+      {{ grid_cells(row, view, entity_def, 'company') }}
       <td>
         <button class="outline secondary"
                 style="padding:0.2rem 0.5rem;font-size:0.75rem"

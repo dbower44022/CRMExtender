@@ -16,6 +16,8 @@
     {% set fk = col.field_key %}
     {% set fdef = entity_def.fields[fk] if fk in entity_def.fields else none %}
     {% if fdef and fdef.type != 'hidden' %}
+      {% set col_label = col.label_override or fdef.label %}
+      {% set w_style = 'style="width:' ~ col.width_px ~ 'px;"' if col.width_px else '' %}
       {% if fdef.sortable %}
         {% if s == fk %}
           {% set next_sort = '-' ~ fk %}
@@ -36,10 +38,10 @@
         {% else %}
           {% set qs = 'sort=' ~ next_sort %}
         {% endif %}
-        <th><a hx-get="{{ search_url }}?{{ qs }}" hx-target="#results"
-               style="text-decoration:none;color:inherit;cursor:pointer;">{{ fdef.label }} {{ arrow }}</a></th>
+        <th {{ w_style }}><a hx-get="{{ search_url }}?{{ qs }}" hx-target="#results"
+               style="text-decoration:none;color:inherit;cursor:pointer;">{{ col_label }} {{ arrow }}</a></th>
       {% else %}
-        <th>{{ fdef.label }}</th>
+        <th {{ w_style }}>{{ col_label }}</th>
       {% endif %}
     {% endif %}
   {% endfor %}
@@ -53,14 +55,15 @@
     row:        dict of field values (from execute_view)
     view:       dict with "columns" list
     entity_def: registry EntityDef
+    entity_type: string entity type key (e.g. "contact", "company")
 #}
-{% macro grid_cells(row, view, entity_def) %}
+{% macro grid_cells(row, view, entity_def, entity_type='') %}
   {% for col in view.columns %}
     {% set fk = col.field_key %}
     {% set fdef = entity_def.fields[fk] if fk in entity_def.fields else none %}
     {% if fdef and fdef.type != 'hidden' %}
       {% set val = row[fk] if fk in row else none %}
-      <td>
+      <td{% if fdef.editable and entity_type %} data-editable data-entity-type="{{ entity_type }}" data-entity-id="{{ row.id }}" data-field-key="{{ fdef.db_column }}" data-edit-type="{{ 'select' if fdef.select_options else 'text' }}"{% if fdef.select_options %} data-options="{{ fdef.select_options|join(',') }}"{% endif %}{% endif %}>
         {% if val is none or val == '' %}
           <small style="color:var(--pico-muted-color);">&mdash;</small>
         {% elif fdef.type == 'number' and fk == 'score' %}

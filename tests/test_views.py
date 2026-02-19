@@ -1077,3 +1077,205 @@ class TestWebRoutes:
         # "name" should NOT be in the available dropdown (already selected)
         # It should be in the selected list instead
         assert 'data-key="name"' in html
+
+
+# ===========================================================================
+# Column Config Tests (Phase 5)
+# ===========================================================================
+
+class TestColumnConfig:
+    def test_update_view_columns_with_label_and_width(self, tmp_db):
+        """CRUD saves and loads label_override + width_px."""
+        from poc.views.crud import (
+            create_view, ensure_system_data_sources, get_view_with_config,
+            update_view_columns,
+        )
+        with get_connection() as conn:
+            ensure_system_data_sources(conn, CUST_ID)
+            view_id = create_view(
+                conn, customer_id=CUST_ID, user_id=USER_ID,
+                data_source_id=f"ds-contact-{CUST_ID}", name="Label Width Test",
+                columns=["name"],
+            )
+            update_view_columns(conn, view_id, [
+                {"key": "name", "label": "Full Name", "width": 250},
+                {"key": "email"},
+            ])
+            view = get_view_with_config(conn, view_id)
+        assert len(view["columns"]) == 2
+        assert view["columns"][0]["field_key"] == "name"
+        assert view["columns"][0]["label_override"] == "Full Name"
+        assert view["columns"][0]["width_px"] == 250
+        assert view["columns"][1]["field_key"] == "email"
+        assert view["columns"][1]["label_override"] is None
+        assert view["columns"][1]["width_px"] is None
+
+    def test_update_view_columns_backward_compat(self, tmp_db):
+        """Plain string list still works with update_view_columns."""
+        from poc.views.crud import (
+            create_view, ensure_system_data_sources, get_view_with_config,
+            update_view_columns,
+        )
+        with get_connection() as conn:
+            ensure_system_data_sources(conn, CUST_ID)
+            view_id = create_view(
+                conn, customer_id=CUST_ID, user_id=USER_ID,
+                data_source_id=f"ds-contact-{CUST_ID}", name="Compat Test",
+                columns=["name"],
+            )
+            update_view_columns(conn, view_id, ["name", "email", "score"])
+            view = get_view_with_config(conn, view_id)
+        assert len(view["columns"]) == 3
+        assert [c["field_key"] for c in view["columns"]] == ["name", "email", "score"]
+        assert all(c["label_override"] is None for c in view["columns"])
+        assert all(c["width_px"] is None for c in view["columns"])
+
+    def test_save_view_with_column_objects(self, client, tmp_db):
+        """POST with object-format columns_json persists label + width."""
+        from poc.views.crud import create_view, ensure_system_data_sources, get_view_with_config
+        with get_connection() as conn:
+            ensure_system_data_sources(conn, CUST_ID)
+            view_id = create_view(
+                conn, customer_id=CUST_ID, user_id=USER_ID,
+                data_source_id=f"ds-contact-{CUST_ID}", name="Obj Save",
+                columns=["name"],
+            )
+        resp = client.post(f"/views/{view_id}/edit", data={
+            "name": "Obj Save",
+            "sort_field": "name",
+            "sort_direction": "asc",
+            "per_page": "50",
+            "columns_json": json.dumps([
+                {"key": "name", "label": "Contact Name", "width": 300},
+                {"key": "email"},
+            ]),
+            "filters_json": json.dumps([]),
+        })
+        assert resp.status_code == 200
+        with get_connection() as conn:
+            view = get_view_with_config(conn, view_id)
+        assert view["columns"][0]["label_override"] == "Contact Name"
+        assert view["columns"][0]["width_px"] == 300
+        assert view["columns"][1]["label_override"] is None
+
+
+# ===========================================================================
+# Inline Cell Edit Tests (Phase 5)
+# ===========================================================================
+
+class TestInlineCellEdit:
+    def test_cell_edit_contact_name(self, client, tmp_db):
+        """Updates contact name, returns ok."""
+        _seed_contacts(1)
+        resp = client.post(
+            "/views/cell-edit",
+            json={"entity_type": "contact", "entity_id": "contact-0",
+                  "field_key": "name", "value": "New Name"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data["value"] == "New Name"
+
+    def test_cell_edit_company_industry(self, client, tmp_db):
+        """Updates company field."""
+        _seed_companies(1)
+        resp = client.post(
+            "/views/cell-edit",
+            json={"entity_type": "company", "entity_id": "company-0",
+                  "field_key": "industry", "value": "Finance"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data["value"] == "Finance"
+
+    def test_cell_edit_non_editable_field(self, client, tmp_db):
+        """Rejects non-editable field with 400."""
+        _seed_contacts(1)
+        resp = client.post(
+            "/views/cell-edit",
+            json={"entity_type": "contact", "entity_id": "contact-0",
+                  "field_key": "email", "value": "nope@example.com"},
+        )
+        assert resp.status_code == 400
+        assert resp.json()["ok"] is False
+
+    def test_cell_edit_unknown_entity_type(self, client, tmp_db):
+        """Rejects bogus entity type with 400."""
+        resp = client.post(
+            "/views/cell-edit",
+            json={"entity_type": "bogus", "entity_id": "x",
+                  "field_key": "name", "value": "test"},
+        )
+        assert resp.status_code == 400
+
+    def test_cell_edit_wrong_customer(self, client, tmp_db):
+        """Rejects cross-customer access with 404."""
+        # Insert a contact under a different customer
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO customers (id, name, slug, is_active, created_at, updated_at) "
+                "VALUES ('cust-other2', 'Other', 'other2', 1, ?, ?)",
+                (_NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO contacts (id, customer_id, name, source, status, created_at, updated_at) "
+                "VALUES ('c-foreign', 'cust-other2', 'Foreign', 'test', 'active', ?, ?)",
+                (_NOW, _NOW),
+            )
+        resp = client.post(
+            "/views/cell-edit",
+            json={"entity_type": "contact", "entity_id": "c-foreign",
+                  "field_key": "name", "value": "Hacked"},
+        )
+        assert resp.status_code == 404
+
+    def test_cell_edit_select_validation(self, client, tmp_db):
+        """Rejects invalid select option with 400."""
+        _seed_contacts(1)
+        resp = client.post(
+            "/views/cell-edit",
+            json={"entity_type": "contact", "entity_id": "contact-0",
+                  "field_key": "status", "value": "bogus_status"},
+        )
+        assert resp.status_code == 400
+        assert "Invalid option" in resp.json()["error"]
+
+    def test_cell_edit_valid_select(self, client, tmp_db):
+        """Accepts valid select value."""
+        _seed_contacts(1)
+        resp = client.post(
+            "/views/cell-edit",
+            json={"entity_type": "contact", "entity_id": "contact-0",
+                  "field_key": "status", "value": "archived"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+        assert resp.json()["value"] == "archived"
+
+
+# ===========================================================================
+# Registry Validation Tests (Phase 5)
+# ===========================================================================
+
+class TestRegistryEditable:
+    def test_editable_fields_have_db_column(self):
+        """Every editable field must have db_column set."""
+        from poc.views.registry import ENTITY_TYPES
+        for et_key, et_def in ENTITY_TYPES.items():
+            for fk, fdef in et_def.fields.items():
+                if fdef.editable:
+                    assert fdef.db_column, (
+                        f"{et_key}.{fk}: editable=True but no db_column"
+                    )
+
+    def test_editable_fields_not_subqueries(self):
+        """Editable fields should have simple SQL (not subqueries)."""
+        from poc.views.registry import ENTITY_TYPES
+        for et_key, et_def in ENTITY_TYPES.items():
+            for fk, fdef in et_def.fields.items():
+                if fdef.editable:
+                    assert "SELECT" not in fdef.sql.upper(), (
+                        f"{et_key}.{fk}: editable field has subquery SQL"
+                    )

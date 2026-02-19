@@ -287,3 +287,12 @@ dialog .close {
   max-height: 50vh;
   overflow-y: auto;
 }
+
+/* Inline editable cells */
+td[data-editable] {
+  cursor: pointer;
+}
+td[data-editable]:hover {
+  outline: 1px dashed var(--pico-primary);
+  outline-offset: -1px;
+}

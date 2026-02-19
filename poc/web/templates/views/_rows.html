@@ -8,7 +8,7 @@
       {% set fk = col.field_key %}
       {% set fdef = entity_def.fields[fk] if fk in entity_def.fields else None %}
       {% if fdef and fdef.type != 'hidden' %}
-      <th>
+      <th{% if col.width_px %} style="width:{{ col.width_px }}px;"{% endif %}>
         {% if fdef.sortable %}
         {% set is_asc = (s == fk) %}
         {% set is_desc = (s == '-' + fk) %}
@@ -33,7 +33,7 @@
       {% set fk = col.field_key %}
       {% set fdef = entity_def.fields[fk] if fk in entity_def.fields else None %}
       {% if fdef and fdef.type != 'hidden' %}
-      <td>
+      <td{% if fdef.editable and entity_type %} data-editable data-entity-type="{{ entity_type }}" data-entity-id="{{ row.id }}" data-field-key="{{ fdef.db_column }}" data-edit-type="{{ 'select' if fdef.select_options else 'text' }}"{% if fdef.select_options %} data-options="{{ fdef.select_options|join(',') }}"{% endif %}{% endif %}>
         {% set val = row[fk] if fk in row else '' %}
         {% if fdef.type == 'number' and fk == 'score' and val is not none and val != '' %}
           {# Score rendering as progress bar #}

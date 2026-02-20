@@ -539,6 +539,38 @@ def event_detail_api(request: Request, event_id: str):
 
 
 # ------------------------------------------------------------------
+# Communication detail
+# ------------------------------------------------------------------
+
+@router.get("/communications/{comm_id}")
+def communication_detail_api(request: Request, comm_id: str):
+    with get_connection() as conn:
+        comm = conn.execute(
+            "SELECT * FROM communications WHERE id = ?", (comm_id,)
+        ).fetchone()
+        if not comm:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        comm = dict(comm)
+
+    return {
+        "identity": {
+            "name": comm.get("subject") or "No Subject",
+            "subtitle": comm.get("sender_name") or comm.get("sender_address"),
+            "channel": comm.get("channel"),
+            "direction": comm.get("direction"),
+            "timestamp": comm.get("timestamp"),
+        },
+        "context": {
+            "sender": comm.get("sender_address"),
+            "snippet": comm.get("snippet"),
+            "is_read": comm.get("is_read"),
+            "is_archived": comm.get("is_archived"),
+        },
+        "timeline": [],
+    }
+
+
+# ------------------------------------------------------------------
 # Cross-entity search
 # ------------------------------------------------------------------
 

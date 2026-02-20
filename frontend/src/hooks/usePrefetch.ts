@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { get } from '../api/client.ts'
+import { PLURAL } from '../api/detail.ts'
 import type { EntityDetailResponse } from '../types/api.ts'
 
 interface UsePrefetchOptions {
@@ -37,7 +38,7 @@ export function usePrefetch({
       queryClient.prefetchQuery({
         queryKey: ['entity-detail', entityType, rowId],
         queryFn: () =>
-          get<EntityDetailResponse>(`/${entityType}s/${rowId}`),
+          get<EntityDetailResponse>(`/${PLURAL[entityType] ?? `${entityType}s`}/${rowId}`),
         staleTime: 30 * 1000,
       })
     }

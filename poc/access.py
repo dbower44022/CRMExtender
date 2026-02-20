@@ -105,6 +105,33 @@ def visible_communications_query(
     return where, [user_id, customer_id]
 
 
+def visible_projects_query(
+    customer_id: str,
+    user_id: str,
+) -> tuple[str, list]:
+    """Return (WHERE clause, params) for projects visible to a user."""
+    return "p.customer_id = ?", [customer_id]
+
+
+def visible_relationships_query(
+    customer_id: str,
+    user_id: str,
+) -> tuple[str, list]:
+    """Return (WHERE clause, params) for relationships visible to a user.
+
+    Relationship types may be system-wide (customer_id IS NULL) or tenant-scoped.
+    """
+    return "(rt.customer_id IS NULL OR rt.customer_id = ?)", [customer_id]
+
+
+def visible_notes_query(
+    customer_id: str,
+    user_id: str,
+) -> tuple[str, list]:
+    """Return (WHERE clause, params) for notes visible to a user."""
+    return "n.customer_id = ?", [customer_id]
+
+
 def get_visible_contacts(
     conn: sqlite3.Connection,
     customer_id: str,

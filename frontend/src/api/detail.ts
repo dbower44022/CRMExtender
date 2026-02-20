@@ -8,6 +8,9 @@ export const PLURAL: Record<string, string> = {
   conversation: 'conversations',
   event: 'events',
   communication: 'communications',
+  project: 'projects',
+  relationship: 'relationships',
+  note: 'notes',
 }
 
 export function useEntityDetail(

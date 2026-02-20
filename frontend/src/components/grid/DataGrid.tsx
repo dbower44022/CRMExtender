@@ -5,6 +5,7 @@ import {
   flexRender,
   type ColumnDef,
   type Row,
+  type ColumnResizeMode,
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useNavigationStore } from '../../stores/navigation.ts'
@@ -76,6 +77,9 @@ export function DataGrid() {
           accessorKey: vc.field_key,
           header: vc.label_override || fd.label,
           size: vc.width_px ?? 150,
+          minSize: 50,
+          maxSize: 600,
+          enableResizing: true,
           enableSorting: fd.sortable,
           cell: ({ getValue, row }) => (
             <CellRenderer
@@ -90,6 +94,8 @@ export function DataGrid() {
       })
   }, [entityDef, viewColumns, activeEntityType])
 
+  const columnResizeMode: ColumnResizeMode = 'onChange'
+
   const table = useReactTable({
     data: rows,
     columns,
@@ -98,6 +104,8 @@ export function DataGrid() {
     manualPagination: true,
     rowCount: total,
     getRowId: (row) => String(row.id),
+    columnResizeMode,
+    enableColumnResizing: true,
   })
 
   const { rows: tableRows } = table.getRowModel()
@@ -185,15 +193,17 @@ export function DataGrid() {
                 return (
                   <div
                     key={header.id}
-                    onClick={() => canSort && handleSort(header.id)}
-                    className={`shrink-0 px-3 py-2 text-left text-xs font-semibold text-surface-500 ${
-                      canSort
-                        ? 'cursor-pointer select-none hover:text-surface-700'
-                        : ''
-                    }`}
+                    className="group/header relative shrink-0 text-left text-xs font-semibold text-surface-500"
                     style={{ width: header.column.getSize() }}
                   >
-                    <div className="flex items-center gap-1">
+                    <div
+                      onClick={() => canSort && handleSort(header.id)}
+                      className={`flex items-center gap-1 px-3 py-2 ${
+                        canSort
+                          ? 'cursor-pointer select-none hover:text-surface-700'
+                          : ''
+                      }`}
+                    >
                       {flexRender(
                         header.column.columnDef.header,
                         header.getContext(),
@@ -205,6 +215,16 @@ export function DataGrid() {
                           <ChevronDown size={12} />
                         ))}
                     </div>
+                    {/* Column resize handle */}
+                    <div
+                      onMouseDown={header.getResizeHandler()}
+                      onTouchStart={header.getResizeHandler()}
+                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none ${
+                        header.column.getIsResizing()
+                          ? 'bg-primary-500'
+                          : 'bg-transparent group-hover/header:bg-surface-300'
+                      }`}
+                    />
                   </div>
                 )
               }),

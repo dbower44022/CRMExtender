@@ -477,6 +477,218 @@ ENTITY_TYPES: dict[str, EntityDef] = {
     # -----------------------------------------------------------------
     # Events
     # -----------------------------------------------------------------
+    # -----------------------------------------------------------------
+    # Projects
+    # -----------------------------------------------------------------
+    "project": EntityDef(
+        table="projects",
+        alias="p",
+        label="Projects",
+        detail_url="/projects/{id}",
+        fields={
+            "name": FieldDef(
+                label="Name",
+                sql="p.name",
+                type="text",
+                sortable=True,
+                filterable=True,
+                link="/projects/{id}",
+            ),
+            "description": FieldDef(
+                label="Description",
+                sql="p.description",
+                type="text",
+            ),
+            "status": FieldDef(
+                label="Status",
+                sql="p.status",
+                type="text",
+                filterable=True,
+            ),
+            "owner_name": FieldDef(
+                label="Owner",
+                sql=(
+                    "(SELECT u.name FROM users u "
+                    "WHERE u.id = p.owner_id)"
+                ),
+                type="text",
+            ),
+            "created_at": FieldDef(
+                label="Created",
+                sql="p.created_at",
+                type="datetime",
+                sortable=True,
+            ),
+            "updated_at": FieldDef(
+                label="Updated",
+                sql="p.updated_at",
+                type="datetime",
+                sortable=True,
+            ),
+        },
+        default_columns=["name", "status", "owner_name", "updated_at"],
+        default_sort=("name", "asc"),
+        search_fields=["p.name", "p.description"],
+    ),
+
+    # -----------------------------------------------------------------
+    # Relationships
+    # -----------------------------------------------------------------
+    "relationship": EntityDef(
+        table="relationships",
+        alias="rel",
+        label="Relationships",
+        detail_url="/relationships/{id}",
+        base_joins=[
+            "JOIN relationship_types rt ON rt.id = rel.relationship_type_id",
+            "LEFT JOIN contacts c_from ON c_from.id = rel.from_entity_id "
+            "AND rel.from_entity_type = 'contact'",
+            "LEFT JOIN companies co_from ON co_from.id = rel.from_entity_id "
+            "AND rel.from_entity_type = 'company'",
+            "LEFT JOIN contacts c_to ON c_to.id = rel.to_entity_id "
+            "AND rel.to_entity_type = 'contact'",
+            "LEFT JOIN companies co_to ON co_to.id = rel.to_entity_id "
+            "AND rel.to_entity_type = 'company'",
+        ],
+        fields={
+            "relationship_type": FieldDef(
+                label="Type",
+                sql="rt.name",
+                type="text",
+                filterable=True,
+            ),
+            "forward_label": FieldDef(
+                label="Relationship",
+                sql="rt.forward_label",
+                type="text",
+            ),
+            "from_entity_name": FieldDef(
+                label="From",
+                sql="COALESCE(c_from.name, co_from.name)",
+                type="text",
+                sortable=True,
+            ),
+            "from_entity_type": FieldDef(
+                label="From Type",
+                sql="rel.from_entity_type",
+                type="text",
+            ),
+            "from_entity_id": FieldDef(
+                label="From ID",
+                sql="rel.from_entity_id",
+                type="hidden",
+            ),
+            "to_entity_name": FieldDef(
+                label="To",
+                sql="COALESCE(c_to.name, co_to.name)",
+                type="text",
+                sortable=True,
+            ),
+            "to_entity_type": FieldDef(
+                label="To Type",
+                sql="rel.to_entity_type",
+                type="text",
+            ),
+            "to_entity_id": FieldDef(
+                label="To ID",
+                sql="rel.to_entity_id",
+                type="hidden",
+            ),
+            "source": FieldDef(
+                label="Source",
+                sql="rel.source",
+                type="text",
+                filterable=True,
+            ),
+            "created_at": FieldDef(
+                label="Created",
+                sql="rel.created_at",
+                type="datetime",
+                sortable=True,
+            ),
+        },
+        default_columns=[
+            "from_entity_name", "from_entity_type", "from_entity_id",
+            "forward_label",
+            "to_entity_name", "to_entity_type", "to_entity_id",
+            "relationship_type", "source",
+        ],
+        default_sort=("created_at", "desc"),
+        search_fields=[
+            "COALESCE(c_from.name, co_from.name)",
+            "COALESCE(c_to.name, co_to.name)",
+        ],
+    ),
+
+    # -----------------------------------------------------------------
+    # Notes
+    # -----------------------------------------------------------------
+    "note": EntityDef(
+        table="notes",
+        alias="n",
+        label="Notes",
+        detail_url="/notes/{id}",
+        base_joins=[
+            "LEFT JOIN note_revisions nr ON nr.id = n.current_revision_id",
+        ],
+        fields={
+            "title": FieldDef(
+                label="Title",
+                sql="n.title",
+                type="text",
+                sortable=True,
+                filterable=True,
+                link="/notes/{id}",
+            ),
+            "entity_info": FieldDef(
+                label="Linked Entity",
+                sql=(
+                    "(SELECT ne.entity_type || ': ' || "
+                    "COALESCE("
+                    "  (SELECT c2.name FROM contacts c2 WHERE c2.id = ne.entity_id AND ne.entity_type = 'contact'), "
+                    "  (SELECT co2.name FROM companies co2 WHERE co2.id = ne.entity_id AND ne.entity_type = 'company'), "
+                    "  (SELECT conv2.title FROM conversations conv2 WHERE conv2.id = ne.entity_id AND ne.entity_type = 'conversation'), "
+                    "  (SELECT e2.title FROM events e2 WHERE e2.id = ne.entity_id AND ne.entity_type = 'event'), "
+                    "  (SELECT p2.name FROM projects p2 WHERE p2.id = ne.entity_id AND ne.entity_type = 'project'), "
+                    "  ne.entity_id"
+                    ") FROM note_entities ne WHERE ne.note_id = n.id LIMIT 1)"
+                ),
+                type="text",
+            ),
+            "content_preview": FieldDef(
+                label="Preview",
+                sql="SUBSTR(REPLACE(REPLACE(nr.content_html, '<', ' '), '>', ' '), 1, 120)",
+                type="text",
+            ),
+            "created_by_name": FieldDef(
+                label="Created By",
+                sql=(
+                    "(SELECT u.name FROM users u "
+                    "WHERE u.id = n.created_by)"
+                ),
+                type="text",
+            ),
+            "created_at": FieldDef(
+                label="Created",
+                sql="n.created_at",
+                type="datetime",
+                sortable=True,
+            ),
+            "updated_at": FieldDef(
+                label="Updated",
+                sql="n.updated_at",
+                type="datetime",
+                sortable=True,
+            ),
+        },
+        default_columns=["title", "entity_info", "content_preview", "updated_at"],
+        default_sort=("updated_at", "desc"),
+        search_fields=["n.title"],
+    ),
+
+    # -----------------------------------------------------------------
+    # Events
+    # -----------------------------------------------------------------
     "event": EntityDef(
         table="events",
         alias="e",

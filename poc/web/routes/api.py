@@ -571,6 +571,183 @@ def communication_detail_api(request: Request, comm_id: str):
 
 
 # ------------------------------------------------------------------
+# Project detail
+# ------------------------------------------------------------------
+
+@router.get("/projects/{project_id}")
+def project_detail_api(request: Request, project_id: str):
+    cid = request.state.customer_id
+
+    with get_connection() as conn:
+        project = conn.execute(
+            "SELECT * FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if not project:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        project = dict(project)
+        if project.get("customer_id") and project["customer_id"] != cid:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+
+        # Owner name
+        owner_name = None
+        if project.get("owner_id"):
+            owner = conn.execute(
+                "SELECT name FROM users WHERE id = ?",
+                (project["owner_id"],),
+            ).fetchone()
+            if owner:
+                owner_name = owner["name"]
+
+        # Notes linked to this project
+        timeline = []
+        notes = conn.execute(
+            "SELECT n.id, n.title, n.updated_at, nr.content_html "
+            "FROM notes n "
+            "JOIN note_entities ne ON ne.note_id = n.id "
+            "LEFT JOIN note_revisions nr ON nr.id = n.current_revision_id "
+            "WHERE ne.entity_type = 'project' AND ne.entity_id = ? "
+            "ORDER BY n.updated_at DESC LIMIT 20",
+            (project_id,),
+        ).fetchall()
+        for note in notes:
+            summary = _strip_html(note["content_html"] or "")[:120]
+            timeline.append({
+                "type": "note",
+                "id": note["id"],
+                "title": note["title"] or "Note",
+                "date": note["updated_at"] or "",
+                "summary": summary,
+            })
+
+    return {
+        "identity": {
+            "name": project.get("name") or "Untitled",
+            "subtitle": project.get("description"),
+            "status": project.get("status"),
+            "owner": owner_name,
+        },
+        "context": {},
+        "timeline": timeline,
+    }
+
+
+# ------------------------------------------------------------------
+# Relationship detail
+# ------------------------------------------------------------------
+
+@router.get("/relationships/{relationship_id}")
+def relationship_detail_api(request: Request, relationship_id: str):
+    with get_connection() as conn:
+        rel = conn.execute(
+            "SELECT r.*, rt.name AS type_name, rt.forward_label, rt.reverse_label "
+            "FROM relationships r "
+            "JOIN relationship_types rt ON rt.id = r.relationship_type_id "
+            "WHERE r.id = ?",
+            (relationship_id,),
+        ).fetchone()
+        if not rel:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        rel = dict(rel)
+
+        # Resolve from entity name
+        from_name = _resolve_entity_name(
+            conn, rel["from_entity_type"], rel["from_entity_id"],
+        )
+        to_name = _resolve_entity_name(
+            conn, rel["to_entity_type"], rel["to_entity_id"],
+        )
+
+    return {
+        "identity": {
+            "name": f"{from_name} \u2192 {to_name}",
+            "subtitle": rel["forward_label"],
+            "relationship_type": rel["type_name"],
+            "source": rel.get("source"),
+        },
+        "context": {
+            "from": {
+                "entity_type": rel["from_entity_type"],
+                "entity_id": rel["from_entity_id"],
+                "name": from_name,
+            },
+            "to": {
+                "entity_type": rel["to_entity_type"],
+                "entity_id": rel["to_entity_id"],
+                "name": to_name,
+            },
+        },
+        "timeline": [],
+    }
+
+
+# ------------------------------------------------------------------
+# Note detail
+# ------------------------------------------------------------------
+
+@router.get("/notes/{note_id}")
+def note_detail_api(request: Request, note_id: str):
+    cid = request.state.customer_id
+
+    with get_connection() as conn:
+        note = conn.execute(
+            "SELECT * FROM notes WHERE id = ?", (note_id,)
+        ).fetchone()
+        if not note:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        note = dict(note)
+        if note.get("customer_id") and note["customer_id"] != cid:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+
+        # Current revision content
+        content_html = None
+        if note.get("current_revision_id"):
+            rev = conn.execute(
+                "SELECT content_html FROM note_revisions WHERE id = ?",
+                (note["current_revision_id"],),
+            ).fetchone()
+            if rev:
+                content_html = rev["content_html"]
+
+        # Linked entities
+        entities = []
+        for ne in conn.execute(
+            "SELECT entity_type, entity_id, is_pinned FROM note_entities "
+            "WHERE note_id = ?",
+            (note_id,),
+        ).fetchall():
+            ename = _resolve_entity_name(conn, ne["entity_type"], ne["entity_id"])
+            entities.append({
+                "entity_type": ne["entity_type"],
+                "entity_id": ne["entity_id"],
+                "name": ename,
+                "is_pinned": bool(ne["is_pinned"]),
+            })
+
+        # Creator name
+        creator_name = None
+        if note.get("created_by"):
+            creator = conn.execute(
+                "SELECT name FROM users WHERE id = ?",
+                (note["created_by"],),
+            ).fetchone()
+            if creator:
+                creator_name = creator["name"]
+
+    return {
+        "identity": {
+            "name": note.get("title") or "Untitled Note",
+            "subtitle": _strip_html(content_html or "")[:120] if content_html else None,
+            "created_by": creator_name,
+        },
+        "context": {
+            "entities": entities,
+            "content_html": content_html,
+        },
+        "timeline": [],
+    }
+
+
+# ------------------------------------------------------------------
 # Cross-entity search
 # ------------------------------------------------------------------
 
@@ -669,3 +846,24 @@ _TAG_RE = re.compile(r"<[^>]+>")
 def _strip_html(html: str) -> str:
     """Strip HTML tags for plain-text summaries."""
     return _TAG_RE.sub("", html).strip()
+
+
+def _resolve_entity_name(
+    conn, entity_type: str, entity_id: str,
+) -> str:
+    """Look up a human-readable name for any entity type."""
+    _TABLE_MAP = {
+        "contact": ("contacts", "name"),
+        "company": ("companies", "name"),
+        "conversation": ("conversations", "title"),
+        "event": ("events", "title"),
+        "project": ("projects", "name"),
+    }
+    spec = _TABLE_MAP.get(entity_type)
+    if not spec:
+        return entity_id[:8]
+    table, col = spec
+    row = conn.execute(
+        f"SELECT {col} FROM {table} WHERE id = ?", (entity_id,)
+    ).fetchone()
+    return row[col] if row else entity_id[:8]

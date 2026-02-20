@@ -17,6 +17,9 @@ from ..access import (
     visible_companies_query,
     visible_contacts_query,
     visible_conversations_query,
+    visible_notes_query,
+    visible_projects_query,
+    visible_relationships_query,
 )
 from .registry import ENTITY_TYPES, EntityDef, FieldDef
 
@@ -43,6 +46,9 @@ _VISIBILITY_FN = {
     "company": visible_companies_query,
     "conversation": visible_conversations_query,
     "communication": visible_communications_query,
+    "project": visible_projects_query,
+    "relationship": visible_relationships_query,
+    "note": visible_notes_query,
 }
 
 

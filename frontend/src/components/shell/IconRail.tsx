@@ -1,9 +1,13 @@
 import {
+  Home,
   Users,
   Building2,
   MessageSquare,
   Mail,
   Calendar,
+  FolderKanban,
+  Link2,
+  StickyNote,
   Settings,
   type LucideIcon,
 } from 'lucide-react'
@@ -22,6 +26,9 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'conversation', label: 'Conversations', icon: MessageSquare },
   { key: 'communication', label: 'Communications', icon: Mail },
   { key: 'event', label: 'Events', icon: Calendar },
+  { key: 'project', label: 'Projects', icon: FolderKanban },
+  { key: 'relationship', label: 'Relationships', icon: Link2 },
+  { key: 'note', label: 'Notes', icon: StickyNote },
 ]
 
 export function IconRail() {
@@ -40,6 +47,14 @@ export function IconRail() {
   return (
     <div className="flex h-full w-[60px] flex-col items-center border-r border-surface-200 bg-surface-50 py-2">
       <div className="flex flex-1 flex-col gap-1">
+        <a
+          href="/"
+          title="Dashboard"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-surface-500 transition-colors hover:bg-surface-100 hover:text-surface-700"
+        >
+          <Home size={20} strokeWidth={1.8} />
+        </a>
+        <div className="mx-auto my-1 h-px w-6 bg-surface-200" />
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
           const isActive = item.key === activeEntityType

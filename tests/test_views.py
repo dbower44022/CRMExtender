@@ -139,6 +139,7 @@ class TestRegistry:
         from poc.views.registry import ENTITY_TYPES
         assert set(ENTITY_TYPES.keys()) == {
             "contact", "company", "conversation", "communication", "event",
+            "project", "relationship", "note",
         }
 
     def test_default_columns_are_valid(self):
@@ -178,9 +179,12 @@ class TestCRUD:
                 "SELECT * FROM data_sources WHERE customer_id = ?",
                 (CUST_ID,),
             ).fetchall()
-        assert len(rows) == 5
+        assert len(rows) == 8
         entity_types = {r["entity_type"] for r in rows}
-        assert entity_types == {"contact", "company", "conversation", "communication", "event"}
+        assert entity_types == {
+            "contact", "company", "conversation", "communication", "event",
+            "project", "relationship", "note",
+        }
 
     def test_ensure_default_views(self, tmp_db):
         from poc.views.crud import ensure_default_views
@@ -189,7 +193,7 @@ class TestCRUD:
             views = conn.execute(
                 "SELECT * FROM views WHERE owner_id = ?", (USER_ID,),
             ).fetchall()
-        assert len(views) == 5
+        assert len(views) == 8
         # Each view should have columns
         with get_connection() as conn:
             for v in views:
@@ -207,7 +211,7 @@ class TestCRUD:
             views = conn.execute(
                 "SELECT * FROM views WHERE owner_id = ?", (USER_ID,),
             ).fetchall()
-        assert len(views) == 5
+        assert len(views) == 8
 
     def test_create_view(self, tmp_db):
         from poc.views.crud import create_view, ensure_system_data_sources, get_view_with_config

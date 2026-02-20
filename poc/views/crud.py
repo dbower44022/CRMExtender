@@ -27,6 +27,9 @@ _ENTITY_LABELS = {
     "conversation": "Conversations",
     "communication": "Communications",
     "event": "Events",
+    "project": "Projects",
+    "relationship": "Relationships",
+    "note": "Notes",
 }
 
 
@@ -74,6 +77,12 @@ _DEFAULT_COLUMNS = {
                        "timestamp", "direction", "snippet"],
     "event": ["title", "event_type", "start", "start_datetime", "start_date",
               "location", "status", "source", "account_name", "provider_calendar_id"],
+    "project": ["name", "status", "owner_name", "updated_at"],
+    "relationship": ["from_entity_name", "from_entity_type", "from_entity_id",
+                      "forward_label",
+                      "to_entity_name", "to_entity_type", "to_entity_id",
+                      "relationship_type", "source"],
+    "note": ["title", "entity_info", "content_preview", "updated_at"],
 }
 
 _DEFAULT_SORT = {
@@ -82,6 +91,9 @@ _DEFAULT_SORT = {
     "conversation": ("last_activity_at", "desc"),
     "communication": ("timestamp", "desc"),
     "event": ("start", "desc"),
+    "project": ("name", "asc"),
+    "relationship": ("created_at", "desc"),
+    "note": ("updated_at", "desc"),
 }
 
 

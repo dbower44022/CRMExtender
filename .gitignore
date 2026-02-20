@@ -129,3 +129,6 @@ credentials/*.json
 
 # Database
 data/
+
+# React frontend build (include for production serving)
+!frontend/dist/

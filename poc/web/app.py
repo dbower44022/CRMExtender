@@ -67,6 +67,7 @@ def create_app() -> FastAPI:
     app.add_middleware(AuthMiddleware)
 
     from .routes import (
+        api,
         auth_routes,
         communications,
         companies,
@@ -82,6 +83,9 @@ def create_app() -> FastAPI:
         views,
     )
 
+    # JSON API for React frontend
+    app.include_router(api.router, prefix="/api/v1")
+
     app.include_router(auth_routes.router)
     app.include_router(dashboard.router)
     app.include_router(communications.router, prefix="/communications")
@@ -95,5 +99,18 @@ def create_app() -> FastAPI:
     app.include_router(views.router, prefix="/views")
     app.include_router(contact_company_roles.router)
     app.include_router(settings_routes.router)
+
+    # Serve React frontend at /app/
+    _FRONTEND_DIST = _HERE.parent.parent / "frontend" / "dist"
+    if _FRONTEND_DIST.is_dir():
+        from fastapi.responses import FileResponse
+
+        @app.get("/app/{rest_of_path:path}")
+        async def serve_react_app(rest_of_path: str):
+            """Serve React SPA — all routes fall through to index.html."""
+            file_path = _FRONTEND_DIST / rest_of_path
+            if rest_of_path and file_path.is_file():
+                return FileResponse(file_path)
+            return FileResponse(_FRONTEND_DIST / "index.html")
 
     return app

@@ -254,5 +254,6 @@ def _build_order_by(
     direction = "DESC" if sort_direction == "desc" else "ASC"
     sql_expr = field_def.sql
 
-    # NULLs sort last
-    return f"ORDER BY ({sql_expr}) IS NULL, {sql_expr} {direction}"
+    # Case-insensitive sort for text fields; NULLs sort last
+    collate = " COLLATE NOCASE" if field_def.type == "text" else ""
+    return f"ORDER BY ({sql_expr}) IS NULL, {sql_expr}{collate} {direction}"

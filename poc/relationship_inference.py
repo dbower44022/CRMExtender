@@ -100,7 +100,7 @@ def _build_canonical_map(conn) -> dict[str, str]:
             GROUP BY contact_id
         ) p ON p.contact_id = c.id
         WHERE c.name IS NOT NULL AND c.name != ''
-        ORDER BY c.name, participant_count DESC
+        ORDER BY c.name COLLATE NOCASE, participant_count DESC
         """
     ).fetchall()
 

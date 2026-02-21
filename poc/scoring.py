@@ -447,7 +447,7 @@ def score_all_companies(
 
     with get_connection() as conn:
         companies = conn.execute(
-            "SELECT id, name FROM companies WHERE status = 'active' ORDER BY name",
+            "SELECT id, name FROM companies WHERE status = 'active' ORDER BY name COLLATE NOCASE",
         ).fetchall()
 
         for c in companies:
@@ -474,7 +474,7 @@ def score_all_contacts(
 
     with get_connection() as conn:
         contacts = conn.execute(
-            "SELECT id, name FROM contacts WHERE status = 'active' ORDER BY name",
+            "SELECT id, name FROM contacts WHERE status = 'active' ORDER BY name COLLATE NOCASE",
         ).fetchall()
 
         for c in contacts:

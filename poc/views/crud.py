@@ -153,7 +153,7 @@ def get_views_for_entity(
         "FROM views v JOIN data_sources ds ON ds.id = v.data_source_id "
         "WHERE v.customer_id = ? AND ds.entity_type = ? "
         "AND (v.owner_id = ? OR v.visibility = 'shared') "
-        "ORDER BY v.is_default DESC, v.name",
+        "ORDER BY v.is_default DESC, v.name COLLATE NOCASE",
         (customer_id, entity_type, user_id),
     ).fetchall()
     return [dict(r) for r in rows]
@@ -170,7 +170,7 @@ def get_all_views_for_user(
         "FROM views v JOIN data_sources ds ON ds.id = v.data_source_id "
         "WHERE v.customer_id = ? "
         "AND (v.owner_id = ? OR v.visibility = 'shared') "
-        "ORDER BY ds.entity_type, v.is_default DESC, v.name",
+        "ORDER BY ds.entity_type, v.is_default DESC, v.name COLLATE NOCASE",
         (customer_id, user_id),
     ).fetchall()
     return [dict(r) for r in rows]
@@ -295,8 +295,12 @@ def create_view(
 def update_view(
     conn: sqlite3.Connection, view_id: str, **kwargs,
 ) -> None:
-    """Update view-level fields (name, sort_field, sort_direction, per_page)."""
-    allowed = {"name", "sort_field", "sort_direction", "per_page", "visibility"}
+    """Update view-level fields (name, sort, per_page, visibility, AGI settings)."""
+    allowed = {
+        "name", "sort_field", "sort_direction", "per_page", "visibility",
+        "preview_panel_size", "auto_density", "column_auto_sizing",
+        "column_demotion", "primary_identifier_field",
+    }
     updates = {k: v for k, v in kwargs.items() if k in allowed}
     if not updates:
         return

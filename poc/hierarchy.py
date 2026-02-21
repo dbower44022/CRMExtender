@@ -154,7 +154,7 @@ def list_users(customer_id: str) -> list[dict]:
     """Return all users for a customer, ordered by name then email."""
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT * FROM users WHERE customer_id = ? ORDER BY name, email",
+            "SELECT * FROM users WHERE customer_id = ? ORDER BY name COLLATE NOCASE, email COLLATE NOCASE",
             (customer_id,),
         ).fetchall()
     return [dict(r) for r in rows]
@@ -300,13 +300,13 @@ def list_companies(*, customer_id: str | None = None) -> list[dict]:
     if customer_id:
         with get_connection() as conn:
             rows = conn.execute(
-                _DOMAIN_SQL + " AND c.customer_id = ? ORDER BY c.name",
+                _DOMAIN_SQL + " AND c.customer_id = ? ORDER BY c.name COLLATE NOCASE",
                 (customer_id,),
             ).fetchall()
     else:
         with get_connection() as conn:
             rows = conn.execute(
-                _DOMAIN_SQL + " ORDER BY c.name"
+                _DOMAIN_SQL + " ORDER BY c.name COLLATE NOCASE"
             ).fetchall()
 
     result = []
@@ -990,13 +990,13 @@ def list_projects(*, customer_id: str | None = None) -> list[dict]:
     if customer_id:
         with get_connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM projects WHERE status = 'active' AND customer_id = ? ORDER BY name",
+                "SELECT * FROM projects WHERE status = 'active' AND customer_id = ? ORDER BY name COLLATE NOCASE",
                 (customer_id,),
             ).fetchall()
     else:
         with get_connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM projects WHERE status = 'active' ORDER BY name"
+                "SELECT * FROM projects WHERE status = 'active' ORDER BY name COLLATE NOCASE"
             ).fetchall()
     return [dict(r) for r in rows]
 
@@ -1081,7 +1081,7 @@ def list_topics(project_id: str) -> list[dict]:
     """Return all topics in a project ordered by name."""
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT * FROM topics WHERE project_id = ? ORDER BY name", (project_id,)
+            "SELECT * FROM topics WHERE project_id = ? ORDER BY name COLLATE NOCASE", (project_id,)
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -1191,7 +1191,7 @@ def get_hierarchy_stats(*, customer_id: str | None = None) -> list[dict]:
                 LEFT JOIN conversations c ON c.topic_id = t.id
                 WHERE p.status = 'active' AND p.customer_id = ?
                 GROUP BY p.id
-                ORDER BY p.name
+                ORDER BY p.name COLLATE NOCASE
             """, (customer_id,)).fetchall()
     else:
         with get_connection() as conn:
@@ -1204,7 +1204,7 @@ def get_hierarchy_stats(*, customer_id: str | None = None) -> list[dict]:
                 LEFT JOIN conversations c ON c.topic_id = t.id
                 WHERE p.status = 'active'
                 GROUP BY p.id
-                ORDER BY p.name
+                ORDER BY p.name COLLATE NOCASE
             """).fetchall()
     return [dict(r) for r in rows]
 
@@ -1222,6 +1222,6 @@ def get_topic_stats(project_id: str) -> list[dict]:
             LEFT JOIN conversations c ON c.topic_id = t.id
             WHERE t.project_id = ?
             GROUP BY t.id
-            ORDER BY t.name
+            ORDER BY t.name COLLATE NOCASE
         """, (project_id,)).fetchall()
     return [dict(r) for r in rows]

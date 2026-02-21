@@ -140,7 +140,7 @@ def get_visible_contacts(
     """Fetch all contacts visible to a user."""
     where, params = visible_contacts_query(customer_id, user_id)
     rows = conn.execute(
-        f"SELECT c.* FROM contacts c WHERE {where} ORDER BY c.name",
+        f"SELECT c.* FROM contacts c WHERE {where} ORDER BY c.name COLLATE NOCASE",
         params,
     ).fetchall()
     return [dict(r) for r in rows]
@@ -156,7 +156,7 @@ def get_my_contacts(
     rows = conn.execute(
         f"SELECT c.* FROM contacts c "
         f"JOIN user_contacts uc ON uc.contact_id = c.id "
-        f"WHERE {where} ORDER BY c.name",
+        f"WHERE {where} ORDER BY c.name COLLATE NOCASE",
         params,
     ).fetchall()
     return [dict(r) for r in rows]
@@ -170,7 +170,7 @@ def get_visible_companies(
     """Fetch all companies visible to a user."""
     where, params = visible_companies_query(customer_id, user_id)
     rows = conn.execute(
-        f"SELECT co.* FROM companies co WHERE {where} ORDER BY co.name",
+        f"SELECT co.* FROM companies co WHERE {where} ORDER BY co.name COLLATE NOCASE",
         params,
     ).fetchall()
     return [dict(r) for r in rows]
@@ -186,7 +186,7 @@ def get_my_companies(
     rows = conn.execute(
         f"SELECT co.* FROM companies co "
         f"JOIN user_companies uco ON uco.company_id = co.id "
-        f"WHERE {where} ORDER BY co.name",
+        f"WHERE {where} ORDER BY co.name COLLATE NOCASE",
         params,
     ).fetchall()
     return [dict(r) for r in rows]

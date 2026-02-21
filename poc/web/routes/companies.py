@@ -46,7 +46,7 @@ def _find_contacts_by_domain(domain: str, *, customer_id: str | None = None) -> 
                FROM contacts c
                JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
                WHERE {where}
-               ORDER BY c.name""",
+               ORDER BY c.name COLLATE NOCASE""",
             params,
         ).fetchall()
     return [dict(r) for r in rows]
@@ -327,7 +327,7 @@ def company_detail(request: Request, company_id: str):
                LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email'
                LEFT JOIN contact_company_roles ccr ON ccr.id = cc.role_id
                WHERE cc.company_id = ?
-               ORDER BY cc.is_current DESC, c.name""",
+               ORDER BY cc.is_current DESC, c.name COLLATE NOCASE""",
             (company_id,),
         ).fetchall()
         contacts = [dict(r) for r in contacts]

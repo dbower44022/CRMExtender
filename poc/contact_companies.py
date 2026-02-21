@@ -141,7 +141,7 @@ def list_affiliations_for_contact(contact_id: str) -> list[dict]:
                JOIN companies co ON co.id = cc.company_id
                LEFT JOIN contact_company_roles ccr ON ccr.id = cc.role_id
                WHERE cc.contact_id = ?
-               ORDER BY cc.is_current DESC, cc.is_primary DESC, co.name""",
+               ORDER BY cc.is_current DESC, cc.is_primary DESC, co.name COLLATE NOCASE""",
             (contact_id,),
         ).fetchall()
     return [dict(r) for r in rows]
@@ -163,7 +163,7 @@ def list_affiliations_for_company(company_id: str) -> list[dict]:
                LEFT JOIN contact_identifiers ci
                  ON ci.contact_id = c.id AND ci.type = 'email' AND ci.is_primary = 1
                WHERE cc.company_id = ?
-               ORDER BY cc.is_current DESC, cc.is_primary DESC, c.name""",
+               ORDER BY cc.is_current DESC, cc.is_primary DESC, c.name COLLATE NOCASE""",
             (company_id,),
         ).fetchall()
     return [dict(r) for r in rows]

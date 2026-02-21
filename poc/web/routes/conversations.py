@@ -81,7 +81,7 @@ def _get_topics_for_filter() -> list[dict]:
             """SELECT t.id, t.name, p.name AS project_name
                FROM topics t
                JOIN projects p ON p.id = t.project_id
-               ORDER BY p.name, t.name"""
+               ORDER BY p.name COLLATE NOCASE, t.name COLLATE NOCASE"""
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -222,7 +222,7 @@ def conversation_detail(request: Request, conversation_id: str):
             """SELECT t.name FROM tags t
                JOIN conversation_tags ct ON ct.tag_id = t.id
                WHERE ct.conversation_id = ?
-               ORDER BY t.name""",
+               ORDER BY t.name COLLATE NOCASE""",
             (conversation_id,),
         ).fetchall()
         tag_names = [t["name"] for t in tags]
@@ -231,7 +231,7 @@ def conversation_detail(request: Request, conversation_id: str):
         all_topics = conn.execute(
             """SELECT t.id, t.name, p.name AS project_name
                FROM topics t JOIN projects p ON p.id = t.project_id
-               ORDER BY p.name, t.name"""
+               ORDER BY p.name COLLATE NOCASE, t.name COLLATE NOCASE"""
         ).fetchall()
         all_topics = [dict(t) for t in all_topics]
 

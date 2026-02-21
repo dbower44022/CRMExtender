@@ -75,7 +75,7 @@ def find_matching_topics(
 
         # Load topics for this project
         topic_rows = conn.execute(
-            "SELECT id, name FROM topics WHERE project_id = ? ORDER BY name",
+            "SELECT id, name FROM topics WHERE project_id = ? ORDER BY name COLLATE NOCASE",
             (project_id,),
         ).fetchall()
         if not topic_rows:

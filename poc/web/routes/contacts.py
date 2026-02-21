@@ -276,7 +276,7 @@ def contact_relate_form(request: Request, ids: list[str] = Query(default=[])):
         type_rows = conn.execute(
             "SELECT * FROM relationship_types "
             "WHERE from_entity_type = 'contact' AND to_entity_type = 'contact' "
-            "ORDER BY name",
+            "ORDER BY name COLLATE NOCASE",
         ).fetchall()
         default_types = [dict(r) for r in type_rows]
 
@@ -295,7 +295,7 @@ def contact_relate_types(request: Request, to_entity_type: str = "contact"):
         rows = conn.execute(
             "SELECT * FROM relationship_types "
             "WHERE from_entity_type = 'contact' AND to_entity_type = ? "
-            "ORDER BY name",
+            "ORDER BY name COLLATE NOCASE",
             (to_entity_type,),
         ).fetchall()
         types = [dict(r) for r in rows]
@@ -329,7 +329,7 @@ def contact_relate_search(
                         WHERE c.name LIKE ?
                           AND c.customer_id = ?
                           AND c.id NOT IN ({exclude_placeholders})
-                        ORDER BY c.name LIMIT 20""",
+                        ORDER BY c.name COLLATE NOCASE LIMIT 20""",
                     [f"%{q.strip()}%", cid] + list(contact_ids),
                 ).fetchall()
                 entities = [{"id": r["id"], "name": r["name"], "detail": r["email"] or ""} for r in rows]
@@ -337,7 +337,7 @@ def contact_relate_search(
                 rows = conn.execute(
                     """SELECT id, name, domain FROM companies
                        WHERE name LIKE ? AND customer_id = ?
-                       ORDER BY name LIMIT 20""",
+                       ORDER BY name COLLATE NOCASE LIMIT 20""",
                     (f"%{q.strip()}%", cid),
                 ).fetchall()
                 entities = [{"id": r["id"], "name": r["name"], "detail": r["domain"] or ""} for r in rows]

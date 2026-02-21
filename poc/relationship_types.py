@@ -87,7 +87,7 @@ def list_relationship_types(
 
     with get_connection() as conn:
         rows = conn.execute(
-            f"SELECT * FROM relationship_types {where} ORDER BY name",
+            f"SELECT * FROM relationship_types {where} ORDER BY name COLLATE NOCASE",
             params,
         ).fetchall()
     return [dict(r) for r in rows]

@@ -132,7 +132,7 @@ def resolve_unlinked_contacts(*, dry_run: bool = False) -> DomainResolveResult:
             "JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email' "
             "LEFT JOIN contact_companies cc ON cc.contact_id = c.id "
             "WHERE cc.id IS NULL "
-            "ORDER BY c.name",
+            "ORDER BY c.name COLLATE NOCASE",
         ).fetchall()
 
         result.contacts_checked = len(rows)

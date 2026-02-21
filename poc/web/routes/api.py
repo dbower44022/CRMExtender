@@ -469,7 +469,7 @@ def contact_detail_api(request: Request, contact_id: str):
             "FROM contact_companies cc "
             "JOIN companies co ON co.id = cc.company_id "
             "LEFT JOIN contact_company_roles ccr ON ccr.id = cc.role_id "
-            "WHERE cc.contact_id = ? ORDER BY cc.is_current DESC, co.name",
+            "WHERE cc.contact_id = ? ORDER BY cc.is_current DESC, co.name COLLATE NOCASE",
             (contact_id,),
         ).fetchall()
         affiliations = [
@@ -608,7 +608,7 @@ def company_detail_api(request: Request, company_id: str):
             "JOIN contacts c ON c.id = cc.contact_id "
             "LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email' AND ci.is_primary = 1 "
             "LEFT JOIN contact_company_roles ccr ON ccr.id = cc.role_id "
-            "WHERE cc.company_id = ? ORDER BY cc.is_current DESC, c.name",
+            "WHERE cc.company_id = ? ORDER BY cc.is_current DESC, c.name COLLATE NOCASE",
             (company_id,),
         ).fetchall()
 

@@ -213,6 +213,87 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 editable=True,
                 db_column="headquarters_location",
             ),
+            "description": FieldDef(
+                label="Description",
+                sql="co.description",
+                type="text",
+                editable=True,
+                db_column="description",
+            ),
+            "stock_symbol": FieldDef(
+                label="Ticker",
+                sql="co.stock_symbol",
+                type="text",
+                sortable=True,
+                editable=True,
+                db_column="stock_symbol",
+            ),
+            "employee_count": FieldDef(
+                label="Employees",
+                sql="co.employee_count",
+                type="number",
+                sortable=True,
+                editable=True,
+                db_column="employee_count",
+            ),
+            "founded_year": FieldDef(
+                label="Founded",
+                sql="co.founded_year",
+                type="number",
+                sortable=True,
+                editable=True,
+                db_column="founded_year",
+            ),
+            "revenue_range": FieldDef(
+                label="Revenue",
+                sql="co.revenue_range",
+                type="text",
+                filterable=True,
+                editable=True,
+                db_column="revenue_range",
+            ),
+            "funding_total": FieldDef(
+                label="Funding",
+                sql="co.funding_total",
+                type="text",
+                editable=True,
+                db_column="funding_total",
+            ),
+            "funding_stage": FieldDef(
+                label="Funding Stage",
+                sql="co.funding_stage",
+                type="text",
+                filterable=True,
+                editable=True,
+                db_column="funding_stage",
+            ),
+            "email": FieldDef(
+                label="Email",
+                sql=(
+                    "(SELECT ea.address FROM email_addresses ea "
+                    "WHERE ea.entity_type = 'company' AND ea.entity_id = co.id "
+                    "AND ea.is_current = 1 ORDER BY ea.is_primary DESC, ea.created_at ASC LIMIT 1)"
+                ),
+                type="text",
+            ),
+            "phone": FieldDef(
+                label="Phone",
+                sql=(
+                    "(SELECT pn.number FROM phone_numbers pn "
+                    "WHERE pn.entity_type = 'company' AND pn.entity_id = co.id "
+                    "AND pn.is_current = 1 ORDER BY pn.created_at ASC LIMIT 1)"
+                ),
+                type="text",
+            ),
+            "address": FieldDef(
+                label="Address",
+                sql=(
+                    "(SELECT a.street FROM addresses a "
+                    "WHERE a.entity_type = 'company' AND a.entity_id = co.id "
+                    "AND a.is_current = 1 ORDER BY a.created_at ASC LIMIT 1)"
+                ),
+                type="text",
+            ),
             "score": FieldDef(
                 label="Score",
                 sql=(

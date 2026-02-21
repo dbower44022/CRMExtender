@@ -942,6 +942,41 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 ),
                 type="text",
             ),
+            "updated_by_name": FieldDef(
+                label="Updated By",
+                sql=(
+                    "(SELECT u.name FROM users u "
+                    "WHERE u.id = n.updated_by)"
+                ),
+                type="text",
+            ),
+            "revision_count": FieldDef(
+                label="Revisions",
+                sql=(
+                    "(SELECT COUNT(*) FROM note_revisions nr2 "
+                    "WHERE nr2.note_id = n.id)"
+                ),
+                type="number",
+                sortable=True,
+            ),
+            "entity_count": FieldDef(
+                label="Linked Entities",
+                sql=(
+                    "(SELECT COUNT(*) FROM note_entities ne2 "
+                    "WHERE ne2.note_id = n.id)"
+                ),
+                type="number",
+                sortable=True,
+            ),
+            "is_pinned": FieldDef(
+                label="Pinned",
+                sql=(
+                    "(SELECT MAX(ne3.is_pinned) FROM note_entities ne3 "
+                    "WHERE ne3.note_id = n.id)"
+                ),
+                type="number",
+                filterable=True,
+            ),
             "created_at": FieldDef(
                 label="Created",
                 sql="n.created_at",

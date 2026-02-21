@@ -5,6 +5,7 @@ export interface FieldDef {
   filterable: boolean
   link: string | null
   editable: boolean
+  db_column: string | null
   select_options: string[] | null
 }
 
@@ -59,6 +60,7 @@ export interface ViewDataResponse {
   total: number
   page: number
   per_page: number
+  has_more: boolean
 }
 
 export interface EntityDetailResponse {
@@ -79,4 +81,46 @@ export interface TimelineEntry {
 export interface HealthResponse {
   status: string
   version: string
+}
+
+// --- View mutation types ---
+
+export interface CreateViewRequest {
+  entity_type: string
+  name: string
+}
+
+export interface UpdateViewRequest {
+  name?: string
+  sort_field?: string
+  sort_direction?: 'asc' | 'desc'
+  per_page?: number
+  visibility?: 'personal' | 'shared'
+}
+
+export interface UpdateColumnsRequest {
+  columns: (string | { key: string; label?: string; width?: number })[]
+}
+
+export interface UpdateFiltersRequest {
+  filters: { field_key: string; operator: string; value?: string | null }[]
+}
+
+export interface CellEditRequest {
+  entity_type: string
+  entity_id: string
+  field_key: string
+  value: string
+}
+
+export interface CellEditResponse {
+  ok: boolean
+  value?: string
+  error?: string
+}
+
+export interface QuickFilter {
+  field_key: string
+  operator: string
+  value?: string
 }

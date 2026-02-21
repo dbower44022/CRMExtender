@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict
 
 from fastapi import APIRouter, Query, Request
@@ -10,9 +11,18 @@ from fastapi.responses import JSONResponse
 
 from ...database import get_connection
 from ...views.crud import (
+    create_view,
+    delete_view,
+    duplicate_view,
+    ensure_system_data_sources,
+    get_data_source,
     get_default_view_for_entity,
+    get_view,
     get_view_with_config,
     get_views_for_entity,
+    update_view,
+    update_view_columns,
+    update_view_filters,
 )
 from ...views.engine import execute_view
 from ...views.registry import ENTITY_TYPES
@@ -43,7 +53,6 @@ def entity_types():
             fd = asdict(fdef)
             # Remove the sql expression — frontend doesn't need it
             fd.pop("sql", None)
-            fd.pop("db_column", None)
             fields[fk] = fd
         result[key] = {
             "label": edef.label,
@@ -91,20 +100,38 @@ def view_data(
     sort_direction: str = Query("asc"),
     search: str = Query(""),
     scope: str = Query("all"),
+    filters: str = Query(""),
 ):
     cid = request.state.customer_id
     uid = request.state.user["id"] if request.state.user else ""
+
+    # Parse extra_filters from query param (JSON array of filter dicts)
+    extra_filters: list[dict] = []
+    if filters:
+        try:
+            extra_filters = json.loads(filters)
+        except (json.JSONDecodeError, TypeError):
+            extra_filters = []
 
     with get_connection() as conn:
         view = get_view_with_config(conn, view_id)
         if not view:
             return JSONResponse({"error": "View not found"}, status_code=404)
 
+        # Merge view filters with any extra (quick) filters
+        all_filters = list(view["filters"])
+        for ef in extra_filters:
+            all_filters.append({
+                "field_key": ef.get("field_key", ""),
+                "operator": ef.get("operator", "equals"),
+                "value": ef.get("value"),
+            })
+
         rows, total = execute_view(
             conn,
             entity_type=view["entity_type"],
             columns=view["columns"],
-            filters=view["filters"],
+            filters=all_filters,
             sort_field=sort or view.get("sort_field"),
             sort_direction=sort_direction if sort else view.get("sort_direction", "asc"),
             search=search,
@@ -115,12 +142,266 @@ def view_data(
             scope=scope,
         )
 
+    per_page = view.get("per_page", 50)
     return {
         "rows": rows,
         "total": total,
         "page": page,
-        "per_page": view.get("per_page", 50),
+        "per_page": per_page,
+        "has_more": page * per_page < total,
     }
+
+
+# ------------------------------------------------------------------
+# View Mutations
+# ------------------------------------------------------------------
+
+def _extract_link_deps(entity_def):
+    """Map visible fields to hidden fields required by their link templates."""
+    deps = {}
+    hidden_keys = {k for k, f in entity_def.fields.items() if f.type == "hidden"}
+    for fk, fdef in entity_def.fields.items():
+        if fdef.link:
+            refs = set(re.findall(r'\{(\w+)\}', fdef.link))
+            needed = [r for r in refs if r in hidden_keys and r != "id"]
+            if needed:
+                deps[fk] = needed
+    return deps
+
+
+@router.post("/views")
+async def create_view_api(request: Request):
+    """Create a new view for an entity type."""
+    cid = request.state.customer_id
+    uid = request.state.user["id"] if request.state.user else ""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    entity_type = body.get("entity_type", "")
+    name = body.get("name", "").strip()
+    if not entity_type or not name:
+        return JSONResponse(
+            {"error": "entity_type and name are required"}, status_code=400,
+        )
+    if entity_type not in ENTITY_TYPES:
+        return JSONResponse({"error": "Unknown entity type"}, status_code=400)
+
+    with get_connection() as conn:
+        ensure_system_data_sources(conn, cid)
+        ds_id = f"ds-{entity_type}-{cid}"
+        ds = get_data_source(conn, ds_id)
+        if not ds:
+            return JSONResponse({"error": "Data source not found"}, status_code=400)
+
+        view_id = create_view(
+            conn,
+            customer_id=cid,
+            user_id=uid,
+            data_source_id=ds_id,
+            name=name,
+        )
+        conn.commit()
+        view = get_view_with_config(conn, view_id)
+    return view
+
+
+@router.put("/views/{view_id}")
+async def update_view_api(request: Request, view_id: str):
+    """Update view settings (name, sort, per_page, visibility)."""
+    cid = request.state.customer_id
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    with get_connection() as conn:
+        view = get_view(conn, view_id)
+        if not view or view.get("customer_id") != cid:
+            return JSONResponse({"error": "View not found"}, status_code=404)
+
+        update_view(conn, view_id, **body)
+        conn.commit()
+        return get_view_with_config(conn, view_id)
+
+
+@router.put("/views/{view_id}/columns")
+async def update_view_columns_api(request: Request, view_id: str):
+    """Replace columns for a view."""
+    cid = request.state.customer_id
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    columns = body.get("columns", [])
+    if not columns:
+        return JSONResponse({"error": "columns list is required"}, status_code=400)
+
+    with get_connection() as conn:
+        view = get_view(conn, view_id)
+        if not view or view.get("customer_id") != cid:
+            return JSONResponse({"error": "View not found"}, status_code=404)
+
+        entity_type = view.get("entity_type", "")
+        entity_def = ENTITY_TYPES.get(entity_type)
+
+        if entity_def:
+            # Normalize column format
+            def _col_key(item):
+                return item["key"] if isinstance(item, dict) else item
+
+            is_object_format = columns and isinstance(columns[0], dict)
+            valid_keys = set(entity_def.fields.keys())
+            columns = [c for c in columns if _col_key(c) in valid_keys]
+
+            # Auto-append hidden dependency fields
+            field_deps = _extract_link_deps(entity_def)
+            col_set = {_col_key(c) for c in columns}
+            for item in list(columns):
+                for dep_key in field_deps.get(_col_key(item), []):
+                    if dep_key not in col_set:
+                        columns.append({"key": dep_key} if is_object_format else dep_key)
+                        col_set.add(dep_key)
+
+        update_view_columns(conn, view_id, columns)
+        conn.commit()
+        return get_view_with_config(conn, view_id)
+
+
+@router.put("/views/{view_id}/filters")
+async def update_view_filters_api(request: Request, view_id: str):
+    """Replace filters for a view."""
+    cid = request.state.customer_id
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    filters = body.get("filters", [])
+
+    with get_connection() as conn:
+        view = get_view(conn, view_id)
+        if not view or view.get("customer_id") != cid:
+            return JSONResponse({"error": "View not found"}, status_code=404)
+
+        update_view_filters(conn, view_id, filters)
+        conn.commit()
+        return get_view_with_config(conn, view_id)
+
+
+@router.delete("/views/{view_id}")
+def delete_view_api(request: Request, view_id: str):
+    """Delete a view (fails for default views)."""
+    cid = request.state.customer_id
+
+    with get_connection() as conn:
+        view = get_view(conn, view_id)
+        if not view or view.get("customer_id") != cid:
+            return JSONResponse({"error": "View not found"}, status_code=404)
+
+        deleted = delete_view(conn, view_id)
+        if not deleted:
+            return JSONResponse(
+                {"error": "Cannot delete a default view"}, status_code=400,
+            )
+        conn.commit()
+    return {"ok": True}
+
+
+@router.post("/views/{view_id}/duplicate")
+async def duplicate_view_api(request: Request, view_id: str):
+    """Duplicate a view."""
+    cid = request.state.customer_id
+    uid = request.state.user["id"] if request.state.user else ""
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    with get_connection() as conn:
+        view = get_view(conn, view_id)
+        if not view or view.get("customer_id") != cid:
+            return JSONResponse({"error": "View not found"}, status_code=404)
+
+        new_name = (body.get("name") or f"{view['name']} (copy)").strip()
+        new_id = duplicate_view(conn, view_id, new_name, uid)
+        if not new_id:
+            return JSONResponse({"error": "Duplicate failed"}, status_code=500)
+        conn.commit()
+        return get_view_with_config(conn, new_id)
+
+
+@router.post("/cell-edit")
+async def cell_edit_api(request: Request):
+    """Update a single field on a contact or company via inline edit."""
+    from ...hierarchy import update_company, update_contact
+
+    _UPDATE_DISPATCHERS = {
+        "contact": ("contacts", update_contact),
+        "company": ("companies", update_company),
+    }
+
+    cid = request.state.customer_id
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
+
+    entity_type = body.get("entity_type", "")
+    entity_id = body.get("entity_id", "")
+    field_key = body.get("field_key", "")
+    value = body.get("value", "")
+
+    if entity_type not in _UPDATE_DISPATCHERS:
+        return JSONResponse(
+            {"ok": False, "error": f"Entity type '{entity_type}' is not editable"},
+            status_code=400,
+        )
+
+    entity_def = ENTITY_TYPES.get(entity_type)
+    if not entity_def:
+        return JSONResponse({"ok": False, "error": "Unknown entity type"}, status_code=400)
+
+    # Find the editable field by db_column
+    fdef = None
+    for fk, fd in entity_def.fields.items():
+        if fd.db_column == field_key and fd.editable:
+            fdef = fd
+            break
+
+    if not fdef:
+        return JSONResponse(
+            {"ok": False, "error": f"Field '{field_key}' is not editable"},
+            status_code=400,
+        )
+
+    # Validate select options
+    if fdef.select_options and value and value not in fdef.select_options:
+        return JSONResponse(
+            {"ok": False, "error": f"Invalid option '{value}'. Must be one of: {', '.join(fdef.select_options)}"},
+            status_code=400,
+        )
+
+    # Verify entity belongs to this customer
+    table_name, update_fn = _UPDATE_DISPATCHERS[entity_type]
+    with get_connection() as conn:
+        row = conn.execute(
+            f"SELECT id FROM {table_name} WHERE id = ? AND customer_id = ?",
+            (entity_id, cid),
+        ).fetchone()
+
+    if not row:
+        return JSONResponse({"ok": False, "error": "Entity not found"}, status_code=404)
+
+    updated = update_fn(entity_id, **{field_key: value})
+    if not updated:
+        return JSONResponse({"ok": False, "error": "Update failed"}, status_code=500)
+
+    return JSONResponse({"ok": True, "value": updated.get(field_key, value)})
 
 
 # ------------------------------------------------------------------

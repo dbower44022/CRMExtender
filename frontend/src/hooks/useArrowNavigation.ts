@@ -18,8 +18,6 @@ export function useArrowNavigation({
   const selectedRowId = useNavigationStore((s) => s.selectedRowId)
   const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
   const showDetailPanel = useLayoutStore((s) => s.showDetailPanel)
-  const page = useNavigationStore((s) => s.page)
-  const setPage = useNavigationStore((s) => s.setPage)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -46,9 +44,6 @@ export function useArrowNavigation({
         if (nextIndex < rows.length) {
           const row = rows[nextIndex]
           onSelect(row, nextIndex)
-        } else if (nextIndex >= rows.length) {
-          // Auto-paginate forward
-          setPage(page + 1)
         }
       }
 
@@ -60,9 +55,6 @@ export function useArrowNavigation({
         if (prevIndex >= 0) {
           const row = rows[prevIndex]
           onSelect(row, prevIndex)
-        } else if (page > 1) {
-          // Auto-paginate backward
-          setPage(page - 1)
         }
       }
 
@@ -80,7 +72,5 @@ export function useArrowNavigation({
     setSelectedRow,
     showDetailPanel,
     onSelect,
-    page,
-    setPage,
   ])
 }

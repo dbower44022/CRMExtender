@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useEffect } from 'react'
+import { useMemo, useCallback, useRef, useEffect, useState } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,16 +11,13 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { useLayoutStore } from '../../stores/layout.ts'
 import { useEntityRegistry } from '../../api/registry.ts'
-import { useViewConfig, useViewData } from '../../api/views.ts'
+import { useViewConfig, useInfiniteViewData } from '../../api/views.ts'
 import { useArrowNavigation } from '../../hooks/useArrowNavigation.ts'
 import { usePrefetch } from '../../hooks/usePrefetch.ts'
 import { CellRenderer } from './CellRenderer.tsx'
-import {
-  ChevronUp,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react'
+import { InlineEditor } from './InlineEditor.tsx'
+import { useUpdateViewColumns } from '../../api/views.ts'
+import { ChevronUp, ChevronDown, Loader2 } from 'lucide-react'
 import type { FieldDef, ViewColumn } from '../../types/api.ts'
 
 type RowData = Record<string, unknown>
@@ -28,39 +25,56 @@ type RowData = Record<string, unknown>
 export function DataGrid() {
   const activeViewId = useNavigationStore((s) => s.activeViewId)
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)
-  const page = useNavigationStore((s) => s.page)
   const sort = useNavigationStore((s) => s.sort)
   const sortDirection = useNavigationStore((s) => s.sortDirection)
   const search = useNavigationStore((s) => s.search)
+  const quickFilters = useNavigationStore((s) => s.quickFilters)
   const selectedRowId = useNavigationStore((s) => s.selectedRowId)
   const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
   const setSort = useNavigationStore((s) => s.setSort)
-  const setPage = useNavigationStore((s) => s.setPage)
   const showDetailPanel = useLayoutStore((s) => s.showDetailPanel)
 
   const { data: registry } = useEntityRegistry()
   const { data: viewConfig } = useViewConfig(activeViewId)
   const {
-    data: viewData,
+    data,
     isLoading,
     isFetching,
-  } = useViewData({
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteViewData({
     viewId: activeViewId,
-    page,
     sort: sort ?? viewConfig?.sort_field,
     sortDirection: sortDirection ?? (viewConfig?.sort_direction as 'asc' | 'desc'),
     search,
+    quickFilters,
   })
 
-  const rows = viewData?.rows ?? []
-  const total = viewData?.total ?? 0
-  const perPage = viewConfig?.per_page ?? 50
-  const totalPages = Math.ceil(total / perPage)
+  const rows = useMemo(() => data?.pages.flatMap((p) => p.rows) ?? [], [data])
+  const total = data?.pages[0]?.total ?? 0
 
   const entityDef = registry?.[activeEntityType]
   const viewColumns = viewConfig?.columns ?? []
 
   const tableContainerRef = useRef<HTMLDivElement>(null)
+  const [editingCell, setEditingCell] = useState<{
+    rowId: string
+    fieldKey: string
+  } | null>(null)
+
+  // Force browser to recalculate overflow after data populates.
+  // Without this, overflowY:'auto' doesn't engage until a resize event.
+  useEffect(() => {
+    const el = tableContainerRef.current
+    if (!el || !rows.length) return
+    requestAnimationFrame(() => {
+      el.style.overflowY = 'scroll'
+      requestAnimationFrame(() => {
+        el.style.overflowY = 'auto'
+      })
+    })
+  }, [rows.length])
 
   // Build TanStack columns from view config + entity registry
   const columns = useMemo<ColumnDef<RowData>[]>(() => {
@@ -108,6 +122,32 @@ export function DataGrid() {
     enableColumnResizing: true,
   })
 
+  // Column resize persistence — debounced save
+  const updateColumns = useUpdateViewColumns(activeViewId ?? '')
+  const resizeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const columnSizingState = table.getState().columnSizing
+
+  useEffect(() => {
+    // Skip empty or initial sizing
+    if (Object.keys(columnSizingState).length === 0 || !activeViewId || !viewColumns.length) return
+
+    if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current)
+    resizeTimerRef.current = setTimeout(() => {
+      const cols = viewColumns.map((vc: ViewColumn) => ({
+        key: vc.field_key,
+        label: vc.label_override || undefined,
+        width: columnSizingState[vc.field_key]
+          ? Math.round(columnSizingState[vc.field_key])
+          : vc.width_px || undefined,
+      }))
+      updateColumns.mutate({ columns: cols })
+    }, 1000)
+
+    return () => {
+      if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current)
+    }
+  }, [columnSizingState]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const { rows: tableRows } = table.getRowModel()
 
   // Virtual scrolling
@@ -117,6 +157,23 @@ export function DataGrid() {
     estimateSize: () => 34,
     overscan: 10,
   })
+
+  // Infinite scroll — fetch next page when near bottom
+  useEffect(() => {
+    const el = tableContainerRef.current
+    if (!el) return
+    const onScroll = () => {
+      if (
+        el.scrollHeight - el.scrollTop - el.clientHeight < 300 &&
+        hasNextPage &&
+        !isFetchingNextPage
+      ) {
+        fetchNextPage()
+      }
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   // Row selection
   const handleRowClick = useCallback(
@@ -179,9 +236,11 @@ export function DataGrid() {
     .reduce((sum, col) => sum + col.getSize(), 0)
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Scrollable area with sticky header */}
-      <div ref={tableContainerRef} className="flex-1 overflow-auto">
+    <div>
+      <div
+        ref={tableContainerRef}
+        style={{ maxHeight: 'calc(100vh - 130px)', overflowY: 'auto' }}
+      >
         {/* Header — sticky inside the scroll container so scrollbar affects both */}
         <div className="sticky top-0 z-10 border-b border-surface-200 bg-surface-50">
           <div className="flex" style={{ width: totalWidth }}>
@@ -282,18 +341,63 @@ export function DataGrid() {
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <div
-                      key={cell.id}
-                      className="shrink-0 truncate px-3 text-sm"
-                      style={{ width: cell.column.getSize() }}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </div>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const fieldKey = cell.column.id
+                    const fd = entityDef?.fields[fieldKey]
+                    const isEditable =
+                      fd?.editable &&
+                      (activeEntityType === 'contact' ||
+                        activeEntityType === 'company')
+                    const isEditing =
+                      editingCell?.rowId === String(row.original.id) &&
+                      editingCell?.fieldKey === fieldKey
+
+                    return (
+                      <div
+                        key={cell.id}
+                        data-edit-cell={
+                          isEditable
+                            ? `${row.original.id}-${fieldKey}`
+                            : undefined
+                        }
+                        className={`shrink-0 truncate px-3 text-sm ${
+                          isEditable && !isEditing
+                            ? 'cell-editable'
+                            : ''
+                        }`}
+                        style={{ width: cell.column.getSize() }}
+                        onDoubleClick={
+                          isEditable
+                            ? (e) => {
+                                e.stopPropagation()
+                                setEditingCell({
+                                  rowId: String(row.original.id),
+                                  fieldKey,
+                                })
+                              }
+                            : undefined
+                        }
+                      >
+                        {isEditing && fd ? (
+                          <InlineEditor
+                            entityType={activeEntityType}
+                            entityId={String(row.original.id)}
+                            fieldKey={fd.db_column ?? fieldKey}
+                            fieldDef={fd}
+                            currentValue={String(
+                              row.original[fieldKey] ?? '',
+                            )}
+                            onClose={() => setEditingCell(null)}
+                          />
+                        ) : (
+                          flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )
             })}
@@ -301,38 +405,22 @@ export function DataGrid() {
         )}
       </div>
 
-      {/* Pagination */}
+      {/* Status bar */}
       <div className="flex items-center justify-between border-t border-surface-200 bg-surface-50 px-4 py-1.5 text-xs text-surface-500">
         <span>
           {total > 0
-            ? `${(page - 1) * perPage + 1}\u2013${Math.min(
-                page * perPage,
-                total,
-              )} of ${total}`
+            ? `${rows.length} of ${total}`
             : 'No records'}
         </span>
-        {isFetching && !isLoading && (
+        {isFetchingNextPage && (
+          <span className="flex items-center gap-1 text-primary-500">
+            <Loader2 size={12} className="animate-spin" />
+            Loading more...
+          </span>
+        )}
+        {isFetching && !isLoading && !isFetchingNextPage && (
           <span className="text-primary-500">Updating...</span>
         )}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setPage(page - 1)}
-            disabled={page <= 1}
-            className="flex h-6 w-6 items-center justify-center rounded text-surface-500 transition-colors hover:bg-surface-200 disabled:opacity-30"
-          >
-            <ChevronLeft size={14} />
-          </button>
-          <span>
-            {page} / {totalPages || 1}
-          </span>
-          <button
-            onClick={() => setPage(page + 1)}
-            disabled={page >= totalPages}
-            className="flex h-6 w-6 items-center justify-center rounded text-surface-500 transition-colors hover:bg-surface-200 disabled:opacity-30"
-          >
-            <ChevronRight size={14} />
-          </button>
-        </div>
       </div>
     </div>
   )

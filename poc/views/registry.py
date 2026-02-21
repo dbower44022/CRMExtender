@@ -475,9 +475,61 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 sql="conv.ai_summary",
                 type="text",
             ),
+            "ai_action_items": FieldDef(
+                label="Action Items",
+                sql="conv.ai_action_items",
+                type="text",
+            ),
+            "ai_topics": FieldDef(
+                label="AI Topics",
+                sql="conv.ai_topics",
+                type="text",
+            ),
+            "ai_summarized_at": FieldDef(
+                label="Summarized",
+                sql="conv.ai_summarized_at",
+                type="datetime",
+                sortable=True,
+            ),
+            "dismissed": FieldDef(
+                label="Dismissed",
+                sql="conv.dismissed",
+                type="number",
+                filterable=True,
+            ),
+            "dismissed_reason": FieldDef(
+                label="Dismiss Reason",
+                sql="conv.dismissed_reason",
+                type="text",
+                filterable=True,
+            ),
+            "dismissed_at": FieldDef(
+                label="Dismissed At",
+                sql="conv.dismissed_at",
+                type="datetime",
+                sortable=True,
+            ),
+            "first_message_at": FieldDef(
+                label="First Message",
+                sql="conv.first_message_at",
+                type="datetime",
+                sortable=True,
+            ),
+            "last_message_at": FieldDef(
+                label="Last Message",
+                sql="conv.last_message_at",
+                type="datetime",
+                sortable=True,
+            ),
             "created_at": FieldDef(
                 label="Created",
                 sql="conv.created_at",
+                type="datetime",
+                sortable=True,
+            ),
+            "updated_at": FieldDef(
+                label="Updated",
+                sql="conv.updated_at",
                 type="datetime",
                 sortable=True,
             ),
@@ -636,6 +688,33 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                     "WHERE u.id = p.owner_id)"
                 ),
                 type="text",
+            ),
+            "parent_name": FieldDef(
+                label="Parent Project",
+                sql=(
+                    "(SELECT p2.name FROM projects p2 "
+                    "WHERE p2.id = p.parent_id)"
+                ),
+                type="text",
+            ),
+            "topic_count": FieldDef(
+                label="Topics",
+                sql=(
+                    "(SELECT COUNT(*) FROM topics t "
+                    "WHERE t.project_id = p.id)"
+                ),
+                type="number",
+                sortable=True,
+            ),
+            "conversation_count": FieldDef(
+                label="Conversations",
+                sql=(
+                    "(SELECT COUNT(*) FROM conversations conv "
+                    "JOIN topics t2 ON t2.id = conv.topic_id "
+                    "WHERE t2.project_id = p.id)"
+                ),
+                type="number",
+                sortable=True,
             ),
             "created_at": FieldDef(
                 label="Created",
@@ -881,6 +960,37 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 sql="COALESCE(pa.display_name, pa.email_address)",
                 type="text",
             ),
+            "description": FieldDef(
+                label="Description",
+                sql="e.description",
+                type="text",
+            ),
+            "is_all_day": FieldDef(
+                label="All Day",
+                sql="e.is_all_day",
+                type="number",
+                filterable=True,
+            ),
+            "timezone": FieldDef(
+                label="Timezone",
+                sql="e.timezone",
+                type="text",
+            ),
+            "recurrence_type": FieldDef(
+                label="Recurrence",
+                sql="e.recurrence_type",
+                type="text",
+                filterable=True,
+            ),
+            "participant_count": FieldDef(
+                label="Participants",
+                sql=(
+                    "(SELECT COUNT(*) FROM event_participants ep "
+                    "WHERE ep.event_id = e.id)"
+                ),
+                type="number",
+                sortable=True,
+            ),
             "provider_calendar_id": FieldDef(
                 label="Calendar",
                 sql="e.provider_calendar_id",
@@ -889,6 +999,12 @@ ENTITY_TYPES: dict[str, EntityDef] = {
             "created_at": FieldDef(
                 label="Created",
                 sql="e.created_at",
+                type="datetime",
+                sortable=True,
+            ),
+            "updated_at": FieldDef(
+                label="Updated",
+                sql="e.updated_at",
                 type="datetime",
                 sortable=True,
             ),

@@ -628,15 +628,69 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 type="datetime",
                 sortable=True,
             ),
+            "source": FieldDef(
+                label="Source",
+                sql="comm.source",
+                type="text",
+                filterable=True,
+            ),
             "is_read": FieldDef(
                 label="Read",
                 sql="comm.is_read",
                 type="number",
                 filterable=True,
             ),
+            "is_archived": FieldDef(
+                label="Archived",
+                sql="comm.is_archived",
+                type="number",
+                filterable=True,
+            ),
+            "phone_number_from": FieldDef(
+                label="Phone From",
+                sql="comm.phone_number_from",
+                type="text",
+            ),
+            "phone_number_to": FieldDef(
+                label="Phone To",
+                sql="comm.phone_number_to",
+                type="text",
+            ),
+            "duration_seconds": FieldDef(
+                label="Duration (s)",
+                sql="comm.duration_seconds",
+                type="number",
+                sortable=True,
+            ),
+            "ai_summary": FieldDef(
+                label="AI Summary",
+                sql="comm.ai_summary",
+                type="text",
+            ),
+            "triage_result": FieldDef(
+                label="Triage",
+                sql="comm.triage_result",
+                type="text",
+                filterable=True,
+            ),
+            "cc_addresses": FieldDef(
+                label="CC",
+                sql=(
+                    "(SELECT GROUP_CONCAT(cp.address, ', ') "
+                    "FROM communication_participants cp "
+                    "WHERE cp.communication_id = comm.id AND cp.role = 'cc')"
+                ),
+                type="text",
+            ),
             "created_at": FieldDef(
                 label="Created",
                 sql="comm.created_at",
+                type="datetime",
+                sortable=True,
+            ),
+            "updated_at": FieldDef(
+                label="Updated",
+                sql="comm.updated_at",
                 type="datetime",
                 sortable=True,
             ),
@@ -797,6 +851,17 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 sql="rel.to_entity_id",
                 type="hidden",
             ),
+            "reverse_label": FieldDef(
+                label="Reverse Label",
+                sql="rt.reverse_label",
+                type="text",
+            ),
+            "is_bidirectional": FieldDef(
+                label="Bidirectional",
+                sql="rt.is_bidirectional",
+                type="number",
+                filterable=True,
+            ),
             "source": FieldDef(
                 label="Source",
                 sql="rel.source",
@@ -806,6 +871,12 @@ ENTITY_TYPES: dict[str, EntityDef] = {
             "created_at": FieldDef(
                 label="Created",
                 sql="rel.created_at",
+                type="datetime",
+                sortable=True,
+            ),
+            "updated_at": FieldDef(
+                label="Updated",
+                sql="rel.updated_at",
                 type="datetime",
                 sortable=True,
             ),

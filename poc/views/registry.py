@@ -92,12 +92,43 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 sql="co.id",
                 type="hidden",
             ),
+            "title": FieldDef(
+                label="Title",
+                sql="ccx.title",
+                type="text",
+                sortable=True,
+                filterable=True,
+            ),
+            "department": FieldDef(
+                label="Department",
+                sql="ccx.department",
+                type="text",
+                filterable=True,
+            ),
+            "role": FieldDef(
+                label="Role",
+                sql=(
+                    "(SELECT ccr2.name FROM contact_company_roles ccr2 "
+                    "WHERE ccr2.id = ccx.role_id)"
+                ),
+                type="text",
+                filterable=True,
+            ),
             "phone": FieldDef(
                 label="Phone",
                 sql=(
                     "(SELECT pn.number FROM phone_numbers pn "
                     "WHERE pn.entity_type = 'contact' AND pn.entity_id = c.id "
                     "AND pn.is_current = 1 ORDER BY pn.created_at ASC LIMIT 1)"
+                ),
+                type="text",
+            ),
+            "address": FieldDef(
+                label="Address",
+                sql=(
+                    "(SELECT a.street FROM addresses a "
+                    "WHERE a.entity_type = 'contact' AND a.entity_id = c.id "
+                    "AND a.is_current = 1 ORDER BY a.created_at ASC LIMIT 1)"
                 ),
                 type="text",
             ),
@@ -131,6 +162,12 @@ ENTITY_TYPES: dict[str, EntityDef] = {
             "created_at": FieldDef(
                 label="Created",
                 sql="c.created_at",
+                type="datetime",
+                sortable=True,
+            ),
+            "updated_at": FieldDef(
+                label="Updated",
+                sql="c.updated_at",
                 type="datetime",
                 sortable=True,
             ),
@@ -307,6 +344,12 @@ ENTITY_TYPES: dict[str, EntityDef] = {
             "created_at": FieldDef(
                 label="Created",
                 sql="co.created_at",
+                type="datetime",
+                sortable=True,
+            ),
+            "updated_at": FieldDef(
+                label="Updated",
+                sql="co.updated_at",
                 type="datetime",
                 sortable=True,
             ),

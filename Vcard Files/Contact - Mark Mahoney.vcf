@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Mahoney;Mark;;;
+FN;CHARSET=utf-8:Mark Mahoney
+ORG;CHARSET=utf-8:Constructconnect;
+TITLE;CHARSET=utf-8:Senior Business Development Representative
+TEL;TYPE=WORK:+1 772-774-4666
+EMAIL;TYPE=INTERNET;TYPE=WORK:mark.mahoney@constructconnect.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bc9878e9d96b49fbd72b3da1721038383485b50d96660358ed800833faa5d0053?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=2f5f78bdc3e93afd3c15c93e02fe74d333cb623f99726e495dc067e6d0564668
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

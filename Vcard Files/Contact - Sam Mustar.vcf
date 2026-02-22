@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Mustar;Sam;;;
+FN;CHARSET=utf-8:Sam Mustar
+ORG;CHARSET=utf-8:ClearCompany;
+TITLE;CHARSET=utf-8:Sales Executive
+EMAIL;TYPE=INTERNET;TYPE=WORK:smustar@clearcompany.com
+END:VCARD

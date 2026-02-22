@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Obrien;Nancy;;;
+FN;CHARSET=utf-8:Nancy Obrien
+TEL;TYPE=WORK:(440) 349-3953
+ADR;TYPE=HOME;CHARSET=utf-8:;;34665 Miles Rd;Chagrin Falls;OH;44022;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b33f2eff0378a1b98d6c9dac3e3ec21099be6fc90f9368960d6c0cd432994ac24?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=2078df86954b5105020205ee610b4c82e406333536e9d0b359afa44c45025343
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

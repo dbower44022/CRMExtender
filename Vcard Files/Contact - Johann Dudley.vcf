@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Dudley;Johann;;;
+FN;CHARSET=utf-8:Johann Dudley
+ORG;CHARSET=utf-8:Dodge Data & Analytics;
+TEL;TYPE=CELL;TYPE=VOICE:(734) 223-1272
+ADR;TYPE=HOME;CHARSET=utf-8:;;;Solon;OHIO;;United States
+NOTE;CHARSET=utf-8:Grew up in Chicago, Michigan and Ohio\nWife has big family from this area \nWorked with Andrew multiple times at different companies. \nBeen at dodge since Nov 2024
+END:VCARD

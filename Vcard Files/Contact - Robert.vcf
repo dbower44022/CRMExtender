@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Robert;;;
+FN;CHARSET=utf-8:Robert
+ORG;CHARSET=utf-8:Gilmore Security;
+TEL;TYPE=WORK:216-857-8919
+NOTE;CHARSET=utf-8:Working on Bill O'Neill's security system.
+END:VCARD

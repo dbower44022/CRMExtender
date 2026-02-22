@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Smith;Donnette;;;
+FN;CHARSET=utf-8:Donnette Smith
+ORG;CHARSET=utf-8:Zinner & Co. LLP;
+TITLE;CHARSET=utf-8:CPA
+TEL;TYPE=WORK:+1 216-831-0733 ext. 163
+item1.X-ABLabel:Other
+item1.TEL:+1 216-765-7118
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:dsmith@zinnerco.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;29125 Chagrin Blvd 4692;Cleveland;OH;44122;US
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHW4AAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

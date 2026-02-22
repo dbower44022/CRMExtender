@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Barb;;;
+FN;CHARSET=utf-8:Barb
+ORG;CHARSET=utf-8:Rover;
+TEL;TYPE=WORK:310-504-3182
+TEL;TYPE=WORK:248-425-7913
+ADR;TYPE=WORK;CHARSET=utf-8:;;;Chagrin Falls;OH;;
+NOTE;CHARSET=utf-8:https://www.rover.com/members/barb-m-reliable-loving-care-7-daysweek/
+END:VCARD

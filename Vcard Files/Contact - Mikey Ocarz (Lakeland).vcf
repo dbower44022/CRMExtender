@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Mikey Ocarz (Lakeland);;;
+FN;CHARSET=utf-8:Mikey Ocarz (Lakeland)
+TEL;TYPE=CELL;TYPE=VOICE:(440) 417-5836
+NOTE;CHARSET=utf-8:Welding class
+END:VCARD

@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Sleeper;Stacy;;;
+FN;CHARSET=utf-8:Stacy Sleeper
+ORG;CHARSET=utf-8:Bx;
+TEL;TYPE=CELL;TYPE=VOICE:1 614-486-9521
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b8bc4a150796297ecd65f2f38372783067881c09643ad5ef831157b7cf5803131?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=22fc647cf6bbc60dbbca68a5981a80ca026348376c30897d99b6ac28974cb8fa
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

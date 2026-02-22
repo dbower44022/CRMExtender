@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hernandez;Clarissa;;;
+FN;CHARSET=utf-8:Clarissa Hernandez
+ORG;CHARSET=utf-8:Procore;
+TITLE;CHARSET=utf-8:Senior Workplace Experience Manager
+TEL;TYPE=WORK:+1 805-456-4940
+EMAIL;TYPE=INTERNET;TYPE=WORK:clarissah@procore.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;6309 Carpinteria Ave;Carpinteria;CA;93013;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c83390c2dfc04a5992c5f8e779b19af5e04?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=48e45aaed56b3671cc7d1fd0b4407af76677e5122bb79b483255b135749ac2a8
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

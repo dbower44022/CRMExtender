@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Plate;Andy;Jena;;
+FN;CHARSET=utf-8:Andy Jena Plate
+ORG;CHARSET=utf-8:Ralph Lauren - Polo Golf;
+TITLE;CHARSET=utf-8:Regional Sales Manager
+TEL;TYPE=HOME:(205) 298-0689
+TEL;TYPE=CELL;TYPE=VOICE:(205) 862-4399
+ADR;TYPE=HOME;CHARSET=utf-8:;;3813 Asbury Place;Birmingham;AL;35243;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bcd01911bbf8a3cd6a46916ccda4827243b6c07b7e5c88faa6464ac48f5bdbd0c?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=6e76a4debf0d7b5203a3d70850193cd047149db21148a28330c24f55353709f7
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nwife - Jena\nSon - Andrew 5/14/02
+END:VCARD

@@ -1,0 +1,21 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Greer;Philip K.;;;
+FN;CHARSET=utf-8:Philip K. Greer
+ORG;CHARSET=utf-8:Trimble GC/CM Division;
+TITLE;CHARSET=utf-8:Product Manager
+TEL;TYPE=WORK:(440) 268-9310
+TEL;TYPE=HOME:(440) 238-0548
+TEL;TYPE=CELL;TYPE=VOICE:(440) 570-3086
+item1.X-ABLabel:Other
+item1.TEL:(916) 294-2332
+EMAIL;TYPE=INTERNET;TYPE=HOME:philip_greer@trimble.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:pgreer@meridiansystems.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;10064 Lake Meadows Drive;Strongsville;OH;44136;United States
+ADR;TYPE=HOME;CHARSET=utf-8:;;;Akron;OH;;United States
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0Apy5gi5eniUuQo4C1Y5t6CgAAAAB_mAAA?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nThey are planning on adopting a child from China in the Summer of 2005.\n\nHas 13 Year old Step Son.\nDoes not feel bad about not having biological Son/Daughter\nWife Wanted another, he's ok, but not his idea.\nSpent a number of years in England.\n\nJoined Meridian in ~2000\n\nThey are not planning major changes to Document Management in 2005, but they are in 2006.\n\nThey use Raster-X viewer in Prolog, but using Brava in Proliance.
+END:VCARD

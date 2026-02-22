@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Scanio;Renata;;;
+FN;CHARSET=utf-8:Renata Scanio
+ORG;CHARSET=utf-8:Evans LLP;
+TEL;TYPE=WORK:513-707-0471
+TEL;TYPE=WORK:513-241-2324
+EMAIL;TYPE=INTERNET;TYPE=HOME:rscanio@whe-law.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;600 Vine Street | Suite 2800 | Cincinnati, Ohio 45202;;;;
+END:VCARD

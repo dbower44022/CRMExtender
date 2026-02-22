@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Couchot;Justin;;;
+FN;CHARSET=utf-8:Justin Couchot
+ORG;CHARSET=utf-8:STACK Construction Technologies;Engineering
+TITLE;CHARSET=utf-8:Sr. UI/UX Designer
+EMAIL;TYPE=INTERNET;TYPE=WORK:jcouchot@stackct.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;;;;;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8ba28d95c3c04c0a78536f59535aa202c84f52faafbdab38f2f202791004a4ad53?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=4a1887c518d9897a17298613ed5ff44fc9fc4de1966523b5e029dc633bfbd3dd
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

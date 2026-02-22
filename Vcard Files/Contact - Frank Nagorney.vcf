@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Nagorney;Frank;;P.;
+FN;CHARSET=utf-8:P. Frank Nagorney
+ORG;CHARSET=utf-8:Buckley King;
+TITLE;CHARSET=utf-8:Attorney
+TEL;TYPE=CELL;TYPE=VOICE:1 (216) 905-1455
+item1.X-ABLabel:Other
+item1.TEL:216.685.4784
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:nagorney@buckleyking.com
+ADR;TYPE=OTHER;CHARSET=utf-8:;;1400 Fifth Third Center 600 Superior Avenue East;Cleveland;OH;44114;United States of America
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8ba2843cc9ede2d01697a75997e47dc366380257ae89ce25be34a9a1cf73899adb?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=b7d6bd16fce9d9084fc3a164c7ae070ee94e1536967d75cf3cede435c25ae73e
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

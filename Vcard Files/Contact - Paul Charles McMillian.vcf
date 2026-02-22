@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:McMillian;Paul;Charles;;
+FN;CHARSET=utf-8:Paul Charles McMillian
+ORG;CHARSET=utf-8:Lakeland Community Collete;
+TITLE;CHARSET=utf-8:Welding Instructor
+TEL;TYPE=WORK:814-282-3055
+EMAIL;TYPE=INTERNET;TYPE=HOME:paulcharlesmcmillan@gmail.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:pmcmillan2@lakelandcc.edu
+END:VCARD

@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hill;Tammy;;;
+FN;CHARSET=utf-8:Tammy Hill
+ORG;CHARSET=utf-8:Cincinnati Bell;
+EMAIL;TYPE=INTERNET;TYPE=HOME:hillscincinnati@zoomtown.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:tamaradhill@gmail.com
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;Cincinnati;Ohio;;United States
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bcd01911bbf8a3cd6a46916ccda48272434337cf1de5ddb77e138c800ebf34ee4?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=a27a6268b8e0e9db26939ff299883616c12bd343255cd7babc0e53cead65c53e
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

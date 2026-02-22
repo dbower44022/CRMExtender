@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Jones;Lauren;;;
+FN;CHARSET=utf-8:Lauren Jones
+TITLE;CHARSET=utf-8:Administrative Assistant
+TEL;TYPE=WORK:440-247-5500
+EMAIL;TYPE=INTERNET;TYPE=WORK:lauren.jones@chagrinschools.org
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b45ecd529c4fbeb6b20213bacfebef51e7bbc5b4c9ee207446ad50b7d23fdc4b9?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=03d734efe23f693667d60f66d51f69bfaa9cbdffb2aeae59a89182b7e74923a4
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

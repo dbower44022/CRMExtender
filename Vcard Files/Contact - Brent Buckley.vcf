@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Buckley;Brent;;;
+FN;CHARSET=utf-8:Brent Buckley
+ORG;CHARSET=utf-8:Buckley King LPA;
+TITLE;CHARSET=utf-8:Business Attorney and Managing Partner
+TEL;TYPE=WORK:+12163631400
+EMAIL;TYPE=INTERNET;TYPE=WORK:buckley@buckleyking.com
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;Cleveland;Ohio;;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bb720eb16eb5c8f314cb52e4dbaeaefda1defecf8a34a035c519759f355d32c77?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=9c39f14d7281bd1bf0575fa758586563e07d351b1fae8aac11e31b6e9d296c8f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

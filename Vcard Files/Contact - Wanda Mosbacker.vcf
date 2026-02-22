@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Mosbacker;Wanda;;;
+FN;CHARSET=utf-8:Wanda Mosbacker
+TEL;TYPE=HOME:(513) 574-5266
+ADR;TYPE=HOME;CHARSET=utf-8:;;#5 6582 Hearn Road;Cincinnati;OH;45248;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bcd01911bbf8a3cd6a46916ccda482724a2f505db28d83d64d7cb9ac193d72c74?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=6112c5e85f86c9aa4cfdee0a8cff469897bf576db7206e38ea5e9aaa3cd41799
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

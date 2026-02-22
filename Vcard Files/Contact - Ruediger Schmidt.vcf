@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Schmidt;Ruediger;;;
+FN;CHARSET=utf-8:Ruediger Schmidt
+EMAIL;TYPE=INTERNET;TYPE=WORK:ruediger.schmidt@gmx.net
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b557937ab829ca1448269bd67d7cffa7ced154c29f08caa07c94acfc1c42ab250?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=ae5881e6e0485ae2b234b7440d111d6877adc4e85df52e10789d6e75b62f88c3
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nSkype ID:  ruedigerschmidt\n\nHe is based in Driesden.   Has a family ???
+END:VCARD

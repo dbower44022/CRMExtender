@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:King;Steven;;;
+FN;CHARSET=utf-8:Steven King
+ORG;CHARSET=utf-8:ConstructConnect;
+TITLE;CHARSET=utf-8:Business Development Representative
+TEL;TYPE=WORK:513.478.0858
+TEL;TYPE=CELL;TYPE=VOICE:513.458.8584
+EMAIL;TYPE=INTERNET;TYPE=WORK:steven.king@constructconnect.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;;Wallasey;England;;United Kingdom
+ADR;TYPE=HOME;CHARSET=utf-8:;;;Chicago;Illinois;;United States
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;Cincinnati;Ohio;;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b88588afc51efda8695e82c4bd08fee3b65cc02e9b5d862f4a8ec788f41dcbb70?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=4ec90783ed0acf56e6dd29ce4fe13d1fd4f50a8a5d913834d46cc1888b2a5bc8
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

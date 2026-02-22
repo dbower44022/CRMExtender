@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:McGrath;Deirdre;;;
+FN;CHARSET=utf-8:Deirdre McGrath
+ORG;CHARSET=utf-8:Mhfi;
+TEL;TYPE=WORK:+1 516-223-6736
+TEL;TYPE=WORK:+1 516-526-6481
+item1.X-ABLabel:Other
+item1.TEL:+1 516-377-1639
+EMAIL;TYPE=INTERNET;TYPE=HOME:deirdre.mcgrath@construction.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:deirdre_mcgrath@mcgraw-hill.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;830 Third Avenue;;;;
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b8bc4a150796297ecd65f2f3837278306613473d7a8d38835dec751d2241ac13d?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=2d5e5d6ede3ae8b5252ef0e2d08e745abed029177c18822187abece10996a0a1
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nWorking on Skanska account for MCH\nWorks on Turner, Suffok
+END:VCARD

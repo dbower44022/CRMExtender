@@ -1,0 +1,20 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Chaney;John;;;
+FN;CHARSET=utf-8:John Chaney
+ORG;CHARSET=utf-8:Dexter + Chaney;
+TITLE;CHARSET=utf-8:Chief Executive Officer and Co-Founder
+TEL;TYPE=WORK:+1 800-875-1400
+TEL;TYPE=CELL;TYPE=VOICE:206-300-8082
+item1.X-ABLabel:Other
+item1.TEL:+1 206-367-9613
+EMAIL;TYPE=INTERNET;TYPE=HOME:jchaney@dexterchaney.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:johnbchaney@gmail.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;9700 Lake City Way NESeattle, WA 98115\nUS;;;;
+ADR;TYPE=HOME;CHARSET=utf-8:;;9700 Lake City Way NE 2347;Seattle;WA;98115;
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c838e7733355ff6b79f067df6c071941e7c?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=bf623f20a9d30b5987386c7469cce595fa4dba694718f99a890060baceb884d6
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nJohn has a son that is a sophmore in college (Fall 2009), and a daughter that is a Sophomre in High School (Fall 2009).   His daughter used to play soccer, but decided to run Cross Country.\n\n\n\nJohn has a son that is a sophmore in college (Fall 2009), and a daughter that is a Sophomre in High School (Fall 2009).   His daughter used to play soccor, but decided to run Cross Country.
+END:VCARD

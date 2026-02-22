@@ -1,0 +1,16 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Plate;Arthur;;;
+FN;CHARSET=utf-8:Arthur Plate
+TEL;TYPE=HOME:(513) 793-0526
+item1.X-ABLabel:Other
+item1.TEL:513-910-0445
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:aplate@cinci.rr.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;United States of America;;;;
+ADR;TYPE=HOME;CHARSET=utf-8:;;7804 Concord Hills Lane;Cincinnati;OH;45243;
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4182bc424bcca3cfca7e8371ac79985b12e2b98a086b2b02eaa9afefefd1d81b?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=5adabb628bdba9b34e90eb4c309b857c7423d2143d6431d6f4ccfc6b8440dfe9
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d9553
+END:VCARD

@@ -1,0 +1,19 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bates;Ron;E.;;
+FN;CHARSET=utf-8:Ron E. Bates
+ORG;CHARSET=utf-8:Executive Advantage Group, Inc.;
+TITLE;CHARSET=utf-8:Managing Principal and Co-Founder—Executive Advantage Group Since 2001; Managing Principal—RedCard Solutions Since 2008
+TEL;TYPE=WORK:+14084518414
+TEL;TYPE=CELL;TYPE=VOICE:408-206-4580
+item1.X-ABLabel:Other
+item1.TEL:408-904-4935
+EMAIL;TYPE=INTERNET;TYPE=WORK:rbates@executive-advantage.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;;San Francisco;California;;United States
+ADR;TYPE=HOME;CHARSET=utf-8:;;;San Jose;California;;United States
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;Sunnyvale;California;;United States
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b7c02d86ab64752804ae31cc5595bb8d010666d14d5ab64c71ef15560fb238474?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=cc447ee6f256927cfbd0bd5956b1dec8168938ec35885263178e686d839ae2b5
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

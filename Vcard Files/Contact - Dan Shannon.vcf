@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Shannon;Dan;;;
+FN;CHARSET=utf-8:Dan Shannon
+ORG;CHARSET=utf-8:Adamsffi;
+TITLE;CHARSET=utf-8:Managing Partner
+TEL;TYPE=WORK:210-559-2576
+EMAIL;TYPE=INTERNET;TYPE=WORK:dshannon@adamsffi.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b021df1b05cb03163b1fe2d93f0bb09564e7a8beb2cb1952057fac85119a426dd?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=421061637338957fec06c8c5b16cf561110619c56dcf47d9493918afc7ad3cc1
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

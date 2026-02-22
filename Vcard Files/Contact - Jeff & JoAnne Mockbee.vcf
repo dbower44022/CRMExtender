@@ -1,0 +1,20 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Mockbee;Jeff & JoAnne;;;
+FN;CHARSET=utf-8:Jeff & JoAnne Mockbee
+ORG;CHARSET=utf-8:CAM, Inc.;
+TITLE;CHARSET=utf-8:President
+TEL;TYPE=WORK:(330) 896-3253
+TEL;TYPE=HOME:+1 678-208-9170
+TEL;TYPE=HOME:(330) 571-5767
+TEL;TYPE=CELL;TYPE=VOICE:(330) 666-5457
+item1.X-ABLabel:Other
+item1.TEL:330-896-3304
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:jeffm@camincorp.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;804 Robinson Spur;Akron;Ohio;44333;
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b33f2eff0378a1b98d6c9dac3e3ec21096137763cac93a0dd70080dfb5080b9d9?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=020a0748d12e9db69ef8c5113705291af3675a493fc5622e138b50878bea1469
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nfriend tom, with blond hair, drives thunderbird.  Met at new years party.\nhis wife is friends of joann, and is also a speach thearapist?\nWife, JoAnne   Married July, 1987\nDaughter Megan  Born May 27, 1990\nSon Mark  Born July, 1993\nSon Joey  Born January, 1995\nDaughter Madelyn born December, 1997\n---\n59b6cd263499b912d09d9581
+END:VCARD

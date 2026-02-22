@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Sunshine Customer Support;;;
+FN;CHARSET=utf-8:Sunshine Customer Support
+ORG;CHARSET=utf-8:Sunshine Products Inc.;
+EMAIL;TYPE=INTERNET;TYPE=HOME:support@sunshine.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b22dbfcb78e31b3f5118f8710422c916bc0e122e217aed09fe5bda11ae5639581?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=22c514d3884d4b074fc1843b1515c7ce7400f6e0a7eec986a79c9dda940c9802
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

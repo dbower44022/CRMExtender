@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Support;Contacts+;;;
+FN;CHARSET=utf-8:Contacts+ Support
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:support@contactsplus.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;;Huntington Beach;CA;;United States
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8ba2843cc9ede2d01697a75997e47dc3662e950b6d02f262a9aea0070f83b1ef22?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=d904779e327f9f4288d3ea4a68102e72d6418409f73b208e6484754d43af782c
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n\n*----------------*\nText below this line will not be preserved.\n\nThis contact was created by Contacts+ in order to detect any syncing loops or other anomalies. You may delete it if you like, but, if you do, we will be unable to perform a safety check on your account. Please contact support@contactsplus.com if you have any questions, or see the following article for more information:\nhttps://www.contactsplus.com/support/sync-loops?data=5ioBAABuohAAYaO4BMjUEeaiZg7JmJC18PMK\n\nOrigin: doug@dougbower.com (google2)\nMagic: \¥Ѭ
+END:VCARD

@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Q;Michael;;;
+FN;CHARSET=utf-8:Michael Q
+ORG;CHARSET=utf-8:Triple A Electric;
+TEL;TYPE=CELL;TYPE=VOICE:(440) 865-7334
+EMAIL;TYPE=INTERNET;TYPE=HOME:michael.a.quinhlicno@gmail.com
+END:VCARD

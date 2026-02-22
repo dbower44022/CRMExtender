@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Jamieson;Rob;;;
+FN;CHARSET=utf-8:Rob Jamieson
+ORG;CHARSET=utf-8:Village of Chagrin Falls;
+TITLE;CHARSET=utf-8:Chief Administrative Officer
+TEL;TYPE=WORK:440-247-5050 x2798
+EMAIL;TYPE=INTERNET;TYPE=HOME:rjamieson@chagrin-falls.org
+ADR;TYPE=WORK;CHARSET=utf-8:;;21 West Washington Street;Chagrin Falls;OH;44022;
+END:VCARD

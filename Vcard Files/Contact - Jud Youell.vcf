@@ -1,0 +1,18 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Youell;Jud;;;
+FN;CHARSET=utf-8:Jud Youell
+ORG;CHARSET=utf-8:Dexter + Chaney;
+TITLE;CHARSET=utf-8:Venture Project Manager
+TEL;TYPE=WORK:+1 206-462-7715
+TEL;TYPE=CELL;TYPE=VOICE:1-206-225-9363
+EMAIL;TYPE=INTERNET;TYPE=HOME:jud.youell03@gmail.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:jyouell@dexterchaney.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:jud.youell@sage.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;2347 9700 Lake City Way NE;Seattle;WA;98115;US
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHdwAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d955b
+END:VCARD

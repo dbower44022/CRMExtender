@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bower;Tommy;;;
+FN;CHARSET=utf-8:Tommy Bower
+EMAIL;TYPE=INTERNET;TYPE=WORK:tommy@dougbower.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b33f2eff0378a1b98d6c9dac3e3ec2109875b1bdea7233dfdd4325ac85324f76e?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=db7b50b7e768d72f924a72742e00fd329ac253c7b6ff5c27750f1cf0ad418b3c
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

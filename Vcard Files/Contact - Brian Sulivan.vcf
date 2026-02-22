@@ -1,0 +1,20 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Sulivan;Brian;;;
+FN;CHARSET=utf-8:Brian Sulivan
+ORG;CHARSET=utf-8:Second Story Productions;
+TITLE;CHARSET=utf-8:Creative Director
+EMAIL;TYPE=INTERNET;TYPE=HOME:brian@secondstoryproductions.net
+ADR;TYPE=HOME;CHARSET=utf-8:;;;Akron;Ohio;;United States
+item1.X-ABLabel:LinkedIn
+item1.URL:https://www.linkedin.com/in/brian-sullivan-75a60a7
+item2.X-ABLabel:Twitter
+item2.URL:https://twitter.com/SecondStory1
+URL;TYPE=INTERNET;TYPE=HOME:http://www.secondstoryproductions.net
+item3.X-ABLabel:Other
+item3.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHcsAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+item4.X-ABLabel:Other
+item4.URL:ms-outlook://people/AQMkAGM4YzkwMAItNWY3Yi03MmNiLTAwAi0wMAoARgAAA38DAmqlmZBAqeYnrTn3GFoHAGk-T4Babr5FoguEs8GX124AAAIBDgAAAGk-T4Babr5FoguEs8GX124AAAIiPQAAAA==?accountKey=f49b87807bcc2e9a5dab9370fbb3a346&accountExportedAt=665427321.112962
+NOTE;CHARSET=utf-8:59b6cd273499b912d09d9597
+END:VCARD

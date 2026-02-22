@@ -1,0 +1,292 @@
+<mxfile host="app.diagrams.net" modified="2026-02-13T00:00:00.000Z" agent="Claude" version="22.1.0" type="device">
+  <diagram id="resolve-company-id" name="_resolve_company_id flowchart">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="&lt;b&gt;_resolve_company_id()&lt;/b&gt;&lt;br&gt;Contact sync: resolve Google org name + email → company_id" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="480" y="10" width="480" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- START -->
+        <mxCell id="start" value="START&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Inputs: company_name, email,&lt;br&gt;customer_id, user_id&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="600" y="70" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- D1: company_name empty? -->
+        <mxCell id="d1" value="company_name&lt;br&gt;empty?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="630" y="170" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e_start_d1" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="start" target="d1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Return None -->
+        <mxCell id="ret_none" value="Return None" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="870" y="185" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d1_none" value="Yes" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d1" target="ret_none" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="830" y="210" /></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Extract domain -->
+        <mxCell id="extract" value="Extract domain from email&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;extract_domain(email) → domain&lt;br&gt;is_private = domain &amp;amp;&amp;amp; !is_public_domain&lt;br&gt;domain_conflict = False&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="575" y="290" width="270" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d1_extract" value="No" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d1" target="extract" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Step 1 header -->
+        <mxCell id="step1_label" value="&lt;b&gt;STEP 1: Exact Name Match&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="610" y="375" width="200" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- D2: name match found? -->
+        <mxCell id="d2" value="SELECT id FROM companies&lt;br&gt;WHERE name = ?&lt;br&gt;&lt;b&gt;Match found?&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="610" y="400" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="e_extract_d2" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="extract" target="d2" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- D3: is_private? -->
+        <mxCell id="d3" value="is_private?&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;(private email domain)&lt;/font&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="410" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d2_d3" value="Yes" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d2" target="d3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Return name match (public domain) -->
+        <mxCell id="ret_name_pub" value="Return name match&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;(trust Google org name;&lt;br&gt;can't validate public email)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="130" y="530" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d3_pub" value="No&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;(public/no domain)&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d3" target="ret_name_pub" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="225" y="450" /><mxPoint x="225" y="560" /></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- D4: _company_matches_domain? -->
+        <mxCell id="d4" value="_company_matches_domain&lt;br&gt;(company, email_domain)?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="330" y="540" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d3_d4" value="Yes" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d3" target="d4" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Helper box -->
+        <mxCell id="helper" value="&lt;b&gt;_company_matches_domain(company_id, domain)&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;1. Read companies.domain column&lt;br&gt;2. Read company_identifiers WHERE type='domain'&lt;br&gt;3. Merge into known_domains set&lt;br&gt;4. If known_domains is empty → True (no info, trust name)&lt;br&gt;5. If email domain IN known_domains → True (match)&lt;br&gt;6. Else → False (conflict)&lt;/font&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=15;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="650" width="320" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Return name match (domain ok) -->
+        <mxCell id="ret_name_ok" value="Return name match&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;(name + domain agree)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="130" y="790" width="190" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d4_ok" value="True&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;(matches or no info)&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d4" target="ret_name_ok" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="225" y="590" /><mxPoint x="225" y="815" /></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Domain conflict path -->
+        <mxCell id="conflict" value="Log WARNING&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;domain_conflict = True&lt;br&gt;&quot;name matched but domain doesn't&quot;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="560" y="620" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d4_conflict" value="False&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;(domain mismatch!)&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d4" target="conflict" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="540" y="590" /><mxPoint x="540" y="650" /></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 2 header -->
+        <mxCell id="step2_label" value="&lt;b&gt;STEP 2: Domain Resolution&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="780" y="545" width="200" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- D5: is_private for step 2? -->
+        <mxCell id="d5" value="is_private?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="830" y="580" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d2_d5" value="No name match" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d2" target="d5" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="890" y="450" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- conflict also flows to step 2 -->
+        <mxCell id="e_conflict_d5" value="Fall through" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="conflict" target="d5" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="780" y="650" /><mxPoint x="780" y="615" /></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- D6: domain match found? -->
+        <mxCell id="d6" value="resolve_company_by_domain&lt;br&gt;(domain)&lt;br&gt;&lt;b&gt;Match found?&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;checks companies.domain&lt;br&gt;+ company_identifiers&lt;/font&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="810" y="700" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d5_d6" value="Yes" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d5" target="d6" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Return domain match -->
+        <mxCell id="ret_domain" value="Return domain match&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;(email domain resolved to&lt;br&gt;existing company)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="720" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d6_ret" value="Yes" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d6" target="ret_domain" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Step 3 header -->
+        <mxCell id="step3_label" value="&lt;b&gt;STEP 3: Auto-Create Company&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="600" y="855" width="220" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Merge point into step 3 -->
+        <mxCell id="d7" value="domain_conflict?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="630" y="890" width="160" height="80" as="geometry" />
+        </mxCell>
+        <!-- no domain match flows to step 3 -->
+        <mxCell id="e_d6_d7" value="No" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d6" target="d7" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="920" y="850" /><mxPoint x="710" y="850" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- not private also flows to step 3 -->
+        <mxCell id="e_d5_d7" value="No&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;(public domain)&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d5" target="d7" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1000" y="615" /><mxPoint x="1000" y="850" /><mxPoint x="710" y="850" /></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Use domain as name -->
+        <mxCell id="name_domain" value="Company name = &lt;b&gt;email domain&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;e.g. &quot;dbllaw.com&quot;&lt;br&gt;(Google org name is untrustworthy)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="920" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d7_domain" value="True" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d7" target="name_domain" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Use org name -->
+        <mxCell id="name_org" value="Company name = &lt;b&gt;Google org name&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;e.g. &quot;NewCo&quot;&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="830" y="920" width="190" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d7_org" value="False" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d7" target="name_org" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- INSERT company -->
+        <mxCell id="insert_co" value="INSERT INTO companies&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;(id, name, status='active', customer_id)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="570" y="1020" width="280" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_nd_insert" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="name_domain" target="insert_co" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="515" y="1000" /><mxPoint x="710" y="1000" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_no_insert" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="name_org" target="insert_co" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="925" y="1000" /><mxPoint x="710" y="1000" /></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- user_companies -->
+        <mxCell id="d8" value="user_id&lt;br&gt;provided?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="640" y="1100" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e_insert_d8" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="insert_co" target="d8" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="user_co" value="INSERT OR IGNORE&lt;br&gt;INTO user_companies&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;(visibility='public', is_owner=1)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="1100" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d8_uc" value="Yes" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d8" target="user_co" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- domain identifier -->
+        <mxCell id="d9" value="is_private?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="640" y="1210" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d8_d9" value="No" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d8" target="d9" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_uc_d9" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="user_co" target="d9" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="515" y="1190" /><mxPoint x="710" y="1190" /></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="domain_id" value="ensure_domain_identifier&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;INSERT OR IGNORE INTO&lt;br&gt;company_identifiers (type='domain')&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="420" y="1210" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d9_di" value="Yes" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d9" target="domain_id" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Return new company -->
+        <mxCell id="ret_new" value="Return new company_id" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="1320" width="220" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e_d9_ret" value="No" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="d9" target="ret_new" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_di_ret" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="domain_id" target="ret_new" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="515" y="1300" /><mxPoint x="710" y="1300" /></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#999999;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="880" width="240" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_title" value="&lt;b&gt;Legend&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="885" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1115" y="920" width="20" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1t" value="Return / terminal" style="text;html=1;align=left;fontSize=10;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1145" y="915" width="110" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" value="" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1112" y="945" width="25" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2t" value="Decision" style="text;html=1;align=left;fontSize=10;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1145" y="945" width="110" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1115" y="975" width="20" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3t" value="Action / query" style="text;html=1;align=left;fontSize=10;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1145" y="972" width="110" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1115" y="1002" width="20" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4t" value="Warning / conflict path" style="text;html=1;align=left;fontSize=10;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1145" y="999" width="140" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5" value="" style="shape=note;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;size=8;" vertex="1" parent="1">
+          <mxGeometry x="1115" y="1028" width="20" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5t" value="Helper function detail" style="text;html=1;align=left;fontSize=10;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1145" y="1025" width="130" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Example annotation -->
+        <mxCell id="example" value="&lt;b&gt;Example: ahartman@dbllaw.com, org=&quot;Ulmer &amp;amp; Berne LLP&quot;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Step 1: Name matches Ulmer (ulmer.com) → CONFLICT (dbllaw.com ≠ ulmer.com)&lt;br&gt;Step 2: No company has domain dbllaw.com → no match&lt;br&gt;Step 3: Auto-create company named &quot;dbllaw.com&quot; + register domain&lt;/font&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=15;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="440" width="380" height="90" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

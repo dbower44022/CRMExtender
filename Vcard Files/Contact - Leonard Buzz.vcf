@@ -1,0 +1,20 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Buzz;Leonard;;;
+FN;CHARSET=utf-8:Leonard Buzz
+ORG;CHARSET=utf-8:On Center Software Inc.;
+TITLE;CHARSET=utf-8:Chief Executive Officer
+TEL;TYPE=WORK:(800) 880-8254 X 1010
+TEL;TYPE=WORK:(281) 297-9010
+TEL;TYPE=CELL;TYPE=VOICE:(832) 928-4126
+item1.X-ABLabel:Other
+item1.TEL:(281) 297-9001
+EMAIL;TYPE=INTERNET;TYPE=HOME:wlb@oncenter.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:leonard.buzz@oncenter.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;Suite 400 1400 Woodloch Forest Dr 1100;The Woodlands;TX;77380;
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bc9878e9d96b49fbd72b3da17210383833b49cd66b9d1463b86ff0734d34b2199?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=6ec597f2fa372105389966ea0eeeea47a71e7ffa49dad2a5d09ce1b41603a139
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nCell Phone Number:? 832-928-4126\nWife: Helen ?
+END:VCARD

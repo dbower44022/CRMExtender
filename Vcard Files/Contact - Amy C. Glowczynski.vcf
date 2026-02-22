@@ -1,0 +1,20 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Glowczynski;Amy C.;;;
+FN;CHARSET=utf-8:Amy C. Glowczynski
+ORG;CHARSET=utf-8:Skanska USA Building Inc.;
+TITLE;CHARSET=utf-8:Regional Manager Systems and Controls
+TEL;TYPE=WORK:(248) 936-6351
+TEL;TYPE=HOME:(313) 350-5358
+TEL;TYPE=CELL;TYPE=VOICE:7163614314
+item1.X-ABLabel:Other
+item1.TEL:(866) 373-6064
+EMAIL;TYPE=INTERNET;TYPE=HOME:aglowczynski@meridiansystems.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:amy.glowczynski@skanskausa.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;Suite 200 26100 American Drive 2367;Southfield;MI;48034;US
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b61d0ec60531633d8228e96f5571c7949d2f52f2fa492c9cf04011197176978d9?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=c43dc7ec618237ce3dc9af7336a5be57968d0c562fc08789f48b1e3e981e3653
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

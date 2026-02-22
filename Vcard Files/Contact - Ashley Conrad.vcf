@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Conrad;Ashley;;;
+FN;CHARSET=utf-8:Ashley Conrad
+EMAIL;TYPE=INTERNET;TYPE=HOME:ashley@connected-electrical.com
+item1.X-ABLabel:Other
+item1.URL:https://nicejob.com/connected-electrical
+END:VCARD

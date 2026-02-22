@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Joe;;;
+FN;CHARSET=utf-8:Joe
+ORG;CHARSET=utf-8:Scott's Services;
+item1.X-ABLabel:
+item1.TEL:+14406296264
+END:VCARD

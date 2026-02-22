@@ -1,0 +1,19 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Fergusson;Douglas C.;;;
+FN;CHARSET=utf-8:Douglas C. Fergusson
+ORG;CHARSET=utf-8:Synq Solutions, Inc.;
+TITLE;CHARSET=utf-8:Executive Vice President Chief Technology Officer
+TEL;TYPE=WORK:(404) 888-6315
+TEL;TYPE=CELL;TYPE=VOICE:(404) 874-8400
+item1.X-ABLabel:Other
+item1.TEL:(404) 885-5906
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:dfergusson@synqsolutions.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;655 Lambert Drive, NE 4125;Atlanta;GA;30324;US
+ADR;TYPE=HOME;CHARSET=utf-8:;;;Atlanta;Georgia;;United States
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4ba2fda22463764d070878401a8ed47dcefa169a978b70d071c7213e0d702703?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=9471474a0a8352ee9c2422b29fccbe0215e53bd42b7820ccbff9e77b15f28fce
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

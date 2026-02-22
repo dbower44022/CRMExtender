@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Carfagna;Peter;;;
+FN;CHARSET=utf-8:Peter Carfagna
+ORG;CHARSET=utf-8:Morgan Stanley;
+TITLE;CHARSET=utf-8:Senior Vice President, Alternative Investments Director, Financial Advisor and Financial Planning Specialist
+EMAIL;TYPE=INTERNET;TYPE=WORK:peter.carfagna@morganstanley.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b8e591b1b6075d4b6568e6fa68f20555ffe03f1cf2b23d9194dc5eeb5fbfe0611?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=c0e4ad5ec181b9dc6166f3ea7c148bb5048458042197584e2a0b725bd3c10db3
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

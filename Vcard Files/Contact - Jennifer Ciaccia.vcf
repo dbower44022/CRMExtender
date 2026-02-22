@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Ciaccia;Jennifer;;;
+FN;CHARSET=utf-8:Jennifer Ciaccia
+ORG;CHARSET=utf-8:Cuyahoga County;Department of Communications
+TITLE;CHARSET=utf-8:Press Secretary
+TEL;TYPE=WORK:(216) 698-2142
+TEL;TYPE=CELL;TYPE=VOICE:(216)250-5863
+EMAIL;TYPE=INTERNET;TYPE=HOME:jciaccia@cuyahogacounty.us
+ADR;TYPE=WORK;CHARSET=utf-8:;;2079 E. Ninth Street l;Cleveland;OH;44115;
+END:VCARD

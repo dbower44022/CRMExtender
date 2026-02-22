@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bower;Douglas;;;
+FN;CHARSET=utf-8:Douglas Bower
+EMAIL;TYPE=INTERNET;TYPE=WORK:douglas.bower@scorevolunteer.org
+item1.X-ABLabel:Other
+item1.URL:https://www.score.org/startup-roadmap
+END:VCARD

@@ -1,0 +1,20 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hall;Brian;;;
+FN;CHARSET=utf-8:Brian Hall
+ORG;CHARSET=utf-8:Repro Graphics Inc;
+TITLE;CHARSET=utf-8:Co-Owner, Vice President
+TEL;TYPE=WORK:+1 317-637-3377
+TEL;TYPE=WORK:812.422.2400
+TEL;TYPE=CELL;TYPE=VOICE:317-432-0778
+item1.X-ABLabel:Other
+item1.TEL:+1 317-637-3415
+EMAIL;TYPE=INTERNET;TYPE=HOME:bhall@reprographix.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:jillorbrian@aol.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;437 N. Illinois Street;Indianapolis;IN;46204;US
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHWgAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

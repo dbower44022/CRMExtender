@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Petrullo;Mike;;;
+FN;CHARSET=utf-8:Mike Petrullo
+ORG;CHARSET=utf-8:Dodge Data & Analytics;
+TITLE;CHARSET=utf-8:Chief Executive Officer
+TEL;TYPE=WORK:+1 347-523-4475
+TEL;TYPE=CELL;TYPE=VOICE:+1 917-418-9019
+EMAIL;TYPE=INTERNET;TYPE=WORK:mike.petrullo@construction.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;830 Third Avenue\nNew York, NY 10022\nUS;;;;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHeEAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d9519
+END:VCARD

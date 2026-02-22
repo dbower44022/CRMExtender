@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hatfield;Rhyan;;;
+FN;CHARSET=utf-8:Rhyan Hatfield
+ORG;CHARSET=utf-8:Jabra Support Enterprise (NA);
+TITLE;CHARSET=utf-8:Support Specialist
+TEL;TYPE=WORK:+1 866-697-8757
+EMAIL;TYPE=INTERNET;TYPE=HOME:rhatfield@jabra.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:jabrasupport.us@jabra.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:dsyas@jabra.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;8th Floor 900 Chelmsford Street;Lowell;MA;01851;United States
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c8319f616dce4c4f57935a969c859fa0c62?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=73fc7e2a71feac039ca55b8c050527ffdfe7acda01f1ef132a290326f165288f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

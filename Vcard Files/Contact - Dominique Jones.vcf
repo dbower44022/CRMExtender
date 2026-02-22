@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Jones;Dominique;;;
+FN;CHARSET=utf-8:Dominique Jones
+TITLE;CHARSET=utf-8:Regional Volunteer Intake Coordinator – Central
+TEL;TYPE=WORK:(571) 568-6744
+EMAIL;TYPE=INTERNET;TYPE=WORK:dominique.jones@score.org
+END:VCARD

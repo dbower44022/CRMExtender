@@ -1,0 +1,19 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bellaire;Brian;;;
+FN;CHARSET=utf-8:Brian Bellaire
+ORG;CHARSET=utf-8:LeChase Construction;
+TITLE;CHARSET=utf-8:Project Engineer
+TEL;TYPE=WORK:585.475.3551
+TEL;TYPE=CELL;TYPE=VOICE:585.967.4118
+item1.X-ABLabel:Other
+item1.TEL:585.475.9555
+EMAIL;TYPE=INTERNET;TYPE=HOME:brianbe@homeleasing.net
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:brian.bellaire@lechase.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;300 Trolley Blvd;;;;
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0Apy5gi5eniUuQo4C1Y5t6CgAAAAB9ZQAA?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nSingle\nBrother works for an oracle ISP for healthcare\nLikes to golf...\nHas a sail boat
+END:VCARD

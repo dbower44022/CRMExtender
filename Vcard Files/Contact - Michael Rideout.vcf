@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Rideout;Michael;;;
+FN;CHARSET=utf-8:Michael Rideout
+ORG;CHARSET=utf-8:Meridian Risk Management;
+TEL;TYPE=WORK:917.325.9425
+item1.X-ABLabel:Other
+item1.TEL:914.355.2451
+EMAIL;TYPE=INTERNET;TYPE=WORK:mr@meridianrisk.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b16c9f2fb803336f8c8e317407f9e39eb002152fe410d2a1e5d2fd36e522a2293?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=49416c5fe913814edd37367b39606566e11a8fa381df0fcfc4c938f70e06308b
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

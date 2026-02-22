@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Tworzydlo;Mike;;;
+FN;CHARSET=utf-8:Mike Tworzydlo
+ORG;CHARSET=utf-8:Cuyahoga County;Department of Public Works
+TITLE;CHARSET=utf-8:Chief Section Engineer - Construction
+TEL;TYPE=CELL;TYPE=VOICE:440-728-8387
+TEL;TYPE=WORK:216-348-3895
+EMAIL;TYPE=INTERNET;TYPE=HOME:mtworzydlo@cuyahogacounty.us
+ADR;TYPE=WORK;CHARSET=utf-8:;;2079 East 9th Street;Cleveland;OH;44115;US
+NOTE;CHARSET=utf-8:## 2024/4/29 0:14\nSent not to Jennifer introducing myself and Ruth.\n==
+END:VCARD

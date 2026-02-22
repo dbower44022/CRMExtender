@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Benson;Hunter;W.;;
+FN;CHARSET=utf-8:Hunter W. Benson
+ORG;CHARSET=utf-8:Meyers, Roman;
+TITLE;CHARSET=utf-8:Associate Attorney
+TEL;TYPE=WORK:216-831-0542
+TEL;TYPE=WORK:216-831-0042
+EMAIL;TYPE=INTERNET;TYPE=WORK:hbenson@meyersroman.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;28601 Chagrin Blvd Ste 500;Cleveland;OH;44122-4556;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bbad221585e890c7e5ba7b18af26a56bf300d620da72e2f53493203ea9046e60e?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=dacdfd6772656460c68e2656ac181f917c9b3044a5360ce56f63f67185376735
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

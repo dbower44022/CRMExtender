@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Tombazzi;Lou;;;
+FN;CHARSET=utf-8:Lou Tombazzi
+item1.X-ABLabel:
+item1.TEL:+12162009580
+EMAIL;TYPE=INTERNET;TYPE=HOME:louistombazzi@gmail.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;1873 east 55 th street;;;;
+END:VCARD

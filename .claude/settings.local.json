@@ -54,7 +54,25 @@
       "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender diff)",
       "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender log --oneline -5)",
       "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender commit -m \"$\\(cat <<''EOF''\nAdd settings UI with profile, system settings, and user management \\(Phase 4\\)\n\nAdds three settings pages \\(profile, system, users\\), per-user timezone\nrendering, user management CRUD, and fixes the v8 migration''s SQLite\nALTER TABLE RENAME bug that caused dangling FK references to _users_old.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender push)"
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender push)",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender add poc/company_merge.py tests/test_company_merge.py)",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender commit -m \"$\\(cat <<''EOF''\nFix company merge FK constraint error when absorbed company was a prior merge survivor\n\nThe company_merges.surviving_company_id FK \\(NO ACTION\\) blocked DELETE when\nthe absorbed company had been the surviving side of earlier merges. Now\nre-points those audit records to the new survivor before delete. Also\ntransfers user_companies visibility rows so users don''t lose access.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender log --oneline -3)",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender add poc/hierarchy.py poc/web/routes/companies.py poc/web/templates/companies/_identifiers.html)",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender commit -m \"$\\(cat <<''EOF''\nFix company list domain resolution and duplicate identifier error handling\n\nlist_companies\\(\\) now resolves domains from company_identifiers when the\ncompany row has no domain set. Adding a duplicate identifier now shows a\nfriendly error instead of a 500 Internal Server Error.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender add poc/calendar_client.py poc/calendar_sync.py poc/config.py poc/auth.py poc/__main__.py poc/web/routes/events.py poc/web/routes/settings_routes.py poc/web/templates/events/list.html poc/web/templates/settings/_nav.html poc/web/templates/settings/calendars.html poc/web/templates/settings/_calendar_list.html tests/test_calendar_sync.py docs/events-prd.md docs/users-guide.md)",
+      "Bash(git -C /home/doug/Dropbox/Projects/CRM_Extender/CRMExtender commit -m \"$\\(cat <<''EOF''\nAdd Google Calendar sync with settings UI, sync button, and documentation\n\nImplements calendar event sync from connected Google accounts: API client\n\\(list calendars, fetch events with sync token support\\), sync orchestration\n\\(upsert events, match attendees to CRM contacts\\), calendar selection in\nSettings, \"Sync Events\" button on Events tab, and reauth CLI command for\nscope upgrades. Includes 28 tests and comprehensive documentation updates\nto events-prd.md and users-guide.md covering setup, workflow, and\ntroubleshooting.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(head:*)",
+      "Bash(pip3 show:*)",
+      "Bash(git stash:*)",
+      "Bash(node --version:*)",
+      "Bash(npm:*)",
+      "Bash(npx tsc:*)",
+      "Bash(pgrep:*)",
+      "Bash(node -e:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git rm:*)",
+      "Bash(printf:*)"
     ]
   }
 }

@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bolt;Thunder;;;
+FN;CHARSET=utf-8:Thunder Bolt
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:thunderboltengineer@gmail.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b7c02d86ab64752804ae31cc5595bb8d0af0f4f5d7a0dbf0b908faab7dbbfb3c0?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=319f12e1f6d157e4d98a8c356875de8ae12414bf7509870020699037faaf0e7a
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

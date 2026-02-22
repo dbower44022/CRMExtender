@@ -15,7 +15,7 @@
 >
 > This document defines the Adaptive Grid Intelligence system — an intelligent layout engine that automatically optimizes the entire workspace (grid, Detail Panel, Action Panel) based on display characteristics, data content analysis, and user preferences. The system eliminates the need for manual layout configuration by anticipating user needs and adapting the UI to deliver maximum information density on any screen.
 >
-> This PRD is additive to the [Views & Grid PRD](views-grid-prd_V4.md) and [GUI Functional Requirements PRD](gui-functional-requirements-prd_V2.md). It does not replace any existing specifications — it defines an intelligent optimization layer that operates on top of the existing column system, zone layout, and view persistence model. Where this PRD extends or refines behaviors defined in those PRDs, the changes are called out explicitly in the Cross-PRD Reconciliation section.
+> This PRD is additive to the [Views & Grid PRD](views-grid-prd_V5.md) and [GUI Functional Requirements PRD](gui-functional-requirements-prd_V2.md). It does not replace any existing specifications — it defines an intelligent optimization layer that operates on top of the existing column system, zone layout, and view persistence model. Where this PRD extends or refines behaviors defined in those PRDs, the changes are called out explicitly in the Cross-PRD Reconciliation section.
 >
 > **Scope:** Grid/List views only. The design patterns established here are intentionally extensible to Board, Calendar, and Timeline views in future phases.
 >
@@ -71,7 +71,7 @@ The system operates at three interconnected levels:
 
 **Core principle:** The system auto-configures when a view is opened and when the display is significantly resized. After configuration, the system steps back and lets the user work without interference. The user always knows better — the system's job is to deliver a great starting point, not to impose its will.
 
-**Relationship to other PRDs:** This PRD extends the column system defined in the [Views & Grid PRD](views-grid-prd_V4.md), the Workspace Layout and responsive breakpoints defined in the [GUI Functional Requirements PRD](gui-functional-requirements-prd_V2.md), and the view persistence model defined in the [Views & Grid PRD, Section 17](views-grid-prd_V4.md#17-view-persistence--sharing).
+**Relationship to other PRDs:** This PRD extends the column system defined in the [Views & Grid PRD](views-grid-prd_V5.md), the Workspace Layout and responsive breakpoints defined in the [GUI Functional Requirements PRD](gui-functional-requirements-prd_V2.md), and the view persistence model defined in the [Views & Grid PRD, Section 17](views-grid-prd_V5.md#17-view-persistence--sharing).
 
 ---
 
@@ -128,7 +128,7 @@ The net result is that users spend significant time on every session manually co
 
 ### 4.1 Personas
 
-These personas extend the personas defined in the [Views & Grid PRD, Section 4](views-grid-prd_V4.md#4-user-personas--stories) and the [GUI Functional Requirements PRD, Section 3](gui-functional-requirements-prd_V2.md#3-user-personas--stories).
+These personas extend the personas defined in the [Views & Grid PRD, Section 4](views-grid-prd_V5.md#4-user-personas--stories) and the [GUI Functional Requirements PRD, Section 3](gui-functional-requirements-prd_V2.md#3-user-personas--stories).
 
 **Power User (Doug)** — Runs a gutter cleaning business across multiple cities. Uses a 4K 27" monitor at 2x scaling. Has dozens of custom views for Conversations, Jobs, Properties, and Contacts. Wants to open any view and immediately see the maximum amount of useful data with zero clicks wasted on layout adjustment. Hates truncated subjects and wasted whitespace.
 
@@ -1072,7 +1072,7 @@ When a user drags a column edge or splitter, the resize events fire continuously
 
 ## 24. Cross-PRD Reconciliation
 
-### 24.1 Views & Grid PRD (views-grid-prd_V4.md)
+### 24.1 Views & Grid PRD (views-grid-prd_V5.md)
 
 **Section 8.3 — Column Configuration:**
 The "Width" property (described as "Pixel width of the column") is extended. Width is now a computed output of the auto-configuration engine, not solely a user-set value. The auto-configured width serves as the initial value; user drag-resize creates a proportional override. The "Default Width (px)" table in Section 8.3 becomes a fallback used only when `column_auto_sizing = false` in the view's layout intelligence settings.
@@ -1108,7 +1108,7 @@ The three density levels remain as defined. The Adaptive Grid Intelligence syste
 **Section 9.1 — Field Type System:**
 No changes to the field type definitions. The content analysis engine reads field type metadata to apply type-specific heuristics (e.g., knowing a column is "Currency" affects alignment rules), but does not modify the field type system.
 
-### 24.4 Permissions & Sharing PRD (permissions-sharing-prd_V1.md)
+### 24.4 Permissions & Sharing PRD (permissions-sharing-prd_V2.md)
 
 **Layout overrides are personal data.** A user's layout overrides are never visible to other users, even on shared views. The overrides are scoped to the user and do not affect the shared view definition.
 
@@ -1158,11 +1158,11 @@ No changes to the field type definitions. The content analysis engine reads fiel
 
 | PRD | Dependency Type | Details |
 |---|---|---|
-| **[Views & Grid PRD](views-grid-prd_V4.md)** | Foundation | Column system (Section 8), field type registry (Section 9), view persistence (Section 17), performance targets (Section 19). This PRD extends these foundations. |
+| **[Views & Grid PRD](views-grid-prd_V5.md)** | Foundation | Column system (Section 8), field type registry (Section 9), view persistence (Section 17), performance targets (Section 19). This PRD extends these foundations. |
 | **[GUI Functional Requirements PRD](gui-functional-requirements-prd_V2.md)** | Foundation | Workspace Layout (Section 4), Splitter Bar (Section 4.3), Detail Panel (Section 8), responsive breakpoints (Section 22), density settings (Section 24.3). This PRD refines and extends these specifications. |
 | **[Custom Objects PRD](custom-objects-prd_v1.md)** | Reference | Field type system (Section 9) informs content analysis heuristics. No modifications to the Custom Objects PRD required. |
-| **[Data Sources PRD](data-sources-prd.md)** | Reference | Data source query results feed the content analysis engine. No modifications required. |
-| **[Permissions & Sharing PRD](permissions-sharing-prd_V1.md)** | Constraint | Layout overrides are personal data and follow user-scoped visibility rules. |
+| **[Data Sources PRD](data-sources-prd_V1.md)** | Reference | Data source query results feed the content analysis engine. No modifications required. |
+| **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** | Constraint | Layout overrides are personal data and follow user-scoped visibility rules. |
 
 ---
 

@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Kugelman;M;;;
+FN;CHARSET=utf-8:M Kugelman
+TEL;TYPE=WORK:330-998-6987
+EMAIL;TYPE=INTERNET;TYPE=WORK:m@kugelman.net
+ADR;TYPE=OTHER;CHARSET=utf-8:;;twinsburg, oh\nUS;;;;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c83bd5c070672c390f2526e275c86661b62?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=2d7c5bb68c5f20edcb733b185cbcb29c2f7f8cd4be183cf30be2a8c6fb5f34a3
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

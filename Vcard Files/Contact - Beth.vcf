@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Beth;;;
+FN;CHARSET=utf-8:Beth
+ORG;CHARSET=utf-8:Nurse;
+item1.X-ABLabel:
+item1.TEL:+18473225166
+END:VCARD

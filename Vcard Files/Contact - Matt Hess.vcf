@@ -1,0 +1,22 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hess;Matt;;;
+FN;CHARSET=utf-8:Matt Hess
+ORG;CHARSET=utf-8:Adenium Systems, Inc.;
+TITLE;CHARSET=utf-8:Engineer
+TEL;TYPE=WORK:440-941-4377
+TEL;TYPE=WORK:216-772-7183
+TEL;TYPE=HOME:(440) 937-6063
+TEL;TYPE=CELL;TYPE=VOICE:(440)251-7655
+item1.X-ABLabel:Other
+item1.TEL:(440) 942-2526
+EMAIL;TYPE=INTERNET;TYPE=HOME:hess1005@gmail.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:mhess@adeniumsystems.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;34103 Lakeshore Blvd;Lakeline;OH;44095;United States
+ADR;TYPE=HOME;CHARSET=utf-8:;;34002 Hickory Court;Avon;OH;44011;United States
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c836ea8ba1710b7dd17853594b41defc09a?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=96ddd7347876b269ca6784bdb85d24bb01a6c65db8cdfcb0c041055cf1130545
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nWife Michelle
+END:VCARD

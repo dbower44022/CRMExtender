@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Callahan;Patrick;;;
+FN;CHARSET=utf-8:Patrick Callahan
+ORG;CHARSET=utf-8:Eaton Corporation;
+TITLE;CHARSET=utf-8:Data Analyst
+TEL;TYPE=HOME:513-234-5678
+EMAIL;TYPE=INTERNET;TYPE=HOME:patick@jpcallahan.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b7df6a7231c5319157da1f843172e2d33b0b1066f7eed1d221aa59506113658a1?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=be428daec31598440dad16bbcf2e726ae31b59a50b8b6117327997aabe9c850f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

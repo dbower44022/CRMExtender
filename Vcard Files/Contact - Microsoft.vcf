@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Microsoft;;;
+FN;CHARSET=utf-8:Microsoft
+ORG;CHARSET=utf-8:Microsoft Corporation;
+EMAIL;TYPE=INTERNET;TYPE=WORK:msa@communication.microsoft.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;One Microsoft Way;Redmond;WA;98052;USA
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bc9878e9d96b49fbd72b3da17210383837517961af20875c2c0a6322b1b56cbac?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=5d7e53f23a259eedd5faf3c570815dad5f4c7c139a18e518e3d0a1b6cb346999
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

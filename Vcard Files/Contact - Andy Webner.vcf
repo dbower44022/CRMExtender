@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Webner;Andy;;;
+FN;CHARSET=utf-8:Andy Webner
+ORG;CHARSET=utf-8:Great Lakes Construction;
+TEL;TYPE=CELL;TYPE=VOICE:(216) 296-2692
+EMAIL;TYPE=INTERNET;TYPE=HOME:awebner@greatlakesway.com
+END:VCARD

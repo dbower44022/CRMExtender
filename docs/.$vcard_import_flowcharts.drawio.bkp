@@ -1,0 +1,611 @@
+<mxfile host="Claude" modified="2026-02-13T00:00:00.000Z" agent="Claude Code" version="1.0">
+  <diagram id="find_vcf_files" name="find_vcf_files">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="fvf_start" value="find_vcf_files(path, recursive)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_resolve" value="Resolve path to Path object" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="100" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_exists" value="Path exists?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="180" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_err_notfound" value="Raise FileNotFoundError" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+          <mxGeometry x="500" y="180" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_isfile" value="Is a file?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="300" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_check_ext" value=".vcf extension?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="500" y="300" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_err_ext" value="Raise ValueError&#xa;(not a .vcf file)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+          <mxGeometry x="740" y="300" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_return_file" value="Return [path]" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="510" y="420" width="140" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_isdir" value="Is a directory?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="420" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_glob" value="Glob for *.vcf files&#xa;(recursive if flag set)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="540" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_found" value="Files found?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="620" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_err_nofiles" value="Raise ValueError&#xa;(no .vcf files found)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+          <mxGeometry x="500" y="620" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_return_list" value="Return sorted file list" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="225" y="740" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="fvf_err_notdir" value="Raise ValueError&#xa;(not file or directory)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+          <mxGeometry x="500" y="460" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Edges -->
+        <mxCell id="e_fvf_start_resolve" style="endArrow=classic;" edge="1" source="fvf_start" target="fvf_resolve" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_resolve_exists" style="endArrow=classic;" edge="1" source="fvf_resolve" target="fvf_exists" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_exists_no" value="No" style="endArrow=classic;" edge="1" source="fvf_exists" target="fvf_err_notfound" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_exists_yes" value="Yes" style="endArrow=classic;" edge="1" source="fvf_exists" target="fvf_isfile" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_isfile_yes" value="Yes" style="endArrow=classic;" edge="1" source="fvf_isfile" target="fvf_check_ext" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_check_ext_no" value="No" style="endArrow=classic;" edge="1" source="fvf_check_ext" target="fvf_err_ext" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_check_ext_yes" value="Yes" style="endArrow=classic;" edge="1" source="fvf_check_ext" target="fvf_return_file" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_isfile_no" value="No" style="endArrow=classic;" edge="1" source="fvf_isfile" target="fvf_isdir" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_isdir_yes" value="Yes" style="endArrow=classic;" edge="1" source="fvf_isdir" target="fvf_glob" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_isdir_no" value="No" style="endArrow=classic;" edge="1" source="fvf_isdir" target="fvf_err_notdir" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_glob_found" style="endArrow=classic;" edge="1" source="fvf_glob" target="fvf_found" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_found_no" value="No" style="endArrow=classic;" edge="1" source="fvf_found" target="fvf_err_nofiles" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fvf_found_yes" value="Yes" style="endArrow=classic;" edge="1" source="fvf_found" target="fvf_return_list" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="parse_vcard_file" name="parse_vcard_file">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="pvf_start" value="parse_vcard_file(path)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="pvf_read" value="Read file text (UTF-8)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="100" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="pvf_parse" value="vobject.readComponents()&#xa;Parse all vCard blocks" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="200" y="180" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="pvf_return" value="Return list of vCard components" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="260" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="pvf_except" value="Log warning, return []" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+          <mxGeometry x="530" y="180" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Edges -->
+        <mxCell id="e_pvf_start_read" style="endArrow=classic;" edge="1" source="pvf_start" target="pvf_read" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_pvf_read_parse" style="endArrow=classic;" edge="1" source="pvf_read" target="pvf_parse" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_pvf_parse_return" style="endArrow=classic;" edge="1" source="pvf_parse" target="pvf_return" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_pvf_parse_except" value="Exception" style="endArrow=classic;dashed=1;strokeColor=#C0392B;" edge="1" source="pvf_parse" target="pvf_except" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="map_phone_type" name="_map_phone_type">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="mpt_start" value="_map_phone_type(vcard_types)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mpt_upper" value="Uppercase all type values" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="100" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mpt_cell" value="CELL?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="180" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mpt_ret_mobile" value="Return &quot;mobile&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="500" y="190" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mpt_work" value="WORK?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="300" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mpt_ret_work" value="Return &quot;work&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="500" y="310" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mpt_home" value="HOME?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="420" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mpt_ret_home" value="Return &quot;home&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="500" y="430" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mpt_fax" value="FAX?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="540" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mpt_ret_fax" value="Return &quot;fax&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="500" y="550" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mpt_ret_other" value="Return &quot;other&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="250" y="660" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Edges -->
+        <mxCell id="e_mpt_start_upper" style="endArrow=classic;" edge="1" source="mpt_start" target="mpt_upper" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mpt_upper_cell" style="endArrow=classic;" edge="1" source="mpt_upper" target="mpt_cell" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mpt_cell_yes" value="Yes" style="endArrow=classic;" edge="1" source="mpt_cell" target="mpt_ret_mobile" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mpt_cell_no" value="No" style="endArrow=classic;" edge="1" source="mpt_cell" target="mpt_work" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mpt_work_yes" value="Yes" style="endArrow=classic;" edge="1" source="mpt_work" target="mpt_ret_work" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mpt_work_no" value="No" style="endArrow=classic;" edge="1" source="mpt_work" target="mpt_home" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mpt_home_yes" value="Yes" style="endArrow=classic;" edge="1" source="mpt_home" target="mpt_ret_home" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mpt_home_no" value="No" style="endArrow=classic;" edge="1" source="mpt_home" target="mpt_fax" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mpt_fax_yes" value="Yes" style="endArrow=classic;" edge="1" source="mpt_fax" target="mpt_ret_fax" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mpt_fax_no" value="No" style="endArrow=classic;" edge="1" source="mpt_fax" target="mpt_ret_other" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="map_address_type" name="_map_address_type">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="mat_start" value="_map_address_type(vcard_types)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mat_upper" value="Uppercase all type values" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="100" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mat_work" value="WORK?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="180" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mat_ret_work" value="Return &quot;work&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="500" y="190" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mat_home" value="HOME?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="300" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mat_ret_home" value="Return &quot;home&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="500" y="310" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mat_ret_other" value="Return &quot;other&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="250" y="420" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Edges -->
+        <mxCell id="e_mat_start_upper" style="endArrow=classic;" edge="1" source="mat_start" target="mat_upper" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mat_upper_work" style="endArrow=classic;" edge="1" source="mat_upper" target="mat_work" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mat_work_yes" value="Yes" style="endArrow=classic;" edge="1" source="mat_work" target="mat_ret_work" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mat_work_no" value="No" style="endArrow=classic;" edge="1" source="mat_work" target="mat_home" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mat_home_yes" value="Yes" style="endArrow=classic;" edge="1" source="mat_home" target="mat_ret_home" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mat_home_no" value="No" style="endArrow=classic;" edge="1" source="mat_home" target="mat_ret_other" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="map_email_label" name="_map_email_label">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="mel_start" value="_map_email_label(vcard_types)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mel_upper" value="Uppercase all type values" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="100" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mel_work" value="WORK?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="180" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mel_ret_work" value="Return &quot;work&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="500" y="190" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mel_home" value="HOME?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="300" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="mel_ret_home" value="Return &quot;home&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="500" y="310" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="mel_ret_general" value="Return &quot;general&quot;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="250" y="420" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Edges -->
+        <mxCell id="e_mel_start_upper" style="endArrow=classic;" edge="1" source="mel_start" target="mel_upper" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mel_upper_work" style="endArrow=classic;" edge="1" source="mel_upper" target="mel_work" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mel_work_yes" value="Yes" style="endArrow=classic;" edge="1" source="mel_work" target="mel_ret_work" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mel_work_no" value="No" style="endArrow=classic;" edge="1" source="mel_work" target="mel_home" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mel_home_yes" value="Yes" style="endArrow=classic;" edge="1" source="mel_home" target="mel_ret_home" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mel_home_no" value="No" style="endArrow=classic;" edge="1" source="mel_home" target="mel_ret_general" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="extract_contact_data" name="extract_contact_data">
+    <mxGraphModel dx="1422" dy="962" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="1200">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="ecd_start" value="extract_contact_data(vcard)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecd_has_fn" value="Has FN (full name)?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="100" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecd_use_fn" value="Use FN as name" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="500" y="110" width="160" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecd_has_n" value="Has N (structured name)?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="220" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecd_use_n" value="Build name from&#xa;prefix/given/family/suffix" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="500" y="230" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecd_has_name" value="Name resolved?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="340" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecd_ret_none" value="Return None" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="500" y="350" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecd_extract" value="Extract from vCard children:&#xa;EMAIL, TEL, ADR&#xa;(using type mappers)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="175" y="460" width="300" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecd_org" value="Extract ORG and TITLE&#xa;(if present)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="550" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecd_return" value="Return {name, emails,&#xa;phones, addresses, org, title}" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="190" y="630" width="270" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Edges -->
+        <mxCell id="e_ecd_start_fn" style="endArrow=classic;" edge="1" source="ecd_start" target="ecd_has_fn" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ecd_fn_yes" value="Yes" style="endArrow=classic;" edge="1" source="ecd_has_fn" target="ecd_use_fn" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ecd_fn_no" value="No" style="endArrow=classic;" edge="1" source="ecd_has_fn" target="ecd_has_n" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ecd_use_fn_check" style="endArrow=classic;curved=1;" edge="1" source="ecd_use_fn" target="ecd_has_name" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ecd_n_yes" value="Yes" style="endArrow=classic;" edge="1" source="ecd_has_n" target="ecd_use_n" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ecd_n_no" value="No" style="endArrow=classic;" edge="1" source="ecd_has_n" target="ecd_has_name" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ecd_use_n_check" style="endArrow=classic;curved=1;" edge="1" source="ecd_use_n" target="ecd_has_name" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ecd_check_no" value="No" style="endArrow=classic;" edge="1" source="ecd_has_name" target="ecd_ret_none" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ecd_check_yes" value="Yes" style="endArrow=classic;" edge="1" source="ecd_has_name" target="ecd_extract" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ecd_extract_org" style="endArrow=classic;" edge="1" source="ecd_extract" target="ecd_org" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ecd_org_return" style="endArrow=classic;" edge="1" source="ecd_org" target="ecd_return" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="import_vcards" name="import_vcards">
+    <mxGraphModel dx="1422" dy="962" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="1100">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="iv_start" value="import_vcards(path, recursive,&#xa;customer_id, user_id)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="250" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_init" value="Initialize ImportResult" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="110" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_find" value="find_vcf_files()" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="200" y="190" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_loop_files" value="For each .vcf file" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="270" width="250" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_parse" value="parse_vcard_file()" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="200" y="360" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_valid" value="Parsed successfully?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="440" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_invalid" value="Add to invalid_files" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+          <mxGeometry x="500" y="450" width="180" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_loop_vcards" value="For each vCard in file" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="560" width="250" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_extract" value="extract_contact_data()" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="200" y="650" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_hasname" value="Has name?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="730" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_skip_noname" value="Skip (no name)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="500" y="740" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_import" value="_import_single_contact()" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="200" y="850" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_catch" value="Log error, add to errors" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;fontColor=#FFFFFF;strokeColor=#C0392B;" vertex="1" parent="1">
+          <mxGeometry x="500" y="850" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="iv_return" value="Return ImportResult" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="225" y="950" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Edges -->
+        <mxCell id="e_iv_start_init" style="endArrow=classic;" edge="1" source="iv_start" target="iv_init" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_init_find" style="endArrow=classic;" edge="1" source="iv_init" target="iv_find" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_find_loop" style="endArrow=classic;" edge="1" source="iv_find" target="iv_loop_files" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_loop_parse" style="endArrow=classic;" edge="1" source="iv_loop_files" target="iv_parse" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_parse_valid" style="endArrow=classic;" edge="1" source="iv_parse" target="iv_valid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_valid_no" value="No" style="endArrow=classic;" edge="1" source="iv_valid" target="iv_invalid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_invalid_loop" value="Next file" style="endArrow=classic;curved=1;" edge="1" source="iv_invalid" target="iv_loop_files" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_valid_yes" value="Yes" style="endArrow=classic;" edge="1" source="iv_valid" target="iv_loop_vcards" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_vcards_extract" style="endArrow=classic;" edge="1" source="iv_loop_vcards" target="iv_extract" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_extract_hasname" style="endArrow=classic;" edge="1" source="iv_extract" target="iv_hasname" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_hasname_no" value="No" style="endArrow=classic;" edge="1" source="iv_hasname" target="iv_skip_noname" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_skip_loop" value="Next vCard" style="endArrow=classic;curved=1;" edge="1" source="iv_skip_noname" target="iv_loop_vcards" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_hasname_yes" value="Yes" style="endArrow=classic;" edge="1" source="iv_hasname" target="iv_import" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_import_catch" value="Exception" style="endArrow=classic;dashed=1;strokeColor=#C0392B;" edge="1" source="iv_import" target="iv_catch" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_iv_import_next" value="Next vCard" style="endArrow=classic;curved=1;" edge="1" source="iv_import" target="iv_loop_vcards" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="140" y="870"/>
+              <mxPoint x="140" y="585"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_iv_loop_done" value="All files done" style="endArrow=classic;" edge="1" source="iv_loop_files" target="iv_return" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="140" y="295"/>
+              <mxPoint x="140" y="970"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="import_single_contact" name="_import_single_contact">
+    <mxGraphModel dx="1422" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="1500">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="isc_start" value="_import_single_contact(data,&#xa;result, customer_id, user_id)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="250" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_dup_check" value="Any email already in&#xa;contact_identifiers?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="220" y="110" width="210" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_skip_dup" value="Skip (duplicate)&#xa;return early" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="530" y="120" width="170" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_create" value="INSERT contact into DB&#xa;(source = &apos;vcard_import&apos;)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="230" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_visibility" value="Create user_contacts&#xa;visibility row (if user_id)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="310" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_emails" value="Add email identifiers&#xa;(first = primary)" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="390" width="250" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_domain" value="Try domain-based company&#xa;resolution via first email" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="200" y="480" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_has_company" value="Company found?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="560" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_has_org" value="ORG in vCard?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="680" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_find_name" value="Look up company by&#xa;ORG name" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="200" y="800" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_name_found" value="Found by name?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="245" y="880" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_create_co" value="Create new company&#xa;from ORG name" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="500" y="890" width="200" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_affiliation" value="Create affiliation&#xa;(Employee role + title)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="200" y="1000" width="250" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_phones" value="Add phone numbers&#xa;(E.164 normalization)" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="1080" width="250" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_addrs" value="Add addresses" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="1170" width="250" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_record" value="Record contact in result&#xa;(contacts_created + imported_contacts)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="175" y="1260" width="300" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="isc_return" value="Return (void)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#4A9EFF;fontColor=#FFFFFF;strokeColor=#2D7CD6;" vertex="1" parent="1">
+          <mxGeometry x="250" y="1340" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Edges -->
+        <mxCell id="e_isc_start_dup" style="endArrow=classic;" edge="1" source="isc_start" target="isc_dup_check" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_dup_yes" value="Yes" style="endArrow=classic;" edge="1" source="isc_dup_check" target="isc_skip_dup" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_dup_no" value="No" style="endArrow=classic;" edge="1" source="isc_dup_check" target="isc_create" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_create_vis" style="endArrow=classic;" edge="1" source="isc_create" target="isc_visibility" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_vis_emails" style="endArrow=classic;" edge="1" source="isc_visibility" target="isc_emails" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_emails_domain" style="endArrow=classic;" edge="1" source="isc_emails" target="isc_domain" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_domain_check" style="endArrow=classic;" edge="1" source="isc_domain" target="isc_has_company" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_company_yes" value="Yes" style="endArrow=classic;curved=1;" edge="1" source="isc_has_company" target="isc_affiliation" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="530" y="600"/>
+              <mxPoint x="530" y="1020"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_isc_company_no" value="No" style="endArrow=classic;" edge="1" source="isc_has_company" target="isc_has_org" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_org_no" value="No" style="endArrow=classic;curved=1;" edge="1" source="isc_has_org" target="isc_phones" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="140" y="720"/>
+              <mxPoint x="140" y="1105"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_isc_org_yes" value="Yes" style="endArrow=classic;" edge="1" source="isc_has_org" target="isc_find_name" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_find_found" style="endArrow=classic;" edge="1" source="isc_find_name" target="isc_name_found" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_found_no" value="No" style="endArrow=classic;" edge="1" source="isc_name_found" target="isc_create_co" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_found_yes" value="Yes" style="endArrow=classic;" edge="1" source="isc_name_found" target="isc_affiliation" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_createco_aff" style="endArrow=classic;curved=1;" edge="1" source="isc_create_co" target="isc_affiliation" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_aff_phones" style="endArrow=classic;" edge="1" source="isc_affiliation" target="isc_phones" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_phones_addrs" style="endArrow=classic;" edge="1" source="isc_phones" target="isc_addrs" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_addrs_record" style="endArrow=classic;" edge="1" source="isc_addrs" target="isc_record" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_isc_record_return" style="endArrow=classic;" edge="1" source="isc_record" target="isc_return" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

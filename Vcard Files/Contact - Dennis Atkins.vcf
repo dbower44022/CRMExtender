@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Atkins;Dennis;;;
+FN;CHARSET=utf-8:Dennis Atkins
+ORG;CHARSET=utf-8:ProSolv CardioVascular;
+TITLE;CHARSET=utf-8:Director of Sales and Marketing
+TEL;TYPE=WORK:440-893-9851
+TEL;TYPE=HOME:440-893-9850
+TEL;TYPE=CELL;TYPE=VOICE:440-715-5169
+EMAIL;TYPE=INTERNET;TYPE=WORK:atkins.com@gmail.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;;Chagrin Falls;Ohio;;United States
+ADR;TYPE=HOME;CHARSET=utf-8:;;116 Signal Hill\nChagrin Falls, OH 44023 Ohio\nUnited States of America;;;;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4182bc424bcca3cfca7e8371ac79985bc7ed7791e077b6a2541058fb567ee150?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=f063f8e3ed46a74b8ac0f7041b0ad7ddd90109b03975425e6225c0612b7fc518
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d954d
+END:VCARD

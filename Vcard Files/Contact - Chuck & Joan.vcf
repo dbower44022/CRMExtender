@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Joan;Chuck;&;;Mockbee
+FN;CHARSET=utf-8:Chuck & Joan Mockbee
+ORG;CHARSET=utf-8:CAM Inc.;
+TEL;TYPE=WORK:(330) 896-3253
+TEL;TYPE=HOME:(330) 666-4273
+ADR;TYPE=HOME;CHARSET=utf-8:;;4844 Stonehedge Drive;Akron;OH;44333;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4182bc424bcca3cfca7e8371ac79985bf438db4d3f7fffcca7f913a229689ce5?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=40bace1ba73b5a7a5535e477f630b49088b6b5cb31000047259dc8bab6840721
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nwife - Joan
+END:VCARD

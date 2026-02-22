@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hill;Colin;;;
+FN;CHARSET=utf-8:Colin Hill
+ORG;CHARSET=utf-8:Telsa Motors;
+EMAIL;TYPE=INTERNET;TYPE=HOME:cohill@teslamotors.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:colintrevorhill@gmail.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;;Cincinnati;Ohio;;United States
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b62965a8693e0b27c7d8d1857c50016d628a813fe85cfe3d7ac1aedb62b2651b3?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=713e523b0017d6c70d479ae295f68d02d9fffca0276e1ae222ec84c5dd51fb69
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

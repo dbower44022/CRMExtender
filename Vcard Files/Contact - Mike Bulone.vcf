@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bulone;Mike;;;
+FN;CHARSET=utf-8:Mike Bulone
+item1.X-ABLabel:
+item1.TEL:(440) 477-3500
+item2.X-ABLabel:
+item2.TEL:(330) 562-0070
+item3.X-ABLabel:
+item3.EMAIL;TYPE=INTERNET:mike@bulonebrothers.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;9337 Ravenna Road, Unit M;Twinsburg;Ohio;44087;
+END:VCARD

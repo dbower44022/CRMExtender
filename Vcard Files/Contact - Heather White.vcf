@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:White;Heather;;;
+FN;CHARSET=utf-8:Heather White
+item1.X-ABLabel:
+item1.TEL:440-478-8396
+EMAIL;TYPE=INTERNET;TYPE=HOME:heather.white@schoolyardstudio.net
+NOTE;CHARSET=utf-8:Schoolyards Studio\nLives in Kenston.  Son is running track and is running the 300 hurdles, and the 400m Dash.
+END:VCARD

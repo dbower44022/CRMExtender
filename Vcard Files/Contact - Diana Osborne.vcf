@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Osborne;Diana;;;
+FN;CHARSET=utf-8:Diana Osborne
+ORG;CHARSET=utf-8:STACK Construction Technologies;
+TITLE;CHARSET=utf-8:Senior Human Capital Partner
+EMAIL;TYPE=INTERNET;TYPE=WORK:dosborne@stackct.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4692cfb1aaf8644d6e0eb8095bd4ba9328c2cb7cc1cbd913bd06394df7683485?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=1dc25fa6b1fd65ac5822764aaa6061294bba21913f3842d5e25d4edc0f7920e1
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

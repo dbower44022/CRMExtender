@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Skaggs;Jason;;;
+FN;CHARSET=utf-8:Jason Skaggs
+TEL;TYPE=HOME:(513) 792-0282
+ADR;TYPE=HOME;CHARSET=utf-8:;;8781 Sturbridge Drive;Cincinnati;OH;45236;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4ba2fda22463764d070878401a8ed47d4a3a81d036e26101420967044f94b0d1?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=459d5a670d6bfea05c896c3bb3d572206300b79e6f9194b4136c7919392fcd36
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nJustin, Ryan & Caroline
+END:VCARD

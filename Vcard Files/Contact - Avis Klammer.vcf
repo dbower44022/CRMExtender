@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Klammer;Avis;;;
+FN;CHARSET=utf-8:Avis Klammer
+TEL;TYPE=HOME:(440) 951-4685
+TEL;TYPE=CELL;TYPE=VOICE:(440) 487-2691
+ADR;TYPE=WORK;CHARSET=utf-8:;;;;;;United States of America
+ADR;TYPE=HOME;CHARSET=utf-8:;;34103 Lakeshore Blvd. Lakeline OH 44095;;;;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bcd01911bbf8a3cd6a46916ccda48272440cc8533460ec3aaaefee77bd91eb584?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=c205a901bfc565dc1b4febd663f94214c8f8758ff2a9b74498b6f28e3db9d659
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nPager: 440-301-3863
+END:VCARD

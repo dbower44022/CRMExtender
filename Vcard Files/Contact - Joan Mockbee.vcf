@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Mockbee;Joan;;;
+FN;CHARSET=utf-8:Joan Mockbee
+ORG;CHARSET=utf-8:CAM Inc;
+TITLE;CHARSET=utf-8:Treasurer
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:joanm@camincorp.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4182bc424bcca3cfca7e8371ac79985b8e34d07b1c9d2d9b78e6dab03092c44e?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=070ff8cc9960d6f6c059fd84048794289aca71f569cbf659f20d332041dd0a5b
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d9552
+END:VCARD

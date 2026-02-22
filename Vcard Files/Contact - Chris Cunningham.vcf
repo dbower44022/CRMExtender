@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Cunningham;Chris;;;
+FN;CHARSET=utf-8:Chris Cunningham
+TEL;TYPE=WORK:304-483-1509
+EMAIL;TYPE=INTERNET;TYPE=WORK:cunninghamswelding@yahoo.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bdccff1aab5dcfcb2ac62d30c11e54769b5b67328630b66c103662c63a9c7df36?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=ed2629ae51632107da3d9ab54714310b6498a31fbd4d7324b313636063b04803
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nWelding Instructor at Lakeland community college
+END:VCARD

@@ -1,0 +1,18 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Padilla;Cecilia;;;
+FN;CHARSET=utf-8:Cecilia Padilla
+ORG;CHARSET=utf-8:On-Center Software;
+TITLE;CHARSET=utf-8:President
+TEL;TYPE=HOME:1 832-492-1906
+TEL;TYPE=HOME:281.297.9010
+TEL;TYPE=CELL;TYPE=VOICE:800.880.8254 ext 0193
+EMAIL;TYPE=INTERNET;TYPE=HOME:cecilia.padilla@oncenter.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:cecilia@oncenter.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;The Woodlands, Texas\nUS;;;;
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b61d0ec60531633d8228e96f5571c79493e70e2ec11deabe6f7fa2bccf981cb27?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=37eb1165533819402c760f36c3678e87f8b2001d2cbca3a42414f83b3f921872
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d9539
+END:VCARD

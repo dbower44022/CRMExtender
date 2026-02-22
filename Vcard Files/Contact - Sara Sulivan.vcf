@@ -1,0 +1,16 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Sulivan;Sara;;;MA
+FN;CHARSET=utf-8:Sara Sulivan MA
+ORG;CHARSET=utf-8:Second Story;
+TEL;TYPE=CELL;TYPE=VOICE:216-244-3196
+TEL;TYPE=WORK:+12162925946
+EMAIL;TYPE=INTERNET;TYPE=WORK:saraonsullivan@gmail.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:sara@janemintz.com
+ADR;TYPE=OTHER;CHARSET=utf-8:;;22150 McCauley Road;Shaker Heights;;;US
+item1.X-ABLabel:LinkedIn
+item1.URL:https://www.linkedin.com/in/brian-sullivan-75a60a7
+item2.X-ABLabel:Other
+item2.URL:http://www.secondstoryproductions.net
+END:VCARD

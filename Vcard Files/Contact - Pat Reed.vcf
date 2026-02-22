@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Reed;Pat;;;
+FN;CHARSET=utf-8:Pat Reed
+TEL;TYPE=HOME:(440) 230-0805
+TEL;TYPE=CELL;TYPE=VOICE:(216) 219-0636
+ADR;TYPE=HOME;CHARSET=utf-8:;;14070 Pine Forest Drive;North Royalton;OH;44133;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0Apy5gi5eniUuQo4C1Y5t6CgAAAAB9YAAA?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nMom's Friend
+END:VCARD

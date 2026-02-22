@@ -1,0 +1,21 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Wright;Lisa E.;;;
+FN;CHARSET=utf-8:Lisa E. Wright
+ORG;CHARSET=utf-8:McGraw Hill Construction;
+TITLE;CHARSET=utf-8:Strategic Account Manager
+TEL;TYPE=WORK:+1 513-345-8220
+TEL;TYPE=CELL;TYPE=VOICE:+1 513-702-2014
+item1.X-ABLabel:Other
+item1.TEL:+1 513-345-8250
+EMAIL;TYPE=INTERNET;TYPE=HOME:lisa.wright@fuse.net
+EMAIL;TYPE=INTERNET;TYPE=WORK:lisa.wright@mhfi.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:lisa_wright@mcgraw-hill.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;Suite 202 Executive Center 7265 Kenwood Rd Kenwood;Cincinnati;OH;45236;US
+ADR;TYPE=HOME;CHARSET=utf-8:;;5022 Lord Alfred Court;Cincinnati;OH;45241;United States
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c83c5c8c16d027c10b6c17dedb9793968b5?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=e7d8b83d6e028b9260ff67d521e210d7edd915d5644bc60cb6b4933915081b71
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd273499b912d09d9599
+END:VCARD

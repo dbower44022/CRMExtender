@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Broekmaat;Marcel;;;
+FN;CHARSET=utf-8:Marcel Broekmaat
+ORG;CHARSET=utf-8:Trimble GC/CM Division;
+TEL;TYPE=CELL;TYPE=VOICE:+1 954-647-0765
+EMAIL;TYPE=INTERNET;TYPE=WORK:marcel_broekmaat@trimble.com
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;Denver;Colorado;;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b6d532a9d31d14702ae0144fa702007596993fa3c0ac96cc069dd9742cb1772bb?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=19cca8b09001b22f1ccb8ca62579238960f72fe3066f10fd42597259bee23209
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nMeridian Systems
+END:VCARD

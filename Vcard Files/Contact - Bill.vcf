@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Bill;;;
+FN;CHARSET=utf-8:Bill
+ORG;CHARSET=utf-8:Ski Nautique;
+item1.X-ABLabel:
+item1.TEL:+14195531128
+NOTE;CHARSET=utf-8:Buddy Dave.\nSister died. So selling boat\nShe lived in Columbus.
+END:VCARD

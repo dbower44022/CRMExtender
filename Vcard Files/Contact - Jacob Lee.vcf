@@ -1,0 +1,7 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Lee;Jacob;;;
+FN;CHARSET=utf-8:Jacob Lee
+EMAIL;TYPE=INTERNET;TYPE=HOME:jalee@alro.com
+END:VCARD

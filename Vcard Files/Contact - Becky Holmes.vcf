@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Holmes;Becky;;;
+FN;CHARSET=utf-8:Becky Holmes
+TITLE;CHARSET=utf-8:Cocker Spaniel
+EMAIL;TYPE=INTERNET;TYPE=WORK:beckholmes@gmail.com
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;;Missouri;;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bdede97086ea1ca16751e2e5141ffa41ff2931d0cdba858746e73899c8bc8dead?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=d32901ec3dd0183fb327ddbc1b11ca1df5854905de08cf1f103fec8b9a2caa45
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

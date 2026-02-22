@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Baumann;Alicia;;;
+FN;CHARSET=utf-8:Alicia Baumann
+ORG;CHARSET=utf-8:Procore;
+TITLE;CHARSET=utf-8:Manager, Webinar Production
+EMAIL;TYPE=INTERNET;TYPE=HOME:alicia.baumann@procore.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:alicia.assistant@procore.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;6309 Carpinteria Ave;Carpinteria;CA;93013;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bcd01911bbf8a3cd6a46916ccda482724c42b28a11cffc4666637829fd9fa7cb5?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=875b0d0123afcedd454830aa4499a585b011317fa877738a773853db5946711f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Rob;Schroeder;;;
+FN;CHARSET=utf-8:Schroeder Rob
+ORG;CHARSET=utf-8:Greater Cincinnati Water Works;
+TITLE;CHARSET=utf-8:Principal Engineer
+EMAIL;TYPE=INTERNET;TYPE=HOME:rschroeder2@zoomtown.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:rob.schroeder@gcww.cincinnati-oh.gov
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHfAAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

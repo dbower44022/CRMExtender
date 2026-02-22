@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bower;Sunny;;;
+FN;CHARSET=utf-8:Sunny Bower
+ORG;CHARSET=utf-8:Sunny Inc;
+TITLE;CHARSET=utf-8:Boss Dog
+TEL;TYPE=WORK:5134946262
+EMAIL;TYPE=INTERNET;TYPE=WORK:sunny@dougbower.com
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;solon;OH;;US
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4182bc424bcca3cfca7e8371ac79985ba432aba8515cc1501c595670c6b63193?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=f11a94ec273efa32802001dea360e6aadaae786780375b311c03de72ab81cffd
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

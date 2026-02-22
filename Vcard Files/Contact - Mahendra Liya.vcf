@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Liya;Mahendra;;;
+FN;CHARSET=utf-8:Mahendra Liya
+ORG;CHARSET=utf-8:Devapps Systems Private Limited;
+TITLE;CHARSET=utf-8:Founder and Director
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:liyamahendra4@gmail.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;;Bhavnagar;Gujarat;;India
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;Bengaluru;Karnataka;;India
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b61d0ec60531633d8228e96f5571c7949b04a89549f4f341dc5ed3e9e74dd926c?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=88cab8ebc3b3dd447615de0cefabc825a05fbc21c2f7d56063c16d3bb363a88e
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

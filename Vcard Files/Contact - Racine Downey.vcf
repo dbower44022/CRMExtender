@@ -1,0 +1,7 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Downey;Racine;;;
+FN;CHARSET=utf-8:Racine Downey
+EMAIL;TYPE=INTERNET;TYPE=WORK:downey.racine@gmail.com
+END:VCARD

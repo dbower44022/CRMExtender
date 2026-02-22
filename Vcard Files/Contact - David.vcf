@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;David;;;
+FN;CHARSET=utf-8:David
+item1.X-ABLabel:
+item1.TEL:+12153008995
+END:VCARD

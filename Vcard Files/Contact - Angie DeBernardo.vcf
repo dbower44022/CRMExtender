@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:DeBernardo;Angie;;;
+FN;CHARSET=utf-8:Angie DeBernardo
+ORG;CHARSET=utf-8:Chagrin Central;
+TITLE;CHARSET=utf-8:Website Administrator
+EMAIL;TYPE=INTERNET;TYPE=HOME:angie@chagrincentral.com
+item1.X-ABLabel:LinkedIn
+item1.URL:https://www.linkedin.com/in/angela-debernardo-65813511
+NOTE;CHARSET=utf-8:## 2024/4/29 0:30\nOn linked in it says: Community Blogger and Social Media Manager\n==
+END:VCARD

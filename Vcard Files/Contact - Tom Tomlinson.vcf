@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Tomlinson;Tom;;;
+FN;CHARSET=utf-8:Tom Tomlinson
+EMAIL;TYPE=INTERNET;TYPE=HOME:tomtom@acmecontracting.net
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b61d0ec60531633d8228e96f5571c7949fd523beb446a8515ef7dd310bdff262c?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=f52c99b90e97812b71abd7859f67cd8e2029350bd39b5fb0028b57c2a0a29e21
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nDelete Me
+END:VCARD

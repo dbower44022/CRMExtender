@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Resnick;Richard;;;
+FN;CHARSET=utf-8:Richard Resnick
+EMAIL;TYPE=INTERNET;TYPE=WORK:rmresnick@icloud.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b0b205dd286cae0e7fb8a132c1683e5e93eda81b19d4364fe5a49d92c2ee331e6?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=77ae5022da3dc619b710bf497cf5bc4d6d4decc65d545337ded43fb83ecb0865
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Coehn;David;;;
+FN;CHARSET=utf-8:David Coehn
+ORG;CHARSET=utf-8:Dodge Data & Analytics;
+TITLE;CHARSET=utf-8:Chief Operating Officer
+TEL;TYPE=WORK:+1 347-523-4583
+TEL;TYPE=CELL;TYPE=VOICE:+1 646-831-1625
+EMAIL;TYPE=INTERNET;TYPE=HOME:david.cohen@construction.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;830 Third Ave;New York;NY;10022;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b61d0ec60531633d8228e96f5571c79499de54e4817ec704a14ebba288d316492?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=ecc66c7c97f79f518bd357c0ba952d981f6d46e71b3225ed9d0800d8d9c91ee2
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d952c
+END:VCARD

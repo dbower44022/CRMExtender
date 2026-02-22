@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Miller;Cindy;;;
+FN;CHARSET=utf-8:Cindy Miller
+ORG;CHARSET=utf-8:Whitacre Rebar;
+item1.X-ABLabel:
+item1.TEL:+13303128191
+END:VCARD

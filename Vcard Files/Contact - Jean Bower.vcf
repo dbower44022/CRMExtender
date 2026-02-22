@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bower;Jean;;;
+FN;CHARSET=utf-8:Jean Bower
+ORG;CHARSET=utf-8:St. Ladislas;
+TEL;TYPE=HOME:(614) 850-8483
+ADR;TYPE=HOME;CHARSET=utf-8:;;3673 Colonial Drive;Hilliard;OH;43026;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4182bc424bcca3cfca7e8371ac79985ba0b2f7d2ef8075c88ac4dc236de670fc?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=6b6a6245339436450ac3f3f74c7dd5dbf3e4605e2226c4cb2d8b02ef96228a4b
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

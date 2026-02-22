@@ -1,0 +1,7 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Tucker;Jason;;;
+FN;CHARSET=utf-8:Jason Tucker
+EMAIL;TYPE=INTERNET;TYPE=HOME:jtucker@greatlakesway.com
+END:VCARD

@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Telebak;Lazar;;;
+FN;CHARSET=utf-8:Lazar Telebak
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:lazartelebak@gmail.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b7c02d86ab64752804ae31cc5595bb8d0d457e0f69635fdae6ccb4765d5be83b7?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=f4face3c6165ae454a6a29a3c7fa812e0d1b77d2724a9a9845aaa75d704371c0
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nPython Scraper Expert
+END:VCARD

@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Nichols;Josh;;;
+FN;CHARSET=utf-8:Josh Nichols
+ORG;CHARSET=utf-8:CrossBraining, Inc;
+TITLE;CHARSET=utf-8:Co-Founder/Chief Education Officer
+TEL;TYPE=WORK:1.888.755.6770 x101
+EMAIL;TYPE=INTERNET;TYPE=HOME:josh.nichols@crossbraining.com
+END:VCARD

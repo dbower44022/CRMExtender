@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:C;Mary;;;
+FN;CHARSET=utf-8:Mary C
+ORG;CHARSET=utf-8:Rover;
+item1.X-ABLabel:
+item1.TEL:+18582567002
+END:VCARD

@@ -1,0 +1,16 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Lewey;Amber;;;
+FN;CHARSET=utf-8:Amber Lewey
+ORG;CHARSET=utf-8:Skanska USA Building;
+TITLE;CHARSET=utf-8:Field Administrator
+TEL;TYPE=CELL;TYPE=VOICE:+1 971-271-4119
+item1.X-ABLabel:Other
+item1.TEL:+1 503-382-0901
+EMAIL;TYPE=INTERNET;TYPE=WORK:amber.lewey@skanska.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;222 SW Columbia Street\nPortland, OR 97201\nUS;;;;
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHdUAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

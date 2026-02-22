@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Plate;Jena;;;
+FN;CHARSET=utf-8:Jena Plate
+TEL;TYPE=CELL;TYPE=VOICE:(336) 337-9024
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:jenaplate@gmail.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bd5c9ea2cfb4b036c7bffc3351029e61bcbe27a18218db5cfe20b4a549e6e155f?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=b66856189755d006bac2c42e1da50612c7003751c9666b220034a423610efc3f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

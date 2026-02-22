@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Tanis;Bob;;;
+FN;CHARSET=utf-8:Bob Tanis
+TEL;TYPE=CELL;TYPE=VOICE:513-708-0877
+EMAIL;TYPE=INTERNET;TYPE=WORK:rntusna63@gmail.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;Regional Airport 2820 Bobmeyer RD;Hamilton;Butler County OH;;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHfYAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nThe person who manages the hanger for my plane at Butler County.
+END:VCARD

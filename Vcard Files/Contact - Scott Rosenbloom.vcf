@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Rosenbloom;Scott;;;
+FN;CHARSET=utf-8:Scott Rosenbloom
+ORG;CHARSET=utf-8:Dexter + Chaney;
+TITLE;CHARSET=utf-8:Vice President Strategy
+TEL;TYPE=WORK:+1 206-777-6812
+TEL;TYPE=CELL;TYPE=VOICE:+1 206-799-0550
+EMAIL;TYPE=INTERNET;TYPE=WORK:scott.rosenbloom@viewpoint.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:srosenbloom@dexterchaney.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;9700 Lake City Way NE\nSeattle, WA 98115\nUnited States;;;;
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHXMAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d956c
+END:VCARD

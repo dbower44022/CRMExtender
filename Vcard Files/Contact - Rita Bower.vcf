@@ -1,0 +1,16 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bower;Rita;;;
+FN;CHARSET=utf-8:Rita Bower
+ORG;CHARSET=utf-8:GE;
+TEL;TYPE=HOME:978-258-3787
+TEL;TYPE=CELL;TYPE=VOICE:978-390-3789
+EMAIL;TYPE=INTERNET;TYPE=WORK:rita1.bower@gmail.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:rita.bower@ge.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;;Boston;Massachusetts;;United States
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c832cf02bc577ff733964ad54da33c17c4f?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=5eb37421638594774b19e6123a6f7e4acdc4fddb77ba75e88551a37c71c6a63f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d956f
+END:VCARD

@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Koerts;Len;;;
+FN;CHARSET=utf-8:Len Koerts
+ORG;CHARSET=utf-8:Hewlett-Packard Company;
+TEL;TYPE=HOME:34-93-212-2757
+TEL;TYPE=CELL;TYPE=VOICE:+34 650800626
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:len_koerts@hp.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;20 C/ Barcelona;Bigues i Riells;Barcelona;08415;ES
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bcd01911bbf8a3cd6a46916ccda482724bb1d057652b88eaaeb989b443e8d9e67?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=705a262e65b02cfee5257c3c8f95c366bc2dc78438752591394bd0cc34e3effe
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nWife: Cristina Comares cell: 34-654-78-7434\ncomares@worldnet.att.net\n\nHewlett-Packard\nAvda Graells, 501\n08190 Sant Cugat del Valles\nBarcelona - Spain\n\nLen Works for the Commercial Printing Systems business unit.  There are three business Groups WFPS, Indego and Solutions.  Len works for the Solutions organization.  The commercial printing group is about 1.3B in revenue.\nCarmen - Born ?\nJaun - born July? 1999\nCarlotta - born August 2000\n\nWorks for a woman who works for Enrique Loras?
+END:VCARD

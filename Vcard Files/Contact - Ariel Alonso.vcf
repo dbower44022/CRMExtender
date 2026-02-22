@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Alonso;Ariel;;;
+FN;CHARSET=utf-8:Ariel Alonso
+TITLE;CHARSET=utf-8:Vice President of Engineering
+EMAIL;TYPE=INTERNET;TYPE=HOME:aalonso@stackct.com
+END:VCARD

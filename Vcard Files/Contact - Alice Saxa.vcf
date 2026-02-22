@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:saxa;alice;;;
+FN;CHARSET=utf-8:alice saxa
+TEL;TYPE=WORK:440-893-0320
+TEL;TYPE=CELL;TYPE=VOICE:440-552-3745
+EMAIL;TYPE=INTERNET;TYPE=HOME:alice.saxa@gmail.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:asaxa@yahoo.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b557937ab829ca1448269bd67d7cffa7cec45a48b758e151b9c1cafe1945da47d?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=02fba565ae2f76ee17a65ff447e7468beccd6d1b1564bc15cc9d58d2a3a39ba9
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nAlice works for Bill O'Neil.\nShe has a grandson that is 3 (2017)
+END:VCARD

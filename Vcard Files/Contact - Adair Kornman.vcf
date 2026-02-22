@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Kornman;Adair;;;
+FN;CHARSET=utf-8:Adair Kornman
+ORG;CHARSET=utf-8:Cincinnati Bell;
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:rakornman@fuse.net
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHfMAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nLogan Kornman's Mom
+END:VCARD

@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Tracker Software Products;;;
+FN;CHARSET=utf-8:Tracker Software Products
+ORG;CHARSET=utf-8:Tracker Software Products/PDF-XChange Co.;
+EMAIL;TYPE=INTERNET;TYPE=WORK:privacy@tracker-software.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bc9878e9d96b49fbd72b3da17210383837bbf81e6c952664e931a70d51ac538c5?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=811088d45ccd4613cd0054d5275e5626118f7806e316c89c14faf9cb40527bcc
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

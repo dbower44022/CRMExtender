@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Sam Acme;;;
+FN;CHARSET=utf-8:Sam Acme
+ORG;CHARSET=utf-8:Dodge Data & Analytics;
+TITLE;CHARSET=utf-8:Vice President and General Manager Contractor Segment
+TEL;TYPE=WORK:513-494-6262
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:sam@acmecontracting.net
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;Cleveland;Ohio;;United States
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c8357c2c8e0bd2bc9b93013576fcb652e55?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=f678a41f6b3b3d3dbb5c691462eb5cf7be6644d571740ebbda581eba65c18208
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

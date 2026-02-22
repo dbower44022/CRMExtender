@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Veri;Jim;;;
+FN;CHARSET=utf-8:Jim Veri
+EMAIL;TYPE=INTERNET;TYPE=WORK:jim.veri@hartvillehardware.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:jveri@hartvillehardware.com
+END:VCARD

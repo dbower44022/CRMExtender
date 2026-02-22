@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Trebec;Kim;;;
+FN;CHARSET=utf-8:Kim Trebec
+ORG;CHARSET=utf-8:Dodge Data & Analytics;
+TITLE;CHARSET=utf-8:Engineer Administrator
+TEL;TYPE=WORK:413.203.6801
+EMAIL;TYPE=INTERNET;TYPE=HOME:ktrebec@gmail.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:kim.trebec@construction.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;300 American Metro Blvd Ste 185;Hamilton;NJ;08619-2371;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b0be6b7ae49480a29c6507093a204438045a02d73435ef937dafbc06710e7b646?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=30b489fce363db71757db73b2c17d5e2754e1fd2d4a3f99bf3a3ecc202a76ffe
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

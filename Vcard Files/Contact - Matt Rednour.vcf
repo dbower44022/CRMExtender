@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Rednour;Matt;;;
+FN;CHARSET=utf-8:Matt Rednour
+ORG;CHARSET=utf-8:Ware Group General Agencies;
+TITLE;CHARSET=utf-8:Regional Vice President
+TEL;TYPE=WORK:+1 563-265-0122
+TEL;TYPE=WORK:+1 855-535-4231 ext. 210
+EMAIL;TYPE=INTERNET;TYPE=WORK:matt@waregroupga.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b10686434b524caf0630eebdd4672baa50559749746290441d612585c04e34b6b?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=f94e0ef84d04e6fb51956510882163caed2ddf3c60d56d82b57cc4e52f0fa3a7
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

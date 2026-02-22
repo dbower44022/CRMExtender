@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Rose;Sharon;;;
+FN;CHARSET=utf-8:Sharon Rose
+EMAIL;TYPE=INTERNET;TYPE=WORK:sharon.rose@scorevolunteer.org
+item1.X-ABLabel:Other
+item1.URL:https://www.score.org/startup-roadmap
+END:VCARD

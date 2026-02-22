@@ -1,0 +1,16 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Donahoe;David;;;
+FN;CHARSET=utf-8:David Donahoe
+ORG;CHARSET=utf-8:Continental Real Estate Companies;
+TITLE;CHARSET=utf-8:Lead Network Administrator
+TEL;TYPE=WORK:614-883-1081
+item1.X-ABLabel:Other
+item1.TEL:614-221-9051
+EMAIL;TYPE=INTERNET;TYPE=WORK:ddonahoe@continental-realestate.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;The Empire Building150 East Broad Street\nColumbus, OH 43215\nUS;;;;
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bcd01911bbf8a3cd6a46916ccda4827246079b86fa685885099ce876a6a2e6122?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=4bc21f50384a8482f80735632a12a396ba0a8cc6f4fd9065507fd88da1d0b82a
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

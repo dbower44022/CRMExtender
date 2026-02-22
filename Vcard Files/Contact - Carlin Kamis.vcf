@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Kamis;Carlin;;;
+FN;CHARSET=utf-8:Carlin Kamis
+ORG;CHARSET=utf-8:Rover;
+TEL;TYPE=WORK:310-982-2135
+TEL;TYPE=WORK:440-903-7623
+EMAIL;TYPE=INTERNET;TYPE=HOME:carlin.kamis@outlook.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;;Aurora;;;
+NOTE;CHARSET=utf-8:https://www.rover.com/members/carlin-k-holiday-care-you-can-trust/\n\nWorks at progressive\nHusband Brian\nHas two dogs
+END:VCARD

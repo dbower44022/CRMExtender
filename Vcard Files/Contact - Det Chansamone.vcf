@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Chansamone;Det;;;
+FN;CHARSET=utf-8:Det Chansamone
+ORG;CHARSET=utf-8:Schoolyard Studio;
+TEL;TYPE=WORK:213-500-8502
+EMAIL;TYPE=INTERNET;TYPE=HOME:det@schoolyardstudio.net
+ADR;TYPE=WORK;CHARSET=utf-8:;;14510 N. CHESHIRE STREET;BURTON;OH;44021;
+item1.X-ABLabel:HomePage
+item1.URL:https://schoolyardstudio.net
+item2.X-ABLabel:Other
+item2.URL:https://aka.ms/o0ukef
+NOTE;CHARSET=utf-8:Wife Kiyomi
+END:VCARD

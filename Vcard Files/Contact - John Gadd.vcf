@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Gadd;John;;;
+FN;CHARSET=utf-8:John Gadd
+ORG;CHARSET=utf-8:Hotcards;
+TITLE;CHARSET=utf-8:CEO
+TEL;TYPE=CELL;TYPE=VOICE:440-804-4902
+TEL;TYPE=WORK:+12162414040
+EMAIL;TYPE=INTERNET;TYPE=HOME:jdgadd@hotcards.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;18 N. Main StFloor 3;Chagrin Falls;OH;44022;
+NOTE;CHARSET=utf-8:## 2024/4/30 16:43\nJohn knows John Burger and Sharon our next door neighbors\n\n==
+END:VCARD

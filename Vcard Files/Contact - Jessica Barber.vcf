@@ -1,0 +1,19 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Barber;Jessica;;;
+FN;CHARSET=utf-8:Jessica Barber
+ORG;CHARSET=utf-8:LEED;
+TITLE;CHARSET=utf-8:Project Controls Director
+TEL;TYPE=WORK:+1 866-252-0050
+TEL;TYPE=WORK:+1 866-288-7744
+TEL;TYPE=CELL;TYPE=VOICE:+1 248-755-0762
+EMAIL;TYPE=INTERNET;TYPE=HOME:jebarber05@gmail.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:jessica.barber@skanska.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;4235 South Stream BoulevardCharlotte, NC 28217\nUS;;;;
+ADR;TYPE=HOME;CHARSET=utf-8:;;Detroit, MichiganUnited States;;;;
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c83cecce10f026e7ccd44b679b1d1149aae?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=e512712a25dd65f69013c38d020cf5a704cca2c59664d73a8bbfd73c32182a47
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

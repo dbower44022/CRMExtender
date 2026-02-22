@@ -1,0 +1,7 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Anthony;Julie;;;
+FN;CHARSET=utf-8:Julie Anthony
+EMAIL;TYPE=INTERNET;TYPE=HOME:julie@lowesgreenhouse.com
+END:VCARD

@@ -1,0 +1,19 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Thomas;Bill;;;
+FN;CHARSET=utf-8:Bill Thomas
+ORG;CHARSET=utf-8:Thomas Reprographics Inc.;
+TITLE;CHARSET=utf-8:Chief Executive Officer
+TEL;TYPE=WORK:(972) 231-7227
+TEL;TYPE=HOME:(513) 891-1195
+item1.X-ABLabel:Other
+item1.TEL:(972) 231-0623
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:bet@thomasrepro.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;600 N. Central Expressway;Richardson;TX;75080;USA
+ADR;TYPE=HOME;CHARSET=utf-8:;;8773 Sturbridge Drive;Cincinnati;OH;45236;
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c8365f2a6d71e3d533257caec66dd6ddc34?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=ac2b4585e232ca7688601f29b963991203ff320bfadd09fe1370944e602ec35a
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nAge 58 - 2002\nBill donated money to Naval Reserve and got a trip to an aircraft carrier. So he to a cat shot and a vest.\n\nWife: Beverly.\n\n\n\nJim, Bill & Katie
+END:VCARD

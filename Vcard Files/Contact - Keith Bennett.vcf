@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bennett;Keith;;;
+FN;CHARSET=utf-8:Keith Bennett
+ORG;CHARSET=utf-8:Sellingcincinnati;
+TITLE;CHARSET=utf-8:Broker and Associate
+TEL;TYPE=WORK:+1 513-317-2713
+EMAIL;TYPE=INTERNET;TYPE=HOME:kbennett919@gmail.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:keithbennett@cinci.rr.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:keith@sellingcincinnati.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;7870 E Kemper Road\nCincinnati, OH 45249\nUS;;;;
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c83fa1a16880a54d9969194cbee6f55965d?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=c8803339591b42b391d6525efd70110dd367e9c7c299121723bea900fdeacd2f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

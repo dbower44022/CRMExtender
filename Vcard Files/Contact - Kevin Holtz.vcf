@@ -1,0 +1,20 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Holtz;Kevin;;;
+FN;CHARSET=utf-8:Kevin Holtz
+ORG;CHARSET=utf-8:Adenium Systems, Inc.;
+TITLE;CHARSET=utf-8:Customer Engineering
+TEL;TYPE=WORK:(330)-342-7003
+TEL;TYPE=CELL;TYPE=VOICE:(440) 251-4874
+item1.X-ABLabel:Other
+item1.TEL:(440) 942-2526
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:kholtz@adeniumsystems.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;34103 Lakeshore Blvd;Lakeline;OH;44095;USA
+ADR;TYPE=HOME;CHARSET=utf-8:;;6479 Inland Shores;Mentor;OH;44060;United States of America
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;Stow;Ohio;;United States
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c833e0513b2cea3367f2662778b79274435?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=d110a39f94b66b6f0252862c0c022e0c9cc43a2f4c5597bc051ba780527fac6c
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

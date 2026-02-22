@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Froehlich;Erin;;;
+FN;CHARSET=utf-8:Erin Froehlich
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:erin.froehlich@gmail.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b8bc4a150796297ecd65f2f3837278306b5b7b7b4abe3a296bea7109dbd6b7a51?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=3530ff6da637995edc2ee359649ce76c7f322c255a62f03bdd160ab07d4d581f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

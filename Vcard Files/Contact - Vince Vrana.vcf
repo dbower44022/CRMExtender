@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Vrana;Vince;;;
+FN;CHARSET=utf-8:Vince Vrana
+ORG;CHARSET=utf-8:Fortney & Weygandt, Inc.;
+TITLE;CHARSET=utf-8:Bid Manager
+EMAIL;TYPE=INTERNET;TYPE=WORK:vvrana@fortneyweygandt.com
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;;;;US
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0Apy5gi5eniUuQo4C1Y5t6CgAAAAB9oQAA?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

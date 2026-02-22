@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Smith;Bill;;;
+FN;CHARSET=utf-8:Bill Smith
+ORG;CHARSET=utf-8:Ace Contracting;
+TITLE;CHARSET=utf-8:Estimator
+TEL;TYPE=WORK:513-494-6262
+EMAIL;TYPE=INTERNET;TYPE=WORK:ace@acmecontracting.net
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;Cleveland;Ohio;;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHhQAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

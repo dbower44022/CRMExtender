@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hall;Thaddeus;;;
+FN;CHARSET=utf-8:Thaddeus Hall
+ORG;CHARSET=utf-8:ActiveCampaign;
+TEL;TYPE=WORK:(312) 313-0315
+EMAIL;TYPE=INTERNET;TYPE=WORK:thall@activecampaign.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;1 N Dearborn St Ste 500;Chicago;IL;60602-4349;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b0be6b7ae49480a29c6507093a20443808f9f11b996bcf64013c920f5796bf765?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=0c2102c442b08eaf278f2fb63eccfc6bda29bf8cb02530ea8fab68f8fdd4d754
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

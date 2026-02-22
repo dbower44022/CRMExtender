@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Dagan;Jake;;;
+FN;CHARSET=utf-8:Jake Dagan
+ORG;CHARSET=utf-8:aircall;
+TITLE;CHARSET=utf-8:Channel Partner Manager
+TEL;TYPE=WORK:(929) 801-2044
+EMAIL;TYPE=INTERNET;TYPE=WORK:jake.dagan@aircall.io
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4c905297a7637dabd80b1d0afb3d284083bf2b0d429d6d5eda34ae44e84aee93?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=159ac2102724bfc13b94cca8b2c4cdebb5253e965b4415bba22b3782ff81d33c
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

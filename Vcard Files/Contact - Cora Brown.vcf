@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Brown;Cora;;;
+FN;CHARSET=utf-8:Cora Brown
+ORG;CHARSET=utf-8:Dynamic Reprographics, Inc.;
+TITLE;CHARSET=utf-8:Vice President
+TEL;TYPE=WORK:+1 512-474-8842
+TEL;TYPE=WORK:+1 512-474-9127
+item1.X-ABLabel:Other
+item1.TEL:+1 512-474-9133
+EMAIL;TYPE=INTERNET;TYPE=WORK:cora@dynamicreprographics.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;817 W. 12th St;Austin;TX;78701;United States
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bcd01911bbf8a3cd6a46916ccda4827240ef00ce656af0182043081e2fa36920a?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=68d426dc603967089afbb3cee7be6fceba1596a30c4a922f2a8bc89d1a28b172
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

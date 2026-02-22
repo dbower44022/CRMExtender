@@ -1,8 +1,8 @@
 # Product Requirements Document: Custom Objects
 
-## CRMExtender Ã¢â‚¬â€ Object Type Framework, Field Registry & Relation Model
+## CRMExtender — Object Type Framework, Field Registry & Relation Model
 
-**Version:** 1.1
+**Version:** 2.0
 **Date:** 2026-02-21
 **Status:** Draft
 **Parent Document:** [CRMExtender PRD v1.1](PRD.md)
@@ -51,25 +51,25 @@
 
 ## 1. Executive Summary
 
-The Custom Objects framework is the entity model foundation of CRMExtender. It defines what things exist in the system Ã¢â‚¬â€ Contacts, Conversations, Companies, and any user-created entity type Ã¢â‚¬â€ and what attributes they have. Every other subsystem depends on this: the Views system renders entity fields, the Data Sources query engine joins across entity types, the Communication subsystem resolves participants to entity records, and the relationship intelligence layer models graph connections between entities.
+The Custom Objects framework is the entity model foundation of CRMExtender. It defines what things exist in the system — Contacts, Conversations, Companies, and any user-created entity type — and what attributes they have. Every other subsystem depends on this: the Views system renders entity fields, the Data Sources query engine joins across entity types, the Communication subsystem resolves participants to entity records, and the relationship intelligence layer models graph connections between entities.
 
-This PRD establishes a **Unified Object Model** where system entities and user-created entities are instances of the same framework. A Contact is not a special snowflake with hand-crafted storage Ã¢â‚¬â€ it is an object type that happens to be pre-installed, with core fields that are protected from deletion, and specialized behaviors (identity resolution, enrichment) that custom entities don't have. A user-created "Jobs" entity type works identically to Contacts at the storage, query, field, and relation layers. This architectural unification eliminates dual code paths and ensures that every platform capability Ã¢â‚¬â€ views, data sources, filters, sorting, inline editing, event sourcing, audit trails Ã¢â‚¬â€ works uniformly across all entity types.
+This PRD establishes a **Unified Object Model** where system entities and user-created entities are instances of the same framework. A Contact is not a special snowflake with hand-crafted storage — it is an object type that happens to be pre-installed, with core fields that are protected from deletion, and specialized behaviors (identity resolution, enrichment) that custom entities don't have. A user-created "Jobs" entity type works identically to Contacts at the storage, query, field, and relation layers. This architectural unification eliminates dual code paths and ensures that every platform capability — views, data sources, filters, sorting, inline editing, event sourcing, audit trails — works uniformly across all entity types.
 
 **Core design principles:**
 
-- **Unified Object Model** Ã¢â‚¬â€ System entities (Contact, Conversation, Company, Project, Topic, Communication) and user-created entities are instances of the same `ObjectType` framework. No first-class vs. second-class distinction at the storage, query, or rendering layers.
-- **Dedicated typed tables** Ã¢â‚¬â€ Every entity type gets its own PostgreSQL table with native typed columns. Fields map directly to database columns. This provides maximum query performance, full PostgreSQL type safety, native indexing, and the simplest possible virtual-to-physical schema translation for the Data Sources query engine.
-- **Full event sourcing** Ã¢â‚¬â€ Every entity type (system and custom) has a companion event table recording all field-level mutations as immutable events. This enables audit trails, point-in-time reconstruction, undo/revert, and temporal analytics Ã¢â‚¬â€ uniformly, for every entity type.
-- **First-class Relation Types** Ã¢â‚¬â€ Relationships between entity types are explicitly defined as Relation Type objects with cardinality, directionality (bidirectional or unidirectional), cascade behavior, optional metadata attributes, and optional Neo4j graph sync. Relations work between any combination of entity types, including self-referential.
-- **Schema-per-tenant isolation** Ã¢â‚¬â€ Each tenant gets its own PostgreSQL schema, containing its entity type tables and event tables. Custom fields added by one tenant do not affect another tenant's schema. This aligns with the multi-tenant isolation model referenced in the Communication PRD.
-- **DDL-as-a-service** Ã¢â‚¬â€ Adding fields, creating entity types, and defining relations trigger database schema changes (ALTER TABLE, CREATE TABLE). The platform manages these DDL operations through a safe, queued execution system with locking, validation, and rollback.
+- **Unified Object Model** — System entities (Contact, Conversation, Company, Project, Topic, Communication) and user-created entities are instances of the same `ObjectType` framework. No first-class vs. second-class distinction at the storage, query, or rendering layers.
+- **Dedicated typed tables** — Every entity type gets its own PostgreSQL table with native typed columns. Fields map directly to database columns. This provides maximum query performance, full PostgreSQL type safety, native indexing, and the simplest possible virtual-to-physical schema translation for the Data Sources query engine.
+- **Full event sourcing** — Every entity type (system and custom) has a companion event table recording all field-level mutations as immutable events. This enables audit trails, point-in-time reconstruction, undo/revert, and temporal analytics — uniformly, for every entity type.
+- **First-class Relation Types** — Relationships between entity types are explicitly defined as Relation Type objects with cardinality, directionality (bidirectional or unidirectional), cascade behavior, optional metadata attributes, and optional Neo4j graph sync. Relations work between any combination of entity types, including self-referential.
+- **Schema-per-tenant isolation** — Each tenant gets its own PostgreSQL schema, containing its entity type tables and event tables. Custom fields added by one tenant do not affect another tenant's schema. This aligns with the multi-tenant isolation model referenced in the Communication PRD.
+- **DDL-as-a-service** — Adding fields, creating entity types, and defining relations trigger database schema changes (ALTER TABLE, CREATE TABLE). The platform manages these DDL operations through a safe, queued execution system with locking, validation, and rollback.
 
 **Relationship to other PRDs:**
 
-- **[Views & Grid PRD](views-grid-prd_V5.md)** Ã¢â‚¬â€ Consumes the field registry and field type system. The Views PRD's field type rendering, filter operators, sort behavior, and column system are defined against field types that this PRD specifies. The Views PRD is entity-agnostic because this PRD provides a uniform entity model.
-- **[Data Sources PRD](data-sources-prd.md)** Ã¢â‚¬â€ Consumes the entity type definitions and relation model. The virtual schema that SQL data sources query against is derived from the object types and their field registries defined here. The prefixed entity ID convention (established in the Data Sources PRD) is adopted as the platform-wide standard and detailed in this PRD.
-- **[Contact Management PRD](contact-management-prd_V4.md)** Ã¢â‚¬â€ The Contact entity type and Company entity type defined in that PRD become pre-installed object types in the unified framework. Custom fields on Contacts are managed through this PRD's field registry, replacing the previous `custom_fields` JSONB column. See Section 26 for reconciliation details.
-- **[Communication & Conversation Intelligence PRD](email-conversations-prd.md)** Ã¢â‚¬â€ Conversation, Communication, Project, and Topic entity types become pre-installed object types. Their specialized AI behaviors (status detection, summarization) are registered as system behaviors per Section 22.
+- **[Views & Grid PRD](views-grid-prd_V5.md)** — Consumes the field registry and field type system. The Views PRD's field type rendering, filter operators, sort behavior, and column system are defined against field types that this PRD specifies. The Views PRD is entity-agnostic because this PRD provides a uniform entity model.
+- **[Data Sources PRD](data-sources-prd_V1.md)** — Consumes the entity type definitions and relation model. The virtual schema that SQL data sources query against is derived from the object types and their field registries defined here. The prefixed entity ID convention (established in the Data Sources PRD) is adopted as the platform-wide standard and detailed in this PRD.
+- **[Contact Management PRD](contact-management-prd_V5.md)** — The Contact entity type and Company entity type defined in that PRD become pre-installed object types in the unified framework. Custom fields on Contacts are managed through this PRD's field registry, replacing the previous `custom_fields` JSONB column. See Section 26 for reconciliation details.
+- **[Communication & Conversation Intelligence PRD](email-conversations-prd.md)** — Conversation, Communication, Project, and Topic entity types become pre-installed object types. Their specialized AI behaviors (status detection, summarization) are registered as system behaviors per Section 22.
 
 ---
 
@@ -77,27 +77,27 @@ This PRD establishes a **Unified Object Model** where system entities and user-c
 
 ### The Rigid Entity Problem
 
-Traditional CRMs ship with a fixed set of entity types Ã¢â‚¬â€ Contacts, Companies, Deals, Activities Ã¢â‚¬â€ and expect every business to fit their workflow into these predetermined categories. But real businesses have domain-specific entities that don't map to generic CRM objects.
+Traditional CRMs ship with a fixed set of entity types — Contacts, Companies, Deals, Activities — and expect every business to fit their workflow into these predetermined categories. But real businesses have domain-specific entities that don't map to generic CRM objects.
 
 **The consequences for CRM users:**
 
 | Pain Point | Impact |
 |---|---|
 | **No domain modeling** | A gutter cleaning business needs to track Properties, Jobs, and Service Areas. A consulting firm needs Engagements and Deliverables. A VC fund needs Portfolio Companies and Rounds. None of these exist in a standard CRM. Users resort to abusing generic entities (Deals become Jobs, Companies become Properties) or maintaining separate spreadsheets. |
-| **Custom fields aren't enough** | Adding custom fields to Contacts or Deals doesn't solve the problem Ã¢â‚¬â€ a Job is not a Contact with extra fields. It's a fundamentally different entity with its own lifecycle, relationships, and views. |
+| **Custom fields aren't enough** | Adding custom fields to Contacts or Deals doesn't solve the problem — a Job is not a Contact with extra fields. It's a fundamentally different entity with its own lifecycle, relationships, and views. |
 | **No cross-entity relationships** | Even when users create custom entities through third-party add-ons, those entities can't participate in the same relationship graph, view system, or query engine as native entities. They're second-class citizens. |
 | **Schema rigidity** | As the business evolves, the data model needs to evolve too. Adding a field to track a new dimension of a Job shouldn't require a developer, a deployment, or a database migration. |
-| **Lost intelligence** | Custom entities created outside the CRM don't get the platform's intelligence capabilities Ã¢â‚¬â€ no event history, no audit trails, no AI analysis, no relationship tracking. The data exists but the platform ignores it. |
+| **Lost intelligence** | Custom entities created outside the CRM don't get the platform's intelligence capabilities — no event history, no audit trails, no AI analysis, no relationship tracking. The data exists but the platform ignores it. |
 
 ### Why Existing Solutions Fall Short
 
-- **Salesforce Custom Objects** Ã¢â‚¬â€ Powerful but complex. Requires developer skills for anything beyond basic fields. Governor limits (500 custom objects, 800 fields per object) create artificial constraints. No event sourcing. Custom objects feel bolted-on rather than native.
-- **HubSpot Custom Objects** Ã¢â‚¬â€ Limited to Operations Hub Professional+. No raw SQL querying. Relations are simple and don't support metadata. No graph modeling.
-- **Attio Objects** Ã¢â‚¬â€ Closest to the target. Everything is an "object" with a flexible data model. But treats data as flat records without event sourcing, no point-in-time reconstruction, no graph database integration, and no relation metadata.
-- **Airtable/Notion databases** Ã¢â‚¬â€ Excellent flexibility but no CRM intelligence layer. No identity resolution, no enrichment, no AI conversation analysis. Pure data modeling without business context.
-- **ClickUp Custom Fields** Ã¢â‚¬â€ Rich field types but limited to pre-defined entity types (Tasks, Docs, etc.). Can't create entirely new entity types with their own views and relationships.
+- **Salesforce Custom Objects** — Powerful but complex. Requires developer skills for anything beyond basic fields. Governor limits (500 custom objects, 800 fields per object) create artificial constraints. No event sourcing. Custom objects feel bolted-on rather than native.
+- **HubSpot Custom Objects** — Limited to Operations Hub Professional+. No raw SQL querying. Relations are simple and don't support metadata. No graph modeling.
+- **Attio Objects** — Closest to the target. Everything is an "object" with a flexible data model. But treats data as flat records without event sourcing, no point-in-time reconstruction, no graph database integration, and no relation metadata.
+- **Airtable/Notion databases** — Excellent flexibility but no CRM intelligence layer. No identity resolution, no enrichment, no AI conversation analysis. Pure data modeling without business context.
+- **ClickUp Custom Fields** — Rich field types but limited to pre-defined entity types (Tasks, Docs, etc.). Can't create entirely new entity types with their own views and relationships.
 
-CRMExtender closes this gap by making custom entities **equal citizens** in a platform that provides event sourcing, relationship intelligence, AI analysis, and polymorphic views to every entity type Ã¢â‚¬â€ not just the ones that shipped with the product.
+CRMExtender closes this gap by making custom entities **equal citizens** in a platform that provides event sourcing, relationship intelligence, AI analysis, and polymorphic views to every entity type — not just the ones that shipped with the product.
 
 ---
 
@@ -105,11 +105,11 @@ CRMExtender closes this gap by making custom entities **equal citizens** in a pl
 
 ### Primary Goals
 
-1. **Entity-agnostic platform** Ã¢â‚¬â€ Any capability that works for system entities (views, data sources, filters, inline editing, event history, audit trails) works identically for custom entities with zero additional implementation.
-2. **Self-service data modeling** Ã¢â‚¬â€ Users with the appropriate permission can create entity types, define fields, and establish relationships without developer assistance, database expertise, or deployment cycles.
-3. **Full lifecycle tracking** Ã¢â‚¬â€ Every custom entity record has the same event-sourced history, point-in-time reconstruction, and audit trail capabilities as Contacts and Conversations.
-4. **Rich relationship modeling** Ã¢â‚¬â€ Relationships between entity types are first-class objects with cardinality, directionality, metadata, and optional graph database sync Ã¢â‚¬â€ enabling the same relationship intelligence for custom entities as for system entities.
-5. **Domain fidelity** Ã¢â‚¬â€ Users can model their specific business domain (gutter cleaning, consulting, venture capital, real estate) with entity types, fields, and relationships that faithfully represent their real-world operations.
+1. **Entity-agnostic platform** — Any capability that works for system entities (views, data sources, filters, inline editing, event history, audit trails) works identically for custom entities with zero additional implementation.
+2. **Self-service data modeling** — Users with the appropriate permission can create entity types, define fields, and establish relationships without developer assistance, database expertise, or deployment cycles.
+3. **Full lifecycle tracking** — Every custom entity record has the same event-sourced history, point-in-time reconstruction, and audit trail capabilities as Contacts and Conversations.
+4. **Rich relationship modeling** — Relationships between entity types are first-class objects with cardinality, directionality, metadata, and optional graph database sync — enabling the same relationship intelligence for custom entities as for system entities.
+5. **Domain fidelity** — Users can model their specific business domain (gutter cleaning, consulting, venture capital, real estate) with entity types, fields, and relationships that faithfully represent their real-world operations.
 
 ### Success Metrics
 
@@ -133,10 +133,10 @@ CRMExtender closes this gap by making custom entities **equal citizens** in a pl
 
 | Persona | Custom Object Needs | Key Scenarios |
 |---|---|---|
-| **Sam Ã¢â‚¬â€ Gutter Cleaning Business Owner** | Domain-specific entities for service operations: Jobs, Properties, Service Areas, Estimates. Needs relations to Contacts and Companies. Wants views of Jobs by status, Properties by service frequency, and Estimates by expiration date. | "I need a Jobs entity with address, service type, price, and status. Each Job links to a Contact (the customer) and a Property. I want a Board view of Jobs by status and a Calendar view by scheduled date." |
-| **Alex Ã¢â‚¬â€ Sales Rep** | Deals entity with pipeline stages, linked to Contacts and Companies. Products/Services catalog linked to Deals. Custom fields on Contacts for industry-specific attributes. | "I want to add a 'Budget Range' field to Contacts and create a Deals entity with amount, stage, and close date. Each Deal links to multiple Contacts (stakeholders) with roles like 'Decision Maker' and 'Influencer'." |
-| **Maria Ã¢â‚¬â€ Consultant** | Engagements with clients, Deliverables linked to Engagements, custom fields on Companies for engagement history. | "I need an Engagements entity that tracks scope, budget, and status. Each Engagement links to a Company and multiple Contacts. Deliverables are a separate entity linked to Engagements with due dates." |
-| **Jordan Ã¢â‚¬â€ Team Lead** | Team-wide custom entities shared across the workspace. Needs entity type management and field configuration for the team. | "I want to create a 'Client Projects' entity type for the team with standardized fields and status values. Everyone should be able to create records, but only I should be able to modify the entity type's fields and options." |
+| **Sam — Gutter Cleaning Business Owner** | Domain-specific entities for service operations: Jobs, Properties, Service Areas, Estimates. Needs relations to Contacts and Companies. Wants views of Jobs by status, Properties by service frequency, and Estimates by expiration date. | "I need a Jobs entity with address, service type, price, and status. Each Job links to a Contact (the customer) and a Property. I want a Board view of Jobs by status and a Calendar view by scheduled date." |
+| **Alex — Sales Rep** | Deals entity with pipeline stages, linked to Contacts and Companies. Products/Services catalog linked to Deals. Custom fields on Contacts for industry-specific attributes. | "I want to add a 'Budget Range' field to Contacts and create a Deals entity with amount, stage, and close date. Each Deal links to multiple Contacts (stakeholders) with roles like 'Decision Maker' and 'Influencer'." |
+| **Maria — Consultant** | Engagements with clients, Deliverables linked to Engagements, custom fields on Companies for engagement history. | "I need an Engagements entity that tracks scope, budget, and status. Each Engagement links to a Company and multiple Contacts. Deliverables are a separate entity linked to Engagements with due dates." |
+| **Jordan — Team Lead** | Team-wide custom entities shared across the workspace. Needs entity type management and field configuration for the team. | "I want to create a 'Client Projects' entity type for the team with standardized fields and status values. Everyone should be able to create records, but only I should be able to modify the entity type's fields and options." |
 
 ### User Stories
 
@@ -161,8 +161,8 @@ CRMExtender closes this gap by making custom entities **equal citizens** in a pl
 | ID | Story | Acceptance Criteria |
 |---|---|---|
 | CO-07 | As Sam, I want to create a "Properties" entity type with address, property type, gutter footage, and service frequency fields, linked to Contacts (owners). | Entity type created with typed fields. Bidirectional relation to Contacts established. Property records show owner; Contact records show linked Properties. |
-| CO-08 | As Sam, I want to create a "Jobs" entity type with service type, price, status, and date fields, linked to a Property and a Contact (customer), with crew assignment as a many-to-many relation with a "role" attribute. | Entity type created. Relations established: JobÃ¢â€ â€™Property (many:1), JobÃ¢â€ â€™Contact customer (many:1), JobÃ¢â€ â€Contact crew (many:many with role metadata). |
-| CO-09 | As Sam, I want to create an "Estimates" entity type linked to a Contact and Property, where accepting an Estimate can generate a Job. | Entity type created with status workflow. Relation to Contact, Property, and optionally to a generated Job. Status transition from "accepted" triggers Job creation (Phase 2 Ã¢â‚¬â€ automation). |
+| CO-08 | As Sam, I want to create a "Jobs" entity type with service type, price, status, and date fields, linked to a Property and a Contact (customer), with crew assignment as a many-to-many relation with a "role" attribute. | Entity type created. Relations established: Job→Property (many:1), Job→Contact customer (many:1), Job↔Contact crew (many:many with role metadata). |
+| CO-09 | As Sam, I want to create an "Estimates" entity type linked to a Contact and Property, where accepting an Estimate can generate a Job. | Entity type created with status workflow. Relation to Contact, Property, and optionally to a generated Job. Status transition from "accepted" triggers Job creation (Phase 2 — automation). |
 | CO-10 | As Sam, I want to create a "Service Areas" entity type to define geographic zones with active status, linked to Properties. | Entity type created. Relation to Properties established. Views can filter Properties by Service Area. |
 
 ---
@@ -173,46 +173,46 @@ CRMExtender closes this gap by making custom entities **equal citizens** in a pl
 
 ```
 Object Type Framework
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Object Type Definition
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Identity: name, slug, type prefix, description
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Field Registry: ordered list of field definitions
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Field Groups: logical sections rendered as Attribute Cards
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Relation Types: connections to other entity types
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Display Name Field: which field serves as the record title
-  Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Behaviors: registered specialized logic (system entities only)
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ System Object Types (pre-installed, is_system=true)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Contact (con_)    Ã¢â‚¬â€ Behaviors: identity resolution, enrichment
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Company (cmp_)    Ã¢â‚¬â€ Behaviors: firmographic enrichment
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Conversation (cvr_) Ã¢â‚¬â€ Behaviors: AI status detection, summarization
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Communication (com_) Ã¢â‚¬â€ Behaviors: parsing, segmentation
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Project (prj_)    Ã¢â‚¬â€ Behaviors: topic aggregation
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Topic (top_)      Ã¢â‚¬â€ Behaviors: conversation aggregation
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Event (evt_)            Ã¢â‚¬â€ Behaviors: attendee resolution, birthday auto-gen, recurrence
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Note (not_)             Ã¢â‚¬â€ Behaviors: revision mgmt, FTS sync, mentions
-  Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Task (tsk_)             Ã¢â‚¬â€ Behaviors: status enforcement, recurrence, AI extraction, overdue
-  Ã¢â€â€š
-  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Custom Object Types (user-created, is_system=false)
-        Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Jobs (job_)       Ã¢â‚¬â€ Fields: address, service_type, price, status, ...
-        Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Properties (prop_) Ã¢â‚¬â€ Fields: address, property_type, footage, ...
-        Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Service Areas (svca_) Ã¢â‚¬â€ Fields: name, state, active, ...
-        Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Estimates (est_)  Ã¢â‚¬â€ Fields: description, total_price, status, ...
+  ├── Object Type Definition
+  │     ├── Identity: name, slug, type prefix, description
+  │     ├── Field Registry: ordered list of field definitions
+  │     ├── Field Groups: logical sections rendered as Attribute Cards
+  │     ├── Relation Types: connections to other entity types
+  │     ├── Display Name Field: which field serves as the record title
+  │     └── Behaviors: registered specialized logic (system entities only)
+  │
+  ├── System Object Types (pre-installed, is_system=true)
+  │     ├── Contact (con_)    — Behaviors: identity resolution, enrichment
+  │     ├── Company (cmp_)    — Behaviors: firmographic enrichment
+  │     ├── Conversation (cvr_) — Behaviors: AI status detection, summarization
+  │     ├── Communication (com_) — Behaviors: parsing, segmentation
+  │     ├── Project (prj_)    — Behaviors: topic aggregation
+  │     ├── Topic (top_)      — Behaviors: conversation aggregation
+  │     ├── Event (evt_)            — Behaviors: attendee resolution, birthday auto-gen, recurrence
+  │     ├── Note (not_)             — Behaviors: revision mgmt, FTS sync, mentions
+  │     └── Task (tsk_)             — Behaviors: status enforcement, recurrence, AI extraction, overdue
+  │
+  └── Custom Object Types (user-created, is_system=false)
+        ├── Jobs (job_)       — Fields: address, service_type, price, status, ...
+        ├── Properties (prop_) — Fields: address, property_type, footage, ...
+        ├── Service Areas (svca_) — Fields: name, state, active, ...
+        └── Estimates (est_)  — Fields: description, total_price, status, ...
 ```
 
 ### 5.2 Key Terminology
 
 | Term | Definition |
 |---|---|
-| **Object Type** | A named definition of an entity class Ã¢â‚¬â€ its identity, fields, relations, and behaviors. Analogous to a database table definition or a class in object-oriented programming. Both system entities and custom entities are object types. |
+| **Object Type** | A named definition of an entity class — its identity, fields, relations, and behaviors. Analogous to a database table definition or a class in object-oriented programming. Both system entities and custom entities are object types. |
 | **System Object Type** | A pre-installed object type that ships with the platform (`is_system = true`). Cannot be deleted or archived. Core fields are protected from removal. May have registered behaviors (specialized logic). |
 | **Custom Object Type** | A user-created object type (`is_system = false`). Has the same capabilities as system object types except behaviors. Can be archived (soft deleted). Subject to the per-tenant limit. |
 | **Field** | A named, typed attribute on an object type. Maps to a physical column on the object type's database table. Has a data type, validation rules, display configuration, and lifecycle state. |
 | **Field Registry** | The complete ordered set of fields defined on an object type, including universal fields and user-defined fields. The authoritative source for what data an entity type captures. |
-| **Field Group** | A named grouping of fields for organizing the Detail Panel layout. Each Field Group renders as an Attribute Card (GUI PRD Section 15.7). Purely presentational Ã¢â‚¬â€ does not affect storage or queries. |
+| **Field Group** | A named grouping of fields for organizing the Detail Panel layout. Each Field Group renders as an Attribute Card (GUI PRD Section 15.7). Purely presentational — does not affect storage or queries. |
 | **Relation Type** | A first-class definition of a relationship between two object types (or an object type and itself). Specifies cardinality, directionality, cascade behavior, and optional metadata attributes. |
 | **Relation Metadata** | Additional attributes stored on the relationship instance itself (not on either entity record). Examples: role, strength score, start date, notes. |
 | **Display Name Field** | The field designated as the record's human-readable title. Used in views, previews, relation pickers, search results, and card headers. Every object type must designate exactly one field. |
-| **Type Prefix** | A 3Ã¢â‚¬â€œ4 character immutable identifier for an object type, used in the prefixed entity ID convention. System prefixes are reserved (`con_`, `cvr_`, `com_`, etc.); custom prefixes are auto-generated. |
+| **Type Prefix** | A 3–4 character immutable identifier for an object type, used in the prefixed entity ID convention. System prefixes are reserved (`con_`, `cvr_`, `com_`, etc.); custom prefixes are auto-generated. |
 | **Behavior** | A registered piece of specialized logic that applies to a system object type. Examples: identity resolution (Contact), AI status detection (Conversation), firmographic enrichment (Company). Custom object types do not have behaviors. |
 | **DDL Operation** | A database schema change (CREATE TABLE, ALTER TABLE ADD COLUMN, etc.) triggered by user actions in the object type framework. Managed through the DDL Management System. |
 | **Schema Version** | A counter on the object type's field registry that increments when fields are added, removed, renamed, or have their type converted. Used by the Data Sources PRD to detect breaking changes for dependent data sources and views. |
@@ -220,52 +220,52 @@ Object Type Framework
 ### 5.3 Architecture Overview
 
 ```
-Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-Ã¢â€â€š                    OBJECT TYPE FRAMEWORK (this PRD)                      Ã¢â€â€š
-Ã¢â€â€š                                                                          Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â                      Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  Object Type        Ã¢â€â€š  Ã¢â€â€š   Relation Type       Ã¢â€â€š                      Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  Registry           Ã¢â€â€š  Ã¢â€â€š   Registry            Ã¢â€â€š                      Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬  Ã¢â€â€š  Ã¢â€â€š  Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Ã¢â€â€š                      Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  System types       Ã¢â€â€š  Ã¢â€â€š  Cardinality          Ã¢â€â€š                      Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  Custom types       Ã¢â€â€š  Ã¢â€â€š  Directionality       Ã¢â€â€š                      Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  Field registries   Ã¢â€â€š  Ã¢â€â€š  Cascade behavior     Ã¢â€â€š                      Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  Field groups       Ã¢â€â€š  Ã¢â€â€š  Metadata attributes  Ã¢â€â€š                      Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  Behaviors          Ã¢â€â€š  Ã¢â€â€š  Neo4j sync flag      Ã¢â€â€š                      Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ                      Ã¢â€â€š
-Ã¢â€â€š           Ã¢â€â€š                          Ã¢â€â€š                                   Ã¢â€â€š
-Ã¢â€â€š           Ã¢â€“Â¼                          Ã¢â€“Â¼                                   Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š           DDL Management System               Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬        Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  CREATE TABLE, ALTER TABLE ADD COLUMN,         Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  CREATE junction tables, manage indexes         Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  Queued execution, locking, validation          Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ                       Ã¢â€â€š
-Ã¢â€â€š                       Ã¢â€â€š                                                  Ã¢â€â€š
-Ã¢â€â€š                       Ã¢â€“Â¼                                                  Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š        Physical Storage (per tenant schema)   Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬        Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  tenant_abc.contacts       (read model)       Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  tenant_abc.contacts_events (event store)     Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  tenant_abc.jobs           (read model)       Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  tenant_abc.jobs_events    (event store)      Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  tenant_abc.jobs__contacts (junction table)   Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š  ...                                          Ã¢â€â€š                       Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ                       Ã¢â€â€š
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
-         Ã¢â€â€š                          Ã¢â€â€š                        Ã¢â€â€š
-         Ã¢â€“Â¼                          Ã¢â€“Â¼                        Ã¢â€“Â¼
-Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-Ã¢â€â€š  Data Sources   Ã¢â€â€š  Ã¢â€â€š    Views & Grid      Ã¢â€â€š  Ã¢â€â€š  Communication &     Ã¢â€â€š
-Ã¢â€â€š  PRD            Ã¢â€â€š  Ã¢â€â€š    PRD               Ã¢â€â€š  Ã¢â€â€š  Conversation PRD    Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬      Ã¢â€â€š  Ã¢â€â€š  Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬          Ã¢â€â€š  Ã¢â€â€š  Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬      Ã¢â€â€š
-Ã¢â€â€š  Virtual schema Ã¢â€â€š  Ã¢â€â€š  Field type          Ã¢â€â€š  Ã¢â€â€š  Participant         Ã¢â€â€š
-Ã¢â€â€š  from object    Ã¢â€â€š  Ã¢â€â€š  rendering from      Ã¢â€â€š  Ã¢â€â€š  resolution to       Ã¢â€â€š
-Ã¢â€â€š  type field     Ã¢â€â€š  Ã¢â€â€š  field registry      Ã¢â€â€š  Ã¢â€â€š  entity records      Ã¢â€â€š
-Ã¢â€â€š  registries     Ã¢â€â€š  Ã¢â€â€š                      Ã¢â€â€š  Ã¢â€â€š                      Ã¢â€â€š
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    OBJECT TYPE FRAMEWORK (this PRD)                      │
+│                                                                          │
+│  ┌─────────────────────┐  ┌──────────────────────┐                      │
+│  │  Object Type        │  │   Relation Type       │                      │
+│  │  Registry           │  │   Registry            │                      │
+│  │  ─────────────────  │  │  ──────────────────── │                      │
+│  │  System types       │  │  Cardinality          │                      │
+│  │  Custom types       │  │  Directionality       │                      │
+│  │  Field registries   │  │  Cascade behavior     │                      │
+│  │  Field groups       │  │  Metadata attributes  │                      │
+│  │  Behaviors          │  │  Neo4j sync flag      │                      │
+│  └────────┬────────────┘  └──────────┬───────────┘                      │
+│           │                          │                                   │
+│           ▼                          ▼                                   │
+│  ┌──────────────────────────────────────────────┐                       │
+│  │           DDL Management System               │                       │
+│  │  ─────────────────────────────────────        │                       │
+│  │  CREATE TABLE, ALTER TABLE ADD COLUMN,         │                       │
+│  │  CREATE junction tables, manage indexes         │                       │
+│  │  Queued execution, locking, validation          │                       │
+│  └────────────────────┬─────────────────────────┘                       │
+│                       │                                                  │
+│                       ▼                                                  │
+│  ┌──────────────────────────────────────────────┐                       │
+│  │        Physical Storage (per tenant schema)   │                       │
+│  │  ─────────────────────────────────────        │                       │
+│  │  tenant_abc.contacts       (read model)       │                       │
+│  │  tenant_abc.contacts_events (event store)     │                       │
+│  │  tenant_abc.jobs           (read model)       │                       │
+│  │  tenant_abc.jobs_events    (event store)      │                       │
+│  │  tenant_abc.jobs__contacts (junction table)   │                       │
+│  │  ...                                          │                       │
+│  └──────────────────────────────────────────────┘                       │
+└──────────────────────────────────────────────────────────────────────────┘
+         │                          │                        │
+         ▼                          ▼                        ▼
+┌─────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐
+│  Data Sources   │  │    Views & Grid      │  │  Communication &     │
+│  PRD            │  │    PRD               │  │  Conversation PRD    │
+│  ─────────      │  │  ──────────          │  │  ──────────────      │
+│  Virtual schema │  │  Field type          │  │  Participant         │
+│  from object    │  │  rendering from      │  │  resolution to       │
+│  type field     │  │  field registry      │  │  entity records      │
+│  registries     │  │                      │  │                      │
+└─────────────────┘  └──────────────────────┘  └──────────────────────┘
 ```
 
 ---
@@ -282,15 +282,15 @@ An Object Type is a first-class entity in the system (meta-entity: it describes 
 | `tenant_id` | TEXT | NOT NULL, FK | Owning tenant. System object types have a special platform tenant ID. |
 | `name` | TEXT | NOT NULL | Display name, user-facing. Renamable. (e.g., "Jobs", "Properties") |
 | `slug` | TEXT | NOT NULL, UNIQUE per tenant | Machine name, immutable after creation. Used in API paths and virtual schema. (e.g., `jobs`, `properties`) |
-| `type_prefix` | TEXT | NOT NULL, UNIQUE globally | 3Ã¢â‚¬â€œ4 character prefix for entity IDs. Immutable. (e.g., `job_`, `prop_`) |
+| `type_prefix` | TEXT | NOT NULL, UNIQUE globally | 3–4 character prefix for entity IDs. Immutable. (e.g., `job_`, `prop_`) |
 | `description` | TEXT | | Optional description of the entity type's purpose |
 | `icon` | TEXT | | Optional icon identifier for UI display |
-| `display_name_field_id` | TEXT | FK Ã¢â€ â€™ fields | Which field serves as the record title. Required. |
+| `display_name_field_id` | TEXT | FK → fields | Which field serves as the record title. Required. |
 | `is_system` | BOOLEAN | NOT NULL, DEFAULT false | Whether this is a pre-installed system entity type |
 | `is_archived` | BOOLEAN | NOT NULL, DEFAULT false | Soft-delete flag. System types cannot be archived. |
 | `schema_version` | INTEGER | NOT NULL, DEFAULT 1 | Incremented on field registry changes that affect the column set |
 | `field_limit` | INTEGER | DEFAULT 200 | Maximum number of user-defined fields on this entity type |
-| `created_by` | TEXT | FK Ã¢â€ â€™ users | User who created the entity type |
+| `created_by` | TEXT | FK → users | User who created the entity type |
 | `created_at` | TIMESTAMPTZ | NOT NULL | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL | |
 
@@ -298,10 +298,10 @@ An Object Type is a first-class entity in the system (meta-entity: it describes 
 
 When a user creates a custom object type, the system generates a type prefix:
 
-1. Take the first 3Ã¢â‚¬â€œ4 characters of the slug (e.g., `jobs` Ã¢â€ â€™ `job`, `properties` Ã¢â€ â€™ `prop`, `service_areas` Ã¢â€ â€™ `svca`)
+1. Take the first 3–4 characters of the slug (e.g., `jobs` → `job`, `properties` → `prop`, `service_areas` → `svca`)
 2. Check for collisions against all existing prefixes (system and custom, across all tenants)
 3. If collision detected, append or modify characters until unique (e.g., if `job_` exists, try `jobs_`, `jbs_`, `jb_`)
-4. The prefix is immutable once assigned Ã¢â‚¬â€ renaming the object type does not change the prefix
+4. The prefix is immutable once assigned — renaming the object type does not change the prefix
 
 ### 6.3 System Object Type Prefix Registry
 
@@ -323,7 +323,7 @@ When a user creates a custom object type, the system generates a type prefix:
 
 ### 6.4 Object Type Creation Permission
 
-Creating custom object types requires the **Object Creator** permission. This is a discrete permission that can be granted to any role Ã¢â‚¬â€ it is not restricted to workspace administrators, though administrators have it by default.
+Creating custom object types requires the **Object Creator** permission. This is a discrete permission that can be granted to any role — it is not restricted to workspace administrators, though administrators have it by default.
 
 Rationale: Creating an object type triggers DDL operations (table creation) and allocates schema resources. It should be intentional, not casual. But restricting to admins only is too rigid for teams where multiple people need to model domain data.
 
@@ -331,13 +331,13 @@ Rationale: Creating an object type triggers DDL operations (table creation) and 
 
 Each tenant may have a maximum of **50 custom object types** (excluding system object types, which do not count against the limit). This limit balances flexibility against schema complexity and is adjustable per tenant for enterprise plans.
 
-At 50 object types Ãƒâ€” 200 fields each Ãƒâ€” dedicated tables with indexes, the per-tenant schema contains up to ~100 tables (50 read models + 50 event tables) plus junction tables for many-to-many relations. PostgreSQL handles this scale comfortably.
+At 50 object types × 200 fields each × dedicated tables with indexes, the per-tenant schema contains up to ~100 tables (50 read models + 50 event tables) plus junction tables for many-to-many relations. PostgreSQL handles this scale comfortably.
 
 ---
 
 ## 7. Universal Fields
 
-Every object type Ã¢â‚¬â€ system and custom Ã¢â‚¬â€ has a set of universal fields that the framework manages automatically. These fields exist on every entity table and are not user-configurable (they cannot be removed, renamed, or have their types changed).
+Every object type — system and custom — has a set of universal fields that the framework manages automatically. These fields exist on every entity table and are not user-configurable (they cannot be removed, renamed, or have their types changed).
 
 ### 7.1 Universal Field Set
 
@@ -347,8 +347,8 @@ Every object type Ã¢â‚¬â€ system and custom Ã¢â‚¬â€ has a 
 | **Tenant** | `tenant_id` | TEXT, NOT NULL | Tenant isolation. Set on creation, immutable. |
 | **Created At** | `created_at` | TIMESTAMPTZ, NOT NULL | Record creation timestamp. Set by the system, immutable. |
 | **Updated At** | `updated_at` | TIMESTAMPTZ, NOT NULL | Last modification timestamp. Updated automatically on every mutation. |
-| **Created By** | `created_by` | TEXT, FK Ã¢â€ â€™ users | User who created the record. NULL for system-generated records. |
-| **Updated By** | `updated_by` | TEXT, FK Ã¢â€ â€™ users | User who last modified the record. |
+| **Created By** | `created_by` | TEXT, FK → users | User who created the record. NULL for system-generated records. |
+| **Updated By** | `updated_by` | TEXT, FK → users | User who last modified the record. |
 | **Archived At** | `archived_at` | TIMESTAMPTZ, NULL | Soft-delete timestamp. NULL means active. Non-NULL means archived. Default views filter to `archived_at IS NULL`. |
 
 ### 7.2 Display Name Field
@@ -376,7 +376,7 @@ The field registry is the ordered set of field definitions on an object type. It
 | Attribute | Type | Constraints | Description |
 |---|---|---|---|
 | `id` | TEXT | PK | Prefixed ULID: `fld_` prefix. Immutable. |
-| `object_type_id` | TEXT | FK Ã¢â€ â€™ object_types | The entity type this field belongs to |
+| `object_type_id` | TEXT | FK → object_types | The entity type this field belongs to |
 | `slug` | TEXT | NOT NULL, UNIQUE per object type | Machine name, immutable after creation. Maps to the physical column name. (e.g., `service_type`, `price`) |
 | `display_name` | TEXT | NOT NULL | User-facing label, renamable. (e.g., "Service Type", "Price") |
 | `description` | TEXT | | Optional help text shown in forms and tooltips |
@@ -386,7 +386,7 @@ The field registry is the ordered set of field definitions on an object type. It
 | `default_value` | TEXT | | Default value for new records (stored as string, parsed according to field type) |
 | `validation_rules` | JSONB | | Type-specific validation constraints. See Section 12. |
 | `display_order` | INTEGER | NOT NULL | Position in the field registry ordering. Used for default detail view layout. |
-| `field_group_id` | TEXT | FK Ã¢â€ â€™ field_groups | Optional grouping for Detail Panel Attribute Card layout. See Section 11. |
+| `field_group_id` | TEXT | FK → field_groups | Optional grouping for Detail Panel Attribute Card layout. See Section 11. |
 | `is_system` | BOOLEAN | DEFAULT false | Whether this field is a core field of a system entity type (protected from deletion) |
 | `is_archived` | BOOLEAN | DEFAULT false | Soft-delete for fields. Archived fields are hidden from UI but the column and data are preserved. |
 | `created_at` | TIMESTAMPTZ | NOT NULL | |
@@ -423,7 +423,7 @@ Each object type can have a maximum of **200 user-defined fields** (universal fi
 
 ## 9. Field Type System
 
-Each field type defines the physical PostgreSQL column type, the validation behavior, the serialization format for events, and the configuration options. The **rendering behavior** (display renderer, inline editor, filter operators, sort behavior, group-by support) is defined in the [Views & Grid PRD, Section 9](views-grid-prd_V5.md#9-field-type-registry) Ã¢â‚¬â€ this PRD defines the data layer.
+Each field type defines the physical PostgreSQL column type, the validation behavior, the serialization format for events, and the configuration options. The **rendering behavior** (display renderer, inline editor, filter operators, sort behavior, group-by support) is defined in the [Views & Grid PRD, Section 9](views-grid-prd_V5.md#9-field-type-registry) — this PRD defines the data layer.
 
 ### 9.1 Phase 1 Field Types
 
@@ -439,7 +439,7 @@ Each field type defines the physical PostgreSQL column type, the validation beha
 | **Select (multi)** | `TEXT[]` | `options` (ordered list of option definitions) | PostgreSQL array of option slugs |
 | **Checkbox** | `BOOLEAN` | | True/false |
 | **Relation (single)** | `TEXT` | `target_object_type_id`, `relation_type_id` | Foreign key to target entity's `id`. See Section 14 for full relation model. |
-| **Relation (multi)** | Ã¢â‚¬â€ | `target_object_type_id`, `relation_type_id` | Implemented via junction table, not a column on the entity table. See Section 14. |
+| **Relation (multi)** | — | `target_object_type_id`, `relation_type_id` | Implemented via junction table, not a column on the entity table. See Section 14. |
 | **Email** | `TEXT` | | Validated as email format |
 | **Phone** | `TEXT` | | Stored in E.164 format; displayed with locale-aware formatting |
 | **URL** | `TEXT` | | Validated as URL format |
@@ -514,24 +514,24 @@ Users can convert a field's type through limited safe conversions. Safe conversi
 
 ### 10.1 Conversion Rules
 
-| From Ã¢â€ â€™ To | Allowed? | Conversion Behavior |
+| From → To | Allowed? | Conversion Behavior |
 |---|---|---|
-| Text Ã¢â€ â€™ Text (multi-line) | **Yes** | No data change. Column type unchanged (both TEXT). |
-| Text (multi-line) Ã¢â€ â€™ Text | **Yes, with warning** | Truncation risk if values contain newlines. Warning shown. |
-| Text Ã¢â€ â€™ Select (single) | **Yes, with wizard** | System scans existing values, proposes option list. Values not matching an option become NULL (with preview). |
-| Text Ã¢â€ â€™ Email | **Yes, with validation** | Values that fail email validation become NULL (with preview). |
-| Text Ã¢â€ â€™ Phone | **Yes, with validation** | Values that fail phone format validation become NULL (with preview). |
-| Text Ã¢â€ â€™ URL | **Yes, with validation** | Values that fail URL validation become NULL (with preview). |
-| Number Ã¢â€ â€™ Currency | **Yes** | `ALTER TABLE ALTER COLUMN TYPE` (NUMERIC Ã¢â€ â€™ NUMERIC, no change). Currency config added. |
-| Currency Ã¢â€ â€™ Number | **Yes** | Currency config removed. Column type unchanged. |
-| Number Ã¢â€ â€™ Rating | **Yes, with clamping** | Values outside rating range are clamped (with preview). |
-| Rating Ã¢â€ â€™ Number | **Yes** | No data change. Rating config removed. |
-| Date Ã¢â€ â€™ Datetime | **Yes** | Date values gain midnight time component. `ALTER TABLE ALTER COLUMN TYPE TIMESTAMPTZ`. |
-| Datetime Ã¢â€ â€™ Date | **Yes, with warning** | Time component is dropped. Warning shown. |
-| Select (single) Ã¢â€ â€™ Text | **Yes** | Option slugs become plain text values. |
-| Select (single) Ã¢â€ â€™ Select (multi) | **Yes** | Single values become single-element arrays. `ALTER TABLE ALTER COLUMN TYPE TEXT[]`. |
-| Select (multi) Ã¢â€ â€™ Select (single) | **Yes, with warning** | Multi-value fields keep only the first value. Warning shown. |
-| Checkbox Ã¢â€ â€™ Select (single) | **Yes** | `true` Ã¢â€ â€™ option "Yes", `false` Ã¢â€ â€™ option "No". Options auto-created. |
+| Text → Text (multi-line) | **Yes** | No data change. Column type unchanged (both TEXT). |
+| Text (multi-line) → Text | **Yes, with warning** | Truncation risk if values contain newlines. Warning shown. |
+| Text → Select (single) | **Yes, with wizard** | System scans existing values, proposes option list. Values not matching an option become NULL (with preview). |
+| Text → Email | **Yes, with validation** | Values that fail email validation become NULL (with preview). |
+| Text → Phone | **Yes, with validation** | Values that fail phone format validation become NULL (with preview). |
+| Text → URL | **Yes, with validation** | Values that fail URL validation become NULL (with preview). |
+| Number → Currency | **Yes** | `ALTER TABLE ALTER COLUMN TYPE` (NUMERIC → NUMERIC, no change). Currency config added. |
+| Currency → Number | **Yes** | Currency config removed. Column type unchanged. |
+| Number → Rating | **Yes, with clamping** | Values outside rating range are clamped (with preview). |
+| Rating → Number | **Yes** | No data change. Rating config removed. |
+| Date → Datetime | **Yes** | Date values gain midnight time component. `ALTER TABLE ALTER COLUMN TYPE TIMESTAMPTZ`. |
+| Datetime → Date | **Yes, with warning** | Time component is dropped. Warning shown. |
+| Select (single) → Text | **Yes** | Option slugs become plain text values. |
+| Select (single) → Select (multi) | **Yes** | Single values become single-element arrays. `ALTER TABLE ALTER COLUMN TYPE TEXT[]`. |
+| Select (multi) → Select (single) | **Yes, with warning** | Multi-value fields keep only the first value. Warning shown. |
+| Checkbox → Select (single) | **Yes** | `true` → option "Yes", `false` → option "No". Options auto-created. |
 | All other conversions | **Blocked** | User must create a new field and manually migrate data. |
 
 ### 10.2 Conversion Workflow
@@ -572,19 +572,19 @@ Field groups organize fields into logical sections for record detail rendering. 
 ### 11.3 Example: Jobs Entity Type
 
 ```
-Ã¢â€â‚¬Ã¢â€â‚¬ Basic Info Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+── Basic Info ──────────────────────────────
   Name            | Address         | Service Type
 
-Ã¢â€â‚¬Ã¢â€â‚¬ Pricing Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+── Pricing ─────────────────────────────────
   Price           | Discount        | Final Amount
 
-Ã¢â€â‚¬Ã¢â€â‚¬ Scheduling Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+── Scheduling ──────────────────────────────
   Scheduled Date  | Completed Date  | Duration
 
-Ã¢â€â‚¬Ã¢â€â‚¬ Assignment Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  Customer (Ã¢â€ â€™Contact) | Property (Ã¢â€ â€™Property) | Crew (Ã¢â€ â€™Contact[])
+── Assignment ──────────────────────────────
+  Customer (→Contact) | Property (→Property) | Crew (→Contact[])
 
-Ã¢â€â‚¬Ã¢â€â‚¬ Record Info (system) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+── Record Info (system) ────────────────────
   Created: Feb 17, 2026 by Sam  |  Updated: Feb 17, 2026
 ```
 
@@ -598,7 +598,7 @@ Each field type supports type-specific validation constraints beyond the inheren
 
 | Field Type | Available Validation Rules |
 |---|---|
-| **Text (single-line)** | `max_length` (integer), `min_length` (integer), `regex_pattern` (string), `is_unique` (boolean Ã¢â‚¬â€ unique within tenant for this field) |
+| **Text (single-line)** | `max_length` (integer), `min_length` (integer), `regex_pattern` (string), `is_unique` (boolean — unique within tenant for this field) |
 | **Text (multi-line)** | `max_length` (integer), `min_length` (integer) |
 | **Number** | `min_value` (numeric), `max_value` (numeric), `decimal_places` (integer, for display) |
 | **Currency** | `min_value` (numeric), `max_value` (numeric) |
@@ -627,7 +627,7 @@ When `is_required` is true on a field:
 - **Record creation:** API and UI reject creation if the field is not provided (unless a `default_value` is set, in which case the default is applied)
 - **Record update:** API and UI reject updates that set the field to NULL
 - **Bulk import (CSV):** Rows missing the required field are rejected with error details (not silently skipped)
-- **Existing records:** Adding `is_required` to a field with existing NULL values is allowed Ã¢â‚¬â€ the constraint applies going forward only. A warning shows the count of records with NULL values.
+- **Existing records:** Adding `is_required` to a field with existing NULL values is allowed — the constraint applies going forward only. A warning shows the count of records with NULL values.
 
 ---
 
@@ -695,8 +695,8 @@ Relation Types are first-class definitions that describe connections between obj
 ```sql
 CREATE TABLE tenant_abc.jobs__contacts_crew (
     id TEXT PRIMARY KEY,               -- rel instance ID for metadata
-    source_id TEXT NOT NULL,           -- FK Ã¢â€ â€™ jobs(id)
-    target_id TEXT NOT NULL,           -- FK Ã¢â€ â€™ contacts(id)
+    source_id TEXT NOT NULL,           -- FK → jobs(id)
+    target_id TEXT NOT NULL,           -- FK → contacts(id)
     -- Metadata columns (if has_metadata = true):
     role TEXT,                          -- e.g., "lead", "helper"
     assigned_date DATE,
@@ -724,7 +724,7 @@ CREATE TABLE tenant_abc.jobs__contacts_crew (
 - The target entity type has no auto-created inverse field
 - Views can only traverse the relation from source to target
 - Data Sources can only JOIN from source to target
-- Use case: a Communication references a Conversation (the Conversation doesn't need a "Communications" field Ã¢â‚¬â€ its Activity Card handles that differently)
+- Use case: a Communication references a Conversation (the Conversation doesn't need a "Communications" field — its Activity Card handles that differently)
 
 ### 14.4 Self-Referential Relations
 
@@ -744,14 +744,14 @@ Relation Type: "Reporting Structure"
 ```
 
 On a Contact's Detail Panel:
-- "Reports To" shows a single Contact (the manager) Ã¢â‚¬â€ Relation (single) field
-- "Direct Reports" shows multiple Contacts (subordinates) Ã¢â‚¬â€ Relation (multi) inverse field
+- "Reports To" shows a single Contact (the manager) — Relation (single) field
+- "Direct Reports" shows multiple Contacts (subordinates) — Relation (multi) inverse field
 
 ### 14.5 Cascade Behavior
 
 | Behavior | When target record is archived... | Use case |
 |---|---|---|
-| **Nullify** (default) | The relation field on the source record is set to NULL. Junction table rows referencing the archived record are soft-deleted. | Contact is archived Ã¢â€ â€™ Jobs' "Customer" field becomes empty |
+| **Nullify** (default) | The relation field on the source record is set to NULL. Junction table rows referencing the archived record are soft-deleted. | Contact is archived → Jobs' "Customer" field becomes empty |
 | **Restrict** | The archive operation is blocked with an error listing the referencing records. User must unlink or archive source records first. | Cannot archive a Property if it has active Jobs |
 | **Cascade archive** | All source records referencing the archived target are also archived. | Archiving a Company archives all its subsidiary Companies (self-referential cascade) |
 
@@ -789,8 +789,8 @@ Relation, Formula, Rollup, and User fields are not supported as metadata fields 
 ```sql
 CREATE TABLE tenant_abc.rel_job_customer_instances (
     id TEXT PRIMARY KEY,
-    source_id TEXT NOT NULL,       -- FK Ã¢â€ â€™ jobs(id)
-    target_id TEXT NOT NULL,       -- FK Ã¢â€ â€™ contacts(id)
+    source_id TEXT NOT NULL,       -- FK → jobs(id)
+    target_id TEXT NOT NULL,       -- FK → contacts(id)
     -- Metadata columns:
     referral_source TEXT,
     satisfaction_rating INTEGER,
@@ -809,17 +809,17 @@ Relation metadata fields are accessible in views as a special category of lookup
 
 ```
 Add Column
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Direct Fields
-Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Name
-Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Price
-Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ ...
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Related Entity Fields
-      Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Customer (Ã¢â€ â€™Contact)
-            Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Contact Name
-            Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Contact Email
-            Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ ...
-            Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ [Relationship] Referral Source    Ã¢â€ Â metadata field
-            Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ [Relationship] Satisfaction Rating Ã¢â€ Â metadata field
+├── Direct Fields
+│     ├── Name
+│     ├── Price
+│     └── ...
+└── Related Entity Fields
+      └── Customer (→Contact)
+            ├── Contact Name
+            ├── Contact Email
+            ├── ...
+            └── [Relationship] Referral Source    ← metadata field
+            └── [Relationship] Satisfaction Rating ← metadata field
 ```
 
 ### 15.4 Event Sourcing for Relation Metadata
@@ -836,17 +836,17 @@ Relation Types with `neo4j_sync = true` have their instances automatically synch
 
 ```
 PostgreSQL (source of truth)          Neo4j (graph projection)
-Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â          Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-Ã¢â€â€š contacts table           Ã¢â€â€š          Ã¢â€â€š (:Contact {id, name})   Ã¢â€â€š
-Ã¢â€â€š jobs table              Ã¢â€â€š   sync   Ã¢â€â€š (:Job {id, name})       Ã¢â€â€š
-Ã¢â€â€š junction/instance tables Ã¢â€â€š  Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€“Âº Ã¢â€â€š -[:ASSIGNED_TO {role}]Ã¢â€ â€™ Ã¢â€â€š
-Ã¢â€â€š event tables            Ã¢â€â€š          Ã¢â€â€š -[:OWNS]Ã¢â€ â€™               Ã¢â€â€š
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ          Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
+┌─────────────────────────┐          ┌─────────────────────────┐
+│ contacts table           │          │ (:Contact {id, name})   │
+│ jobs table              │   sync   │ (:Job {id, name})       │
+│ junction/instance tables │  ─────► │ -[:ASSIGNED_TO {role}]→ │
+│ event tables            │          │ -[:OWNS]→               │
+└─────────────────────────┘          └─────────────────────────┘
 ```
 
 - **PostgreSQL is always the source of truth.** Neo4j is a read-optimized projection for graph queries.
 - Sync is asynchronous (event-driven). When a relation is created, updated, or deleted in PostgreSQL, a sync event is published.
-- Entity records are synced as nodes with their `id` and `display_name` field (plus any additional fields designated for graph sync Ã¢â‚¬â€ configurable per object type).
+- Entity records are synced as nodes with their `id` and `display_name` field (plus any additional fields designated for graph sync — configurable per object type).
 - Relation instances are synced as edges with the `neo4j_edge_type` label and any metadata fields.
 
 ### 16.2 Graph-Enabled Queries
@@ -862,7 +862,7 @@ These queries are powered by Neo4j's Cypher query language and surfaced through 
 
 ### 16.3 Phasing
 
-- **Phase 1:** Neo4j sync infrastructure built. System relation types (ContactÃ¢â€ â€™Company employment, ContactÃ¢â€ â€™Contact reporting structure) synced.
+- **Phase 1:** Neo4j sync infrastructure built. System relation types (Contact→Company employment, Contact→Contact reporting structure) synced.
 - **Phase 2:** Custom relation types can opt into Neo4j sync. Basic graph queries available via API.
 - **Phase 3:** Graph queries available in Data Sources (Cypher as an alternative query mode). Graph visualization in Views.
 
@@ -899,8 +899,8 @@ CREATE TABLE tenant_abc.jobs (
     crew_notes TEXT,
 
     -- Relation fields (FK columns for single relations)
-    customer_contact_id TEXT,                   -- FK Ã¢â€ â€™ tenant_abc.contacts(id)
-    property_id TEXT                            -- FK Ã¢â€ â€™ tenant_abc.properties(id)
+    customer_contact_id TEXT,                   -- FK → tenant_abc.contacts(id)
+    property_id TEXT                            -- FK → tenant_abc.properties(id)
 );
 
 -- Indexes
@@ -916,14 +916,14 @@ CREATE INDEX idx_jobs_archived ON tenant_abc.jobs(archived_at) WHERE archived_at
 
 The system automatically creates indexes for:
 
-- **Primary key** Ã¢â‚¬â€ On `id` (inherent from PK constraint)
-- **Tenant isolation** Ã¢â‚¬â€ On `tenant_id`
-- **Active record filter** Ã¢â‚¬â€ Partial index on `archived_at IS NULL`
-- **Relation FK columns** Ã¢â‚¬â€ On every relation (single) field
-- **Select fields** Ã¢â‚¬â€ On every select (single) and select (multi) field (for Board view and filter performance)
-- **Date/Datetime fields** Ã¢â‚¬â€ On every date and datetime field (for Calendar/Timeline view and date range filters)
+- **Primary key** — On `id` (inherent from PK constraint)
+- **Tenant isolation** — On `tenant_id`
+- **Active record filter** — Partial index on `archived_at IS NULL`
+- **Relation FK columns** — On every relation (single) field
+- **Select fields** — On every select (single) and select (multi) field (for Board view and filter performance)
+- **Date/Datetime fields** — On every date and datetime field (for Calendar/Timeline view and date range filters)
 
-Additional indexes can be created by the system based on query patterns observed in Data Source execution (Phase 3 Ã¢â‚¬â€ automatic index recommendation).
+Additional indexes can be created by the system based on query patterns observed in Data Source execution (Phase 3 — automatic index recommendation).
 
 ### 17.3 Virtual Schema Mapping
 
@@ -932,9 +932,9 @@ The Data Sources PRD defines a virtual schema that users write SQL against. With
 | Virtual Schema | Physical Schema |
 |---|---|
 | `SELECT name, price, status FROM Jobs` | `SELECT name, price, status FROM tenant_abc.jobs WHERE archived_at IS NULL` |
-| `Jobs.customer Ã¢â€ â€™ Contacts.display_name` | `JOIN tenant_abc.contacts ON jobs.customer_contact_id = contacts.id` |
+| `Jobs.customer → Contacts.display_name` | `JOIN tenant_abc.contacts ON jobs.customer_contact_id = contacts.id` |
 
-The query engine adds tenant isolation (`WHERE tenant_id = ?`), archived record filtering (`WHERE archived_at IS NULL`), and permission injection. But the core translation is trivial Ã¢â‚¬â€ field slugs ARE column names, and object type slugs ARE table names.
+The query engine adds tenant isolation (`WHERE tenant_id = ?`), archived record filtering (`WHERE archived_at IS NULL`), and permission injection. But the core translation is trivial — field slugs ARE column names, and object type slugs ARE table names.
 
 ---
 
@@ -958,11 +958,11 @@ Creating entity types, adding fields, and defining relations trigger database sc
 
 DDL operations are:
 
-1. **Validated** Ã¢â‚¬â€ The system checks that the operation is structurally valid (valid column types, no name collisions, within field limits, etc.)
-2. **Queued** Ã¢â‚¬â€ Operations are placed in a per-tenant DDL queue to serialize schema changes and prevent concurrent DDL conflicts
-3. **Executed** Ã¢â‚¬â€ The DDL statement runs within a transaction. If it fails, the transaction is rolled back and the user is notified with an error.
-4. **Recorded** Ã¢â‚¬â€ Successful DDL operations are logged in a `ddl_audit_log` table (who, what, when, tenant, object type)
-5. **Propagated** Ã¢â‚¬â€ The object type's `schema_version` is incremented, and dependent data sources and views are notified of the schema change
+1. **Validated** — The system checks that the operation is structurally valid (valid column types, no name collisions, within field limits, etc.)
+2. **Queued** — Operations are placed in a per-tenant DDL queue to serialize schema changes and prevent concurrent DDL conflicts
+3. **Executed** — The DDL statement runs within a transaction. If it fails, the transaction is rolled back and the user is notified with an error.
+4. **Recorded** — Successful DDL operations are logged in a `ddl_audit_log` table (who, what, when, tenant, object type)
+5. **Propagated** — The object type's `schema_version` is incremented, and dependent data sources and views are notified of the schema change
 
 ### 18.3 Locking Strategy
 
@@ -993,7 +993,7 @@ For each entity type with slug `{slug}`, the event table is `{slug}_events`:
 ```sql
 CREATE TABLE tenant_abc.jobs_events (
     event_id TEXT PRIMARY KEY,         -- evt_ prefixed ULID
-    record_id TEXT NOT NULL,           -- FK Ã¢â€ â€™ jobs(id)
+    record_id TEXT NOT NULL,           -- FK → jobs(id)
     event_type TEXT NOT NULL,          -- See event types below
     field_slug TEXT,                   -- Which field changed (NULL for record-level events)
     old_value TEXT,                    -- Previous value (serialized as text)
@@ -1028,9 +1028,9 @@ On every record mutation:
 1. The event is appended to the event table (insert)
 2. The read model table is synchronously updated (update)
 3. Both operations occur within a single database transaction
-4. If either fails, the transaction rolls back Ã¢â‚¬â€ no partial writes
+4. If either fails, the transaction rolls back — no partial writes
 
-This ensures the read model always reflects the complete event history. The read model is a performance optimization, not the source of truth Ã¢â‚¬â€ the event table is the source of truth.
+This ensures the read model always reflects the complete event history. The read model is a performance optimization, not the source of truth — the event table is the source of truth.
 
 ### 19.4 Point-in-Time Reconstruction
 
@@ -1048,16 +1048,16 @@ For performance, the system maintains **snapshots** at configurable intervals (e
 Every record's Detail Panel includes an "History" tab that renders the event stream as a human-readable timeline:
 
 ```
-Feb 17, 2026 2:30 PM Ã¢â‚¬â€ Sam updated Status
-  scheduled Ã¢â€ â€™ in_progress
+Feb 17, 2026 2:30 PM — Sam updated Status
+  scheduled → in_progress
 
-Feb 17, 2026 9:00 AM Ã¢â‚¬â€ Sam updated Scheduled Date
-  (empty) Ã¢â€ â€™ Feb 20, 2026
+Feb 17, 2026 9:00 AM — Sam updated Scheduled Date
+  (empty) → Feb 20, 2026
 
-Feb 16, 2026 4:15 PM Ã¢â‚¬â€ Sam updated Price
-  $200.00 Ã¢â€ â€™ $250.00
+Feb 16, 2026 4:15 PM — Sam updated Price
+  $200.00 → $250.00
 
-Feb 16, 2026 3:00 PM Ã¢â‚¬â€ Sam created this Job
+Feb 16, 2026 3:00 PM — Sam created this Job
   Name: "Smith Residence Gutter Clean"
   Service Type: Full Clean
   Price: $200.00
@@ -1152,7 +1152,7 @@ System fields on system entity types (`is_system = true`) cannot be archived.
 
 Field deletion is not supported. Fields can only be archived. This aligns with the event sourcing philosophy: data is never destroyed, and the historical event stream remains valid (events reference field slugs that must remain meaningful).
 
-If a tenant needs to reclaim the field slot (approaching the 200-field limit), archived fields do not count toward the limit Ã¢â‚¬â€ they are excluded from the active field count.
+If a tenant needs to reclaim the field slot (approaching the 200-field limit), archived fields do not count toward the limit — they are excluded from the active field count.
 
 ---
 
@@ -1187,9 +1187,9 @@ A behavior is a registered piece of specialized logic that the platform executes
 | Note | Orphan attachment cleanup | Notes PRD | On schedule (background job) |
 | Note | Visibility enforcement | Notes PRD | On query |
 | Task | Status category enforcement | Tasks PRD | On status change |
-| Task | Subtask cascade (warn) | Tasks PRD | On parent status â†’ done category |
+| Task | Subtask cascade (warn) | Tasks PRD | On parent status → done category |
 | Task | Subtask count sync | Tasks PRD | On child task create, archive, status change |
-| Task | Recurrence generation | Tasks PRD | On task completion (status â†’ done) |
+| Task | Recurrence generation | Tasks PRD | On task completion (status → done) |
 | Task | AI action-item extraction | Tasks PRD | On Conversation intelligence event |
 | Task | Due date reminder scheduling | Tasks PRD | On task create, on due_date change |
 | Task | Overdue detection | Tasks PRD | Periodic (background job) |
@@ -1279,36 +1279,36 @@ Each tenant gets its own PostgreSQL schema, containing all entity type tables, e
 
 ```
 PostgreSQL Database: crmextender
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Schema: platform                  (shared, cross-tenant)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ object_types                (object type registry)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ field_definitions           (field registry)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ field_groups                (field grouping)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ relation_types              (relation registry)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ tenants                     (tenant registry)
-  Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ users                       (user registry)
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Schema: tenant_abc                (tenant-specific)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ contacts                    (Contact read model)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ contacts_events             (Contact event store)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ companies                   (Company read model)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ companies_events            (Company event store)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ conversations               (Conversation read model)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ conversations_events        (Conversation event store)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ jobs                        (custom: Jobs read model)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ jobs_events                 (custom: Jobs event store)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ properties                  (custom: Properties read model)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ properties_events           (custom: Properties event store)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ jobs__contacts_crew         (junction: Jobs Ã¢â€ â€ Contacts crew)
-  Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ ...
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Schema: tenant_def                (another tenant)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ contacts
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ contacts_events
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ deals                       (custom: Deals Ã¢â‚¬â€ this tenant, not tenant_abc)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ deals_events
-  Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ ...
-  Ã¢â€â€š
-  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Schema: tenant_ghi                ...
+  ├── Schema: platform                  (shared, cross-tenant)
+  │     ├── object_types                (object type registry)
+  │     ├── field_definitions           (field registry)
+  │     ├── field_groups                (field grouping)
+  │     ├── relation_types              (relation registry)
+  │     ├── tenants                     (tenant registry)
+  │     └── users                       (user registry)
+  │
+  ├── Schema: tenant_abc                (tenant-specific)
+  │     ├── contacts                    (Contact read model)
+  │     ├── contacts_events             (Contact event store)
+  │     ├── companies                   (Company read model)
+  │     ├── companies_events            (Company event store)
+  │     ├── conversations               (Conversation read model)
+  │     ├── conversations_events        (Conversation event store)
+  │     ├── jobs                        (custom: Jobs read model)
+  │     ├── jobs_events                 (custom: Jobs event store)
+  │     ├── properties                  (custom: Properties read model)
+  │     ├── properties_events           (custom: Properties event store)
+  │     ├── jobs__contacts_crew         (junction: Jobs ↔ Contacts crew)
+  │     └── ...
+  │
+  ├── Schema: tenant_def                (another tenant)
+  │     ├── contacts
+  │     ├── contacts_events
+  │     ├── deals                       (custom: Deals — this tenant, not tenant_abc)
+  │     ├── deals_events
+  │     └── ...
+  │
+  └── Schema: tenant_ghi                ...
 ```
 
 ### 24.2 Tenant Schema Provisioning
@@ -1318,7 +1318,7 @@ When a new tenant is created:
 1. A new PostgreSQL schema is created: `tenant_{tenant_id}`
 2. System entity tables are created within the schema (contacts, companies, conversations, etc.) with their pre-installed core fields
 3. System entity event tables are created
-4. System relation types are instantiated (ContactÃ¢â€ â€™Company employment, etc.) with their FK columns and junction tables
+4. System relation types are instantiated (Contact→Company employment, etc.) with their FK columns and junction tables
 5. System-generated Data Sources are created for each system entity type
 
 ### 24.3 Search Path
@@ -1335,7 +1335,7 @@ SELECT * FROM jobs WHERE status = 'scheduled';
 
 ## 25. Phasing & Roadmap
 
-### Phase 1 Ã¢â‚¬â€ Core Object Framework (MVP)
+### Phase 1 — Core Object Framework (MVP)
 
 **Goal:** Users can create custom entity types, define fields, establish relations, and manage records through the same framework as system entities.
 
@@ -1363,7 +1363,7 @@ SELECT * FROM jobs WHERE status = 'scheduled';
 
 **Not in Phase 1:** Relation metadata, Neo4j sync, field type conversions, Formula/Rollup fields, automatic index recommendations.
 
-### Phase 2 Ã¢â‚¬â€ Relations & Intelligence
+### Phase 2 — Relations & Intelligence
 
 **Goal:** Enrich the relation model with metadata and graph intelligence. Add computed field types.
 
@@ -1378,7 +1378,7 @@ SELECT * FROM jobs WHERE status = 'scheduled';
 - Event sourcing snapshots (for point-in-time reconstruction performance)
 - Audit trail UI in record Detail Panel
 
-### Phase 3 Ã¢â‚¬â€ Graph & Advanced
+### Phase 3 — Graph & Advanced
 
 **Goal:** Full graph intelligence and advanced schema management.
 
@@ -1391,7 +1391,7 @@ SELECT * FROM jobs WHERE status = 'scheduled';
 - Object type duplication (clone an entity type's definition)
 - Bulk field operations (add multiple fields at once)
 
-### Phase 4 Ã¢â‚¬â€ Platform Maturity
+### Phase 4 — Platform Maturity
 
 **Goal:** Advanced features for scale and enterprise use cases.
 
@@ -1417,8 +1417,8 @@ This PRD establishes the entity model foundation that several existing PRDs refe
 | **`custom_fields` JSONB column** | `contacts_current` has a `custom_fields` TEXT (JSONB) column for tenant-defined custom fields | **Remove.** Custom fields on Contacts are now managed through the unified field registry (Section 8). Each custom field becomes a typed column on the contacts table via ALTER TABLE. |
 | **Entity ID format** | Contact IDs use UUID v4 without prefixes | **Migrate to prefixed ULID.** Contact IDs become `con_` prefixed ULIDs per the Data Sources PRD convention (Section 6.3). Migration path: add `con_` prefix to existing UUIDs or re-generate IDs. |
 | **`contacts_current` materialized view** | Described as a hand-crafted table with specific typed columns | **Reframe as the Contact object type's dedicated table**, managed through the object type framework. Core columns become system fields (`is_system = true`). The table is created by tenant schema provisioning, not hand-crafted SQL. |
-| **Employment history tables** | Separate `employment_history` table | **Reframe as a system relation type** (ContactÃ¢â€ â€™Company) with temporal metadata (start_date, end_date, title, department). The relation type has `has_metadata = true`. |
-| **Intelligence items** | Separate `contact_intelligence_items` table | Remains as-is Ã¢â‚¬â€ intelligence items are a specialized subsystem, not a generic field type. The Contact object type's enrichment behavior (Section 22) manages these. |
+| **Employment history tables** | Separate `employment_history` table | **Reframe as a system relation type** (Contact→Company) with temporal metadata (start_date, end_date, title, department). The relation type has `has_metadata = true`. |
+| **Intelligence items** | Separate `contact_intelligence_items` table | Remains as-is — intelligence items are a specialized subsystem, not a generic field type. The Contact object type's enrichment behavior (Section 22) manages these. |
 
 ### 26.2 Data Sources PRD Alignment
 
@@ -1462,29 +1462,29 @@ This PRD establishes the entity model foundation that several existing PRDs refe
 
 ## 28. Open Questions
 
-1. **DDL execution during high-traffic periods** Ã¢â‚¬â€ Should the system automatically defer non-urgent DDL operations (field additions on large tables) to off-peak hours? Or is the brief `ACCESS EXCLUSIVE` lock on metadata-only operations acceptable at any time? PostgreSQL 11+'s instant ADD COLUMN mitigates this, but type conversions are more impactful.
+1. **DDL execution during high-traffic periods** — Should the system automatically defer non-urgent DDL operations (field additions on large tables) to off-peak hours? Or is the brief `ACCESS EXCLUSIVE` lock on metadata-only operations acceptable at any time? PostgreSQL 11+'s instant ADD COLUMN mitigates this, but type conversions are more impactful.
 
-2. **Field slug reserved words** Ã¢â‚¬â€ The current approach validates slugs against PostgreSQL reserved words. Should the system also reserve application-level keywords (e.g., `type`, `class`, `status` Ã¢â‚¬â€ words that might conflict with framework internals)?
+2. **Field slug reserved words** — The current approach validates slugs against PostgreSQL reserved words. Should the system also reserve application-level keywords (e.g., `type`, `class`, `status` — words that might conflict with framework internals)?
 
-3. **Custom entity record limit per tenant** Ã¢â‚¬â€ Should there be a per-entity-type or per-tenant record count limit? At the target scale (low thousands per entity type), this is unlikely to be an issue, but enterprise tenants might push boundaries.
+3. **Custom entity record limit per tenant** — Should there be a per-entity-type or per-tenant record count limit? At the target scale (low thousands per entity type), this is unlikely to be an issue, but enterprise tenants might push boundaries.
 
-4. **Cross-entity-type field templates** Ã¢â‚¬â€ If multiple entity types need the same field (e.g., `address` with identical validation), should there be a field template system to define once and apply to many entity types? Or is copy-paste sufficient?
+4. **Cross-entity-type field templates** — If multiple entity types need the same field (e.g., `address` with identical validation), should there be a field template system to define once and apply to many entity types? Or is copy-paste sufficient?
 
-5. **Entity type import/export** Ã¢â‚¬â€ Should entity type definitions (fields, relations, groups) be exportable as JSON and importable into another tenant? This would enable template sharing and environment replication (dev Ã¢â€ â€™ staging Ã¢â€ â€™ production).
+5. **Entity type import/export** — Should entity type definitions (fields, relations, groups) be exportable as JSON and importable into another tenant? This would enable template sharing and environment replication (dev → staging → production).
 
-6. **Relation type limits** Ã¢â‚¬â€ Should there be a limit on the number of relation types per entity type or per tenant? With dedicated tables for junction tables, many-to-many relations create additional schema objects.
+6. **Relation type limits** — Should there be a limit on the number of relation types per entity type or per tenant? With dedicated tables for junction tables, many-to-many relations create additional schema objects.
 
-7. **Event store retention policy** Ã¢â‚¬â€ For high-volume custom entities (thousands of records Ãƒâ€” frequent updates), the event table can grow large. Should there be a configurable retention policy (e.g., keep events for 2 years, then compact to snapshots)? Or is unbounded retention acceptable at the target scale?
+7. **Event store retention policy** — For high-volume custom entities (thousands of records × frequent updates), the event table can grow large. Should there be a configurable retention policy (e.g., keep events for 2 years, then compact to snapshots)? Or is unbounded retention acceptable at the target scale?
 
-8. **Multi-line text storage** Ã¢â‚¬â€ Should multi-line text fields have a separate storage strategy (e.g., TOAST-optimized) for very long values, or is standard TEXT column storage sufficient?
+8. **Multi-line text storage** — Should multi-line text fields have a separate storage strategy (e.g., TOAST-optimized) for very long values, or is standard TEXT column storage sufficient?
 
-9. **Offline SQLite sync for custom entities** Ã¢â‚¬â€ The Contact Management PRD mentions SQLite for offline read access. Should custom entity types also sync to SQLite on mobile/desktop clients? If so, the DDL system needs to generate SQLite-compatible schemas.
+9. **Offline SQLite sync for custom entities** — The Contact Management PRD mentions SQLite for offline read access. Should custom entity types also sync to SQLite on mobile/desktop clients? If so, the DDL system needs to generate SQLite-compatible schemas.
 
-10. **Computed default values** Ã¢â‚¬â€ Should default values support expressions (e.g., `TODAY()`, `CURRENT_USER()`) in addition to static values? This adds complexity but enables useful patterns like auto-setting a date field to today on record creation.
+10. **Computed default values** — Should default values support expressions (e.g., `TODAY()`, `CURRENT_USER()`) in addition to static values? This adds complexity but enables useful patterns like auto-setting a date field to today on record creation.
 
-11. **Relation Type modification** Ã¢â‚¬â€ Can a relation type's cardinality or directionality be changed after creation? Changing cardinality (e.g., 1:many Ã¢â€ â€™ many:many) has significant DDL implications (adding a junction table, migrating FK data). Recommendation: block cardinality changes; require creating a new relation type and migrating data.
+11. **Relation Type modification** — Can a relation type's cardinality or directionality be changed after creation? Changing cardinality (e.g., 1:many → many:many) has significant DDL implications (adding a junction table, migrating FK data). Recommendation: block cardinality changes; require creating a new relation type and migrating data.
 
-12. **Neo4j sync selective fields** Ã¢â‚¬â€ When syncing entity records to Neo4j as nodes, which fields are included as node properties? All fields? Only the display name? A user-configurable subset? Including all fields increases sync overhead but enables richer graph queries.
+12. **Neo4j sync selective fields** — When syncing entity records to Neo4j as nodes, which fields are included as node properties? All fields? Only the display name? A user-configurable subset? Including all fields increases sync overhead but enables richer graph queries.
 
 ---
 
@@ -1494,7 +1494,7 @@ General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architectu
 
 | Term | Definition |
 |---|---|
-| **Object Type** | A named definition of an entity class Ã¢â‚¬â€ its identity, fields, relations, and behaviors. Both system entities (Contact, Conversation) and user-created entities (Jobs, Properties) are object types. |
+| **Object Type** | A named definition of an entity class — its identity, fields, relations, and behaviors. Both system entities (Contact, Conversation) and user-created entities (Jobs, Properties) are object types. |
 | **System Object Type** | A pre-installed object type that ships with the platform. Cannot be deleted. Core fields are protected. May have registered behaviors. |
 | **Custom Object Type** | A user-created object type. Same capabilities as system object types except behaviors. Can be archived. Subject to per-tenant limit. |
 | **Field** | A named, typed attribute on an object type. Maps to a physical column on the entity type's database table. |
@@ -1503,7 +1503,7 @@ General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architectu
 | **Field Type** | The data type of a field (text, number, date, select, relation, etc.). Determines storage type, validation, rendering, and filter behavior. |
 | **Field Slug** | The immutable machine name of a field, used as the physical column name and virtual schema identifier. |
 | **Display Name Field** | The field designated as the record's human-readable title throughout the platform (views, previews, pickers, cards). |
-| **Type Prefix** | A 3Ã¢â‚¬â€œ4 character immutable identifier for an object type, prepended to entity IDs (e.g., `con_`, `job_`). Enables automatic entity type detection from any ID value. |
+| **Type Prefix** | A 3–4 character immutable identifier for an object type, prepended to entity IDs (e.g., `con_`, `job_`). Enables automatic entity type detection from any ID value. |
 | **Relation Type** | A first-class definition of a relationship between two object types. Specifies cardinality, directionality, cascade behavior, metadata fields, and Neo4j sync configuration. |
 | **Relation Metadata** | Additional attributes stored on a relationship instance (e.g., role, strength, start date). |
 | **Cardinality** | The multiplicity of a relation: one-to-one, one-to-many, or many-to-many. |
@@ -1521,7 +1521,7 @@ General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architectu
 | **Snapshot** | A periodically stored copy of a record's full state at a point in time, used to accelerate point-in-time reconstruction by avoiding full event replay. |
 | **Object Creator** | A permission that allows a user to create custom object types. Not restricted to administrators. |
 | **Universal Fields** | The set of fields present on every entity type (id, tenant_id, created_at, updated_at, created_by, updated_by, archived_at). Managed by the framework, not user-configurable. |
-| **Safe Conversion** | A field type change that preserves data without loss (e.g., Number Ã¢â€ â€™ Currency). Only safe conversions are allowed. |
+| **Safe Conversion** | A field type change that preserves data without loss (e.g., Number → Currency). Only safe conversions are allowed. |
 | **Relation Instance** | A single link between two records via a relation type. For many-to-many relations, stored as a row in the junction table. For 1:1/1:many with metadata, stored in a companion instance table. |
 
 ---
@@ -1532,10 +1532,10 @@ General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architectu
 |---|---|
 | [CRMExtender PRD v1.1](PRD.md) | Parent document defining system architecture, phasing, and all feature areas |
 | [Views & Grid PRD](views-grid-prd_V5.md) | Consumes entity type definitions and field registry for view rendering |
-| [Data Sources PRD](data-sources-prd.md) | Consumes entity type definitions for virtual schema and query engine |
-| [Contact Management PRD](contact-management-prd_V4.md) | Contact and Company are system object types managed by this framework |
+| [Data Sources PRD](data-sources-prd_V1.md) | Consumes entity type definitions for virtual schema and query engine |
+| [Contact Management PRD](contact-management-prd_V5.md) | Contact and Company are system object types managed by this framework |
 | [Communication & Conversation Intelligence PRD](email-conversations-prd.md) | Conversation, Communication, Project, Topic are system object types |
-| [Email Parsing & Content Extraction](email_stripping.md) | Technical spec for Communication entity's parsing behavior |
+| [Email Parsing & Content Extraction](email_stripping_V1.md) | Technical spec for Communication entity's parsing behavior |
 
 ---
 

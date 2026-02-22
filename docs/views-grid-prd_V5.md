@@ -1,8 +1,8 @@
 # Product Requirements Document: Views & Grid System
 
-## CRMExtender Ã¢â‚¬â€ Polymorphic View & Grid Subsystem
+## CRMExtender — Polymorphic View & Grid Subsystem
 
-**Version:** 1.3
+**Version:** 5.0
 **Date:** 2026-02-21
 **Status:** Draft
 **Parent Document:** [CRMExtender PRD v1.1](PRD.md)
@@ -45,22 +45,22 @@
 
 ## 1. Executive Summary
 
-The Views & Grid System is the primary data interaction layer of CRMExtender. It provides users with a polymorphic, entity-agnostic framework for displaying, filtering, sorting, grouping, and editing any entity type in the system Ã¢â‚¬â€ whether system-defined (Contacts, Conversations, Communications, Projects, Topics) or user-defined custom objects (Properties, Vehicles, Service Agreements, or anything else a user creates).
+The Views & Grid System is the primary data interaction layer of CRMExtender. It provides users with a polymorphic, entity-agnostic framework for displaying, filtering, sorting, grouping, and editing any entity type in the system — whether system-defined (Contacts, Conversations, Communications, Projects, Topics) or user-defined custom objects (Properties, Vehicles, Service Agreements, or anything else a user creates).
 
-The system draws inspiration from tools like ClickUp and Attio, where the same underlying dataset can be rendered through multiple view types Ã¢â‚¬â€ a tabular list/grid, a calendar, or a timeline Ã¢â‚¬â€ each offering a different lens into the same data. Users create as many views as they need, each with its own configuration of visible columns, filters, sort orders, and groupings.
+The system draws inspiration from tools like ClickUp and Attio, where the same underlying dataset can be rendered through multiple view types — a tabular list/grid, a calendar, or a timeline — each offering a different lens into the same data. Users create as many views as they need, each with its own configuration of visible columns, filters, sort orders, and groupings.
 
 **Core principles:**
 
-- **Entity-agnostic** Ã¢â‚¬â€ The view system does not know or care what entity type it is rendering. It reads from a universal field registry provided by the object model (defined in the Custom Objects PRD). A view of Contacts works identically to a view of a user-defined "Properties" object Ã¢â‚¬â€ same column system, same filters, same interactions.
-- **Data Source separation** Ã¢â‚¬â€ The "what data" layer (Data Source) is separated from the "how to render" layer (View). A Data Source is a reusable, named query Ã¢â‚¬â€ built via visual query builder or raw SQL Ã¢â‚¬â€ that defines the columns, joins, and base filters. Multiple views can share one Data Source, each rendering the same dataset as a List, Board, Calendar, or Timeline with its own configuration.
-- **Cross-entity queries** Ã¢â‚¬â€ Data Sources can JOIN across entity types, producing denormalized result sets that combine data from Conversations, Contacts, Companies, Projects, and any custom entities. Views render these cross-entity results seamlessly, with inline editing tracing back to the source entity.
-- **Polymorphic columns** Ã¢â‚¬â€ Columns adapt based on the entity type being displayed. Each entity type has its own set of fields (system-defined core fields + user-added custom fields), and the column system renders the appropriate editor and display format for each field type.
-- **Multiple view types, one dataset** Ã¢â‚¬â€ A single entity collection can be viewed as a List/Grid, Board/Kanban, Calendar, or Timeline. Switching view types preserves filters and sort orders where applicable. Each view type is a rendering strategy, not a different data model.
-- **User-owned configuration** Ã¢â‚¬â€ Every aspect of a view (columns, filters, sorts, groups, column widths, column order) is user-configurable and persisted. Views are personal by default and optionally shareable.
-- **Relation-aware** Ã¢â‚¬â€ Views can display fields from related entities, not just the primary entity. A Conversations view can show the related Contact's company name, a Project view can show the count of open Conversations Ã¢â‚¬â€ traversing the object graph to surface contextual information.
-- **Performance-first for real-world scale** Ã¢â‚¬â€ Designed for datasets in the low thousands of records, with server-side pagination, virtual scrolling, and query optimization ensuring responsive interaction at scale.
+- **Entity-agnostic** — The view system does not know or care what entity type it is rendering. It reads from a universal field registry provided by the object model (defined in the Custom Objects PRD). A view of Contacts works identically to a view of a user-defined "Properties" object — same column system, same filters, same interactions.
+- **Data Source separation** — The "what data" layer (Data Source) is separated from the "how to render" layer (View). A Data Source is a reusable, named query — built via visual query builder or raw SQL — that defines the columns, joins, and base filters. Multiple views can share one Data Source, each rendering the same dataset as a List, Board, Calendar, or Timeline with its own configuration.
+- **Cross-entity queries** — Data Sources can JOIN across entity types, producing denormalized result sets that combine data from Conversations, Contacts, Companies, Projects, and any custom entities. Views render these cross-entity results seamlessly, with inline editing tracing back to the source entity.
+- **Polymorphic columns** — Columns adapt based on the entity type being displayed. Each entity type has its own set of fields (system-defined core fields + user-added custom fields), and the column system renders the appropriate editor and display format for each field type.
+- **Multiple view types, one dataset** — A single entity collection can be viewed as a List/Grid, Board/Kanban, Calendar, or Timeline. Switching view types preserves filters and sort orders where applicable. Each view type is a rendering strategy, not a different data model.
+- **User-owned configuration** — Every aspect of a view (columns, filters, sorts, groups, column widths, column order) is user-configurable and persisted. Views are personal by default and optionally shareable.
+- **Relation-aware** — Views can display fields from related entities, not just the primary entity. A Conversations view can show the related Contact's company name, a Project view can show the count of open Conversations — traversing the object graph to surface contextual information.
+- **Performance-first for real-world scale** — Designed for datasets in the low thousands of records, with server-side pagination, virtual scrolling, and query optimization ensuring responsive interaction at scale.
 
-**Relationship to other PRDs:** This PRD defines how data is displayed and interacted with. It depends on the Custom Objects PRD (which defines what entities and fields exist) and is consumed by the Communication & Conversation Intelligence PRD (which defines the system entities that are the primary data sources). The alert system defined in the Conversations PRD is built on top of views Ã¢â‚¬â€ an alert is a view with a trigger attached.
+**Relationship to other PRDs:** This PRD defines how data is displayed and interacted with. It depends on the Custom Objects PRD (which defines what entities and fields exist) and is consumed by the Communication & Conversation Intelligence PRD (which defines the system entities that are the primary data sources). The alert system defined in the Conversations PRD is built on top of views — an alert is a view with a trigger attached.
 
 ---
 
@@ -85,10 +85,10 @@ CRM data is only useful if users can find, view, and act on it efficiently. Yet 
 
 ### Why Existing Solutions Fall Short
 
-- **Salesforce** Ã¢â‚¬â€ Powerful but complex. List views exist but custom objects require significant configuration. No calendar or timeline views without third-party apps. Views are org-wide, not personal-first.
-- **HubSpot** Ã¢â‚¬â€ Clean UI but rigid. Custom objects are limited. No relation-traversal columns. Views are basic filtered lists without grouping or aggregation.
-- **Attio** Ã¢â‚¬â€ Closest to the vision. Flexible object model with rich views. But Attio's view types are limited, and relation columns are somewhat constrained. Strong inspiration, but CRMExtender extends the model.
-- **ClickUp** Ã¢â‚¬â€ Excellent multi-view paradigm (List, Board, Calendar, Timeline, Gantt). However, ClickUp is task-management-first, not CRM-first. Its data model doesn't support the relationship intelligence and communication hierarchy that CRMExtender requires.
+- **Salesforce** — Powerful but complex. List views exist but custom objects require significant configuration. No calendar or timeline views without third-party apps. Views are org-wide, not personal-first.
+- **HubSpot** — Clean UI but rigid. Custom objects are limited. No relation-traversal columns. Views are basic filtered lists without grouping or aggregation.
+- **Attio** — Closest to the vision. Flexible object model with rich views. But Attio's view types are limited, and relation columns are somewhat constrained. Strong inspiration, but CRMExtender extends the model.
+- **ClickUp** — Excellent multi-view paradigm (List, Board, Calendar, Timeline, Gantt). However, ClickUp is task-management-first, not CRM-first. Its data model doesn't support the relationship intelligence and communication hierarchy that CRMExtender requires.
 
 CRMExtender's view system combines Attio's object-model flexibility with ClickUp's multi-view rendering, applied to a communication-intelligence-first CRM.
 
@@ -98,14 +98,14 @@ CRMExtender's view system combines Attio's object-model flexibility with ClickUp
 
 ### Primary Goals
 
-1. **Entity-agnostic rendering** Ã¢â‚¬â€ Any entity type (system or custom) can be displayed in any supported view type using the same underlying column, filter, sort, and group infrastructure.
-2. **Rich column system** Ã¢â‚¬â€ Users control which columns are visible, their order, width, and pinning. Columns adapt display and editing behavior based on field type. Relation-traversal columns surface cross-entity context.
-3. **Powerful filtering** Ã¢â‚¬â€ Users build compound filters with AND/OR logic, using operators appropriate to each field type. Filters can reference fields on related entities.
-4. **Flexible sorting & grouping** Ã¢â‚¬â€ Multi-level sorting, group-by with collapsible sections, and summary aggregation rows for grouped data.
-5. **Multiple view types** Ã¢â‚¬â€ The same data renders as a List/Grid (tabular), Calendar (date-plotted), or Timeline (date-range bars). Each view type has type-specific configuration while sharing the common filter/sort infrastructure.
-6. **Inline editing** Ã¢â‚¬â€ Users edit field values directly in the grid without opening a detail view, for field types that support inline editing.
-7. **Persistent, shareable views** Ã¢â‚¬â€ Views are saved with all configuration. Personal views are private by default. Shared views are available to team members (with data permissions enforced).
-8. **Alert foundation** Ã¢â‚¬â€ Views serve as the query definition layer for the alert system. Any view can be promoted to an alert with a trigger, frequency, and delivery method.
+1. **Entity-agnostic rendering** — Any entity type (system or custom) can be displayed in any supported view type using the same underlying column, filter, sort, and group infrastructure.
+2. **Rich column system** — Users control which columns are visible, their order, width, and pinning. Columns adapt display and editing behavior based on field type. Relation-traversal columns surface cross-entity context.
+3. **Powerful filtering** — Users build compound filters with AND/OR logic, using operators appropriate to each field type. Filters can reference fields on related entities.
+4. **Flexible sorting & grouping** — Multi-level sorting, group-by with collapsible sections, and summary aggregation rows for grouped data.
+5. **Multiple view types** — The same data renders as a List/Grid (tabular), Calendar (date-plotted), or Timeline (date-range bars). Each view type has type-specific configuration while sharing the common filter/sort infrastructure.
+6. **Inline editing** — Users edit field values directly in the grid without opening a detail view, for field types that support inline editing.
+7. **Persistent, shareable views** — Views are saved with all configuration. Personal views are private by default. Shared views are available to team members (with data permissions enforced).
+8. **Alert foundation** — Views serve as the query definition layer for the alert system. Any view can be promoted to an alert with a trigger, frequency, and delivery method.
 
 ### Success Metrics
 
@@ -138,10 +138,10 @@ CRMExtender's view system combines Attio's object-model flexibility with ClickUp
 
 | Persona | View Needs | Key Scenarios |
 |---|---|---|
-| **Alex Ã¢â‚¬â€ Sales Rep** | Track active deals, see stale conversations, prep for calls with full context. Uses 2 email accounts, SMS, 30 active deal conversations. | "Show me all Conversations where AI status is Open, grouped by Project, sorted by last activity. Include Contact Company as a column." |
-| **Maria Ã¢â‚¬â€ Consultant** | Monitor client relationships, surface action items, manage 50+ client relationships across channels. | "Calendar view of all Communications this week. Timeline view of all Projects with start/end dates. List view of Contacts with no activity in 30+ days." |
-| **Jordan Ã¢â‚¬â€ Team Lead** | Oversee team's client conversations, spot escalation needs, weekly reporting. Manages shared inbox. | "Shared view: all Conversations assigned to my team, grouped by owner, with AI Status and Action Item Count columns. Alert me daily on anything Stale + Open." |
-| **Sam Ã¢â‚¬â€ Gutter Cleaning Business Owner** | Track jobs across multiple cities, manage customer relationships, schedule follow-ups. Custom objects for service areas and jobs. | "Board view of my custom 'Jobs' object grouped by job status (Scheduled Ã¢â€ â€™ In Progress Ã¢â€ â€™ Complete Ã¢â€ â€™ Invoiced). Calendar view of upcoming jobs. List view filtered by city and service area." |
+| **Alex — Sales Rep** | Track active deals, see stale conversations, prep for calls with full context. Uses 2 email accounts, SMS, 30 active deal conversations. | "Show me all Conversations where AI status is Open, grouped by Project, sorted by last activity. Include Contact Company as a column." |
+| **Maria — Consultant** | Monitor client relationships, surface action items, manage 50+ client relationships across channels. | "Calendar view of all Communications this week. Timeline view of all Projects with start/end dates. List view of Contacts with no activity in 30+ days." |
+| **Jordan — Team Lead** | Oversee team's client conversations, spot escalation needs, weekly reporting. Manages shared inbox. | "Shared view: all Conversations assigned to my team, grouped by owner, with AI Status and Action Item Count columns. Alert me daily on anything Stale + Open." |
+| **Sam — Gutter Cleaning Business Owner** | Track jobs across multiple cities, manage customer relationships, schedule follow-ups. Custom objects for service areas and jobs. | "Board view of my custom 'Jobs' object grouped by job status (Scheduled → In Progress → Complete → Invoiced). Calendar view of upcoming jobs. List view filtered by city and service area." |
 
 ### User Stories
 
@@ -154,7 +154,7 @@ CRMExtender's view system combines Attio's object-model flexibility with ClickUp
 
 #### Data Sources
 
-> Data Source user stories (US-DS1 through US-DS15) are defined in the [Data Sources PRD, Section 4](data-sources-prd.md#4-user-personas--stories).
+> Data Source user stories (US-DS1 through US-DS15) are defined in the [Data Sources PRD, Section 4](data-sources-prd_V1.md#4-user-personas--stories).
 
 #### Column Management
 
@@ -170,7 +170,7 @@ CRMExtender's view system combines Attio's object-model flexibility with ClickUp
 - **US-V11:** As a user, I want to add filter conditions to a view so that I see only records matching my criteria.
 - **US-V12:** As a user, I want to build compound filters with AND/OR logic so that I can express complex queries (e.g., "Status is Active AND (Priority is High OR Assignee is Me)").
 - **US-V13:** As a user, I want filter operators that match the field type (e.g., "contains" for text, "greater than" for numbers, "is before" for dates, "is any of" for select fields).
-- **US-V14:** As a user, I want to filter by fields on related entities (e.g., "Contact Ã¢â€ â€™ Company = Acme Corp" on a Conversations view).
+- **US-V14:** As a user, I want to filter by fields on related entities (e.g., "Contact → Company = Acme Corp" on a Conversations view).
 - **US-V15:** As a user, I want quick filter shortcuts for common conditions (e.g., "Created this week", "Assigned to me", "Status is Open").
 - **US-V16:** As a user, I want to save filter configurations as part of the view so they persist between sessions.
 
@@ -204,7 +204,7 @@ CRMExtender's view system combines Attio's object-model flexibility with ClickUp
 
 - **US-V34:** As a user, I want my views to be automatically saved (columns, filters, sorts, groups, scroll position) so that I return to exactly where I left off.
 - **US-V35:** As a user, I want to share a view with my team so that everyone benefits from a well-configured data lens.
-- **US-V36:** As a user, I want shared views to respect data permissions Ã¢â‚¬â€ sharing the view definition doesn't grant access to records the viewer wouldn't otherwise see.
+- **US-V36:** As a user, I want shared views to respect data permissions — sharing the view definition doesn't grant access to records the viewer wouldn't otherwise see.
 - **US-V37:** As a user, I want to duplicate a shared view to create my own copy that I can customize without affecting the shared version.
 - **US-V38:** As a user, I want to set a view as my default for a specific entity type so that it opens automatically when I navigate to that entity.
 
@@ -221,46 +221,46 @@ CRMExtender's view system combines Attio's object-model flexibility with ClickUp
 
 ```
 Entity Types (from Object Model)
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Contacts (con_)     Ã¢â€â‚¬Ã¢â€â‚¬ Field Registry: [Name, Email, Phone, Company, ...]
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Conversations (cvr_) Ã¢â€â‚¬Ã¢â€â‚¬ Field Registry: [Subject, AI Status, Last Activity, ...]
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Companies (cmp_)     Ã¢â€â‚¬Ã¢â€â‚¬ Field Registry: [Name, Industry, Revenue, ...]
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Projects (prj_)      Ã¢â€â‚¬Ã¢â€â‚¬ Field Registry: [Name, Status, Owner, ...]
-  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Custom: Jobs (job_)  Ã¢â€â‚¬Ã¢â€â‚¬ Field Registry: [Address, Service Type, Price, ...]
+  ├── Contacts (con_)     ── Field Registry: [Name, Email, Phone, Company, ...]
+  ├── Conversations (cvr_) ── Field Registry: [Subject, AI Status, Last Activity, ...]
+  ├── Companies (cmp_)     ── Field Registry: [Name, Industry, Revenue, ...]
+  ├── Projects (prj_)      ── Field Registry: [Name, Status, Owner, ...]
+  └── Custom: Jobs (job_)  ── Field Registry: [Address, Service Type, Price, ...]
 
 Data Sources (reusable query definitions)
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Data Source: "Deal Pipeline" (dts_9a2b...)
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Query: Conversations JOIN Contacts JOIN Companies
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Columns: [Subject, AI Status, Contact Name, Company, Industry]
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Default Filter: AI Status Ã¢â€°Â  Closed
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Default Sort: Last Activity DESC
-  Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Preview: [Conversation (primary), Contact, Company]
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Data Source: "All Contacts" (system-generated)
-  Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Query: SELECT * FROM Contacts
-  Ã¢â€â€š
-  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Data Source: "Contact Activity Report" (dts_55fg...)
-        Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Query (raw SQL): Contacts LEFT JOIN Conversations (aggregated)
-        Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Columns: [Name, Company, Conversation Count, Last Activity]
-        Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Preview: [Contact (primary), Company]
+  ├── Data Source: "Deal Pipeline" (dts_9a2b...)
+  │     ├── Query: Conversations JOIN Contacts JOIN Companies
+  │     ├── Columns: [Subject, AI Status, Contact Name, Company, Industry]
+  │     ├── Default Filter: AI Status ≠ Closed
+  │     ├── Default Sort: Last Activity DESC
+  │     └── Preview: [Conversation (primary), Contact, Company]
+  │
+  ├── Data Source: "All Contacts" (system-generated)
+  │     └── Query: SELECT * FROM Contacts
+  │
+  └── Data Source: "Contact Activity Report" (dts_55fg...)
+        ├── Query (raw SQL): Contacts LEFT JOIN Conversations (aggregated)
+        ├── Columns: [Name, Company, Conversation Count, Last Activity]
+        └── Preview: [Contact (primary), Company]
 
 Views (rendering configurations, each referencing a Data Source)
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ View: "Pipeline Board" (Board) Ã¢â€ â€™ references "Deal Pipeline" data source
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Board grouping: AI Status
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Card fields: [Subject, Contact Name, Company]
-  Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Additional filters: Owner = Me
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ View: "Pipeline List" (List/Grid) Ã¢â€ â€™ references "Deal Pipeline" data source
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Visible columns: [Subject, AI Status, Contact Name, Company, Last Activity]
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Sort override: Company ASC
-  Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Group by: AI Status
-  Ã¢â€â€š
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ View: "Expected Closes" (Calendar) Ã¢â€ â€™ references "Deal Pipeline" data source
-  Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Date field: Expected Close Date
-  Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Card fields: [Subject, Contact Name]
-  Ã¢â€â€š
-  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ View: "Contact Report" (List/Grid) Ã¢â€ â€™ references "Contact Activity Report" data source
-        Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Visible columns: [Name, Company, Conversation Count, Last Activity]
-        Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Sort: Conversation Count DESC
+  ├── View: "Pipeline Board" (Board) → references "Deal Pipeline" data source
+  │     ├── Board grouping: AI Status
+  │     ├── Card fields: [Subject, Contact Name, Company]
+  │     └── Additional filters: Owner = Me
+  │
+  ├── View: "Pipeline List" (List/Grid) → references "Deal Pipeline" data source
+  │     ├── Visible columns: [Subject, AI Status, Contact Name, Company, Last Activity]
+  │     ├── Sort override: Company ASC
+  │     └── Group by: AI Status
+  │
+  ├── View: "Expected Closes" (Calendar) → references "Deal Pipeline" data source
+  │     ├── Date field: Expected Close Date
+  │     └── Card fields: [Subject, Contact Name]
+  │
+  └── View: "Contact Report" (List/Grid) → references "Contact Activity Report" data source
+        ├── Visible columns: [Name, Company, Conversation Count, Last Activity]
+        └── Sort: Conversation Count DESC
 ```
 
 ### 5.2 Key Concepts
@@ -270,12 +270,12 @@ Views (rendering configurations, each referencing a Data Source)
 | **Entity Type** | A class of objects in the system. Can be system-defined (Contact, Conversation, Communication, Project, Topic) or user-defined (via the Custom Objects system). Each entity type has a field registry and a type-prefixed ID convention (e.g., `con_` for Contacts). |
 | **Field** | A named, typed attribute of an entity type. Fields have a data type (text, number, date, select, relation, formula, etc.) that determines how they are displayed, edited, filtered, and sorted. Fields are either system-defined (core, locked) or user-defined (custom, added by the user). |
 | **Field Registry** | The complete set of fields available for an entity type. The view system reads from this registry to know what columns can be displayed, what filter operators apply, and what editors to render. Defined by the Custom Objects PRD. |
-| **Data Source** | A reusable, named query definition Ã¢â‚¬â€ built via visual query builder or raw SQL Ã¢â‚¬â€ that produces a structured result set. Defines the entities involved (FROM + JOINs), available columns, default filters, default sort, and previewable entities. Multiple views can share one data source. |
+| **Data Source** | A reusable, named query definition — built via visual query builder or raw SQL — that produces a structured result set. Defines the entities involved (FROM + JOINs), available columns, default filters, default sort, and previewable entities. Multiple views can share one data source. |
 | **Column Registry** | The schema of a data source's result set. Lists every column with its name, data type, source entity, source field, editability, and aggregation context. The contract between the data source and the views that consume it. |
 | **View** | A named, saved configuration that defines how to render the results of a data source. Includes: view type, visible columns (with order, width, pinning), additional filter conditions, sort overrides, and group-by configuration. Each view references exactly one data source. |
 | **View Type** | The rendering strategy for a view: List/Grid (tabular rows and columns), Board/Kanban (cards in status columns), Calendar (records plotted on a date grid), or Timeline (records as horizontal bars across a time axis). |
 | **Column** | A single vertical data display slot in a List/Grid view. Maps to a field (either on the primary entity or on a related entity via relation traversal). Has configuration: width, position, pinned state, and sort direction. |
-| **Relation Traversal** | The ability of a column to display a field from a related entity by following a relation field. Example: a Conversation has a relation field "Primary Contact" pointing to a Contact entity; a column can traverse this relation to display "Primary Contact Ã¢â€ â€™ Company Name". |
+| **Relation Traversal** | The ability of a column to display a field from a related entity by following a relation field. Example: a Conversation has a relation field "Primary Contact" pointing to a Contact entity; a column can traverse this relation to display "Primary Contact → Company Name". |
 | **Filter Condition** | A single predicate applied to a field: `field` `operator` `value`. Example: `Status equals Active`. |
 | **Filter Group** | A set of filter conditions combined with AND or OR logic. Filter groups can be nested for compound expressions. |
 | **Sort Rule** | A field + direction (ascending/descending) pair. Multiple sort rules create a multi-level sort. |
@@ -286,44 +286,44 @@ Views (rendering configurations, each referencing a Data Source)
 ### 5.3 View System Architecture
 
 ```
-Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-Ã¢â€â€š                        VIEW CONFIGURATION                         Ã¢â€â€š
-Ã¢â€â€š  (visible columns, additional filters, sorts, groups, view type)  Ã¢â€â€š
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
-                       Ã¢â€â€š references
-                       Ã¢â€“Â¼
-Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-Ã¢â€â€š                         DATA SOURCE                               Ã¢â€â€š
-Ã¢â€â€š  Reusable query definition (visual builder or raw SQL):           Ã¢â€â€š
-Ã¢â€â€š  - Defines entity types involved (FROM + JOINs)                   Ã¢â€â€š
-Ã¢â€â€š  - Defines available columns (result set schema)                  Ã¢â€â€š
-Ã¢â€â€š  - Defines default filters and sort order                         Ã¢â€â€š
-Ã¢â€â€š  - Declares previewable entities (auto-detected + optional        Ã¢â€â€š
-Ã¢â€â€š    manual override for priority and exclusions)                    Ã¢â€â€š
-Ã¢â€â€š  - Multiple views can share one data source                       Ã¢â€â€š
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
-                       Ã¢â€â€š executes via
-                       Ã¢â€“Â¼
-Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-Ã¢â€â€š                         QUERY ENGINE                              Ã¢â€â€š
-Ã¢â€â€š  Translates data source + view overrides into executable queries: Ã¢â€â€š
-Ã¢â€â€š  - Reads field registry from Object Model                         Ã¢â€â€š
-Ã¢â€â€š  - Resolves relation traversals to JOINs                          Ã¢â€â€š
-Ã¢â€â€š  - Merges data source defaults with view-level overrides          Ã¢â€â€š
-Ã¢â€â€š  - Handles pagination (cursor-based)                              Ã¢â€â€š
-Ã¢â€â€š  - Enforces row-level security and tenant isolation               Ã¢â€â€š
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
-                       Ã¢â€â€š
-                       Ã¢â€“Â¼
-Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-Ã¢â€â€š                        RENDERING LAYER                            Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â         Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š List/Grid Ã¢â€â€š  Ã¢â€â€š  Board   Ã¢â€â€š  Ã¢â€â€š Calendar Ã¢â€â€š  Ã¢â€â€š Timeline Ã¢â€â€š         Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€š Renderer  Ã¢â€â€š  Ã¢â€â€š Renderer Ã¢â€â€š  Ã¢â€â€š Renderer Ã¢â€â€š  Ã¢â€â€š Renderer Ã¢â€â€š         Ã¢â€â€š
-Ã¢â€â€š  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ         Ã¢â€â€š
-Ã¢â€â€š  Each renderer reads the same query results and renders           Ã¢â€â€š
-Ã¢â€â€š  according to its view-type-specific rules.                       Ã¢â€â€š
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
+┌──────────────────────────────────────────────────────────────────┐
+│                        VIEW CONFIGURATION                         │
+│  (visible columns, additional filters, sorts, groups, view type)  │
+└──────────────────────┬───────────────────────────────────────────┘
+                       │ references
+                       ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                         DATA SOURCE                               │
+│  Reusable query definition (visual builder or raw SQL):           │
+│  - Defines entity types involved (FROM + JOINs)                   │
+│  - Defines available columns (result set schema)                  │
+│  - Defines default filters and sort order                         │
+│  - Declares previewable entities (auto-detected + optional        │
+│    manual override for priority and exclusions)                    │
+│  - Multiple views can share one data source                       │
+└──────────────────────┬───────────────────────────────────────────┘
+                       │ executes via
+                       ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                         QUERY ENGINE                              │
+│  Translates data source + view overrides into executable queries: │
+│  - Reads field registry from Object Model                         │
+│  - Resolves relation traversals to JOINs                          │
+│  - Merges data source defaults with view-level overrides          │
+│  - Handles pagination (cursor-based)                              │
+│  - Enforces row-level security and tenant isolation               │
+└──────────────────────┬───────────────────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                        RENDERING LAYER                            │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐         │
+│  │ List/Grid │  │  Board   │  │ Calendar │  │ Timeline │         │
+│  │ Renderer  │  │ Renderer │  │ Renderer │  │ Renderer │         │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘         │
+│  Each renderer reads the same query results and renders           │
+│  according to its view-type-specific rules.                       │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -331,24 +331,24 @@ Views (rendering configurations, each referencing a Data Source)
 
 ## 6. Data Sources
 
-> **This section is a summary.** The complete Data Source specification â€” including the definition model, visual query builder, raw SQL environment, column registry, entity detection & preview system, inline editing trace-back, query engine, caching & invalidation, schema evolution, API design, permissions, and examples â€” is defined in the **[Data Sources PRD](data-sources-prd.md)**.
+> **This section is a summary.** The complete Data Source specification — including the definition model, visual query builder, raw SQL environment, column registry, entity detection & preview system, inline editing trace-back, query engine, caching & invalidation, schema evolution, API design, permissions, and examples — is defined in the **[Data Sources PRD](data-sources-prd_V1.md)**.
 
 ### 6.1 Summary
 
-A **Data Source** is a reusable, named query definition that produces a structured result set for one or more views to render. It is the "what data" layer of the system â€” separate from the "how to render it" layer (the View). Data Sources are first-class entities (`dts_` prefix) that encapsulate query definitions, column registries, preview configurations, and caching policies.
+A **Data Source** is a reusable, named query definition that produces a structured result set for one or more views to render. It is the "what data" layer of the system — separate from the "how to render it" layer (the View). Data Sources are first-class entities (`dts_` prefix) that encapsulate query definitions, column registries, preview configurations, and caching policies.
 
 **Key capabilities relevant to the Views system:**
 
-- **Reusability** â€” Multiple views reference a single data source. Change the query once, all views reflect the update.
-- **Cross-entity queries** â€” Data sources JOIN across entity types, producing denormalized result sets combining data from any combination of system and custom entities.
-- **Column registry contract** â€” Every data source exposes a column registry that tells views exactly what columns are available, their types, source entities, and editability. Views select from this registry; they cannot add columns not in the data source.
-- **Dual authoring** â€” Visual query builder for most users; raw SQL for power users. Both produce the same artifact.
-- **View-level overrides** â€” Views can add filters (AND'd with data source defaults) and override sort order, but cannot remove data source filters or add columns.
-- **Inline editing trace-back** â€” The column registry maps each column to its source entity and field, enabling views to trace inline edits back to the correct entity API endpoint.
-- **Preview detection** â€” The system auto-detects which entities in a data source result set can be previewed, using the prefixed entity ID convention and inference rules.
-- **Cache & refresh** â€” Data sources specify a refresh policy (`live`, `cached`, `manual`) that governs how results are cached and when they're refreshed.
+- **Reusability** — Multiple views reference a single data source. Change the query once, all views reflect the update.
+- **Cross-entity queries** — Data sources JOIN across entity types, producing denormalized result sets combining data from any combination of system and custom entities.
+- **Column registry contract** — Every data source exposes a column registry that tells views exactly what columns are available, their types, source entities, and editability. Views select from this registry; they cannot add columns not in the data source.
+- **Dual authoring** — Visual query builder for most users; raw SQL for power users. Both produce the same artifact.
+- **View-level overrides** — Views can add filters (AND'd with data source defaults) and override sort order, but cannot remove data source filters or add columns.
+- **Inline editing trace-back** — The column registry maps each column to its source entity and field, enabling views to trace inline edits back to the correct entity API endpoint.
+- **Preview detection** — The system auto-detects which entities in a data source result set can be previewed, using the prefixed entity ID convention and inference rules.
+- **Cache & refresh** — Data sources specify a refresh policy (`live`, `cached`, `manual`) that governs how results are cached and when they're refreshed.
 
-### 6.2 Data Source â†” View Relationship Summary
+### 6.2 Data Source ↔ View Relationship Summary
 
 The relationship is **many-to-one**: multiple views can reference the same data source, but each view references exactly one data source.
 
@@ -362,7 +362,7 @@ The relationship is **many-to-one**: multiple views can reference the same data 
 
 ### 6.3 User Stories
 
-Data Source user stories (US-DS1 through US-DS15) are defined in the [Data Sources PRD, Section 4](data-sources-prd.md#4-user-personas--stories).
+Data Source user stories (US-DS1 through US-DS15) are defined in the [Data Sources PRD, Section 4](data-sources-prd_V1.md#4-user-personas--stories).
 
 ---
 
@@ -376,7 +376,7 @@ The primary and most versatile view type. Displays records as rows in a tabular 
 | Aspect | Detail |
 |---|---|
 | **Rendering** | Tabular: rows = records, columns = fields |
-| **Required entity fields** | None Ã¢â‚¬â€ any entity type can be displayed in a grid |
+| **Required entity fields** | None — any entity type can be displayed in a grid |
 | **Column support** | Full: all field types, relation traversal columns, computed columns |
 | **Sorting** | Full: multi-level sort on any column |
 | **Grouping** | Full: group-by any field, collapsible sections, aggregation rows |
@@ -396,7 +396,7 @@ Displays records plotted on a date-based grid (day, week, month views). Each rec
 | **Rendering** | Calendar grid: records as cards on date cells |
 | **Required entity fields** | At least one date or datetime field to map as the calendar position |
 | **Column support** | Limited: the calendar card displays a configurable set of fields (title + 1-3 summary fields), not full tabular columns |
-| **Sorting** | N/A Ã¢â‚¬â€ position is determined by date field value |
+| **Sorting** | N/A — position is determined by date field value |
 | **Grouping** | N/A within date cells; optional color-coding by a select/status field |
 | **Filtering** | Full: same filter engine as List/Grid, applied before rendering |
 | **Inline editing** | Drag-to-reschedule (changes the date field value) |
@@ -404,12 +404,12 @@ Displays records plotted on a date-based grid (day, week, month views). Each rec
 | **Zoom levels** | Day, Week, Month |
 
 **Configuration:**
-- **Date field mapping** Ã¢â‚¬â€ User selects which date field determines calendar position. If the entity has multiple date fields, the user chooses one (e.g., "Due Date" vs. "Created Date").
-- **Duration mapping** (optional) Ã¢â‚¬â€ If the entity has a start date AND end date (or a duration field), records can span multiple days on the calendar.
-- **Card display fields** Ã¢â‚¬â€ User selects which fields appear on the calendar card (limited to 1 title field + up to 3 additional fields for space reasons).
-- **Color-coding** Ã¢â‚¬â€ User selects an optional select/status field to color-code calendar cards.
+- **Date field mapping** — User selects which date field determines calendar position. If the entity has multiple date fields, the user chooses one (e.g., "Due Date" vs. "Created Date").
+- **Duration mapping** (optional) — If the entity has a start date AND end date (or a duration field), records can span multiple days on the calendar.
+- **Card display fields** — User selects which fields appear on the calendar card (limited to 1 title field + up to 3 additional fields for space reasons).
+- **Color-coding** — User selects an optional select/status field to color-code calendar cards.
 
-**When to use:** Date-driven entities where temporal position matters Ã¢â‚¬â€ Communications (by timestamp), Tasks/Action Items (by due date), custom objects with date fields (Jobs by scheduled date, Events by event date).
+**When to use:** Date-driven entities where temporal position matters — Communications (by timestamp), Tasks/Action Items (by due date), custom objects with date fields (Jobs by scheduled date, Events by event date).
 
 ### 7.3 Timeline View
 
@@ -428,13 +428,13 @@ Displays records as horizontal bars on a time axis, showing duration and tempora
 | **Zoom levels** | Day, Week, Month, Quarter, Year |
 
 **Configuration:**
-- **Start date field mapping** Ã¢â‚¬â€ Required. Determines the left edge of the bar.
-- **End date field mapping** Ã¢â‚¬â€ Optional. Determines the right edge. If not set, records render as point markers (milestones).
-- **Sidebar fields** Ã¢â‚¬â€ User selects which fields appear in the left sidebar alongside each bar.
-- **Color-coding** Ã¢â‚¬â€ Same as Calendar: optional select/status field for bar coloring.
-- **Swimlane grouping** Ã¢â‚¬â€ User selects a group-by field; each unique value gets its own horizontal lane.
+- **Start date field mapping** — Required. Determines the left edge of the bar.
+- **End date field mapping** — Optional. Determines the right edge. If not set, records render as point markers (milestones).
+- **Sidebar fields** — User selects which fields appear in the left sidebar alongside each bar.
+- **Color-coding** — Same as Calendar: optional select/status field for bar coloring.
+- **Swimlane grouping** — User selects a group-by field; each unique value gets its own horizontal lane.
 
-**When to use:** Projects (start Ã¢â€ â€™ end), Conversations (first activity Ã¢â€ â€™ last activity), custom objects with lifecycle dates, any entity where temporal extent and overlap matter.
+**When to use:** Projects (start → end), Conversations (first activity → last activity), custom objects with lifecycle dates, any entity where temporal extent and overlap matter.
 
 ### 7.4 Board / Kanban View
 
@@ -452,14 +452,14 @@ Displays records as cards organized into columns, where each column represents a
 | **Pagination** | Per-column virtual scrolling: loads first N cards per column, with "Load more" at bottom |
 
 **Configuration:**
-- **Grouping field** Ã¢â‚¬â€ The user selects any single-select field on the entity type. Each option value in the select field becomes a Kanban column. The column order matches the option order defined on the field.
-- **Card title field** Ã¢â‚¬â€ Which field displays as the card's primary text (defaults to name/subject).
-- **Card detail fields** Ã¢â‚¬â€ Up to 4 additional fields shown on the card beneath the title.
-- **Color-coding** Ã¢â‚¬â€ Optional: a second select/status field to color-code card borders or backgrounds. If not set, cards inherit the color of the Kanban column they're in (from the select field's option colors).
-- **Swimlane field** (optional) Ã¢â‚¬â€ A second group-by field that creates horizontal rows across all columns. Example: group Kanban columns by Deal Stage, swimlanes by Owner Ã¢â‚¬â€ creating a matrix of Owner Ãƒâ€” Stage.
-- **Card size** Ã¢â‚¬â€ Compact (title only), Standard (title + 2 fields), or Expanded (title + 4 fields).
+- **Grouping field** — The user selects any single-select field on the entity type. Each option value in the select field becomes a Kanban column. The column order matches the option order defined on the field.
+- **Card title field** — Which field displays as the card's primary text (defaults to name/subject).
+- **Card detail fields** — Up to 4 additional fields shown on the card beneath the title.
+- **Color-coding** — Optional: a second select/status field to color-code card borders or backgrounds. If not set, cards inherit the color of the Kanban column they're in (from the select field's option colors).
+- **Swimlane field** (optional) — A second group-by field that creates horizontal rows across all columns. Example: group Kanban columns by Deal Stage, swimlanes by Owner — creating a matrix of Owner × Stage.
+- **Card size** — Compact (title only), Standard (title + 2 fields), or Expanded (title + 4 fields).
 
-**When to use:** Status-driven workflows where progression through stages is the primary interaction Ã¢â‚¬â€ deal pipelines, project phases, task workflows, approval processes. Any entity with a single-select field representing a lifecycle or status.
+**When to use:** Status-driven workflows where progression through stages is the primary interaction — deal pipelines, project phases, task workflows, approval processes. Any entity with a single-select field representing a lifecycle or status.
 
 ### 7.5 View Type Compatibility Matrix
 
@@ -494,18 +494,18 @@ Example: On a Contacts view, a "Name" column maps directly to the Contact entity
 
 Display a field from a related entity by following a relation field on the primary entity. These columns are read-only in the grid (the value belongs to the related entity, not the primary).
 
-Example: On a Conversations view, a "Contact Ã¢â€ â€™ Company" column follows the `primary_contact` relation field to the Contact entity, then displays that Contact's `company` field.
+Example: On a Conversations view, a "Contact → Company" column follows the `primary_contact` relation field to the Contact entity, then displays that Contact's `company` field.
 
-Traversal depth is limited to **one hop** in Phase 1 (primary entity Ã¢â€ â€™ related entity). Multi-hop traversal (primary Ã¢â€ â€™ related Ã¢â€ â€™ related-of-related) is deferred to Phase 2.
+Traversal depth is limited to **one hop** in Phase 1 (primary entity → related entity). Multi-hop traversal (primary → related → related-of-related) is deferred to Phase 2.
 
 #### Computed Columns
 
 Display a value calculated from other fields or from aggregation of related records. Computed columns are always read-only.
 
 Examples:
-- **Record count:** "Open Conversation Count" on a Contacts view Ã¢â‚¬â€ counts the number of Conversations with `ai_status = open` related to this Contact.
-- **Formula field:** "Days Since Last Activity" Ã¢â‚¬â€ calculates the difference between today and the `last_activity` timestamp.
-- **Rollup:** "Total Deal Value" on a Project view Ã¢â‚¬â€ sums the `value` field across all related Deal records.
+- **Record count:** "Open Conversation Count" on a Contacts view — counts the number of Conversations with `ai_status = open` related to this Contact.
+- **Formula field:** "Days Since Last Activity" — calculates the difference between today and the `last_activity` timestamp.
+- **Rollup:** "Total Deal Value" on a Project view — sums the `value` field across all related Deal records.
 
 Computed columns are defined through the formula field type in the Custom Objects PRD. The view system renders them as read-only columns.
 
@@ -515,7 +515,7 @@ When a user creates a new view, the system provides a default set of columns bas
 
 **Default column logic:**
 1. **System entities** have curated default columns (see below).
-2. **Custom entities** default to: Name/Title field (first text field), Status field (if exists), Created Date, Last Modified Date Ã¢â‚¬â€ plus the first 2-3 custom fields in the order they were defined.
+2. **Custom entities** default to: Name/Title field (first text field), Status field (if exists), Created Date, Last Modified Date — plus the first 2-3 custom fields in the order they were defined.
 
 **System entity default columns:**
 
@@ -533,7 +533,7 @@ Each column in a view has the following user-configurable properties:
 
 | Property | Description | Default |
 |---|---|---|
-| **Field mapping** | Which field (or relationÃ¢â€ â€™field) this column displays | Set at column creation |
+| **Field mapping** | Which field (or relation→field) this column displays | Set at column creation |
 | **Position** | Left-to-right order in the grid | Append to end |
 | **Width** | Pixel width of the column. When the [Adaptive Grid Intelligence](adaptive-grid-intelligence-prd_V2.md) system is active (`column_auto_sizing = true`), this value is computed by the content analysis engine based on actual data in the result set. The static defaults below serve as fallbacks when auto-sizing is disabled. User manual resize creates a proportional override (see AGI PRD Section 17). | Auto-sized based on field type (see below) or computed by AGI |
 | **Pinned** | Whether the column is pinned to the left and stays visible during horizontal scroll | First column pinned by default |
@@ -572,14 +572,14 @@ Each column in a view has the following user-configurable properties:
 | **Resize** | Drag the right edge of a column header to adjust width. Double-click to auto-fit content (when AGI is active, uses content analysis P90 width — see [AGI PRD Section 10](adaptive-grid-intelligence-prd_V2.md#10-intelligent-column-width-allocation)). Manual resize creates a proportional override for future auto-configurations. |
 | **Pin/Unpin** | Toggle column pinning via column header context menu. Pinned columns move to the leftmost positions. |
 | **Hide/Show** | Toggle visibility without removing the column from the view configuration. |
-| **Sort** | Click column header to toggle sort (none Ã¢â€ â€™ ASC Ã¢â€ â€™ DESC Ã¢â€ â€™ none). Shift+click to add as secondary sort. |
+| **Sort** | Click column header to toggle sort (none → ASC → DESC → none). Shift+click to add as secondary sort. |
 | **Rename** | Set a label override via column header context menu. |
 
 ---
 
 ## 9. Field Type Registry
 
-The view system renders columns, filters, and editors based on field types. Each field type defines its display renderer, edit widget, and applicable filter operators. The field types themselves are defined by the Custom Objects PRD Ã¢â‚¬â€ this section specifies how the view system handles each type.
+The view system renders columns, filters, and editors based on field types. Each field type defines its display renderer, edit widget, and applicable filter operators. The field types themselves are defined by the Custom Objects PRD — this section specifies how the view system handles each type.
 
 > **Adaptive Grid Intelligence:** When the [AGI system](adaptive-grid-intelligence-prd_V2.md) is active, display renderers support **format adaptation** — producing compressed output when column width is constrained (e.g., dates as "2/15/26" instead of "Feb 15, 2026"). Cell alignment is also determined dynamically by content rather than statically by field type. See [AGI PRD Sections 10.5](adaptive-grid-intelligence-prd_V2.md#105-content-driven-format-adaptation) and [11](adaptive-grid-intelligence-prd_V2.md#11-content-aware-cell-alignment).
 
@@ -588,7 +588,7 @@ The view system renders columns, filters, and editors based on field types. Each
 | Field Type | Display Renderer | Inline Editor | Supports Sort? | Supports Group-By? |
 |---|---|---|---|---|
 | **Text (single-line)** | Plain text, truncated with ellipsis | Text input | Yes (alphabetical) | Yes |
-| **Text (multi-line)** | First line + "..." indicator | Expandable textarea (opens in popup) | Yes (alphabetical) | No Ã¢â‚¬â€ too many unique values |
+| **Text (multi-line)** | First line + "..." indicator | Expandable textarea (opens in popup) | Yes (alphabetical) | No — too many unique values |
 | **Number** | Formatted number (locale-aware, decimal places configurable) | Number input with increment/decrement | Yes (numeric) | Yes (with binning option) |
 | **Currency** | Number + currency symbol (e.g., "$1,234.56") | Number input with currency prefix | Yes (numeric) | Yes |
 | **Date** | Formatted date (user's locale, e.g., "Feb 15, 2026") | Date picker | Yes (chronological) | Yes (by day, week, month, quarter, year) |
@@ -601,8 +601,8 @@ The view system renders columns, filters, and editors based on field types. Each
 | **Email** | Email address (clickable `mailto:`) | Email input with validation | Yes (alphabetical) | No |
 | **Phone** | Formatted phone number (clickable `tel:`) | Phone input with formatting | Yes (alphabetical) | No |
 | **URL** | Truncated URL (clickable, opens in new tab) | URL input with validation | Yes (alphabetical) | No |
-| **Formula** | Computed value (renders based on output type) | Read-only Ã¢â‚¬â€ not editable | Yes (based on output type) | Yes (based on output type) |
-| **Rollup** | Aggregated value from related records | Read-only Ã¢â‚¬â€ not editable | Yes (numeric) | Yes |
+| **Formula** | Computed value (renders based on output type) | Read-only — not editable | Yes (based on output type) | Yes (based on output type) |
+| **Rollup** | Aggregated value from related records | Read-only — not editable | Yes (numeric) | Yes |
 | **Rating** | Star icons (1-5 or configurable range) | Click to set stars | Yes (numeric) | Yes |
 | **Duration** | Human-readable duration (e.g., "2h 30m") | Duration input | Yes (numeric, in seconds) | Yes (with binning option) |
 | **User** | User avatar + name | User picker dropdown | Yes (by name) | Yes |
@@ -635,13 +635,13 @@ Date filters support both absolute values ("is after 2026-01-15") and **relative
 | `is_this_week` | Monday through Sunday of current week |
 | `is_this_month` | First through last day of current month |
 | `is_within_last N days` | Today minus N days through today |
-| `is_within_last N weeks` | Today minus NÃƒâ€”7 days through today |
+| `is_within_last N weeks` | Today minus N×7 days through today |
 | `is_within_last N months` | Today minus N months through today |
 | `is_within_next N days` | Today through today plus N days |
-| `is_within_next N weeks` | Today through today plus NÃƒâ€”7 days |
+| `is_within_next N weeks` | Today through today plus N×7 days |
 | `is_within_next N months` | Today through today plus N months |
 
-Relative dates are critical for saved views and alerts Ã¢â‚¬â€ a "Stale Conversations" view filtered by "Last Activity is_within_last 14 days = false" stays current without manual adjustment.
+Relative dates are critical for saved views and alerts — a "Stale Conversations" view filtered by "Last Activity is_within_last 14 days = false" stays current without manual adjustment.
 
 ---
 
@@ -649,22 +649,22 @@ Relative dates are critical for saved views and alerts Ã¢â‚¬â€ a "Sta
 
 ### 10.1 The Concept
 
-Relation traversal allows a view to display fields that don't belong to the primary entity type but to a related entity. This is one of the most powerful features of the view system Ã¢â‚¬â€ it surfaces cross-entity context without requiring the user to navigate between screens.
+Relation traversal allows a view to display fields that don't belong to the primary entity type but to a related entity. This is one of the most powerful features of the view system — it surfaces cross-entity context without requiring the user to navigate between screens.
 
 ### 10.2 How It Works
 
 ```
 Primary Entity: Conversation
-  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Field: primary_contact (Relation Ã¢â€ â€™ Contact)
+  └── Field: primary_contact (Relation → Contact)
 
 Related Entity: Contact
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Field: company (Text)
-  Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Field: email (Email)
-  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Field: last_activity (Datetime)
+  ├── Field: company (Text)
+  ├── Field: email (Email)
+  └── Field: last_activity (Datetime)
 
-Lookup Column: "Primary Contact Ã¢â€ â€™ Company"
-  Step 1: Read the Conversation's primary_contact relation field Ã¢â€ â€™ get Contact ID
-  Step 2: Read the referenced Contact's company field Ã¢â€ â€™ get "Acme Corp"
+Lookup Column: "Primary Contact → Company"
+  Step 1: Read the Conversation's primary_contact relation field → get Contact ID
+  Step 2: Read the referenced Contact's company field → get "Acme Corp"
   Step 3: Display "Acme Corp" in the column
 ```
 
@@ -672,9 +672,9 @@ Lookup Column: "Primary Contact Ã¢â€ â€™ Company"
 
 | Rule | Detail |
 |---|---|
-| **Depth limit** | One hop in Phase 1 (A Ã¢â€ â€™ B). Multi-hop (A Ã¢â€ â€™ B Ã¢â€ â€™ C) deferred to Phase 2. |
+| **Depth limit** | One hop in Phase 1 (A → B). Multi-hop (A → B → C) deferred to Phase 2. |
 | **Editability** | Lookup columns are read-only. The value belongs to the related entity. To edit, the user must open the related entity. |
-| **Null handling** | If the relation field is empty (no related entity), the lookup column displays "Ã¢â‚¬â€" (em-dash). |
+| **Null handling** | If the relation field is empty (no related entity), the lookup column displays "—" (em-dash). |
 | **Multi-relation** | If the relation field allows multiple related entities, the lookup column displays the field value from the **first** related entity, with a "+N" indicator (e.g., "Acme Corp +2"). Full list available on hover or row expansion. |
 | **Filtering** | Users can filter by lookup column values. The query engine translates this to a JOIN-based filter. |
 | **Sorting** | Users can sort by lookup column values. The query engine translates this to a JOIN-based sort. |
@@ -685,23 +685,23 @@ When adding a column, the field picker displays:
 
 ```
 Add Column
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Direct Fields
-Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Subject
-Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ AI Status
-Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Last Activity
-Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ ...
-Ã¢â€â€š
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Related Entity Fields
-      Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Primary Contact Ã¢â€ â€™
-      Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Name
-      Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Company
-      Ã¢â€â€š     Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Email
-      Ã¢â€â€š     Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ ...
-      Ã¢â€â€š
-      Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Project Ã¢â€ â€™
-            Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Name
-            Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Status
-            Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ ...
+├── Direct Fields
+│     ├── Subject
+│     ├── AI Status
+│     ├── Last Activity
+│     └── ...
+│
+└── Related Entity Fields
+      ├── Primary Contact →
+      │     ├── Name
+      │     ├── Company
+      │     ├── Email
+      │     └── ...
+      │
+      └── Project →
+            ├── Name
+            ├── Status
+            └── ...
 ```
 
 The picker shows all relation fields on the primary entity, and under each, the fields available on the related entity type. This makes it discoverable without requiring users to understand the data model.
@@ -724,11 +724,11 @@ The filter system uses a tree structure to represent compound filter logic:
 
 ```
 Filter Root (AND)
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Condition: Status = "Active"
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Condition: Last Activity > "2026-01-01"
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Group (OR)
-      Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Condition: Priority = "High"
-      Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Condition: Assignee = Me
+├── Condition: Status = "Active"
+├── Condition: Last Activity > "2026-01-01"
+└── Group (OR)
+      ├── Condition: Priority = "High"
+      └── Condition: Assignee = Me
 ```
 
 This translates to: `Status = Active AND Last Activity > Jan 1 AND (Priority = High OR Assignee = Me)`
@@ -741,7 +741,7 @@ A single predicate:
 
 | Component | Description | Example |
 |---|---|---|
-| **Field** | The field to filter on (direct or relation traversal) | `ai_status`, `primary_contactÃ¢â€ â€™company` |
+| **Field** | The field to filter on (direct or relation traversal) | `ai_status`, `primary_contact→company` |
 | **Operator** | The comparison operator (from the field type's operator set) | `equals`, `contains`, `is_after` |
 | **Value** | The comparison value (type matches the field) | `"Open"`, `"Acme"`, `"2026-01-01"` |
 
@@ -762,12 +762,12 @@ Filter groups can be nested up to **3 levels deep**. This provides sufficient ex
 Level 0: Root group (AND/OR)
   Level 1: Nested group
     Level 2: Nested group
-      Level 3: Deepest allowed nesting Ã¢â‚¬â€ conditions only, no further groups
+      Level 3: Deepest allowed nesting — conditions only, no further groups
 ```
 
 ### 11.3 Quick Filters
 
-For common, frequently used filter patterns, the view provides quick filter controls above the grid Ã¢â‚¬â€ single-click shortcuts that add pre-configured filter conditions:
+For common, frequently used filter patterns, the view provides quick filter controls above the grid — single-click shortcuts that add pre-configured filter conditions:
 
 | Quick Filter | Adds Condition |
 |---|---|
@@ -778,7 +778,7 @@ For common, frequently used filter patterns, the view provides quick filter cont
 | "Has Activity" | `last_activity is_not_empty` |
 | "No Activity in 14 Days" | `last_activity is_within_last 14 days = false` |
 
-Quick filters are additive Ã¢â‚¬â€ they add to existing filter conditions (AND logic). They can be toggled on/off without opening the full filter builder.
+Quick filters are additive — they add to existing filter conditions (AND logic). They can be toggled on/off without opening the full filter builder.
 
 Entity types can define their own quick filters based on their most commonly filtered fields. System entities have built-in quick filters; custom entities can have user-defined quick filters.
 
@@ -794,7 +794,7 @@ Filter configurations are saved as part of the view definition. When a user modi
 Users can filter by fields on related entities. The UI presents this as:
 
 ```
-Filter: Primary Contact Ã¢â€ â€™ Company  equals  "Acme Corp"
+Filter: Primary Contact → Company  equals  "Acme Corp"
 ```
 
 Under the hood, the query engine translates this to a JOIN + WHERE clause. The same field picker used for columns (Section 9.4) is used for filter field selection.
@@ -829,7 +829,7 @@ Records are sorted by the first rule. Ties in the first rule are broken by the s
 
 #### Sort Interaction
 
-- **Click column header:** Toggle between ASC Ã¢â€ â€™ DESC Ã¢â€ â€™ Remove sort.
+- **Click column header:** Toggle between ASC → DESC → Remove sort.
 - **Shift + click column header:** Add as next-level sort (preserves existing sort rules).
 - **Sort panel:** Open a dedicated sort configuration panel to see and reorder all active sort rules.
 
@@ -840,16 +840,16 @@ Records are sorted by the first rule. Ties in the first rule are broken by the s
 Grouping partitions rows into visual sections based on a field's value. Each unique value creates a group header row with the grouped records beneath it.
 
 ```
-Ã¢â€“Â¼ Project: Acme Acquisition (3 conversations)
+▼ Project: Acme Acquisition (3 conversations)
     Conversation: Contract Review    Open     Feb 14
     Conversation: Due Diligence      Open     Feb 12
     Conversation: Pricing Discussion Closed   Feb 10
 
-Ã¢â€“Â¼ Project: Office Relocation (2 conversations)
+▼ Project: Office Relocation (2 conversations)
     Conversation: Lease Negotiation  Open     Feb 15
     Conversation: Moving Logistics   Closed   Feb 8
 
-Ã¢â€“Â¶ Project: (Unassigned) (5 conversations)  [collapsed]
+▶ Project: (Unassigned) (5 conversations)  [collapsed]
 ```
 
 #### Group Configuration
@@ -873,7 +873,7 @@ Group headers can display summary aggregations for the records in that group:
 | **Sum** | Number, Currency fields | "$45,000" |
 | **Average** | Number, Currency fields | "Avg: $15,000" |
 | **Min / Max** | Number, Currency, Date fields | "Earliest: Feb 8" |
-| **Range** | Date fields | "Feb 8 Ã¢â‚¬â€œ Feb 15" |
+| **Range** | Date fields | "Feb 8 – Feb 15" |
 
 Aggregations are configured per column in the group header. By default, only Count is shown. Users can add aggregations via the column header context menu.
 
@@ -964,7 +964,7 @@ Users can select multiple rows and perform actions on the entire selection:
 | **Bulk export** | Export selected records to CSV or other format |
 | **Bulk tag** | Add/remove tags or select-field values |
 
-Bulk actions display a floating action bar at the bottom of the screen when records are selected: "15 records selected Ã¢â‚¬â€ [Edit] [Assign] [Delete] [Export]".
+Bulk actions display a floating action bar at the bottom of the screen when records are selected: "15 records selected — [Edit] [Assign] [Delete] [Export]".
 
 ### 13.4 Row Actions (Context Menu)
 
@@ -1004,17 +1004,17 @@ Right-clicking a row (or clicking a "..." menu on the row) displays a context me
 The Calendar view maps records to date cells on a visual calendar grid. Each record appears as a **card** within the cell corresponding to its date field value.
 
 ```
-Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-Ã¢â€â€š   Mon   Ã¢â€â€š   Tue   Ã¢â€â€š   Wed   Ã¢â€â€š   Thu   Ã¢â€â€š   Fri   Ã¢â€â€š   Sat   Ã¢â€â€š   Sun   Ã¢â€â€š
-Ã¢â€â€š  Feb 9  Ã¢â€â€š  Feb 10 Ã¢â€â€š  Feb 11 Ã¢â€â€š  Feb 12 Ã¢â€â€š  Feb 13 Ã¢â€â€š  Feb 14 Ã¢â€â€š  Feb 15 Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Ã¢â€â€š         Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š         Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š         Ã¢â€â€š         Ã¢â€â€š
-Ã¢â€â€š         Ã¢â€â€š Ã¢â€â€š Bob Ã¢â€â€š Ã¢â€â€š         Ã¢â€â€š Ã¢â€â€šDue  Ã¢â€â€š Ã¢â€â€š Ã¢â€â€šCall Ã¢â€â€š Ã¢â€â€š         Ã¢â€â€š         Ã¢â€â€š
-Ã¢â€â€š         Ã¢â€â€š Ã¢â€â€šmtg  Ã¢â€â€š Ã¢â€â€š         Ã¢â€â€š Ã¢â€â€šDili Ã¢â€â€š Ã¢â€â€š Ã¢â€â€šw/   Ã¢â€â€š Ã¢â€â€š         Ã¢â€â€š         Ã¢â€â€š
-Ã¢â€â€š         Ã¢â€â€š Ã¢â€â€š Ã°Å¸Å¸Â¢  Ã¢â€â€š Ã¢â€â€š         Ã¢â€â€š Ã¢â€â€š Ã°Å¸Å¸Â¡  Ã¢â€â€š Ã¢â€â€š Ã¢â€â€šSara Ã¢â€â€š Ã¢â€â€š         Ã¢â€â€š         Ã¢â€â€š
-Ã¢â€â€š         Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š         Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š Ã¢â€â€š Ã°Å¸â€Â´  Ã¢â€â€š Ã¢â€â€š         Ã¢â€â€š         Ã¢â€â€š
-Ã¢â€â€š         Ã¢â€â€š         Ã¢â€â€š         Ã¢â€â€š         Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š         Ã¢â€â€š         Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
+┌─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐
+│   Mon   │   Tue   │   Wed   │   Thu   │   Fri   │   Sat   │   Sun   │
+│  Feb 9  │  Feb 10 │  Feb 11 │  Feb 12 │  Feb 13 │  Feb 14 │  Feb 15 │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
+│         │ ┌─────┐ │         │ ┌─────┐ │ ┌─────┐ │         │         │
+│         │ │ Bob │ │         │ │Due  │ │ │Call │ │         │         │
+│         │ │mtg  │ │         │ │Dili │ │ │w/   │ │         │         │
+│         │ │ 🟢  │ │         │ │ 🟡  │ │ │Sara │ │         │         │
+│         │ └─────┘ │         │ └─────┘ │ │ 🔴  │ │         │         │
+│         │         │         │         │ └─────┘ │         │         │
+├─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
 ```
 
 ### 14.2 Configuration
@@ -1061,28 +1061,28 @@ When a date cell contains more records than can be visually displayed:
 The Board view organizes records into vertical columns, where each column corresponds to a value of the user-selected grouping field (a single-select field). Records appear as cards stacked vertically within their column.
 
 ```
-Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-Ã¢â€â€š  Prospect   Ã¢â€â€š Negotiation Ã¢â€â€š  Proposal   Ã¢â€â€š   Closed    Ã¢â€â€š
-Ã¢â€â€š  (4 cards)  Ã¢â€â€š  (2 cards)  Ã¢â€â€š  (3 cards)  Ã¢â€â€š  (6 cards)  Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š
-Ã¢â€â€š Ã¢â€â€š Acme    Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Beta Co Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Delta   Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Epsilon Ã¢â€â€š Ã¢â€â€š
-Ã¢â€â€š Ã¢â€â€š $50K    Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š $120K   Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š $80K    Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š $200K   Ã¢â€â€š Ã¢â€â€š
-Ã¢â€â€š Ã¢â€â€š Alex    Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Maria   Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Alex    Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Jordan  Ã¢â€â€š Ã¢â€â€š
-Ã¢â€â€š Ã¢â€â€š Ã°Å¸Å¸Â¢ Hot  Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Ã°Å¸Å¸Â¡ Warm Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Ã°Å¸Å¸Â¢ Hot  Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Ã°Å¸Å¸Â¢ Won  Ã¢â€â€š Ã¢â€â€š
-Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š
-Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š
-Ã¢â€â€š Ã¢â€â€š Gamma   Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Zeta    Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Theta   Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Iota    Ã¢â€â€š Ã¢â€â€š
-Ã¢â€â€š Ã¢â€â€š $30K    Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š $75K    Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š $45K    Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š $150K   Ã¢â€â€š Ã¢â€â€š
-Ã¢â€â€š Ã¢â€â€š Maria   Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Alex    Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Jordan  Ã¢â€â€š Ã¢â€â€š Ã¢â€â€š Alex    Ã¢â€â€š Ã¢â€â€š
-Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š
-Ã¢â€â€š   ...       Ã¢â€â€š             Ã¢â€â€š Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â Ã¢â€â€š   ...       Ã¢â€â€š
-Ã¢â€â€š             Ã¢â€â€š             Ã¢â€â€š Ã¢â€â€š Kappa   Ã¢â€â€š Ã¢â€â€š             Ã¢â€â€š
-Ã¢â€â€š             Ã¢â€â€š             Ã¢â€â€š Ã¢â€â€š $60K    Ã¢â€â€š Ã¢â€â€š             Ã¢â€â€š
-Ã¢â€â€š             Ã¢â€â€š             Ã¢â€â€š Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ Ã¢â€â€š             Ã¢â€â€š
-Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Ã¢â€â€š Sum: $145K  Ã¢â€â€š Sum: $195K  Ã¢â€â€š Sum: $185K  Ã¢â€â€š Sum: $890K  Ã¢â€â€š
-Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
+┌─────────────┬─────────────┬─────────────┬─────────────┐
+│  Prospect   │ Negotiation │  Proposal   │   Closed    │
+│  (4 cards)  │  (2 cards)  │  (3 cards)  │  (6 cards)  │
+├─────────────┼─────────────┼─────────────┼─────────────┤
+│ ┌─────────┐ │ ┌─────────┐ │ ┌─────────┐ │ ┌─────────┐ │
+│ │ Acme    │ │ │ Beta Co │ │ │ Delta   │ │ │ Epsilon │ │
+│ │ $50K    │ │ │ $120K   │ │ │ $80K    │ │ │ $200K   │ │
+│ │ Alex    │ │ │ Maria   │ │ │ Alex    │ │ │ Jordan  │ │
+│ │ 🟢 Hot  │ │ │ 🟡 Warm │ │ │ 🟢 Hot  │ │ │ 🟢 Won  │ │
+│ └─────────┘ │ └─────────┘ │ └─────────┘ │ └─────────┘ │
+│ ┌─────────┐ │ ┌─────────┐ │ ┌─────────┐ │ ┌─────────┐ │
+│ │ Gamma   │ │ │ Zeta    │ │ │ Theta   │ │ │ Iota    │ │
+│ │ $30K    │ │ │ $75K    │ │ │ $45K    │ │ │ $150K   │ │
+│ │ Maria   │ │ │ Alex    │ │ │ Jordan  │ │ │ Alex    │ │
+│ └─────────┘ │ └─────────┘ │ └─────────┘ │ └─────────┘ │
+│   ...       │             │ ┌─────────┐ │   ...       │
+│             │             │ │ Kappa   │ │             │
+│             │             │ │ $60K    │ │             │
+│             │             │ └─────────┘ │             │
+├─────────────┼─────────────┼─────────────┼─────────────┤
+│ Sum: $145K  │ Sum: $195K  │ Sum: $185K  │ Sum: $890K  │
+└─────────────┴─────────────┴─────────────┴─────────────┘
 ```
 
 ### 15.2 Configuration
@@ -1139,29 +1139,29 @@ The user configures which aggregations appear via the column header context menu
 
 ### 15.6 Swimlanes
 
-When a swimlane field is configured, the board is divided into horizontal rows Ã¢â‚¬â€ one per unique value in the swimlane field. Each swimlane contains its own set of columns, creating a matrix:
+When a swimlane field is configured, the board is divided into horizontal rows — one per unique value in the swimlane field. Each swimlane contains its own set of columns, creating a matrix:
 
 ```
                  Prospect    Negotiation    Closed
-               Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-  Owner: Alex  Ã¢â€â€š [Acme]    Ã¢â€â€š [Zeta]     Ã¢â€â€š [Iota]   Ã¢â€â€š
-               Ã¢â€â€š [Gamma]   Ã¢â€â€š            Ã¢â€â€š          Ã¢â€â€š
-               Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-  Owner: Maria Ã¢â€â€š [Beta]    Ã¢â€â€š            Ã¢â€â€š [Kappa]  Ã¢â€â€š
-               Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-  Owner: JordanÃ¢â€â€š           Ã¢â€â€š [Delta]    Ã¢â€â€š [Epsilon]Ã¢â€â€š
-               Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
+               ┌───────────┬────────────┬──────────┐
+  Owner: Alex  │ [Acme]    │ [Zeta]     │ [Iota]   │
+               │ [Gamma]   │            │          │
+               ├───────────┼────────────┼──────────┤
+  Owner: Maria │ [Beta]    │            │ [Kappa]  │
+               ├───────────┼────────────┼──────────┤
+  Owner: Jordan│           │ [Delta]    │ [Epsilon]│
+               └───────────┴────────────┴──────────┘
 ```
 
 Swimlanes are collapsible. Drag-and-drop between columns within a swimlane updates only the grouping field. Dragging between swimlanes updates the swimlane field (e.g., reassigning ownership).
 
 ### 15.7 Empty Columns
 
-If a select field option has no matching records (after filters are applied), the column still renders Ã¢â‚¬â€ but as an empty column with a "+" button to create a new record in that state. This ensures the full workflow pipeline is always visible, even when some stages are empty.
+If a select field option has no matching records (after filters are applied), the column still renders — but as an empty column with a "+" button to create a new record in that state. This ensures the full workflow pipeline is always visible, even when some stages are empty.
 
 ### 15.8 Unset / Null Handling
 
-Records where the grouping field has no value (null/empty) are collected in a special "(No Status)" column, displayed as the first or last column (user-configurable). This column behaves identically to named columns Ã¢â‚¬â€ cards can be dragged out of it to assign a status, or into it to clear the status.
+Records where the grouping field has no value (null/empty) are collected in a special "(No Status)" column, displayed as the first or last column (user-configurable). This column behaves identically to named columns — cards can be dragged out of it to assign a status, or into it to clear the status.
 
 ---
 
@@ -1173,14 +1173,14 @@ The Timeline view displays records as horizontal bars on a scrollable time axis,
 
 ```
                      Feb 2026
-Sidebar          Ã¢â€â€š W1  Ã¢â€â€š W2  Ã¢â€â€š W3  Ã¢â€â€š W4  Ã¢â€â€š Mar Ã¢â€â€š
-Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
-Acme Acquisition Ã¢â€â€š Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“â€˜Ã¢â€“â€˜ Ã¢â€â€š     Ã¢â€â€š
-                 Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š
-Office Relo.     Ã¢â€â€š     Ã¢â€â€š Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€â€š
-                 Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š
-Q1 Hiring        Ã¢â€â€šÃ¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š
-Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
+Sidebar          │ W1  │ W2  │ W3  │ W4  │ Mar │
+─────────────────┼─────┼─────┼─────┼─────┼─────┤
+Acme Acquisition │ ████████████████████░░ │     │
+                 │     │     │     │     │     │
+Office Relo.     │     │ ███████████████████████│
+                 │     │     │     │     │     │
+Q1 Hiring        │████████████│     │     │     │
+─────────────────┼─────┼─────┼─────┼─────┼─────┤
 ```
 
 ### 16.2 Configuration
@@ -1209,18 +1209,18 @@ Q1 Hiring        Ã¢â€â€šÃ¢â€“Ë†Ã¢â€“Ë†Ã¢â€�
 
 ### 16.4 Swimlanes
 
-When a swimlane field is configured, the timeline is divided into horizontal lanes Ã¢â‚¬â€ one per unique value in the group-by field. This is the Timeline equivalent of grouping in the List view.
+When a swimlane field is configured, the timeline is divided into horizontal lanes — one per unique value in the group-by field. This is the Timeline equivalent of grouping in the List view.
 
 ```
                          Feb 2026
-                    Ã¢â€â€š W1  Ã¢â€â€š W2  Ã¢â€â€š W3  Ã¢â€â€š W4  Ã¢â€â€š
+                    │ W1  │ W2  │ W3  │ W4  │
 
-Ã¢â€“Â¼ Owner: Alex      Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š
-  Acme Acquisition  Ã¢â€â€š Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“â€˜Ã¢â€“â€˜ Ã¢â€â€š
-  Q1 Hiring         Ã¢â€â€šÃ¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š
+▼ Owner: Alex      │     │     │     │     │
+  Acme Acquisition  │ ████████████████████░░ │
+  Q1 Hiring         │████████████│     │     │
 
-Ã¢â€“Â¼ Owner: Maria     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š     Ã¢â€â€š
-  Office Relo.      Ã¢â€â€š     Ã¢â€â€š Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€“Ë†Ã¢â€â€š
+▼ Owner: Maria     │     │     │     │     │
+  Office Relo.      │     │ ███████████████████│
 ```
 
 ### 16.5 Milestones
@@ -1299,9 +1299,9 @@ Views are organized per entity type. When a user navigates to an entity type (e.
 
 ```
 Conversations
-  Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
-  Ã¢â€â€š [My Open Convos Ã¢â€“Â¼] [All Convos] [Stale VIPs] [Team Review*] Ã¢â€â€š + New View
-  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
+  ┌───────────────────────────────────────────────────────────────┐
+  │ [My Open Convos ▼] [All Convos] [Stale VIPs] [Team Review*] │ + New View
+  └───────────────────────────────────────────────────────────────┘
   * = shared view (indicated by icon)
 ```
 
@@ -1318,14 +1318,14 @@ The alert system (defined in the Communication & Conversation Intelligence PRD, 
 ```
 View: "Stale VIP Conversations"
   Entity type: Conversation
-  Filters: ContactÃ¢â€ â€™Tag contains "VIP" AND Last Activity is_within_last 14 days = false
+  Filters: Contact→Tag contains "VIP" AND Last Activity is_within_last 14 days = false
   Sort: Last Activity ASC
-  Ã¢â€â€š
-  Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Alert (optional attachment)
-        Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Trigger: "New records match" (when a Conversation newly matches the filter)
-        Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Frequency: Daily
-        Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ Aggregation: Batched (digest)
-        Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ Delivery: Email
+  │
+  └── Alert (optional attachment)
+        ├── Trigger: "New records match" (when a Conversation newly matches the filter)
+        ├── Frequency: Daily
+        ├── Aggregation: Batched (digest)
+        └── Delivery: Email
 ```
 
 ### 18.2 Alert Promotion Workflow
@@ -1378,7 +1378,7 @@ All views use server-side, cursor-based pagination to handle datasets that excee
 
 | Parameter | Value |
 |---|---|
-| **Page size** | 50 records (default) Ã¢â‚¬â€ configurable: 25, 50, 100 |
+| **Page size** | 50 records (default) — configurable: 25, 50, 100 |
 | **Cursor type** | Opaque token encoding the last record's sort key + ID |
 | **Pre-fetching** | When the user scrolls to within 80% of loaded records, the next page is pre-fetched |
 | **Total count** | Returned as a separate, potentially estimated count (exact for <10,000 records; estimated for larger sets) |
@@ -1448,7 +1448,7 @@ Board views load records per Kanban column:
 - Quick filters for common patterns
 - Single-level sorting (click column header)
 - Basic inline editing with entity trace-back (single-entity data sources only)
-- Row click to open detail page (single entity type Ã¢â€ â€™ auto-primary preview)
+- Row click to open detail page (single entity type → auto-primary preview)
 - Server-side pagination with virtual scrolling
 - View persistence (auto-save)
 - System default views for all entity types
@@ -1496,7 +1496,7 @@ Board views load records per Kanban column:
 - Optional manual preview declaration (Layer 3 overrides)
 - Custom SQL parameters (user-defined, view-supplied)
 - Data source refresh policies (live, cached, manual)
-- Visual builder Ã¢â€ â€™ SQL "eject" workflow
+- Visual builder → SQL "eject" workflow
 - Data source concurrent query deduplication
 
 ### Phase 4: Timeline View + Alerts + Polish
@@ -1532,37 +1532,37 @@ Board views load records per Kanban column:
 
 ## 22. Open Questions
 
-> **Note:** Open questions #2, #6, #10, #11, #13, #14, and #15 from the original version of this document have been migrated to the [Data Sources PRD, Section 26](data-sources-prd.md#26-open-questions) as they pertain to data source functionality rather than view rendering.
+> **Note:** Open questions #2, #6, #10, #11, #13, #14, and #15 from the original version of this document have been migrated to the [Data Sources PRD, Section 26](data-sources-prd_V1.md#26-open-questions) as they pertain to data source functionality rather than view rendering.
 
-1. **Multi-entity views vs. cross-entity data sources** Ã¢â‚¬â€ With Data Sources now supporting JOINs across entity types, the original "multi-entity view" question is partially addressed. A data source joining Conversations + Contacts + Companies produces a cross-entity result set. However, this is still a flattened/denormalized view. Should there also be a "unified activity feed" view type that displays heterogeneous entity types (a Conversation row, then a Communication row, then a Project row) in a single chronological stream? This would require a fundamentally different rendering model where each row can have a different column schema.
+1. **Multi-entity views vs. cross-entity data sources** — With Data Sources now supporting JOINs across entity types, the original "multi-entity view" question is partially addressed. A data source joining Conversations + Contacts + Companies produces a cross-entity result set. However, this is still a flattened/denormalized view. Should there also be a "unified activity feed" view type that displays heterogeneous entity types (a Conversation row, then a Communication row, then a Project row) in a single chronological stream? This would require a fundamentally different rendering model where each row can have a different column schema.
 
-2. **Formula field computation** Ã¢â‚¬â€ Where are formula fields computed? Client-side (fast but limited to loaded records) or server-side (complete but adds query complexity)? Server-side is more correct but makes formulas dependent on the query engine's expression capabilities. With raw SQL data sources, users can compute formulas in the query itself (CASE expressions, window functions) Ã¢â‚¬â€ does this reduce the need for a separate formula field type?
+2. **Formula field computation** — Where are formula fields computed? Client-side (fast but limited to loaded records) or server-side (complete but adds query complexity)? Server-side is more correct but makes formulas dependent on the query engine's expression capabilities. With raw SQL data sources, users can compute formulas in the query itself (CASE expressions, window functions) — does this reduce the need for a separate formula field type?
 
-3. **View templates** Ã¢â‚¬â€ Should the system provide pre-built view templates that include both a data source and a view configuration (e.g., a "Sales Pipeline" template that creates a cross-entity data source + Board view)? Could accelerate onboarding.
+3. **View templates** — Should the system provide pre-built view templates that include both a data source and a view configuration (e.g., a "Sales Pipeline" template that creates a cross-entity data source + Board view)? Could accelerate onboarding.
 
-4. **Export formats** Ã¢â‚¬â€ Beyond CSV, should views support export to Excel (.xlsx), PDF, or direct integration with reporting tools? What about scheduled exports (e.g., "email me this view as a CSV every Monday")?
+4. **Export formats** — Beyond CSV, should views support export to Excel (.xlsx), PDF, or direct integration with reporting tools? What about scheduled exports (e.g., "email me this view as a CSV every Monday")?
 
-5. **Conditional formatting** (partially addressed by [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd_V2.md)) Ã¢â‚¬â€ Should cells/rows support conditional formatting rules (e.g., "if AI Status = Open, highlight row in yellow", "if Days Since Last Activity > 30, make cell red")? This is powerful but adds significant UI complexity. **Note:** The [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd_V2.md) addresses content-aware column optimization (auto-sizing, alignment, value diversity demotion) but does not cover rule-based conditional formatting (user-defined color/style rules). Conditional formatting remains a future PRD that can build on the AGI content analysis engine.
+5. **Conditional formatting** (partially addressed by [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd_V2.md)) — Should cells/rows support conditional formatting rules (e.g., "if AI Status = Open, highlight row in yellow", "if Days Since Last Activity > 30, make cell red")? This is powerful but adds significant UI complexity. **Note:** The [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd_V2.md) addresses content-aware column optimization (auto-sizing, alignment, value diversity demotion) but does not cover rule-based conditional formatting (user-defined color/style rules). Conditional formatting remains a future PRD that can build on the AGI content analysis engine.
 
-6. **Column formulas vs. field formulas** Ã¢â‚¬â€ Should the view system support view-level computed columns (like spreadsheet formulas that exist only in the view) in addition to entity-level formula fields (which exist on the object and are available across all views)? With raw SQL data sources, users can already create computed columns via SQL expressions Ã¢â‚¬â€ is a UI-based formula builder additionally needed?
+6. **Column formulas vs. field formulas** — Should the view system support view-level computed columns (like spreadsheet formulas that exist only in the view) in addition to entity-level formula fields (which exist on the object and are available across all views)? With raw SQL data sources, users can already create computed columns via SQL expressions — is a UI-based formula builder additionally needed?
 
-7. **Saved filter presets** Ã¢â‚¬â€ Should filter configurations be saveable independently of views, so that the same filter preset can be applied to multiple views? Or is the Data Source's default filter + view-level filter composition sufficient?
+7. **Saved filter presets** — Should filter configurations be saveable independently of views, so that the same filter preset can be applied to multiple views? Or is the Data Source's default filter + view-level filter composition sufficient?
 
-8. **Collaborative real-time editing** Ã¢â‚¬â€ If two users are viewing the same shared view and one edits a record inline, should the other see the change in real-time (like Google Sheets)? Or is refresh-on-demand sufficient? This is particularly complex with cross-entity data sources where an edit to a Company record should propagate to all rows referencing that Company.
+8. **Collaborative real-time editing** — If two users are viewing the same shared view and one edits a record inline, should the other see the change in real-time (like Google Sheets)? Or is refresh-on-demand sufficient? This is particularly complex with cross-entity data sources where an edit to a Company record should propagate to all rows referencing that Company.
 
-9. **Print / presentation mode** Ã¢â‚¬â€ Should views have a "print-friendly" rendering that removes interactive controls and optimizes for paper or screen sharing? Relevant for managers presenting data in meetings.
+9. **Print / presentation mode** — Should views have a "print-friendly" rendering that removes interactive controls and optimizes for paper or screen sharing? Relevant for managers presenting data in meetings.
 
-10. **Custom entity scope implications** Ã¢â‚¬â€ With per-user custom entities, if User A shares a data source that queries their custom "Jobs" entity, can User B (who doesn't have a "Jobs" entity) use a view on that data source? The data source defines the schema Ã¢â‚¬â€ does the viewer need the entity type in their own schema, or does the data source's virtual schema suffice?
+10. **Custom entity scope implications** — With per-user custom entities, if User A shares a data source that queries their custom "Jobs" entity, can User B (who doesn't have a "Jobs" entity) use a view on that data source? The data source defines the schema — does the viewer need the entity type in their own schema, or does the data source's virtual schema suffice?
 
-11. **Relation traversal vs. data source JOINs** Ã¢â‚¬â€ The Relation Traversal system (Section 10) and Data Source JOINs both achieve cross-entity column display. Should relation traversal remain as a convenience feature within single-entity data sources (auto-generating the JOIN under the hood), or should it be deprecated in favor of explicit data source JOINs? Recommendation: keep both Ã¢â‚¬â€ relation traversal is simpler for common cases; data source JOINs are more powerful for complex cases.
+11. **Relation traversal vs. data source JOINs** — The Relation Traversal system (Section 10) and Data Source JOINs both achieve cross-entity column display. Should relation traversal remain as a convenience feature within single-entity data sources (auto-generating the JOIN under the hood), or should it be deprecated in favor of explicit data source JOINs? Recommendation: keep both — relation traversal is simpler for common cases; data source JOINs are more powerful for complex cases.
 
-12. **Mobile rendering** Ã¢â‚¬â€ How do List/Grid, Board, Calendar, and Timeline views render on mobile devices? The List view likely needs a card-based responsive rendering. Board may need a single-column swipeable layout. Calendar and Timeline may need simplified mobile-specific layouts.
+12. **Mobile rendering** — How do List/Grid, Board, Calendar, and Timeline views render on mobile devices? The List view likely needs a card-based responsive rendering. Board may need a single-column swipeable layout. Calendar and Timeline may need simplified mobile-specific layouts.
 
-13. **Data source marketplace** Ã¢â‚¬â€ Should there be a community or organization-level library of shared data source templates? Power users create useful queries; other users browse and adopt them for their own views.
+13. **Data source marketplace** — Should there be a community or organization-level library of shared data source templates? Power users create useful queries; other users browse and adopt them for their own views.
 
-14. **SQL guardrails** Ã¢â‚¬â€ What limits should be placed on raw SQL complexity? Maximum number of JOINs? Maximum query cost estimate? Should the system prevent queries that would scan entire large tables without index-aligned filters?
+14. **SQL guardrails** — What limits should be placed on raw SQL complexity? Maximum number of JOINs? Maximum query cost estimate? Should the system prevent queries that would scan entire large tables without index-aligned filters?
 
-15. **Data source lineage & impact analysis** Ã¢â‚¬â€ When a data source is about to be edited, should the system show which views depend on it and what the impact of the change will be? A visual dependency graph could help authors understand the blast radius of their changes.
+15. **Data source lineage & impact analysis** — When a data source is about to be edited, should the system show which views depend on it and what the impact of the change will be? A visual dependency graph could help authors understand the blast radius of their changes.
 
 ---
 
@@ -1575,7 +1575,7 @@ General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architectu
 | **Data Source** | A reusable, named query definition that produces a structured result set for one or more views to render. Defines entities involved, available columns, default filters/sort, and previewable entities. Built via visual query builder or raw SQL. |
 | **Column Registry** | The schema of a data source's result set. Lists every column with its name, data type, source entity, source field, and editability. The contract between the data source and the views that consume it. |
 | **Visual Query Builder** | A UI-based tool for constructing data source queries by selecting entities, joins, columns, and filters without writing SQL. Generates a structured query configuration that the query engine executes. |
-| **Virtual Schema** | The logical representation of entity types and fields that raw SQL queries execute against. Users never see the physical database schema Ã¢â‚¬â€ only entity types as tables and fields as columns. |
+| **Virtual Schema** | The logical representation of entity types and fields that raw SQL queries execute against. Users never see the physical database schema — only entity types as tables and fields as columns. |
 | **Prefixed Entity ID** | A globally unique identifier for any entity in the system, composed of a type prefix + underscore + ULID (e.g., `con_8f3a2b91c4d7` for a Contact). Enables automatic entity type detection from any ID value. |
 | **Type Prefix** | A 3-4 character code identifying an entity type (e.g., `con_` for Contact, `cvr_` for Conversation). Registered globally; immutable once assigned. Custom entity types receive auto-generated prefixes. |
 | **Preview Configuration** | The metadata on a data source that determines which entities can be previewed from a result row and in what priority order. Auto-detected from prefixed IDs with optional manual overrides. |
@@ -1606,7 +1606,7 @@ General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architectu
 | **Virtual scrolling** | A rendering technique where only visible rows are in the DOM, enabling smooth scrolling for large datasets. |
 | **Cursor-based pagination** | A pagination strategy using an opaque token (cursor) that encodes the position of the last loaded record, enabling efficient page-by-page loading. |
 | **Personal override** | A user's local modifications to a shared view, stored separately from the shared view definition. |
-| **Swimlane** | A horizontal lane in a Timeline or Board view, created by grouping records by a field value. In Board views, swimlanes create a matrix of group-by Ãƒâ€” status. |
+| **Swimlane** | A horizontal lane in a Timeline or Board view, created by grouping records by a field value. In Board views, swimlanes create a matrix of group-by × status. |
 | **Milestone** | A point-in-time marker on a Timeline view, used for records with a single date field (no duration). |
 | **Card** | A compact visual representation of a record, used in Calendar and Board views. Shows title and configurable summary fields. |
 | **Date-window loading** | A data loading strategy for Calendar and Timeline views that fetches records within the visible time range plus a buffer. |

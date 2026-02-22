@@ -6,6 +6,8 @@ interface NavigationState {
   activeViewId: string | null
   selectedRowId: string | null
   selectedRowIndex: number
+  selectedRowIds: Set<string>
+  loadedRowCount: number
   sort: string | null
   sortDirection: 'asc' | 'desc'
   search: string
@@ -14,6 +16,10 @@ interface NavigationState {
   setActiveEntityType: (entityType: string) => void
   setActiveViewId: (viewId: string | null) => void
   setSelectedRow: (id: string | null, index: number) => void
+  toggleRowSelection: (id: string) => void
+  selectAllRows: (ids: string[]) => void
+  deselectAllRows: () => void
+  setLoadedRowCount: (count: number) => void
   setSort: (field: string, direction: 'asc' | 'desc') => void
   setSearch: (search: string) => void
   toggleQuickFilter: (filter: QuickFilter) => void
@@ -25,6 +31,8 @@ const DEFAULTS = {
   activeViewId: null as string | null,
   selectedRowId: null as string | null,
   selectedRowIndex: -1,
+  selectedRowIds: new Set<string>(),
+  loadedRowCount: 0,
   sort: null as string | null,
   sortDirection: 'asc' as const,
   search: '',
@@ -40,6 +48,7 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
       activeViewId: null,
       selectedRowId: null,
       selectedRowIndex: -1,
+      selectedRowIds: new Set<string>(),
       sort: null,
       sortDirection: 'asc',
       search: '',
@@ -51,11 +60,29 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
       activeViewId: viewId,
       selectedRowId: null,
       selectedRowIndex: -1,
+      selectedRowIds: new Set<string>(),
       quickFilters: [],
     }),
 
   setSelectedRow: (id, index) =>
     set({ selectedRowId: id, selectedRowIndex: index }),
+
+  toggleRowSelection: (id) =>
+    set((state) => {
+      const next = new Set(state.selectedRowIds)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return { selectedRowIds: next }
+    }),
+
+  selectAllRows: (ids) =>
+    set({ selectedRowIds: new Set(ids) }),
+
+  deselectAllRows: () =>
+    set({ selectedRowIds: new Set<string>() }),
+
+  setLoadedRowCount: (count) =>
+    set({ loadedRowCount: count }),
 
   setSort: (field, direction) =>
     set({

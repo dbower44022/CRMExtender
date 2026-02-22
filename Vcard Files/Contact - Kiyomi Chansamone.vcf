@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Chansamone;Kiyomi;;;
+FN;CHARSET=utf-8:Kiyomi Chansamone
+ORG;CHARSET=utf-8:Schoolyard Studio;
+EMAIL;TYPE=INTERNET;TYPE=HOME:kiyomi@schoolyardstudio.net
+END:VCARD

@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Davies;Justin;;;
+FN;CHARSET=utf-8:Justin Davies
+ORG;CHARSET=utf-8:Davies Architecture;
+TEL;TYPE=WORK:857-204-7430
+EMAIL;TYPE=INTERNET;TYPE=HOME:justin@daviesarchitecture.com
+NOTE;CHARSET=utf-8:Referred by Chad at Lowes landscaping
+END:VCARD

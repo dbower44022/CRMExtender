@@ -1,0 +1,18 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Rampe;John;N;;
+FN;CHARSET=utf-8:John N Rampe
+TITLE;CHARSET=utf-8:Executive in Residence
+TEL;TYPE=WORK:216-403-2318
+TEL;TYPE=WORK:440-525-7566
+EMAIL;TYPE=INTERNET;TYPE=WORK:jrampe1@lakelsndcc.edu
+EMAIL;TYPE=INTERNET;TYPE=WORK:jrampe1@lakelandcc.edu
+item1.X-ABLabel:LinkedIn
+item1.URL:https://www.linkedin.com/in/john-rampe-5269ba6
+item2.X-ABLabel:Other
+item2.URL:https://aka.ms/o0ukef
+item3.X-ABLabel:Other
+item3.URL:http://torquetrans.com
+NOTE;CHARSET=utf-8:Sun retired him from the family manufacturing business.  They manufacture low horsepower gear drive units for electric motors.
+END:VCARD

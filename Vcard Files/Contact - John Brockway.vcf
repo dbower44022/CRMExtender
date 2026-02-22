@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Brockway;John;;;
+FN;CHARSET=utf-8:John Brockway
+ORG;CHARSET=utf-8:Chagrin Falls Street Dept;
+item1.X-ABLabel:
+item1.TEL:14407591504
+END:VCARD

@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Smorag;Doug;;;
+FN;CHARSET=utf-8:Doug Smorag
+ORG;CHARSET=utf-8:CM Wealth Management;
+TEL;TYPE=WORK:1-216-831-9667
+TEL;TYPE=CELL;TYPE=VOICE:+1-216-410-3022
+ADR;TYPE=HOME;CHARSET=utf-8:;;28520 Stonegare Circle 4492;Westlake;OH;44145;
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bcd01911bbf8a3cd6a46916ccda48272488e57e1f2fee31f5456d482bfd488eef?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=55dcdfde0944d77f9a727f3f66f155d209dcead6301442392a95f16d034b2b5f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nLaura / Den contact for problems at the house\n---\n59b6cd263499b912d09d9578
+END:VCARD

@@ -1,0 +1,18 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Williamson;Emily;;;
+FN;CHARSET=utf-8:Emily Williamson
+ORG;CHARSET=utf-8:Franklin Imaging;
+TITLE;CHARSET=utf-8:Controller
+TEL;TYPE=WORK:(614) 885-6894
+TEL;TYPE=CELL;TYPE=VOICE:614-746-5240
+item1.X-ABLabel:Other
+item1.TEL:(614) 885-2823
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:emily@franklinimaging.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;500 Schrock Rd.\nColumbus, OH 43229\nUnited States;;;;
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b33f2eff0378a1b98d6c9dac3e3ec2109dd4e493e5cf556f77f5ada394867fcd0?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=cb7e7296dd443d04c711ad5b7f29a84fd059c6dbaecbfb5f3bf3416740a4a93a
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

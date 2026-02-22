@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Main;Stephen;;;
+FN;CHARSET=utf-8:Stephen Main
+TITLE;CHARSET=utf-8:Account Executive
+TEL;TYPE=WORK:330.741.1362
+EMAIL;TYPE=INTERNET;TYPE=HOME:stephen.main@t-mobile.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:t-mobile@work
+ADR;TYPE=WORK;CHARSET=utf-8:;;6200 Oak Tree Blvd Ste 125;Independence;OH;44131-6934;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0Apy5gi5eniUuQo4C1Y5t6CgAAAAB9lwAA?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

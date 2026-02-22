@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Nozling;Ryan;;;
+FN;CHARSET=utf-8:Ryan Nozling
+ORG;CHARSET=utf-8:Lowe's Greenhouse;
+TITLE;CHARSET=utf-8:Landscape Project Manager
+TEL;TYPE=WORK:216-233-2965
+EMAIL;TYPE=INTERNET;TYPE=HOME:ryan@lowesgreenhouse.com
+END:VCARD

@@ -1,0 +1,7 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Lakeland Police;;;
+FN;CHARSET=utf-8:Lakeland Police
+TEL;TYPE=CELL;TYPE=VOICE:(440) 525-7241
+END:VCARD

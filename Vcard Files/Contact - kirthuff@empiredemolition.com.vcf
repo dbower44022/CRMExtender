@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;kirthuff@empiredemolition.com;;;
+FN;CHARSET=utf-8:kirthuff@empiredemolition.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:kirthuff@empiredemolition.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b7c02d86ab64752804ae31cc5595bb8d0dbde3d1ef248a027c685c2507a96c7ae?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=d76ce0c60c0aca063a87399667b26db386d578aaaa793b2c43cee2ed0b8d5b6e
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

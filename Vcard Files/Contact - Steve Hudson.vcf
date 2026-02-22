@@ -1,0 +1,22 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hudson;Steve;;;
+FN;CHARSET=utf-8:Steve Hudson
+ORG;CHARSET=utf-8:Adenium Systems, Inc.;
+TITLE;CHARSET=utf-8:Engineering
+TEL;TYPE=WORK:(513) 965-0073
+TEL;TYPE=HOME:(513) 965-0224
+TEL;TYPE=CELL;TYPE=VOICE:(513) 240-3675
+item1.X-ABLabel:Other
+item1.TEL:(440) 942-2526
+EMAIL;TYPE=INTERNET;TYPE=HOME:stevehhudson@fuse.net
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:shudson@adeniumsystems.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;528 Oregano Dr;Cincinnati;OH;45244;
+ADR;TYPE=OTHER;CHARSET=utf-8:;;;milford;OH;;US
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0Apy5gi5eniUuQo4C1Y5t6CgAAAAB_VAAA?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+X-SOCIALPROFILE;type=Slack;x-user=U0391CCU8JE:x-apple:U0391CCU8JE
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nKids - Alexis, Sarah, Kimberly\nWife - Pam\n\nKids - Alexis, Sarah,\nWife - Pam
+END:VCARD

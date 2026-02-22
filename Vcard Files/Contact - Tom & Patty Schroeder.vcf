@@ -1,0 +1,16 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Schroeder;Tom & Patty;;;
+FN;CHARSET=utf-8:Tom & Patty Schroeder
+ORG;CHARSET=utf-8:Trinity Printing;
+TEL;TYPE=WORK:(513) 891-0262
+TEL;TYPE=WORK:(513) 469-1000
+TEL;TYPE=CELL;TYPE=VOICE:(513) 314-1341
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:trinityprinting@fuse.net
+ADR;TYPE=WORK;CHARSET=utf-8:;;9911 Huntersrun Lane;Cincinnati;OH;45242;US
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b33f2eff0378a1b98d6c9dac3e3ec2109fb12037ee3c23e5280e39f56f3653710?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=71386a9e51909581bc636614bba5451abbed6bfa4e122551f6603295a0463d80
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d9547\n---\nPatty work: P&G 622-3853\nPatty cell: 470-1788\nJay and Julia
+END:VCARD

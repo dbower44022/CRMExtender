@@ -1,0 +1,20 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Jones;Stephen A.;;;
+FN;CHARSET=utf-8:Stephen A. Jones
+ORG;CHARSET=utf-8:McGraw Hill Construction;
+TITLE;CHARSET=utf-8:Senior Director Business Development
+TEL;TYPE=WORK:+1 212-904-3755
+TEL;TYPE=CELL;TYPE=VOICE:+1 610-505-0359
+item1.X-ABLabel:Other
+item1.TEL:+1 212-904-2305
+EMAIL;TYPE=INTERNET;TYPE=WORK:steve.jones@mhfi.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:steve_jones@mcgraw-hill.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;Two Penn Plaza\nNew York, NY 10121-2298\nUS;;;;
+ADR;TYPE=HOME;CHARSET=utf-8:;;;New York;New York;;United States
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4182bc424bcca3cfca7e8371ac79985b395fb1b6d48705b6367b1d675f0c0c9e?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=ef83a0eb18ddabec7078c9b9899a99222008af637145d44bfeb2dc774023ee8f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nI met with len at the DBIA show .\n\nHe was an architect by training….\n\nSteve is in business development and worked at Primevera prior to McGraw-Hill Construction.\n\nHe worked on a model project in upstate New York, \n\nWas with primavera and worked on Prime Contracts - their collaboration product.\n\nBand Drummer in college\nAttended John Hopkins\nWife&Sister bought guitar for 40th Birthday\nRecommended Tommy Emmanuel - Guitar player - http://www.tommyemmanuel.com/
+END:VCARD

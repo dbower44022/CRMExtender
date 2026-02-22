@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:McMillan;Paul;;;
+FN;CHARSET=utf-8:Paul McMillan
+EMAIL;TYPE=INTERNET;TYPE=WORK:paulcharlesmcmillan@gmail.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:pmcmillan2@lakelandcc.edu
+END:VCARD

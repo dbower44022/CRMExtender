@@ -1,0 +1,18 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Alexander;Todd M.;;;
+FN;CHARSET=utf-8:Todd M. Alexander
+ORG;CHARSET=utf-8:Continental Building Systems;
+TITLE;CHARSET=utf-8:President
+TEL;TYPE=WORK:+1 614-883-1138
+item1.X-ABLabel:Other
+item1.TEL:(614) 221-6374
+EMAIL;TYPE=INTERNET;TYPE=WORK:talexander@builtbycontinental.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:talexander@continental-buildingsystems.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;150 E. Broad St;Columbus;OH;43215;US
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c8352eab8a962e2b208ef295216685fca38?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=6564183fb4baca8f608d6dfc517e85487787680ab0cacab9641c90b3b5830aac
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nSon Mathew chose application state
+END:VCARD

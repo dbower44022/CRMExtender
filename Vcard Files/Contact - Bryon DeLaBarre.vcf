@@ -1,0 +1,19 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:DeLaBarre;Bryon;;;
+FN;CHARSET=utf-8:Bryon DeLaBarre
+ORG;CHARSET=utf-8:Adenium Systems, Inc.;
+TITLE;CHARSET=utf-8:Engineering
+TEL;TYPE=WORK:513.432.5647
+TEL;TYPE=HOME:(513) 233-3105
+TEL;TYPE=HOME:(513) 240-3894
+TEL;TYPE=CELL;TYPE=VOICE:(440) 942-2526
+EMAIL;TYPE=INTERNET;TYPE=HOME:bdelabarre@hotmail.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:bdelabarre@adeniumsystems.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;7025 Treeridge Drive\nCincinnati, OH 45244;;;;
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHekAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nWife:Julie
+END:VCARD

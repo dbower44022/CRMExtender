@@ -18,7 +18,7 @@ import { useGridIntelligence } from '../../hooks/useGridIntelligence.ts'
 import { CellRenderer } from './CellRenderer.tsx'
 import { InlineEditor } from './InlineEditor.tsx'
 import { useUpdateViewColumns } from '../../api/views.ts'
-import { ChevronUp, ChevronDown, Loader2 } from 'lucide-react'
+import { ChevronUp, ChevronDown, Loader2, Square, CheckSquare } from 'lucide-react'
 import type { FieldDef, ViewColumn, CellAlignment, ComputedColumn } from '../../types/api.ts'
 
 type RowData = Record<string, unknown>
@@ -31,7 +31,11 @@ export function DataGrid() {
   const search = useNavigationStore((s) => s.search)
   const quickFilters = useNavigationStore((s) => s.quickFilters)
   const selectedRowId = useNavigationStore((s) => s.selectedRowId)
+  const selectedRowIds = useNavigationStore((s) => s.selectedRowIds)
   const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
+  const toggleRowSelection = useNavigationStore((s) => s.toggleRowSelection)
+  const selectAllRows = useNavigationStore((s) => s.selectAllRows)
+  const setLoadedRowCount = useNavigationStore((s) => s.setLoadedRowCount)
   const setSort = useNavigationStore((s) => s.setSort)
   const showDetailPanel = useLayoutStore((s) => s.showDetailPanel)
 
@@ -96,13 +100,40 @@ export function DataGrid() {
     })
   }, [rows.length])
 
+  // Keep loaded row count in sync for toolbar selection control
+  useEffect(() => {
+    setLoadedRowCount(rows.length)
+  }, [rows.length, setLoadedRowCount])
+
+  // Listen for "Select All" event from toolbar
+  useEffect(() => {
+    const handler = () => {
+      const allIds = rows.map((r) => String(r.id))
+      selectAllRows(allIds)
+    }
+    window.addEventListener('grid:selectAll', handler)
+    return () => window.removeEventListener('grid:selectAll', handler)
+  }, [rows, selectAllRows])
+
   // Build TanStack columns from view config + entity registry + computed layout
   const columns = useMemo<ColumnDef<RowData>[]>(() => {
     if (!entityDef) return []
 
     const demotionEnabled = viewConfig?.column_demotion !== 0
 
-    return viewColumns
+    // Checkbox column for row multi-selection
+    const checkboxCol: ColumnDef<RowData> = {
+      id: '__select',
+      header: '',
+      size: 36,
+      minSize: 36,
+      maxSize: 36,
+      enableResizing: false,
+      enableSorting: false,
+      cell: () => null, // Rendered manually in the row loop
+    }
+
+    const dataCols: ColumnDef<RowData>[] = viewColumns
       .filter((vc: ViewColumn) => {
         const fd = entityDef.fields[vc.field_key]
         if (!fd || fd.type === 'hidden') return false
@@ -155,6 +186,8 @@ export function DataGrid() {
           },
         } satisfies ColumnDef<RowData>
       })
+
+    return [checkboxCol, ...dataCols]
   }, [entityDef, viewColumns, activeEntityType, computedColumnMap, viewConfig])
 
   const columnResizeMode: ColumnResizeMode = 'onChange'
@@ -178,7 +211,9 @@ export function DataGrid() {
 
   useEffect(() => {
     // Skip empty or initial sizing
-    if (Object.keys(columnSizingState).length === 0 || !activeViewId || !viewColumns.length) return
+    // Skip if only the checkbox column changed, or no real data columns
+    const realSizing = Object.keys(columnSizingState).filter((k) => k !== '__select')
+    if (realSizing.length === 0 || !activeViewId || !viewColumns.length) return
 
     if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current)
     resizeTimerRef.current = setTimeout(() => {
@@ -341,15 +376,17 @@ export function DataGrid() {
                         ))}
                     </div>
                     {/* Column resize handle */}
-                    <div
-                      onMouseDown={header.getResizeHandler()}
-                      onTouchStart={header.getResizeHandler()}
-                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none ${
-                        header.column.getIsResizing()
-                          ? 'bg-primary-500'
-                          : 'bg-transparent group-hover/header:bg-surface-300'
-                      }`}
-                    />
+                    {header.column.getCanResize() && (
+                      <div
+                        onMouseDown={header.getResizeHandler()}
+                        onTouchStart={header.getResizeHandler()}
+                        className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none ${
+                          header.column.getIsResizing()
+                            ? 'bg-primary-500'
+                            : 'bg-transparent group-hover/header:bg-surface-300'
+                        }`}
+                      />
+                    )}
                   </div>
                 )
               }),
@@ -386,8 +423,10 @@ export function DataGrid() {
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const row = tableRows[virtualRow.index]
               if (!row) return null
-              const isSelected =
-                String(row.original.id) === selectedRowId
+              const rowId = String(row.original.id)
+              const isDetailSelected = rowId === selectedRowId
+              const isMultiSelected = selectedRowIds.has(rowId)
+              const isHighlighted = isDetailSelected || isMultiSelected
               return (
                 <div
                   key={row.id}
@@ -397,7 +436,7 @@ export function DataGrid() {
                     handleRowClick(row, virtualRow.index)
                   }
                   className={`absolute left-0 flex cursor-pointer items-center border-b border-surface-100 transition-colors ${
-                    isSelected
+                    isHighlighted
                       ? 'bg-primary-50'
                       : 'hover:bg-surface-50'
                   }`}
@@ -409,13 +448,39 @@ export function DataGrid() {
                 >
                   {row.getVisibleCells().map((cell) => {
                     const fieldKey = cell.column.id
+
+                    // Checkbox column
+                    if (fieldKey === '__select') {
+                      const SelectIcon = isMultiSelected ? CheckSquare : Square
+                      return (
+                        <div
+                          key={cell.id}
+                          className="flex shrink-0 items-center justify-center"
+                          style={{ width: 36 }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleRowSelection(rowId)
+                          }}
+                        >
+                          <SelectIcon
+                            size={14}
+                            className={
+                              isMultiSelected
+                                ? 'text-primary-600'
+                                : 'text-surface-400 hover:text-surface-600'
+                            }
+                          />
+                        </div>
+                      )
+                    }
+
                     const fd = entityDef?.fields[fieldKey]
                     const isEditable =
                       fd?.editable &&
                       (activeEntityType === 'contact' ||
                         activeEntityType === 'company')
                     const isEditing =
-                      editingCell?.rowId === String(row.original.id) &&
+                      editingCell?.rowId === rowId &&
                       editingCell?.fieldKey === fieldKey
                     const align = getAlignment(fieldKey)
 
@@ -441,7 +506,7 @@ export function DataGrid() {
                             ? (e) => {
                                 e.stopPropagation()
                                 setEditingCell({
-                                  rowId: String(row.original.id),
+                                  rowId,
                                   fieldKey,
                                 })
                               }
@@ -451,7 +516,7 @@ export function DataGrid() {
                         {isEditing && fd ? (
                           <InlineEditor
                             entityType={activeEntityType}
-                            entityId={String(row.original.id)}
+                            entityId={rowId}
                             fieldKey={fd.db_column ?? fieldKey}
                             fieldDef={fd}
                             currentValue={String(

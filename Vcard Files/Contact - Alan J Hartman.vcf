@@ -1,0 +1,20 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hartman;Alan;J;;
+FN;CHARSET=utf-8:Alan J Hartman
+ORG;CHARSET=utf-8:Ulmer & Berne LLP;
+TEL;TYPE=WORK:+1 513-698-5026
+TEL;TYPE=WORK:(513) 639-7681
+item1.X-ABLabel:Other
+item1.TEL:+1 513-698-5027
+EMAIL;TYPE=INTERNET;TYPE=WORK:ahartman@ulmer.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:ahartman@dbllaw.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;Suite 3500 441 Vine Street 3007;Cincinnati;OH;45202;
+ADR;TYPE=HOME;CHARSET=utf-8:;;Suite 2800 2409\n600 Vine Street Suite 2800;Cincinnati;OH;45202;United States
+ADR;TYPE=OTHER;CHARSET=utf-8:;;600 Vine Street;Cincinnati Suite 2800;Ohio;45202-2409;United States
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c831a729c633ef9b88457108cc64e974ac5?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=0a21d8c8e38a7d9711d2bbdf26d579412afc34a0c74b1ac2289d4e0b20997b2b
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d9564
+END:VCARD

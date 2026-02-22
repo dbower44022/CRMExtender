@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Eubank;Ryan;;;
+FN;CHARSET=utf-8:Ryan Eubank
+ORG;CHARSET=utf-8:Lakeland Community College;
+TEL;TYPE=CELL;TYPE=VOICE:(440) 796-9825
+EMAIL;TYPE=INTERNET;TYPE=WORK:reubank@lakelandcc.edu
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b8e591b1b6075d4b6568e6fa68f20555fe915ab0f7482b802e67ca7c0aba62b97?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=cac21ef505a28f2e46ff28daeee3c53c2a2527218345158aa586e5cdd48e74c1
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nWelding Instructor
+END:VCARD

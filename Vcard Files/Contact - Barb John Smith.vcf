@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Smith;Barb/John;;;
+FN;CHARSET=utf-8:Barb/John Smith
+item1.X-ABLabel:
+item1.TEL:+17406050637
+END:VCARD

@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Zahiri;Zia;;;
+FN;CHARSET=utf-8:Zia Zahiri
+ORG;CHARSET=utf-8:Access KKR;
+TITLE;CHARSET=utf-8:CTO
+TEL;TYPE=CELL;TYPE=VOICE:(925) 998-9945
+EMAIL;TYPE=INTERNET;TYPE=HOME:zzahiri@yahoo.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b557937ab829ca1448269bd67d7cffa7c5dca3af4688de7bbdacd17aa9635b177?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=d2695b0f1c0e195befa521e0bbdc10d29f73e8257a5aff57487518ca60c71448
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nIranian,  Came to US in 75.\nStarted iTrade Network.com with Rob Benonito  Sold for $550M\nWorked For IBM, used Cold Fusion, \nBelieves in Networking of ecommerce.
+END:VCARD

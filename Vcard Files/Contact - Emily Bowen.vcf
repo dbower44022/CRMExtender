@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bowen;Emily;;;
+FN;CHARSET=utf-8:Emily Bowen
+TITLE;CHARSET=utf-8:Dog Sitter
+item1.X-ABLabel:Other
+item1.TEL:216-346-9650
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:emilymbowen95@gmail.com
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c83b9fed025d2116b5a7eb6d5cabc420d0c?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=02a3639c81958b924e0f5530546640b96525ce5bf0a17d1476830a16d4002dd2
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n24 years old in 2019, Went to Ohio University as Psych major.
+END:VCARD

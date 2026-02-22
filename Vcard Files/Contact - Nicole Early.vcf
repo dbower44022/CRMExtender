@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Early;Nicole;;;
+FN;CHARSET=utf-8:Nicole Early
+TITLE;CHARSET=utf-8:Concierge Executive
+TEL;TYPE=WORK:+1 877-815-1242
+TEL;TYPE=WORK:+1 808-518-3066
+EMAIL;TYPE=INTERNET;TYPE=WORK:nicole.early@onefinestay.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bc6cfeda4abbb9425fb56347b4204572a6a989465493ab4637cf45f3a1913975e?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=0c9ce7bd7206188da5fcd72668ddf57007e64399753f76979fce067e8d2f109a
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

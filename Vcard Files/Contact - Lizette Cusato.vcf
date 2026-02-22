@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Cusato;Lizette;;;
+FN;CHARSET=utf-8:Lizette Cusato
+EMAIL;TYPE=INTERNET;TYPE=WORK:lizettecusato@gmail.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;1 Grove St;Wellesley;MA;02482;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b8f5f9cf1f8776142af40ccb500648169fcee65c6394ade0697a7d8c7f0892ac1?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=6313cbe9364914c39514e5da7a9ff5f3ba85493e7ea311ce1b597281ffb24ebc
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

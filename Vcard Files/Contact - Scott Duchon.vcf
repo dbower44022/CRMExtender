@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Duchon;Scott;;;
+FN;CHARSET=utf-8:Scott Duchon
+ORG;CHARSET=utf-8:RNK Capital;
+TITLE;CHARSET=utf-8:Analyst
+TEL;TYPE=WORK:216-385-5751
+item1.X-ABLabel:
+item1.EMAIL;TYPE=INTERNET:msduchon@gmail.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;50 N Strawberry Ln;Moreland Hills;OH;;
+item2.X-ABLabel:LinkedIn
+item2.URL:https://www.linkedin.com/in/scott-duchon-60a481b
+NOTE;CHARSET=utf-8:Wood Working Class\nWife Meridith \nSon Jack\nDog Sophia\nDaughter Ava
+END:VCARD

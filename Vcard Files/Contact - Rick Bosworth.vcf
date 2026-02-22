@@ -1,0 +1,19 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bosworth;Rick;;;
+FN;CHARSET=utf-8:Rick Bosworth
+ORG;CHARSET=utf-8:ReproMAX;
+TITLE;CHARSET=utf-8:President
+TEL;TYPE=WORK:(314) 783-8900
+TEL;TYPE=WORK:(800) 873-7762
+TEL;TYPE=CELL;TYPE=VOICE:314-570-4458
+item1.X-ABLabel:Other
+item1.TEL:636-536 0726
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:rick@repromax.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;15450 South Outer Forty Drive;Chesterfield;MO;63017;
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b678ffc28ef932561d1995e22009c6897bd3c6d0115ab16ae16b88f4256851a39?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=cac9ebb41b601774170936c8c54519b309320108bcbbf1847959d8260fb0ed5d
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nDirect No.: 314-783-8900\nEffective Aug. 1, 2003 - ReproMAX is now located in St. Louis.\n\nEffective 3/3/03 Rick is president of ReproMAX. He was the President of Indox Services in St. Louis.\n\nGraduate in 1979.\nWife Diane - They have a son, and daughter.
+END:VCARD

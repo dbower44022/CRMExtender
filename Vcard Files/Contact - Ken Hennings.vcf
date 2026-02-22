@@ -1,0 +1,24 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hennings;Ken;;;
+FN;CHARSET=utf-8:Ken Hennings
+ORG;CHARSET=utf-8:Beacon Solutions;
+TITLE;CHARSET=utf-8:Major Accounts Manager
+TEL;TYPE=WORK:+1 513-777-0701
+TEL;TYPE=WORK:513-898-3831
+TEL;TYPE=HOME:+15136150833
+TEL;TYPE=HOME:(513) 984-1122
+TEL;TYPE=CELL;TYPE=VOICE:+1 513-500-1993
+item1.X-ABLabel:Other
+item1.TEL:513-772-6790
+EMAIL;TYPE=INTERNET;TYPE=HOME:kenxter@fuse.net
+EMAIL;TYPE=INTERNET;TYPE=WORK:ken.hennings@wachter.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:ken.hennings@askbeacon.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;9854 Windisch Rd;;West Chester OH;45069;US
+ADR;TYPE=HOME;CHARSET=utf-8:;;7208 Bobby Lane;Cincinnati;OH;45243;us
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c838332608cf116a0803171f6af49685513?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=3c12aea27fdffe3454073f64fc1f0c9f6354675e38cf41f745a8eebd75e12511
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n71 north to 275  west-exit at Mosteller-turn left on Mosteller-turn left on Kemper-at the 1st traffic light turn left into parking lot-go to the end of the drive, facing 275, and turn to the right. Beacon is the last office on the right.\nAnthony & Ashley
+END:VCARD

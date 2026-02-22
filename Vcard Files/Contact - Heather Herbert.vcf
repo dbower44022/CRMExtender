@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Herbert;Heather;;;
+FN;CHARSET=utf-8:Heather Herbert
+EMAIL;TYPE=INTERNET;TYPE=WORK:hherbert@zinnerco.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf076aaa357728e54afadda8725121c291538a74131b7fa3333511ddf5bf3250e?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=fd2763510cde9c3c0fb85012df985b3eb366bd2d36cb78cb65e64fddba0b4e2a
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

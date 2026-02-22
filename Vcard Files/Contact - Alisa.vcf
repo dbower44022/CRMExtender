@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;Alisa;;;
+FN;CHARSET=utf-8:Alisa
+ORG;CHARSET=utf-8:Rover;
+item1.X-ABLabel:
+item1.TEL:+13109822053
+END:VCARD

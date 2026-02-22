@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Tipps;Lisa;;;
+FN;CHARSET=utf-8:Lisa Tipps
+ORG;CHARSET=utf-8:Dynamic Reprographics, Inc.;
+TITLE;CHARSET=utf-8:Owner
+TEL;TYPE=WORK:+1 512-474-8842
+EMAIL;TYPE=INTERNET;TYPE=WORK:lisa@dynamicreprographics.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;817 W. 12th St.;Austin;TX;78701;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b33f2eff0378a1b98d6c9dac3e3ec2109d90c9b752952b7aa38f327df6bd5c9c9?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=858d41f260c45102c53d62a853d48a68cf1fc9d524a614b7a6df68ca44805f62
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

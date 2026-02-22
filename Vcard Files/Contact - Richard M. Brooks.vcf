@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Brooks;Richard;M.;;
+FN;CHARSET=utf-8:Richard M. Brooks
+TITLE;CHARSET=utf-8:SCORE Cleveland Membership Chairperson
+TEL;TYPE=WORK:216.403.7284
+EMAIL;TYPE=INTERNET;TYPE=WORK:richard.brooks@scorevolunteer.org
+item1.X-ABLabel:Other
+item1.URL:https://www.score.org/cleveland
+END:VCARD

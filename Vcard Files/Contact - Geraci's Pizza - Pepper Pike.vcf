@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:;;;;
+FN;CHARSET=utf-8:
+ORG;CHARSET=utf-8:Geraci's Pizza - Pepper Pike;
+item1.X-ABLabel:Other
+item1.TEL:216-831-1595
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8badb44768980ce381a2a60879ef5d950983d51509883210b4320a5c396ad5b86d?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=0787990b6c12d4d127843f863797d1856e771a8a6bab325e961cc76eff1ae97f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

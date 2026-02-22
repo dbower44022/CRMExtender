@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Sparks;Wade;;;
+FN;CHARSET=utf-8:Wade Sparks
+ORG;CHARSET=utf-8:Rileys;
+TITLE;CHARSET=utf-8:President and C.E.O. P
+TEL;TYPE=WORK:403.297.1254
+item1.X-ABLabel:Other
+item1.TEL:403.297.1199
+EMAIL;TYPE=INTERNET;TYPE=WORK:sparksw@rileys.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4182bc424bcca3cfca7e8371ac79985b2c13954629cff869532bfd1e287accf8?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=94f63f2b4de3f8a91a3c028c11a4c41bb56cdc30e2bada539a03b2d224fed474
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

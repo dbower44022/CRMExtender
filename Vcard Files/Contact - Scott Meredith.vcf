@@ -1,0 +1,16 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Meredith;Scott;;;
+FN;CHARSET=utf-8:Scott Meredith
+ORG;CHARSET=utf-8:Field Technology Group;
+TITLE;CHARSET=utf-8:Midwest Regional Sales Manager
+TEL;TYPE=WORK:312-405-4754
+EMAIL;TYPE=INTERNET;TYPE=HOME:scott_meredith@trimble.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:mep@buildings.trimble.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:buildings@buildings.trimble.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b557937ab829ca1448269bd67d7cffa7c898cb80033280f9cfab8ab7d9a60e0f6?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=44aa850244c76aa9887d5be89723d5a5eabd1159fb3c86c4c52597e35cd370d6
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

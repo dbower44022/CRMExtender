@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Mockbee;Jeffrey C.;;;
+FN;CHARSET=utf-8:Jeffrey C. Mockbee
+ORG;CHARSET=utf-8:CAM Incorporated;
+TITLE;CHARSET=utf-8:President
+TEL;TYPE=WORK:(330) 896-3253
+TEL;TYPE=CELL;TYPE=VOICE:330-807-5204
+ADR;TYPE=WORK;CHARSET=utf-8:;;1525 Corporate Woods Parkway P.O. Box 3515;Akron;OH;44309;US
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHT8AAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

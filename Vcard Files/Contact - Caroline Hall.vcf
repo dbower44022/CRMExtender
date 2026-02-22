@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hall;Caroline;;;
+FN;CHARSET=utf-8:Caroline Hall
+ORG;CHARSET=utf-8:Reprographix;
+TEL;TYPE=WORK:317.637.3377
+TEL;TYPE=WORK:812.422.2400
+TEL;TYPE=CELL;TYPE=VOICE:317.695.9559
+EMAIL;TYPE=INTERNET;TYPE=WORK:chall@reprographix.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b33f2eff0378a1b98d6c9dac3e3ec21098d8ae62ea14078dd323c27cfc6d483c0?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=4ce95fd1a4e9e8438a277787b1394e491ddcb8fa099558096b61bd58dc7fff59
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

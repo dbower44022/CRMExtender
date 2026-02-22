@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Maya;Dr.;;;
+FN;CHARSET=utf-8:Dr. Maya
+ORG;CHARSET=utf-8:University Hospital;
+TEL;TYPE=CELL;TYPE=VOICE:2168446001
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4182bc424bcca3cfca7e8371ac79985b9be674de83a8ddc01ff3bfb00099a1e1?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=cf9b7a0d4aa598e729bd1dfc938ef2315426384f9ad6ae26d705a279d0768840
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d9558
+END:VCARD

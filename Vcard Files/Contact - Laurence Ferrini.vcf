@@ -1,0 +1,7 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Ferrini;Laurence;;;MBA
+FN;CHARSET=utf-8:Laurence Ferrini MBA
+EMAIL;TYPE=INTERNET;TYPE=WORK:laurence.ferrini@scorevolunteer.org
+END:VCARD

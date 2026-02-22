@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bower;Erik;;;
+FN;CHARSET=utf-8:Erik Bower
+ORG;CHARSET=utf-8:State of Ohio;
+TEL;TYPE=WORK:(614) 752-4220
+TEL;TYPE=CELL;TYPE=VOICE:614-441-3031
+EMAIL;TYPE=INTERNET;TYPE=HOME:cbjjacket@yahoo.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;;Columbus;;;US
+ADR;TYPE=HOME;CHARSET=utf-8:;;514 Pamlico Street;Columbus;OH;43228;US
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHUkAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Froehlich;Kurt;;;
+FN;CHARSET=utf-8:Kurt Froehlich
+ORG;CHARSET=utf-8:Cincinnati Bell;
+TEL;TYPE=WORK:513-984-1808
+TEL;TYPE=CELL;TYPE=VOICE:513-312-7388
+EMAIL;TYPE=INTERNET;TYPE=HOME:kwfroehlich1@gmail.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:kfroehlich@fuse.net
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHdcAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nAttended Vanderbilt
+END:VCARD

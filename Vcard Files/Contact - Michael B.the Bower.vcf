@@ -1,0 +1,24 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bower;Michael B.the;;;
+FN;CHARSET=utf-8:Michael B.the Bower
+TITLE;CHARSET=utf-8:President of the United States
+TEL;TYPE=WORK:(978) 258-3788
+TEL;TYPE=WORK:+1 978-381-3788
+TEL;TYPE=HOME:(978) 258-3787
+TEL;TYPE=HOME:7300711668919
+TEL;TYPE=CELL;TYPE=VOICE:1 978-390-3788
+item1.X-ABLabel:Other
+item1.TEL:0168660640580
+EMAIL;TYPE=INTERNET;TYPE=HOME:michael01.bower@gmail.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:mro.bower@gmail.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:mbower@bostonhcp.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;3 Johnson St.;North Andover;MA;01845;United States
+ADR;TYPE=HOME;CHARSET=utf-8:;;49 Salem St.\nNorth Andover, MA 01845\nUnited States of America;;;;
+ADR;TYPE=OTHER;CHARSET=utf-8:;;212 Middlesex;North Andover;MA;01845;
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b557937ab829ca1448269bd67d7cffa7cb8177af0e124acf7bb3c877c6090504f?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=e56445c023fc314d5892baca7985a1a4eaac51886c85a9c8c922e77fc8117038
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nWife: Rita\n\nAOL - BowerMike  &  GrpwareTec (GoTribe) \nAOL Phone:  (800) 827-6364\nModem # 1-800-720-8398   Pin # 0874348\nRetrieve Messages dial 1-888-360-5196 enter "0" Then your access code
+END:VCARD

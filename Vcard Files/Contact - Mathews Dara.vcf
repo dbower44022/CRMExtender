@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Dara;Mathews;;;
+FN;CHARSET=utf-8:Mathews Dara
+ORG;CHARSET=utf-8:Bluenet Technologies;
+TEL;TYPE=WORK:+1 866-960-9203
+EMAIL;TYPE=INTERNET;TYPE=WORK:mathews.d@bluenettech.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;1219 North Franklin Street;Tampa;Florida;33602;United States
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8badb44768980ce381a2a60879ef5d950976c95e84a096bedab4c7acb00667717e?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=54a97cfa1e9968d6b7ccfcac10c269d28bb8902dc61db84c2ad63e65485956ef
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Franklin;Gabe;;;
+FN;CHARSET=utf-8:Gabe Franklin
+ORG;CHARSET=utf-8:Chagrin Valley JC's;
+TEL;TYPE=WORK:440-318-5378
+EMAIL;TYPE=INTERNET;TYPE=HOME:frankgabelin@gmail.com
+END:VCARD

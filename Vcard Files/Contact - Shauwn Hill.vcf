@@ -1,0 +1,19 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hill;Shauwn;;;
+FN;CHARSET=utf-8:Shauwn Hill
+ORG;CHARSET=utf-8:Cornerstone Financial Group;
+TITLE;CHARSET=utf-8:Partner Financial Consultant
+TEL;TYPE=WORK:+1 513-924-3350 ext. 11
+TEL;TYPE=CELL;TYPE=VOICE:+1 513-708-1058
+EMAIL;TYPE=INTERNET;TYPE=HOME:s.hill@cfgemail.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:shawn@cfgconnect.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:s.hill@cornerstonefinancialgrp.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;4565 E. Galbraith Rd;Cincinnati;OH;45236;US
+ADR;TYPE=HOME;CHARSET=utf-8:;;;Cincinnati;OH;;United States
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b557937ab829ca1448269bd67d7cffa7c2861cca7c6aac8614aeafe9e66c82bb7?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=d36df01fd529160bfc437571b3d97e422bef3d416117f891a1e57037cacaf634
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

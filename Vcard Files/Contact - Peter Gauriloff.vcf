@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Gauriloff;Peter;;;
+FN;CHARSET=utf-8:Peter Gauriloff
+TITLE;CHARSET=utf-8:Project Manager
+EMAIL;TYPE=INTERNET;TYPE=HOME:pgauriloff@riverstonesurvey.com
+END:VCARD

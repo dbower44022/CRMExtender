@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Herdman;Steve;;;
+FN;CHARSET=utf-8:Steve Herdman
+ORG;CHARSET=utf-8:Physical Therapist;
+TEL;TYPE=CELL;TYPE=VOICE:(440) 554-2547
+END:VCARD

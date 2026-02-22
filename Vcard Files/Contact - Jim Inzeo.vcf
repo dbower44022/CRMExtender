@@ -1,0 +1,19 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Inzeo;Jim;;;
+FN;CHARSET=utf-8:Jim Inzeo
+ORG;CHARSET=utf-8:Adenium Systems Inc.;
+TITLE;CHARSET=utf-8:Business Development Manager
+TEL;TYPE=WORK:+1 615-250-9131
+TEL;TYPE=HOME:(615)-562-0661
+TEL;TYPE=CELL;TYPE=VOICE:+1 615-934-3451
+EMAIL;TYPE=INTERNET;TYPE=WORK:jinzeo@landrco.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:jinzeo@lrplot.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;1717 Lebanon Pike;Nashville;TN;37210;US
+ADR;TYPE=HOME;CHARSET=utf-8:;;1808 Toliver Trace;Mt Juiet;TN;37122;
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHc4AAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nNicolas and Kelly
+END:VCARD

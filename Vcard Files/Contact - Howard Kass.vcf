@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Kass;Howard;;;
+FN;CHARSET=utf-8:Howard Kass
+ORG;CHARSET=utf-8:Zinner & Co. LLP;
+TITLE;CHARSET=utf-8:CPA
+TEL;TYPE=WORK:+1 216-831-0733 ext. 159
+TEL;TYPE=WORK:+12168310733
+TEL;TYPE=HOME:+1 216-765-7118
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:hkass@zinnerco.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;29125 Chagrin Blvd 4692;Cleveland;OH;44122;US
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHgEAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

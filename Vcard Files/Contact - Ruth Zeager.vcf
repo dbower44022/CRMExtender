@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Zeager;Ruth;;;
+FN;CHARSET=utf-8:Ruth Zeager
+ORG;CHARSET=utf-8:Chagrin History Center;
+TITLE;CHARSET=utf-8:Executive Director
+TEL;TYPE=WORK:440-247-4695
+EMAIL;TYPE=INTERNET;TYPE=HOME:director@chagrinhistory.org
+ADR;TYPE=WORK;CHARSET=utf-8:;;87 East Washington StreetPO 515;Chagrin Falls;OH;44022;
+END:VCARD

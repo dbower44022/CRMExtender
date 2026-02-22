@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Dobie;Doug;;;
+FN;CHARSET=utf-8:Doug Dobie
+ORG;CHARSET=utf-8:Dobie Associates;
+TITLE;CHARSET=utf-8:Founder
+TEL;TYPE=WORK:+15624802009
+item1.X-ABLabel:Main
+item1.TEL:562-612-0664
+EMAIL;TYPE=INTERNET;TYPE=WORK:doug@dobieassociates.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c831ce986273b2b98dda6be28c9a1971046?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=00ab476a17df1c502176bbf66bd892401b6392e3d63a53d337e9a827d842d50f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nFrom East Lansing\nFamily still lives there
+END:VCARD

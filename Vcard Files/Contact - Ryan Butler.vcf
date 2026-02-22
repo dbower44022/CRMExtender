@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Butler;Ryan;;;
+FN;CHARSET=utf-8:Ryan Butler
+TEL;TYPE=CELL;TYPE=VOICE:440-336-0561
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bf9fe21bd62816f32452d6ca77ef04c833675a33d92c6abac5b66e36c7c774731?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=03d1c7ea12f3badefa805ee832b6e1b208701e8ab773320b393de778d4b4120b
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nRodney's kids\n\nDoes tree grinding and other work
+END:VCARD

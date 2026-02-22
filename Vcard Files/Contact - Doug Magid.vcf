@@ -1,0 +1,18 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Magid;Doug;;;
+FN;CHARSET=utf-8:Doug Magid
+ORG;CHARSET=utf-8:National Reprographics Inc;
+TITLE;CHARSET=utf-8:President and Director
+TEL;TYPE=WORK:+1 212-366-7063
+item1.X-ABLabel:Other
+item1.TEL:(212) 366-7143
+EMAIL;TYPE=INTERNET;TYPE=HOME:doug.magid@nrinet.com
+item2.X-ABLabel:Other
+item2.EMAIL;TYPE=INTERNET:doug@nrinet.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;44 West 18th Street;New York;NY;10011;US
+item3.X-ABLabel:Outlook
+item3.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHXEAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

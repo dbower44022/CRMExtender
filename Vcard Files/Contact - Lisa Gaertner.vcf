@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Gaertner;Lisa;;;
+FN;CHARSET=utf-8:Lisa Gaertner
+EMAIL;TYPE=INTERNET;TYPE=WORK:lgaertner@optonline.net
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b948d744e65281186755fa2f59c23d893fc31f95150de65ffbdf93928ca535bef?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=f4940f1ac7dd7271c6bd08fb13cb3914d7e70fe8a26aca93123a9d5ac6bdcb9f
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Mango;Michael P;;;
+FN;CHARSET=utf-8:Michael P Mango
+ORG;CHARSET=utf-8:McGraw Hill Construction;
+TEL;TYPE=WORK:+1 609-426-7958
+TEL;TYPE=WORK:609.336.2695
+item1.X-ABLabel:Other
+item1.TEL:+1 866-422-8279
+EMAIL;TYPE=INTERNET;TYPE=HOME:michael.mango@construction.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:michael.mango@mhfi.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;148 Princeton-Hightstown Rd;Hightstown;NJ;08520;US
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b61d0ec60531633d8228e96f5571c7949821c31de6dda2a3747faa4b0d0b5e610?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=54266bee5c20dafae77634658a3a14712e606be36f9ece13dff887eb1e4e73d2
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\n59b6cd263499b912d09d9531
+END:VCARD

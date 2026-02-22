@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Linek;Joseph;;;
+FN;CHARSET=utf-8:Joseph Linek
+EMAIL;TYPE=INTERNET;TYPE=WORK:joseph@linekstudio.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b0be6b7ae49480a29c6507093a2044380d53985a04e8700ed648c3ac7c9f84efb?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=0cbb3639f0af338b43c669109300d2217cdc0a08c4d5405eb2cc6546cdf27a48
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

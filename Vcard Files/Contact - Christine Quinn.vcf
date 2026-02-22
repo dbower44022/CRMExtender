@@ -1,0 +1,14 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Quinn;Christine;;;
+FN;CHARSET=utf-8:Christine Quinn
+ORG;CHARSET=utf-8:Brown & Bigelow;
+TEL;TYPE=WORK:(216) 562-4898
+item1.X-ABLabel:Other
+item1.TEL:(330) 562-4898
+ADR;TYPE=HOME;CHARSET=utf-8:;;455 Wheatfield Drive;Aurora;OH;44202;United States
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHg0AAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nBadge #  048952\nSpouse:  Kevin\n\nShe now sells corporate gifts.
+END:VCARD

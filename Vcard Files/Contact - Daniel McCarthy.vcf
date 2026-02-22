@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:McCarthy;Daniel;;;
+FN;CHARSET=utf-8:Daniel McCarthy
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:dan.mccarthy@construction.com
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8bcccfa9d2e189aba82ec2cf78f45082e972c69d93d43d20807896ba2fa6f1c6f1?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=2fc53d78dd46fa3bcc5abb5ee981b90ac75e5d734bdd06c351544612a8786d58
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

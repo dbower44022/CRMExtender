@@ -1,0 +1,12 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Vigh;Brian;D.;;PE
+FN;CHARSET=utf-8:Brian D. Vigh PE
+ORG;CHARSET=utf-8:Cuyahoga County;Department of Public Works
+TITLE;CHARSET=utf-8:Engineer 4
+TEL;TYPE=WORK:(440) 231-4377
+TEL;TYPE=WORK:(216) 348-3800
+EMAIL;TYPE=INTERNET;TYPE=HOME:bvigh@cuyahogacounty.us
+ADR;TYPE=WORK;CHARSET=utf-8:;;2079 East 9th Street;Cleveland;OH;44115;
+END:VCARD

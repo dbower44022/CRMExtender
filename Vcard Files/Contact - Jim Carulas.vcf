@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Carulas;Jim;;;
+FN;CHARSET=utf-8:Jim Carulas
+ORG;CHARSET=utf-8:Meaden & Moore;
+TEL;TYPE=CELL;TYPE=VOICE:(216) 906-0428
+END:VCARD

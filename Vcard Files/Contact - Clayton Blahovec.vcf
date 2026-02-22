@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Blahovec;Clayton;;;
+FN;CHARSET=utf-8:Clayton Blahovec
+ORG;CHARSET=utf-8:CB Property Professionals;
+TEL;TYPE=CELL;TYPE=VOICE:(440) 667-6427
+EMAIL;TYPE=INTERNET;TYPE=HOME:clayblah@gmail.com
+NOTE;CHARSET=utf-8:Score client
+END:VCARD

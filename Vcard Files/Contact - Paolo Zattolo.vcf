@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Zattolo;Paolo;;;
+FN;CHARSET=utf-8:Paolo Zattolo
+ORG;CHARSET=utf-8:j2 Cloud Services, Inc.;
+TITLE;CHARSET=utf-8:Corporate Sales l
+TEL;TYPE=WORK:1.866.358.6355 x7553
+TEL;TYPE=WORK:613.701.0834
+TEL;TYPE=HOME:613.733.0000 x7553
+EMAIL;TYPE=INTERNET;TYPE=WORK:paolo.zattolo@j2.com
+item1.X-ABLabel:Outlook
+item1.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHeAAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

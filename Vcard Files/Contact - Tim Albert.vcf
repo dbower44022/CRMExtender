@@ -1,0 +1,22 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Albert;Tim;;;
+FN;CHARSET=utf-8:Tim Albert
+ORG;CHARSET=utf-8:McGraw-Hill Construction Inc.;
+TITLE;CHARSET=utf-8:Product Manager
+TEL;TYPE=WORK:+1 609-426-7125
+TEL;TYPE=WORK:+1 212-904-4653
+TEL;TYPE=HOME:866-565-6509,,,594075
+TEL;TYPE=HOME:609-336-2726
+TEL;TYPE=CELL;TYPE=VOICE:+1 609-865-5801
+EMAIL;TYPE=INTERNET;TYPE=HOME:timothy.e.albert@gmail.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:tim.albert@construction.com
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:tim_albert@mcgraw-hill.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;Ste 185 300 American Metro Blvd 2371;Hamilton;NJ;08619;United States
+ADR;TYPE=HOME;CHARSET=utf-8:;;;Philadelphia;Pennsylvania;;US
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/AQMkAGM4YzkwMAItNzJhMy1jNzcAZi0wMAItMDAKAEYAAAN697EjfuPyS7fcuapJ1RkbBwCnLmCLl6eJS5CjgLVjm3oKAAACAQ4AAACnLmCLl6eJS5CjgLVjm3oKAAACHXQAAAA=?accountKey=5cf628b23e62f1cb0883feb0d64f3195&accountExportedAt=665427285.496029
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.
+END:VCARD

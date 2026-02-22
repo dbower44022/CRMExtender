@@ -1,0 +1,18 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Peace;Graham;;;
+FN;CHARSET=utf-8:Graham Peace
+ORG;CHARSET=utf-8:Call Print Services, Ltd.;
+TITLE;CHARSET=utf-8:Director of Technology
+TEL;TYPE=WORK:011-44-207-385-0800
+TEL;TYPE=WORK:+44 20 7580 7122
+TEL;TYPE=HOME:011-44-016-284-82004
+TEL;TYPE=CELL;TYPE=VOICE:011-44-07899 966 513
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:gpeace@callprint.co.uk
+ADR;TYPE=WORK;CHARSET=utf-8:;;163-169 Great Portland Street;London;;W1W 5PD;United Kingdom
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b4ba2fda22463764d070878401a8ed47dd33a3adfe247ea364ec5e80ec21cad5c?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=5aa16b445133c7a83837c503588a48e59d589c1bc640b0d77e6b8c13ad388a57
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nPilot - \n\nPhone from US: 011-44-207-385-0800\n\nGraham@peaces.co.uk\n\nGraham, Sarah, Oliver (10), and Lucy (8) - 2010\n\nGrahm used to race off shore power boats, and likes fast motorcycles.  He thought about being a airline pilot but got interupted in his training.  The friend that he started flying with now flies 737's for Easy Jet.
+END:VCARD

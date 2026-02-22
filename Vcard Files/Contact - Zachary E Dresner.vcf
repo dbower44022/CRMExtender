@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Dresner;Zachary;E;;
+FN;CHARSET=utf-8:Zachary E Dresner
+ORG;CHARSET=utf-8:Services, Inc.;
+TITLE;CHARSET=utf-8:Fiber Sales Executive
+TEL;TYPE=CELL;TYPE=VOICE:330.310.7488
+EMAIL;TYPE=INTERNET;TYPE=HOME:zd197g@att.com
+ADR;TYPE=WORK;CHARSET=utf-8:;;6889 W Snowville Road, Brecksville, OH 44141;;;;
+END:VCARD

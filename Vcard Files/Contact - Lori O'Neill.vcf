@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:O'Neill;Lori;;;
+FN;CHARSET=utf-8:Lori O'Neill
+ORG;CHARSET=utf-8:Schoolyard Studio;
+TITLE;CHARSET=utf-8:Public Relations Manager
+item1.X-ABLabel:HomePage
+item1.URL:https://schoolyardstudio.net
+END:VCARD

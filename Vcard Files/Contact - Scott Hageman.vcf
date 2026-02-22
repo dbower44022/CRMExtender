@@ -1,0 +1,7 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Hageman;Scott;;;
+FN;CHARSET=utf-8:Scott Hageman
+EMAIL;TYPE=INTERNET;TYPE=HOME:scotthageman@gmail.com
+END:VCARD

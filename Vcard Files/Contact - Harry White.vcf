@@ -1,0 +1,10 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:White;Harry;;;
+FN;CHARSET=utf-8:Harry White
+ORG;CHARSET=utf-8:CamDo Solutions Inc.;
+TITLE;CHARSET=utf-8:National Sales Manager
+TEL;TYPE=WORK:+1 650-353-4568
+EMAIL;TYPE=INTERNET;TYPE=HOME:harry@cam-do.com
+END:VCARD

@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Bonavito;Robert;;;
+FN;CHARSET=utf-8:Robert Bonavito
+ORG;CHARSET=utf-8:Accel KKR;
+TEL;TYPE=WORK:+19083227719
+TEL;TYPE=CELL;TYPE=VOICE:925-640-8514
+item1.X-ABLabel:Other
+item1.EMAIL;TYPE=INTERNET:robertbonavito@yahoo.com
+ADR;TYPE=HOME;CHARSET=utf-8:;;;Pleasanton;CA;;US
+item2.X-ABLabel:Outlook
+item2.URL:ms-outlook://people/v2/f399a85865c7b287e97ef789baf14f6eef39ec9618ed5f8fd269556c01dccd82ab14267c504058d7e7eeca7af9e05564b33c52e00b68c757acb34f780342b188e159cda67ba705bfa621cf62c93f6e8b97e46bcf0e0a65032eed87bb4dfb984ac04dcb45337ba121281a67c15fb65968?accountKey=e858f2700a5043958802a0c2b16ed04c2e6c749d5cc40658fdc21fedcc5b5746&checksum=8cca926b96f3fe8650907d87270ca3e3623254d40b3e40f8f24e7d51d612016e
+NOTE;CHARSET=utf-8:This contact is read-only. To make changes, tap the link above to edit in Outlook.\n\nHis company was Aquired by Accell KKR.\nHe worked at unysis and Teradyne and knows Digital very well.
+END:VCARD

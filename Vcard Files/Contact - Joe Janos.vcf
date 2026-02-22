@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//DigiDNA SARL//iMazing 3.4.0//EN
+N;CHARSET=utf-8:Janos;Joe;;;
+FN;CHARSET=utf-8:Joe Janos
+ORG;CHARSET=utf-8:Great Lakes Computer Corporation;
+TITLE;CHARSET=utf-8:Senior Account Manager
+EMAIL;TYPE=INTERNET;TYPE=HOME:j_janos@tcdi.com
+END:VCARD

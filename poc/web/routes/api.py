@@ -25,6 +25,12 @@ from ...views.crud import (
     update_view_filters,
 )
 from ...views.engine import execute_view
+from ...views.layout_overrides import (
+    delete_all_layout_overrides,
+    delete_layout_override,
+    get_layout_overrides,
+    upsert_layout_override,
+)
 from ...views.registry import ENTITY_TYPES
 
 router = APIRouter()
@@ -332,6 +338,102 @@ async def duplicate_view_api(request: Request, view_id: str):
             return JSONResponse({"error": "Duplicate failed"}, status_code=500)
         conn.commit()
         return get_view_with_config(conn, new_id)
+
+
+# ------------------------------------------------------------------
+# Layout Overrides
+# ------------------------------------------------------------------
+
+_VALID_DISPLAY_TIERS = {"ultra_wide", "spacious", "standard", "constrained", "minimal"}
+
+
+@router.get("/views/{view_id}/layout-overrides")
+def list_layout_overrides(request: Request, view_id: str):
+    """Get all layout overrides for a view (current user)."""
+    uid = request.state.user["id"] if request.state.user else ""
+    cid = request.state.customer_id
+
+    with get_connection() as conn:
+        view = get_view(conn, view_id)
+        if not view or view.get("customer_id") != cid:
+            return JSONResponse({"error": "View not found"}, status_code=404)
+        overrides = get_layout_overrides(conn, uid, view_id)
+    return overrides
+
+
+@router.put("/views/{view_id}/layout-overrides/{display_tier}")
+async def upsert_layout_override_api(
+    request: Request, view_id: str, display_tier: str,
+):
+    """Create or update a layout override for a specific display tier."""
+    uid = request.state.user["id"] if request.state.user else ""
+    cid = request.state.customer_id
+
+    if display_tier not in _VALID_DISPLAY_TIERS:
+        return JSONResponse(
+            {"error": f"Invalid display_tier: {display_tier}. "
+             f"Must be one of: {', '.join(sorted(_VALID_DISPLAY_TIERS))}"},
+            status_code=400,
+        )
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    with get_connection() as conn:
+        view = get_view(conn, view_id)
+        if not view or view.get("customer_id") != cid:
+            return JSONResponse({"error": "View not found"}, status_code=404)
+
+        try:
+            result = upsert_layout_override(
+                conn,
+                user_id=uid,
+                view_id=view_id,
+                display_tier=display_tier,
+                splitter_pct=body.get("splitter_pct"),
+                density=body.get("density"),
+                column_overrides=body.get("column_overrides"),
+            )
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
+        conn.commit()
+    return result
+
+
+@router.delete("/views/{view_id}/layout-overrides/{display_tier}")
+def delete_layout_override_api(
+    request: Request, view_id: str, display_tier: str,
+):
+    """Delete a layout override for a specific display tier."""
+    uid = request.state.user["id"] if request.state.user else ""
+    cid = request.state.customer_id
+
+    with get_connection() as conn:
+        view = get_view(conn, view_id)
+        if not view or view.get("customer_id") != cid:
+            return JSONResponse({"error": "View not found"}, status_code=404)
+        deleted = delete_layout_override(conn, uid, view_id, display_tier)
+        if not deleted:
+            return JSONResponse({"error": "Override not found"}, status_code=404)
+        conn.commit()
+    return {"ok": True}
+
+
+@router.delete("/views/{view_id}/layout-overrides")
+def delete_all_layout_overrides_api(request: Request, view_id: str):
+    """Delete all layout overrides for a view (reset)."""
+    uid = request.state.user["id"] if request.state.user else ""
+    cid = request.state.customer_id
+
+    with get_connection() as conn:
+        view = get_view(conn, view_id)
+        if not view or view.get("customer_id") != cid:
+            return JSONResponse({"error": "View not found"}, status_code=404)
+        count = delete_all_layout_overrides(conn, uid, view_id)
+        conn.commit()
+    return {"ok": True, "deleted": count}
 
 
 @router.post("/cell-edit")

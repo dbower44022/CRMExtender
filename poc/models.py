@@ -25,6 +25,14 @@ class KnownContact:
     company: str = ""
     status: str = "active"
 
+    # Transport-only fields populated by contacts_client, consumed by sync_contacts.
+    # Not serialized by to_row() / from_row().
+    title: str = ""
+    phones: list[dict] = field(default_factory=list)       # [{"number": str, "type": str}]
+    addresses: list[dict] = field(default_factory=list)     # [{"type", "street", "city", "state", "postal_code", "country"}]
+    biography: str = ""
+    labels: list[str] = field(default_factory=list)
+
     @property
     def display(self) -> str:
         return self.name if self.name else self.email

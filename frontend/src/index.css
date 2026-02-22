@@ -61,6 +61,56 @@ body {
   background: var(--color-surface-400);
 }
 
+.cell-editable {
+  cursor: text;
+}
+.cell-editable:hover {
+  outline: 1px dashed var(--color-surface-300);
+  outline-offset: -1px;
+}
+
+.cell-flash-success {
+  animation: flash-green 600ms ease-out;
+}
+.cell-flash-error {
+  animation: flash-red 600ms ease-out;
+}
+
+@keyframes flash-green {
+  0% {
+    background-color: #bbf7d0;
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+@keyframes flash-red {
+  0% {
+    background-color: #fecaca;
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* Adaptive Grid Intelligence — demotion styles */
+.cell-collapsed-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-surface-300);
+  vertical-align: middle;
+}
+.cell-collapsed-dot:hover {
+  background: var(--color-primary-400);
+}
+
+.cell-header-annotation {
+  background: var(--color-surface-100);
+  font-style: italic;
+}
+
 .separator-handle {
   flex-basis: 6px !important;
   background: var(--color-surface-200);

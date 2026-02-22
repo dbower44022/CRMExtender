@@ -360,6 +360,11 @@ CREATE TABLE IF NOT EXISTS views (
         CHECK(sort_direction IN ('asc', 'desc')),
     search_query    TEXT DEFAULT '',
     per_page        INTEGER DEFAULT 50,
+    preview_panel_size TEXT DEFAULT 'medium',
+    auto_density       INTEGER DEFAULT 1,
+    column_auto_sizing INTEGER DEFAULT 1,
+    column_demotion    INTEGER DEFAULT 1,
+    primary_identifier_field TEXT,
     created_at      TEXT NOT NULL,
     updated_at      TEXT NOT NULL
 );
@@ -901,6 +906,21 @@ CREATE TABLE IF NOT EXISTS note_entities (
     created_at  TEXT NOT NULL,
     PRIMARY KEY (note_id, entity_type, entity_id)
 );
+
+-- User view layout overrides (per-user, per-view, per-display-tier)
+CREATE TABLE IF NOT EXISTS user_view_layout_overrides (
+    id               TEXT PRIMARY KEY,
+    user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    view_id          TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
+    display_tier     TEXT NOT NULL CHECK(display_tier IN (
+        'ultra_wide','spacious','standard','constrained','minimal')),
+    splitter_pct     REAL,
+    density          TEXT CHECK(density IN ('compact','standard','comfortable')),
+    column_overrides TEXT NOT NULL DEFAULT '{}',
+    created_at       TEXT NOT NULL,
+    updated_at       TEXT NOT NULL,
+    UNIQUE(user_id, view_id, display_tier)
+);
 """
 
 _INDEX_SQL = """\
@@ -1078,6 +1098,9 @@ CREATE INDEX IF NOT EXISTS idx_projects_customer         ON projects(customer_id
 CREATE INDEX IF NOT EXISTS idx_tags_customer             ON tags(customer_id);
 CREATE INDEX IF NOT EXISTS idx_contact_tags_contact      ON contact_tags(contact_id);
 CREATE INDEX IF NOT EXISTS idx_contact_tags_tag          ON contact_tags(tag_id);
+
+-- User view layout overrides
+CREATE INDEX IF NOT EXISTS idx_ulo_user_view             ON user_view_layout_overrides(user_id, view_id);
 """
 
 _SETTINGS_INDEX_SQL = """\

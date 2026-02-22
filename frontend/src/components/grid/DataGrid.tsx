@@ -14,11 +14,12 @@ import { useEntityRegistry } from '../../api/registry.ts'
 import { useViewConfig, useInfiniteViewData } from '../../api/views.ts'
 import { useArrowNavigation } from '../../hooks/useArrowNavigation.ts'
 import { usePrefetch } from '../../hooks/usePrefetch.ts'
+import { useGridIntelligence } from '../../hooks/useGridIntelligence.ts'
 import { CellRenderer } from './CellRenderer.tsx'
 import { InlineEditor } from './InlineEditor.tsx'
 import { useUpdateViewColumns } from '../../api/views.ts'
 import { ChevronUp, ChevronDown, Loader2 } from 'lucide-react'
-import type { FieldDef, ViewColumn } from '../../types/api.ts'
+import type { FieldDef, ViewColumn, CellAlignment, ComputedColumn } from '../../types/api.ts'
 
 type RowData = Record<string, unknown>
 
@@ -57,6 +58,25 @@ export function DataGrid() {
   const entityDef = registry?.[activeEntityType]
   const viewColumns = viewConfig?.columns ?? []
 
+  // Adaptive Grid Intelligence
+  const computedLayout = useGridIntelligence({
+    rows,
+    viewColumns,
+    entityDef,
+    viewConfig,
+  })
+
+  // Build a lookup map from computed layout
+  const computedColumnMap = useMemo(() => {
+    const map = new Map<string, ComputedColumn>()
+    if (computedLayout) {
+      for (const cc of computedLayout.columns) {
+        map.set(cc.fieldKey, cc)
+      }
+    }
+    return map
+  }, [computedLayout])
+
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const [editingCell, setEditingCell] = useState<{
     rowId: string
@@ -76,37 +96,66 @@ export function DataGrid() {
     })
   }, [rows.length])
 
-  // Build TanStack columns from view config + entity registry
+  // Build TanStack columns from view config + entity registry + computed layout
   const columns = useMemo<ColumnDef<RowData>[]>(() => {
     if (!entityDef) return []
+
+    const demotionEnabled = viewConfig?.column_demotion !== 0
+
     return viewColumns
       .filter((vc: ViewColumn) => {
         const fd = entityDef.fields[vc.field_key]
-        return fd && fd.type !== 'hidden'
+        if (!fd || fd.type === 'hidden') return false
+        // Filter out hidden-demoted columns when demotion is enabled
+        if (demotionEnabled) {
+          const cc = computedColumnMap.get(vc.field_key)
+          if (cc?.demotionTier === 'hidden') return false
+        }
+        return true
       })
       .map((vc: ViewColumn) => {
         const fd = entityDef.fields[vc.field_key] as FieldDef
+        const cc = computedColumnMap.get(vc.field_key)
+        const computedWidth = cc?.computedWidth ?? vc.width_px ?? 150
+
+        // Header text — for header_only demotion, annotate with dominant value
+        let headerText = vc.label_override || fd.label
+        if (cc?.demotionTier === 'header_only' && cc.dominantValue) {
+          headerText = `${fd.label}: ${cc.dominantValue}`
+        }
+
         return {
           id: vc.field_key,
           accessorKey: vc.field_key,
-          header: vc.label_override || fd.label,
-          size: vc.width_px ?? 150,
+          header: headerText,
+          size: computedWidth,
           minSize: 50,
           maxSize: 600,
           enableResizing: true,
           enableSorting: fd.sortable,
-          cell: ({ getValue, row }) => (
-            <CellRenderer
-              value={getValue()}
-              fieldDef={fd}
-              fieldKey={vc.field_key}
-              row={row.original}
-              entityType={activeEntityType}
-            />
-          ),
+          cell: ({ getValue, row }) => {
+            // Header-only demotion: cells render empty
+            if (cc?.demotionTier === 'header_only') return null
+            // Collapsed demotion: minimal indicator
+            if (cc?.demotionTier === 'collapsed') {
+              const val = getValue()
+              return val != null && val !== '' ? (
+                <span className="cell-collapsed-dot" title={String(val)} />
+              ) : null
+            }
+            return (
+              <CellRenderer
+                value={getValue()}
+                fieldDef={fd}
+                fieldKey={vc.field_key}
+                row={row.original}
+                entityType={activeEntityType}
+              />
+            )
+          },
         } satisfies ColumnDef<RowData>
       })
-  }, [entityDef, viewColumns, activeEntityType])
+  }, [entityDef, viewColumns, activeEntityType, computedColumnMap, viewConfig])
 
   const columnResizeMode: ColumnResizeMode = 'onChange'
 
@@ -230,10 +279,17 @@ export function DataGrid() {
     )
   }
 
+  // Helper: get alignment style for a column
+  const getAlignment = (fieldKey: string): CellAlignment => {
+    return computedColumnMap.get(fieldKey)?.alignment ?? 'left'
+  }
+
   // Compute total width so header + body share the same sizing basis
   const totalWidth = table
     .getAllColumns()
     .reduce((sum, col) => sum + col.getSize(), 0)
+
+  const demotedCount = computedLayout?.demotedCount ?? 0
 
   return (
     <div>
@@ -249,15 +305,25 @@ export function DataGrid() {
                 const canSort =
                   entityDef?.fields[header.id]?.sortable ?? false
                 const isSorted = sort === header.id
+                const align = getAlignment(header.id)
+                const cc = computedColumnMap.get(header.id)
+                const isHeaderOnly = cc?.demotionTier === 'header_only'
                 return (
                   <div
                     key={header.id}
-                    className="group/header relative shrink-0 text-left text-xs font-semibold text-surface-500"
-                    style={{ width: header.column.getSize() }}
+                    className={`group/header relative shrink-0 text-xs font-semibold text-surface-500 ${
+                      isHeaderOnly ? 'cell-header-annotation' : ''
+                    }`}
+                    style={{
+                      width: header.column.getSize(),
+                      textAlign: align,
+                    }}
                   >
                     <div
                       onClick={() => canSort && handleSort(header.id)}
                       className={`flex items-center gap-1 px-3 py-2 ${
+                        align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : ''
+                      } ${
                         canSort
                           ? 'cursor-pointer select-none hover:text-surface-700'
                           : ''
@@ -351,6 +417,7 @@ export function DataGrid() {
                     const isEditing =
                       editingCell?.rowId === String(row.original.id) &&
                       editingCell?.fieldKey === fieldKey
+                    const align = getAlignment(fieldKey)
 
                     return (
                       <div
@@ -365,7 +432,10 @@ export function DataGrid() {
                             ? 'cell-editable'
                             : ''
                         }`}
-                        style={{ width: cell.column.getSize() }}
+                        style={{
+                          width: cell.column.getSize(),
+                          textAlign: align,
+                        }}
                         onDoubleClick={
                           isEditable
                             ? (e) => {
@@ -411,6 +481,11 @@ export function DataGrid() {
           {total > 0
             ? `${rows.length} of ${total}`
             : 'No records'}
+          {demotedCount > 0 && (
+            <span className="ml-2 text-surface-400">
+              ({demotedCount} column{demotedCount !== 1 ? 's' : ''} auto-compacted)
+            </span>
+          )}
         </span>
         {isFetchingNextPage && (
           <span className="flex items-center gap-1 text-primary-500">

@@ -7,6 +7,8 @@ import {
   usePanelRef,
 } from 'react-resizable-panels'
 import { useLayoutStore } from '../../stores/layout.ts'
+import { useNavigationStore } from '../../stores/navigation.ts'
+import { useViewConfig } from '../../api/views.ts'
 import { IconRail } from './IconRail.tsx'
 import { TopHeaderBar } from './TopHeaderBar.tsx'
 import { ActionPanel } from './ActionPanel.tsx'
@@ -14,9 +16,19 @@ import { ContentArea } from './ContentArea.tsx'
 import { DetailPanel } from './DetailPanel.tsx'
 import { useDefaultView } from '../../hooks/useDefaultView.ts'
 
+const PREVIEW_PANEL_SIZE_MAP: Record<string, string> = {
+  none: '0%',
+  small: '20%',
+  medium: '30%',
+  large: '45%',
+  huge: '55%',
+}
+
 export function AppShell() {
   const actionPanelVisible = useLayoutStore((s) => s.actionPanelVisible)
   const detailPanelVisible = useLayoutStore((s) => s.detailPanelVisible)
+  const activeViewId = useNavigationStore((s) => s.activeViewId)
+  const { data: viewConfig } = useViewConfig(activeViewId)
 
   useDefaultView()
 
@@ -43,11 +55,13 @@ export function AppShell() {
     const panel = detailRef.current
     if (!panel) return
     if (detailPanelVisible) {
-      panel.resize('30%')
+      const previewSize = viewConfig?.preview_panel_size ?? 'medium'
+      const size = PREVIEW_PANEL_SIZE_MAP[previewSize] ?? '30%'
+      panel.resize(size)
     } else {
       panel.resize('0%')
     }
-  }, [detailPanelVisible, detailRef])
+  }, [detailPanelVisible, detailRef, viewConfig?.preview_panel_size])
 
   return (
     <div className="flex h-full w-full">

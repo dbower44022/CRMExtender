@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from poc.database import get_connection, init_db
 from poc.passwords import hash_password, verify_password
+from poc.settings import set_setting
 
 _NOW = datetime.now(timezone.utc).isoformat()
 
@@ -263,3 +264,115 @@ class TestAdminDependency:
         with pytest.raises(HTTPException) as exc_info:
             require_admin(req)
         assert exc_info.value.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Registration
+# ---------------------------------------------------------------------------
+
+def _enable_registration(db_file):
+    """Enable self-registration in the test DB (setting checked against default customer)."""
+    with get_connection(db_file) as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO customers (id, name, slug, is_active, created_at, updated_at) "
+            "VALUES ('cust-default', 'Default', 'default', 1, ?, ?)",
+            (_NOW, _NOW),
+        )
+    set_setting("cust-default", "allow_self_registration", "true", db_path=db_file)
+
+
+class TestRegistration:
+    def test_register_page_renders(self, auth_client, tmp_db):
+        _enable_registration(tmp_db)
+        resp = auth_client.get("/register", follow_redirects=False)
+        assert resp.status_code == 200
+        assert "Create your account" in resp.text
+
+    def test_register_page_disabled(self, auth_client):
+        resp = auth_client.get("/register", follow_redirects=False)
+        assert resp.status_code == 302
+        assert "/login" in resp.headers["location"]
+        assert "Registration" in resp.headers["location"]
+
+    def test_register_success(self, auth_client, tmp_db):
+        _enable_registration(tmp_db)
+        resp = auth_client.post("/register", data={
+            "name": "New User",
+            "email": "newuser@example.com",
+            "password": "password123",
+            "confirm_password": "password123",
+        }, follow_redirects=False)
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/"
+        assert "crm_session" in resp.cookies
+
+    def test_register_duplicate_email(self, auth_client, tmp_db):
+        _enable_registration(tmp_db)
+        # First registration succeeds
+        auth_client.post("/register", data={
+            "name": "First User",
+            "email": "dupe@example.com",
+            "password": "password123",
+            "confirm_password": "password123",
+        })
+        # Second attempt with same email fails
+        resp = auth_client.post("/register", data={
+            "name": "Second User",
+            "email": "dupe@example.com",
+            "password": "password123",
+            "confirm_password": "password123",
+        })
+        assert resp.status_code == 400
+        assert "already exists" in resp.text
+
+    def test_register_password_mismatch(self, auth_client, tmp_db):
+        _enable_registration(tmp_db)
+        resp = auth_client.post("/register", data={
+            "name": "Test User",
+            "email": "test@example.com",
+            "password": "password123",
+            "confirm_password": "different456",
+        })
+        assert resp.status_code == 400
+        assert "do not match" in resp.text
+
+    def test_register_password_too_short(self, auth_client, tmp_db):
+        _enable_registration(tmp_db)
+        resp = auth_client.post("/register", data={
+            "name": "Test User",
+            "email": "test@example.com",
+            "password": "short",
+            "confirm_password": "short",
+        })
+        assert resp.status_code == 400
+        assert "at least 8 characters" in resp.text
+
+    def test_register_missing_fields(self, auth_client, tmp_db):
+        _enable_registration(tmp_db)
+        resp = auth_client.post("/register", data={
+            "name": "",
+            "email": "",
+            "password": "password123",
+            "confirm_password": "password123",
+        })
+        assert resp.status_code == 400
+        assert "required" in resp.text
+
+    def test_register_disabled_post(self, auth_client):
+        resp = auth_client.post("/register", data={
+            "name": "Test User",
+            "email": "test@example.com",
+            "password": "password123",
+            "confirm_password": "password123",
+        }, follow_redirects=False)
+        assert resp.status_code == 302
+        assert "/login" in resp.headers["location"]
+
+    def test_login_page_shows_create_link(self, auth_client, tmp_db):
+        _enable_registration(tmp_db)
+        resp = auth_client.get("/login")
+        assert "Create an account" in resp.text
+
+    def test_login_page_hides_create_link(self, auth_client):
+        resp = auth_client.get("/login")
+        assert "Create an account" not in resp.text

@@ -369,3 +369,355 @@ class TestSearch:
         data = resp.json()
         assert data["total"] == 0
         assert data["results"] == []
+
+
+# ---------------------------------------------------------------------------
+# View CRUD Mutations
+# ---------------------------------------------------------------------------
+
+class TestViewCRUD:
+    def test_create_view(self, client):
+        resp = client.post("/api/v1/views", json={
+            "entity_type": "contact",
+            "name": "My Custom View",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "My Custom View"
+        assert data["is_default"] == 0
+        assert "columns" in data
+        assert len(data["columns"]) > 0
+
+    def test_create_view_missing_fields(self, client):
+        resp = client.post("/api/v1/views", json={"entity_type": "contact"})
+        assert resp.status_code == 400
+
+    def test_update_view(self, client):
+        # Create a view first
+        create_resp = client.post("/api/v1/views", json={
+            "entity_type": "contact",
+            "name": "Before Rename",
+        })
+        view_id = create_resp.json()["id"]
+
+        resp = client.put(f"/api/v1/views/{view_id}", json={
+            "name": "After Rename",
+            "per_page": 25,
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "After Rename"
+        assert data["per_page"] == 25
+
+    def test_update_view_columns(self, client):
+        create_resp = client.post("/api/v1/views", json={
+            "entity_type": "contact",
+            "name": "Column Test",
+        })
+        view_id = create_resp.json()["id"]
+
+        resp = client.put(f"/api/v1/views/{view_id}/columns", json={
+            "columns": ["name", "email"],
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        keys = [c["field_key"] for c in data["columns"]]
+        assert "name" in keys
+        assert "email" in keys
+
+    def test_update_view_columns_with_deps(self, client):
+        """company_name field has link /companies/{company_id}, so company_id should auto-append."""
+        create_resp = client.post("/api/v1/views", json={
+            "entity_type": "contact",
+            "name": "Deps Test",
+        })
+        view_id = create_resp.json()["id"]
+
+        resp = client.put(f"/api/v1/views/{view_id}/columns", json={
+            "columns": ["name", "company_name"],
+        })
+        assert resp.status_code == 200
+        keys = [c["field_key"] for c in resp.json()["columns"]]
+        assert "company_id" in keys  # auto-appended hidden dep
+
+    def test_update_view_columns_dict_format(self, client):
+        create_resp = client.post("/api/v1/views", json={
+            "entity_type": "contact",
+            "name": "Dict Format",
+        })
+        view_id = create_resp.json()["id"]
+
+        resp = client.put(f"/api/v1/views/{view_id}/columns", json={
+            "columns": [
+                {"key": "name", "label": "Full Name", "width": 200},
+                {"key": "email"},
+            ],
+        })
+        assert resp.status_code == 200
+        cols = resp.json()["columns"]
+        name_col = next(c for c in cols if c["field_key"] == "name")
+        assert name_col["label_override"] == "Full Name"
+        assert name_col["width_px"] == 200
+
+    def test_update_view_filters(self, client):
+        create_resp = client.post("/api/v1/views", json={
+            "entity_type": "contact",
+            "name": "Filter Test",
+        })
+        view_id = create_resp.json()["id"]
+
+        resp = client.put(f"/api/v1/views/{view_id}/filters", json={
+            "filters": [
+                {"field_key": "status", "operator": "equals", "value": "active"},
+            ],
+        })
+        assert resp.status_code == 200
+        filters = resp.json()["filters"]
+        assert len(filters) == 1
+        assert filters[0]["field_key"] == "status"
+        assert filters[0]["operator"] == "equals"
+        assert filters[0]["value"] == "active"
+
+    def test_delete_view(self, client):
+        create_resp = client.post("/api/v1/views", json={
+            "entity_type": "contact",
+            "name": "To Delete",
+        })
+        view_id = create_resp.json()["id"]
+
+        resp = client.delete(f"/api/v1/views/{view_id}")
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+        # Verify it's gone
+        resp = client.get(f"/api/v1/views/{view_id}")
+        assert resp.status_code == 404
+
+    def test_delete_default_view_fails(self, client):
+        # List views to create defaults
+        views = client.get("/api/v1/views?entity_type=contact").json()
+        default_view = next(v for v in views if v["is_default"])
+
+        resp = client.delete(f"/api/v1/views/{default_view['id']}")
+        assert resp.status_code == 400
+        assert "default" in resp.json()["error"].lower()
+
+    def test_duplicate_view(self, client):
+        create_resp = client.post("/api/v1/views", json={
+            "entity_type": "contact",
+            "name": "Original",
+        })
+        view_id = create_resp.json()["id"]
+
+        resp = client.post(f"/api/v1/views/{view_id}/duplicate", json={
+            "name": "My Copy",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "My Copy"
+        assert data["id"] != view_id
+        # Should have same columns
+        orig_cols = create_resp.json()["columns"]
+        assert len(data["columns"]) == len(orig_cols)
+
+    def test_cell_edit_success(self, client):
+        _seed_contacts(1)
+        resp = client.post("/api/v1/cell-edit", json={
+            "entity_type": "contact",
+            "entity_id": "contact-0",
+            "field_key": "name",
+            "value": "New Name",
+        })
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+    def test_cell_edit_invalid_field(self, client):
+        _seed_contacts(1)
+        resp = client.post("/api/v1/cell-edit", json={
+            "entity_type": "contact",
+            "entity_id": "contact-0",
+            "field_key": "nonexistent",
+            "value": "test",
+        })
+        assert resp.status_code == 400
+        assert resp.json()["ok"] is False
+
+    def test_view_data_with_extra_filters(self, client):
+        _seed_contacts(5)
+        views = client.get("/api/v1/views?entity_type=contact").json()
+        view_id = views[0]["id"]
+
+        import json as _json
+        extra = _json.dumps([{"field_key": "status", "operator": "equals", "value": "active"}])
+        resp = client.get(f"/api/v1/views/{view_id}/data?filters={extra}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 5  # all seeded contacts are 'active'
+
+
+# ---------------------------------------------------------------------------
+# Layout Overrides
+# ---------------------------------------------------------------------------
+
+class TestLayoutOverrides:
+    def _get_view_id(self, client):
+        views = client.get("/api/v1/views?entity_type=contact").json()
+        return views[0]["id"]
+
+    def test_list_overrides_empty(self, client):
+        view_id = self._get_view_id(client)
+        resp = client.get(f"/api/v1/views/{view_id}/layout-overrides")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_create_override(self, client):
+        view_id = self._get_view_id(client)
+        resp = client.put(
+            f"/api/v1/views/{view_id}/layout-overrides/standard",
+            json={
+                "splitter_pct": 35.0,
+                "density": "compact",
+                "column_overrides": {"name": {"width_pct": 25}},
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["display_tier"] == "standard"
+        assert data["splitter_pct"] == 35.0
+        assert data["density"] == "compact"
+        assert data["column_overrides"] == {"name": {"width_pct": 25}}
+
+    def test_update_override(self, client):
+        view_id = self._get_view_id(client)
+        # Create
+        client.put(
+            f"/api/v1/views/{view_id}/layout-overrides/spacious",
+            json={"splitter_pct": 30.0},
+        )
+        # Update
+        resp = client.put(
+            f"/api/v1/views/{view_id}/layout-overrides/spacious",
+            json={"splitter_pct": 45.0, "density": "comfortable"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["splitter_pct"] == 45.0
+        assert data["density"] == "comfortable"
+
+    def test_list_overrides_after_create(self, client):
+        view_id = self._get_view_id(client)
+        client.put(
+            f"/api/v1/views/{view_id}/layout-overrides/standard",
+            json={"splitter_pct": 30.0},
+        )
+        client.put(
+            f"/api/v1/views/{view_id}/layout-overrides/spacious",
+            json={"splitter_pct": 40.0},
+        )
+        resp = client.get(f"/api/v1/views/{view_id}/layout-overrides")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 2
+        tiers = {d["display_tier"] for d in data}
+        assert tiers == {"spacious", "standard"}
+
+    def test_delete_single_override(self, client):
+        view_id = self._get_view_id(client)
+        client.put(
+            f"/api/v1/views/{view_id}/layout-overrides/standard",
+            json={"splitter_pct": 30.0},
+        )
+        resp = client.delete(f"/api/v1/views/{view_id}/layout-overrides/standard")
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+        # Verify it's gone
+        overrides = client.get(f"/api/v1/views/{view_id}/layout-overrides").json()
+        assert len(overrides) == 0
+
+    def test_delete_nonexistent_override(self, client):
+        view_id = self._get_view_id(client)
+        resp = client.delete(f"/api/v1/views/{view_id}/layout-overrides/ultra_wide")
+        assert resp.status_code == 404
+
+    def test_delete_all_overrides(self, client):
+        view_id = self._get_view_id(client)
+        client.put(
+            f"/api/v1/views/{view_id}/layout-overrides/standard",
+            json={"splitter_pct": 30.0},
+        )
+        client.put(
+            f"/api/v1/views/{view_id}/layout-overrides/spacious",
+            json={"splitter_pct": 40.0},
+        )
+        resp = client.delete(f"/api/v1/views/{view_id}/layout-overrides")
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+        assert resp.json()["deleted"] == 2
+
+        # Verify all gone
+        overrides = client.get(f"/api/v1/views/{view_id}/layout-overrides").json()
+        assert len(overrides) == 0
+
+    def test_invalid_display_tier(self, client):
+        view_id = self._get_view_id(client)
+        resp = client.put(
+            f"/api/v1/views/{view_id}/layout-overrides/invalid_tier",
+            json={"splitter_pct": 30.0},
+        )
+        assert resp.status_code == 400
+        assert "Invalid display_tier" in resp.json()["error"]
+
+    def test_column_overrides_json_roundtrip(self, client):
+        view_id = self._get_view_id(client)
+        overrides = {
+            "name": {"width_pct": 25, "alignment": "left"},
+            "email": {"width_pct": 20},
+            "status": {"hidden": True},
+        }
+        client.put(
+            f"/api/v1/views/{view_id}/layout-overrides/standard",
+            json={"column_overrides": overrides},
+        )
+        resp = client.get(f"/api/v1/views/{view_id}/layout-overrides")
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["column_overrides"] == overrides
+
+    def test_view_not_found(self, client):
+        resp = client.get("/api/v1/views/nonexistent/layout-overrides")
+        assert resp.status_code == 404
+
+    def test_view_settings_agi_fields(self, client):
+        """Test that AGI view settings can be updated via the view update endpoint."""
+        create_resp = client.post("/api/v1/views", json={
+            "entity_type": "contact",
+            "name": "AGI Test View",
+        })
+        view_id = create_resp.json()["id"]
+
+        resp = client.put(f"/api/v1/views/{view_id}", json={
+            "preview_panel_size": "large",
+            "auto_density": 0,
+            "column_auto_sizing": 1,
+            "column_demotion": 0,
+            "primary_identifier_field": "name",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["preview_panel_size"] == "large"
+        assert data["auto_density"] == 0
+        assert data["column_auto_sizing"] == 1
+        assert data["column_demotion"] == 0
+        assert data["primary_identifier_field"] == "name"
+
+    def test_view_settings_defaults(self, client):
+        """New views should have AGI defaults."""
+        views = client.get("/api/v1/views?entity_type=contact").json()
+        view_id = views[0]["id"]
+        resp = client.get(f"/api/v1/views/{view_id}")
+        data = resp.json()
+        assert data["preview_panel_size"] == "medium"
+        assert data["auto_density"] == 1
+        assert data["column_auto_sizing"] == 1
+        assert data["column_demotion"] == 1

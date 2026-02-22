@@ -49,6 +49,11 @@ export interface View {
   sort_direction: 'asc' | 'desc'
   per_page: number
   entity_type: string
+  preview_panel_size: 'none' | 'small' | 'medium' | 'large' | 'huge'
+  auto_density: number
+  column_auto_sizing: number
+  column_demotion: number
+  primary_identifier_field: string | null
   created_at: string
   updated_at: string
   columns: ViewColumn[]
@@ -123,4 +128,60 @@ export interface QuickFilter {
   field_key: string
   operator: string
   value?: string
+}
+
+// --- Adaptive Grid Intelligence types ---
+
+export type DisplayTier = 'ultra_wide' | 'spacious' | 'standard' | 'constrained' | 'minimal'
+
+export interface DisplayProfile {
+  viewportWidth: number
+  viewportHeight: number
+  devicePixelRatio: number
+  effectiveWidth: number
+  effectiveHeight: number
+  displayTier: DisplayTier
+}
+
+export interface ColumnMetrics {
+  fieldKey: string
+  maxContentWidth: number
+  medianContentWidth: number
+  p90ContentWidth: number
+  minContentWidth: number
+  diversityScore: number
+  nullRatio: number
+  dominantValue: string | null
+  digitCountRange: [number, number] | null
+}
+
+export type DemotionTier = 'normal' | 'annotated' | 'collapsed' | 'header_only' | 'hidden'
+export type CellAlignment = 'left' | 'center' | 'right'
+
+export interface ComputedColumn {
+  fieldKey: string
+  computedWidth: number
+  alignment: CellAlignment
+  demotionTier: DemotionTier
+  dominantValue: string | null
+  priorityClass: number
+}
+
+export interface ComputedLayout {
+  displayProfile: DisplayProfile
+  columns: ComputedColumn[]
+  demotedCount: number
+  hiddenCount: number
+}
+
+export interface LayoutOverride {
+  id: string
+  user_id: string
+  view_id: string
+  display_tier: DisplayTier
+  splitter_pct: number | null
+  density: 'compact' | 'standard' | 'comfortable' | null
+  column_overrides: Record<string, Record<string, unknown>>
+  created_at: string
+  updated_at: string
 }

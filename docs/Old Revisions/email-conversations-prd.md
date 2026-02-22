@@ -68,16 +68,16 @@ Professional relationships play out across multiple channels — email, text mes
 
 **The consequences for CRM users:**
 
-| Pain Point | Impact |
-|---|---|
-| **Channel silos** | An email thread about a deal, a follow-up SMS, and a phone call with the same contact appear as three unrelated entries. The full picture requires manual assembly. |
+| Pain Point                      | Impact                                                                                                                                                                                              |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Channel silos**               | An email thread about a deal, a follow-up SMS, and a phone call with the same contact appear as three unrelated entries. The full picture requires manual assembly.                                 |
 | **Manual conversation logging** | Sales reps spend 20-30 minutes daily copying email content into CRM records. Phone calls and meetings require manual note entry with no structure. Most users give up, leaving CRM data incomplete. |
-| **No thread context** | Individual emails are logged without conversation context. A 15-message negotiation thread appears as 15 disconnected entries. |
-| **No organizational structure** | CRM tools provide no way to group conversations by project or topic. A complex deal with legal, financial, and technical workstreams appears as a flat list. |
-| **Noise overwhelms signal** | Forwarded chains, legal disclaimers, and signature blocks bloat logged content. Finding the actual message requires manual editing. |
-| **Blind spots on engagement** | Without systematic cross-channel analysis, managers cannot see which relationships are active, stale, or at risk. |
-| **Scattered across accounts** | Professionals with multiple email accounts and phone numbers have no unified view of their communication landscape. |
-| **No proactive intelligence** | Communication content is rich with signals — pending action items, open questions, sentiment shifts — but extracting them requires reading every thread and listening to every call. |
+| **No thread context**           | Individual emails are logged without conversation context. A 15-message negotiation thread appears as 15 disconnected entries.                                                                      |
+| **No organizational structure** | CRM tools provide no way to group conversations by project or topic. A complex deal with legal, financial, and technical workstreams appears as a flat list.                                        |
+| **Noise overwhelms signal**     | Forwarded chains, legal disclaimers, and signature blocks bloat logged content. Finding the actual message requires manual editing.                                                                 |
+| **Blind spots on engagement**   | Without systematic cross-channel analysis, managers cannot see which relationships are active, stale, or at risk.                                                                                   |
+| **Scattered across accounts**   | Professionals with multiple email accounts and phone numbers have no unified view of their communication landscape.                                                                                 |
+| **No proactive intelligence**   | Communication content is rich with signals — pending action items, open questions, sentiment shifts — but extracting them requires reading every thread and listening to every call.                |
 
 ### Why Existing Solutions Fall Short
 
@@ -104,22 +104,22 @@ CRMExtender closes this gap by treating all communications — regardless of cha
 
 ### Success Metrics
 
-| Metric | Target | Measurement |
-|---|---|---|
-| Email sync coverage | 100% of inbox emails captured | Audit: compare message counts between provider and DB |
-| Conversation auto-assignment accuracy | >85% of communications assigned to the correct conversation | User correction rate as inverse proxy |
-| Topic auto-assignment accuracy | >75% of conversations assigned to the correct topic | User correction rate as inverse proxy |
-| Content cleaning accuracy | >95% of email quotes/signatures/boilerplate removed | Human evaluation of 200 sampled cleaned emails |
-| False-positive cleaning rate | <1% of original authored content incorrectly removed | Human evaluation of same 200 samples |
-| AI summarization coverage | 100% of non-triaged, substantive conversations summarized | DB query: eligible conversations with ai_summary IS NOT NULL |
-| Action item extraction recall | >80% of genuine action items captured | Human evaluation of 100 conversation summaries |
-| Contact resolution rate | >95% of communication participants identified | DB query: communications with unresolved contacts |
-| Cross-channel conversation stitching | >90% of related cross-channel communications in the same conversation | Human evaluation of 100 multi-channel conversations |
-| Triage precision | >95% of filtered communications are genuinely automated/marketing | Human review of 200 triaged items |
-| User correction rate (declining over time) | <10% of auto-assignments corrected after 90 days of use | Analytics: correction actions / total assignments |
-| Sync latency (email — Gmail/Outlook) | <60 seconds from delivery to CRM availability | Instrumented end-to-end measurement |
-| User adoption | >70% of users connect at least one communication source within first week | Analytics: account connection rate |
-| Time savings | >20 minutes/day reduction in manual CRM logging | User survey at 30 and 90 days |
+| Metric                                     | Target                                                                    | Measurement                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Email sync coverage                        | 100% of inbox emails captured                                             | Audit: compare message counts between provider and DB        |
+| Conversation auto-assignment accuracy      | >85% of communications assigned to the correct conversation               | User correction rate as inverse proxy                        |
+| Topic auto-assignment accuracy             | >75% of conversations assigned to the correct topic                       | User correction rate as inverse proxy                        |
+| Content cleaning accuracy                  | >95% of email quotes/signatures/boilerplate removed                       | Human evaluation of 200 sampled cleaned emails               |
+| False-positive cleaning rate               | <1% of original authored content incorrectly removed                      | Human evaluation of same 200 samples                         |
+| AI summarization coverage                  | 100% of non-triaged, substantive conversations summarized                 | DB query: eligible conversations with ai_summary IS NOT NULL |
+| Action item extraction recall              | >80% of genuine action items captured                                     | Human evaluation of 100 conversation summaries               |
+| Contact resolution rate                    | >95% of communication participants identified                             | DB query: communications with unresolved contacts            |
+| Cross-channel conversation stitching       | >90% of related cross-channel communications in the same conversation     | Human evaluation of 100 multi-channel conversations          |
+| Triage precision                           | >95% of filtered communications are genuinely automated/marketing         | Human review of 200 triaged items                            |
+| User correction rate (declining over time) | <10% of auto-assignments corrected after 90 days of use                   | Analytics: correction actions / total assignments            |
+| Sync latency (email — Gmail/Outlook)       | <60 seconds from delivery to CRM availability                             | Instrumented end-to-end measurement                          |
+| User adoption                              | >70% of users connect at least one communication source within first week | Analytics: account connection rate                           |
+| Time savings                               | >20 minutes/day reduction in manual CRM logging                           | User survey at 30 and 90 days                                |
 
 ---
 
@@ -127,11 +127,11 @@ CRMExtender closes this gap by treating all communications — regardless of cha
 
 ### Personas
 
-| Persona | Communication Context | Key Needs |
-|---|---|---|
-| **Alex — Sales Rep** | 2 email accounts (work Gmail, personal Outlook). Texts clients from mobile. 80+ emails/day, 20+ SMS/day. Manages 30 active deal conversations. | See which deals have unanswered communications across all channels. Get summaries of long threads before calls. Link conversations to deals. |
-| **Maria — Consultant** | 1 Gmail account. Frequent phone calls with clients. 40+ emails/day. Manages relationships across 50+ clients and referral partners. | Track which relationships are going stale across all channels. Surface action items from emails AND call notes. Prep for meetings with full conversation history. |
-| **Jordan — Team Lead** | 1 work Outlook + shared team inbox (IMAP). Team uses SMS for quick coordination. 100+ emails/day. | Unified view of team's client conversations across channels. Identify conversations requiring escalation. Weekly summary of open action items across all projects. |
+| Persona                | Communication Context                                                                                                                          | Key Needs                                                                                                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Alex — Sales Rep**   | 2 email accounts (work Gmail, personal Outlook). Texts clients from mobile. 80+ emails/day, 20+ SMS/day. Manages 30 active deal conversations. | See which deals have unanswered communications across all channels. Get summaries of long threads before calls. Link conversations to deals.                       |
+| **Maria — Consultant** | 1 Gmail account. Frequent phone calls with clients. 40+ emails/day. Manages relationships across 50+ clients and referral partners.            | Track which relationships are going stale across all channels. Surface action items from emails AND call notes. Prep for meetings with full conversation history.  |
+| **Jordan — Team Lead** | 1 work Outlook + shared team inbox (IMAP). Team uses SMS for quick coordination. 100+ emails/day.                                              | Unified view of team's client conversations across channels. Identify conversations requiring escalation. Weekly summary of open action items across all projects. |
 
 ### User Stories
 
@@ -205,17 +205,18 @@ Project
 
 The highest-level organizational container. Represents a business initiative, engagement, deal, or any user-defined grouping of related work.
 
-| Attribute | Description |
-|---|---|
-| Name | User-defined project name |
-| Description | Optional description of the project's purpose and scope |
-| Status | Active, On Hold, Completed, Archived |
-| Owner | The user who created/manages the project |
-| Sub-projects | Zero or more child projects (recursive nesting) |
-| Topics | Zero or more topics within the project |
-| Created/Updated | Timestamps |
+| Attribute       | Description                                             |
+| --------------- | ------------------------------------------------------- |
+| Name            | User-defined project name                               |
+| Description     | Optional description of the project's purpose and scope |
+| Status          | Active, On Hold, Completed, Archived                    |
+| Owner           | The user who created/manages the project                |
+| Sub-projects    | Zero or more child projects (recursive nesting)         |
+| Topics          | Zero or more topics within the project                  |
+| Created/Updated | Timestamps                                              |
 
 **Creation model:**
+
 - **Proactive** — User creates a project before any communications occur, in anticipation of future work. May pre-define topics that will have future conversations. Example: "Office Relocation" project created with topics "Lease Negotiation", "Moving Logistics", "IT Setup" before any emails are exchanged.
 - **Reactive** — User creates a project in response to an incoming communication that introduces a new initiative. Example: An email arrives about a new opportunity, and the user creates a project to organize the ensuing conversations.
 
@@ -224,6 +225,7 @@ The highest-level organizational container. Represents a business initiative, en
 A child project nested within a parent project. Shares the same structure as a project. Enables organizing complex initiatives with multiple workstreams.
 
 Example:
+
 ```
 Project: Office Relocation
   ├── Sub-project: NYC Office
@@ -238,15 +240,16 @@ Project: Office Relocation
 
 An organizational grouping within a project that represents a distinct subject area or workstream. A topic contains one or more conversations, each with different participants, all about the same subject.
 
-| Attribute | Description |
-|---|---|
-| Name | User-defined or AI-suggested topic name |
-| Description | Optional description |
-| Project | The parent project (or sub-project) this topic belongs to |
-| Conversations | Zero or more conversations about this topic |
-| Created/Updated | Timestamps |
+| Attribute       | Description                                               |
+| --------------- | --------------------------------------------------------- |
+| Name            | User-defined or AI-suggested topic name                   |
+| Description     | Optional description                                      |
+| Project         | The parent project (or sub-project) this topic belongs to |
+| Conversations   | Zero or more conversations about this topic               |
+| Created/Updated | Timestamps                                                |
 
 **Key distinction — Topic vs. Conversation:** A topic groups conversations that are about the same subject but with different people. Under a "Lease Negotiation" topic, there might be:
+
 - A conversation with the lawyer (emails + phone calls about contract terms)
 - A conversation with the accountant (emails about financial analysis)
 - A conversation with the lessor (emails + in-person meetings about the deal itself)
@@ -254,6 +257,7 @@ An organizational grouping within a project that represents a distinct subject a
 Three separate conversations, each with different participants, all about the same topic.
 
 **Creation model:**
+
 - **User-created** — User explicitly creates a topic within a project.
 - **AI-suggested** — When a new conversation doesn't fit existing topics, the system suggests creating a new topic. User confirms or adjusts.
 
@@ -261,20 +265,21 @@ Three separate conversations, each with different participants, all about the sa
 
 A logical grouping of related communications between a specific set of participants about a specific subject. A conversation can span multiple channels (email, SMS, phone) and is sequenced by timestamp.
 
-| Attribute | Description |
-|---|---|
-| Subject/Title | Derived from email subject, or user-defined for non-email conversations |
-| Participants | The set of contacts involved |
-| Communications | One or more communications, ordered by timestamp |
-| Topic | The parent topic (optional — conversations can be unassigned) |
-| AI Summary | AI-generated summary (when warranted) |
-| AI Status | Open, Closed, Uncertain |
-| AI Action Items | Extracted action items |
-| AI Key Topics | Extracted topic tags |
-| System Status | Active, Stale, Closed |
-| Created/Updated | Timestamps |
+| Attribute       | Description                                                             |
+| --------------- | ----------------------------------------------------------------------- |
+| Subject/Title   | Derived from email subject, or user-defined for non-email conversations |
+| Participants    | The set of contacts involved                                            |
+| Communications  | One or more communications, ordered by timestamp                        |
+| Topic           | The parent topic (optional — conversations can be unassigned)           |
+| AI Summary      | AI-generated summary (when warranted)                                   |
+| AI Status       | Open, Closed, Uncertain                                                 |
+| AI Action Items | Extracted action items                                                  |
+| AI Key Topics   | Extracted topic tags                                                    |
+| System Status   | Active, Stale, Closed                                                   |
+| Created/Updated | Timestamps                                                              |
 
 **Creation model:**
+
 - **Automatic from email threading** — Email thread IDs (Gmail `threadId`, Outlook `conversationId`) automatically create and populate conversations.
 - **Automatic from participant grouping** — SMS messages between the same set of contacts form a default participant-based conversation.
 - **AI-suggested splitting** — When the AI detects a communication doesn't fit the current conversation, it may suggest creating a new one.
@@ -286,18 +291,18 @@ A logical grouping of related communications between a specific set of participa
 
 An individual interaction — a single email, SMS message, phone call, video meeting, in-person meeting, or user-entered note. The atomic unit of the system.
 
-| Attribute | Description |
-|---|---|
-| Timestamp | When the communication occurred |
-| Channel | Email, SMS, Phone, Video, In-Person, Note |
-| Participants | Sender/recipients (resolved to CRM contacts) |
-| Content | Email body, SMS text, call transcript, meeting notes, user-written notes |
-| Direction | Inbound, Outbound, or Mutual (for meetings/calls) |
-| Source | Auto-synced (email, SMS) or Manually entered (notes, unrecorded calls) |
-| Conversation | The conversation this communication belongs to (optional — can be unassigned) |
-| Attachments | Zero or more attached files (recordings, documents, images) |
-| AI Summary | AI-generated summary (for long communications only) |
-| Created/Updated | Timestamps |
+| Attribute       | Description                                                                   |
+| --------------- | ----------------------------------------------------------------------------- |
+| Timestamp       | When the communication occurred                                               |
+| Channel         | Email, SMS, Phone, Video, In-Person, Note                                     |
+| Participants    | Sender/recipients (resolved to CRM contacts)                                  |
+| Content         | Email body, SMS text, call transcript, meeting notes, user-written notes      |
+| Direction       | Inbound, Outbound, or Mutual (for meetings/calls)                             |
+| Source          | Auto-synced (email, SMS) or Manually entered (notes, unrecorded calls)        |
+| Conversation    | The conversation this communication belongs to (optional — can be unassigned) |
+| Attachments     | Zero or more attached files (recordings, documents, images)                   |
+| AI Summary      | AI-generated summary (for long communications only)                           |
+| Created/Updated | Timestamps                                                                    |
 
 **Unassigned communications:** Communications from marketing organizations, unknown senders awaiting identification, or one-off exchanges that don't relate to any conversation simply exist in a list of unassigned communications. They can be assigned later by the user or by AI as more context becomes available.
 
@@ -305,15 +310,16 @@ An individual interaction — a single email, SMS message, phone call, video mee
 
 A portion of a communication that has been assigned to a different conversation than the communication's primary conversation. Used when a single email or message covers multiple topics.
 
-| Attribute | Description |
-|---|---|
+| Attribute            | Description                                                |
+| -------------------- | ---------------------------------------------------------- |
 | Source Communication | The original communication this segment was extracted from |
-| Content | The selected text from the original communication |
-| Target Conversation | The conversation this segment is assigned to |
-| Created by | User who created the segment |
-| Created/Updated | Timestamps |
+| Content              | The selected text from the original communication          |
+| Target Conversation  | The conversation this segment is assigned to               |
+| Created by           | User who created the segment                               |
+| Created/Updated      | Timestamps                                                 |
 
 **The split/reference model:**
+
 - The original communication lives in its primary conversation (full content preserved).
 - A segment (selected text) is created and assigned to a second conversation.
 - The original communication now has references in both conversations.
@@ -327,42 +333,42 @@ A portion of a communication that has been assigned to a different conversation 
 
 All communication types share a common record structure, regardless of channel:
 
-| Field | Description | Email | SMS | Recorded Call | Unrecorded Call | Video | In-Person | Note |
-|---|---|---|---|---|---|---|---|---|
-| Timestamp | When it happened | Email date header | Message timestamp | Call start time | User-entered | Meeting start | User-entered | User-entered |
-| Participants | Who was involved | From/To/CC | Phone numbers | Call participants | User-entered | Attendees | User-entered | User-entered |
-| Channel | Communication type | `email` | `sms` | `phone` | `phone` | `video` | `in_person` | `note` |
-| Content | The substance | Email body (cleaned) | Message text | Transcript | User-written notes | Transcript | User-written notes | User-written notes |
-| Direction | Relative to user | Inbound/Outbound | Inbound/Outbound | Mutual | Mutual | Mutual | Mutual | N/A |
-| Source | How it entered | Auto-synced | Auto-synced | Auto-synced + transcription | Manual entry | Auto-synced + transcription | Manual entry | Manual entry |
-| Attachments | Linked files | Email attachments | Media | Audio recording | None | Video recording | Photos, documents | Any files |
-| Auto-captured? | Requires user action? | Yes | Yes | Yes (metadata + transcript) | No | Yes (metadata + transcript) | No | No |
+| Field          | Description           | Email                | SMS               | Recorded Call               | Unrecorded Call    | Video                       | In-Person          | Note               |
+| -------------- | --------------------- | -------------------- | ----------------- | --------------------------- | ------------------ | --------------------------- | ------------------ | ------------------ |
+| Timestamp      | When it happened      | Email date header    | Message timestamp | Call start time             | User-entered       | Meeting start               | User-entered       | User-entered       |
+| Participants   | Who was involved      | From/To/CC           | Phone numbers     | Call participants           | User-entered       | Attendees                   | User-entered       | User-entered       |
+| Channel        | Communication type    | `email`              | `sms`             | `phone`                     | `phone`            | `video`                     | `in_person`        | `note`             |
+| Content        | The substance         | Email body (cleaned) | Message text      | Transcript                  | User-written notes | Transcript                  | User-written notes | User-written notes |
+| Direction      | Relative to user      | Inbound/Outbound     | Inbound/Outbound  | Mutual                      | Mutual             | Mutual                      | Mutual             | N/A                |
+| Source         | How it entered        | Auto-synced          | Auto-synced       | Auto-synced + transcription | Manual entry       | Auto-synced + transcription | Manual entry       | Manual entry       |
+| Attachments    | Linked files          | Email attachments    | Media             | Audio recording             | None               | Video recording             | Photos, documents  | Any files          |
+| Auto-captured? | Requires user action? | Yes                  | Yes               | Yes (metadata + transcript) | No                 | Yes (metadata + transcript) | No                 | No                 |
 
 ### 6.2 Content Characteristics by Channel
 
 Different channels have fundamentally different content characteristics that affect how the system processes them:
 
-| Channel | Content Length | Threading Available? | Content Quality | Parsing Needed? |
-|---|---|---|---|---|
-| Email | Medium-long (50-5000 words) | Yes (provider thread IDs) | High (structured, detailed) | Yes (heavy — quotes, signatures, boilerplate) |
-| SMS | Very short (1-50 words) | No (flat stream) | Low (terse, context-dependent) | Minimal |
-| Phone transcript | Long (500-10,000 words) | No | Medium (conversational, rambling) | Some (filler words, speaker labels) |
-| Video transcript | Long | No | Medium (same as phone) | Some |
-| In-person notes | Variable (user-written) | No | High (user curates) | None |
-| Manual notes | Variable (user-written) | No | High (user curates) | None |
+| Channel          | Content Length              | Threading Available?      | Content Quality                   | Parsing Needed?                               |
+| ---------------- | --------------------------- | ------------------------- | --------------------------------- | --------------------------------------------- |
+| Email            | Medium-long (50-5000 words) | Yes (provider thread IDs) | High (structured, detailed)       | Yes (heavy — quotes, signatures, boilerplate) |
+| SMS              | Very short (1-50 words)     | No (flat stream)          | Low (terse, context-dependent)    | Minimal                                       |
+| Phone transcript | Long (500-10,000 words)     | No                        | Medium (conversational, rambling) | Some (filler words, speaker labels)           |
+| Video transcript | Long                        | No                        | Medium (same as phone)            | Some                                          |
+| In-person notes  | Variable (user-written)     | No                        | High (user curates)               | None                                          |
+| Manual notes     | Variable (user-written)     | No                        | High (user curates)               | None                                          |
 
 ### 6.3 Communication Entry Points
 
-| Channel | How It Enters the System |
-|---|---|
-| Email | Auto-synced from Gmail API, Microsoft Graph API, or IMAP |
-| SMS | Auto-synced from phone integration or SMS provider API |
-| Recorded phone call | Metadata + recording from VoIP integration (Twilio, RingCentral, etc.); transcript generated via speech-to-text |
-| Unrecorded phone call | User manually creates a communication record (Note) with date, participants, and key points |
-| Recorded video call | Metadata + recording from meeting platform (Zoom, Teams); transcript generated via speech-to-text |
-| Unrecorded video call | User manually creates a Note |
-| In-person meeting | User manually creates a Note with date, attendees, and key points |
-| Calendar-triggered | Scheduled meetings from calendar integration can auto-create placeholder communications; user adds notes after the meeting |
+| Channel               | How It Enters the System                                                                                                   |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Email                 | Auto-synced from Gmail API, Microsoft Graph API, or IMAP                                                                   |
+| SMS                   | Auto-synced from phone integration or SMS provider API                                                                     |
+| Recorded phone call   | Metadata + recording from VoIP integration (Twilio, RingCentral, etc.); transcript generated via speech-to-text            |
+| Unrecorded phone call | User manually creates a communication record (Note) with date, participants, and key points                                |
+| Recorded video call   | Metadata + recording from meeting platform (Zoom, Teams); transcript generated via speech-to-text                          |
+| Unrecorded video call | User manually creates a Note                                                                                               |
+| In-person meeting     | User manually creates a Note with date, attendees, and key points                                                          |
+| Calendar-triggered    | Scheduled meetings from calendar integration can auto-create placeholder communications; user adds notes after the meeting |
 
 ### 6.4 Timestamp as the Universal Sequencing Key
 
@@ -384,13 +390,13 @@ A single conversation, three channels, one coherent timeline.
 
 Any communication can have zero or more attached files:
 
-| Attribute | Description |
-|---|---|
-| Filename | Original filename |
-| File type | MIME type / extension (audio, video, document, image, etc.) |
-| Size | File size in bytes |
-| Storage reference | Location in object storage (S3/MinIO) |
-| Source | Synced from email, uploaded by user, pulled from meeting platform, etc. |
+| Attribute         | Description                                                             |
+| ----------------- | ----------------------------------------------------------------------- |
+| Filename          | Original filename                                                       |
+| File type         | MIME type / extension (audio, video, document, image, etc.)             |
+| Size              | File size in bytes                                                      |
+| Storage reference | Location in object storage (S3/MinIO)                                   |
+| Source            | Synced from email, uploaded by user, pulled from meeting platform, etc. |
 
 For recorded calls and video meetings, the **transcript becomes the content** of the communication (for AI processing and search), while the **original recording is an attachment** (for playback and verification).
 
@@ -406,11 +412,11 @@ Conversations are formed through different mechanisms depending on the communica
 
 Email providers supply native thread identifiers that automatically group related messages:
 
-| Provider | Threading Mechanism |
-|---|---|
-| Gmail | `threadId` — Gmail groups messages by subject and participants |
-| Outlook | `conversationId` — Outlook groups messages by conversation |
-| IMAP | Reconstructed from RFC 5322 headers (`Message-ID`, `References`, `In-Reply-To`), with subject-line matching as fallback |
+| Provider | Threading Mechanism                                                                                                     |
+| -------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Gmail    | `threadId` — Gmail groups messages by subject and participants                                                          |
+| Outlook  | `conversationId` — Outlook groups messages by conversation                                                              |
+| IMAP     | Reconstructed from RFC 5322 headers (`Message-ID`, `References`, `In-Reply-To`), with subject-line matching as fallback |
 
 An email thread automatically creates a conversation. Additional email threads may be merged into the same conversation by the AI or user if they are determined to be part of the same exchange.
 
@@ -425,6 +431,7 @@ For channels without native threading (SMS, phone calls), the system creates **d
 #### Manually Created Conversations
 
 Users can create conversations explicitly and assign communications to them. This is the primary model for:
+
 - Organizing phone call and meeting notes into topic-specific conversations.
 - Pulling SMS messages out of the default participant-based conversation.
 - Creating a conversation around communications from multiple channels.
@@ -443,13 +450,13 @@ A conversation can contain communications from multiple channels. The system mai
 
 ### 7.3 Conversation Properties
 
-| Property | Source | Description |
-|---|---|---|
-| Participant list | Union of all communication participants | All contacts involved across all channels |
-| Communication count | Computed | Total number of communications across all channels |
-| Channel breakdown | Computed | Count of communications by channel type |
-| First/last activity | Computed from timestamps | Earliest and most recent communication |
-| Active channels | Computed | Which channels have been used (email, SMS, phone, etc.) |
+| Property            | Source                                  | Description                                             |
+| ------------------- | --------------------------------------- | ------------------------------------------------------- |
+| Participant list    | Union of all communication participants | All contacts involved across all channels               |
+| Communication count | Computed                                | Total number of communications across all channels      |
+| Channel breakdown   | Computed                                | Count of communications by channel type                 |
+| First/last activity | Computed from timestamps                | Earliest and most recent communication                  |
+| Active channels     | Computed                                | Which channels have been used (email, SMS, phone, etc.) |
 
 ---
 
@@ -460,6 +467,7 @@ A conversation can contain communications from multiple channels. The system mai
 Topics group related conversations within a project. They are an organizational device for user understanding — they help users find and manage conversations about the same subject area.
 
 **Example:**
+
 ```
 Topic: Lease Negotiation
   ├── Conversation with lawyer (3 emails, 1 phone call)
@@ -470,6 +478,7 @@ Topic: Lease Negotiation
 Three different conversations, three different sets of people, all about lease negotiation.
 
 **Topic creation:**
+
 - **User-created:** User explicitly creates a topic within a project, possibly before any conversations exist.
 - **AI-suggested:** When the system detects a conversation about a subject that doesn't fit any existing topic, it suggests creating a new topic. The user confirms, adjusts the name, or assigns to an existing topic.
 
@@ -478,6 +487,7 @@ Three different conversations, three different sets of people, all about lease n
 Projects are the top-level organizational container. They represent a business initiative, engagement, deal, or any user-defined grouping.
 
 **Project creation:**
+
 - **Almost always user-created.** Projects are intentional — they represent a decision to organize work around a specific initiative.
 - **Proactive:** Created before any communications, in anticipation of future work. Topics may be pre-defined. Example: Creating "Acme Corp Acquisition" with topics "Due Diligence", "Legal Review", "Integration Planning" before the first email.
 - **Reactive:** Created in response to communications that introduce a new initiative. Example: An email arrives about an unexpected opportunity, and the user creates a project to organize the ensuing work.
@@ -487,6 +497,7 @@ Projects are the top-level organizational container. They represent a business i
 Projects can contain sub-projects for additional organizational depth. Sub-projects share the same structure as projects (name, description, status, topics) and can be nested recursively.
 
 **Use case:** A large initiative with distinct sub-initiatives:
+
 ```
 Project: 2026 Expansion
   ├── Sub-project: NYC Office
@@ -505,12 +516,12 @@ Project: 2026 Expansion
 
 The hierarchy is a tool, not a requirement:
 
-| Entity | Must belong to a parent? | Can exist independently? |
-|---|---|---|
-| Communication | No — can be unassigned | Yes — marketing emails, unknown senders, one-offs |
-| Conversation | No — doesn't need a topic or project | Yes — an ongoing exchange with a colleague that isn't part of any project |
-| Topic | Yes — must belong to a project | No — topics exist within projects |
-| Project | No — top-level entity | Yes — always independent |
+| Entity        | Must belong to a parent?             | Can exist independently?                                                  |
+| ------------- | ------------------------------------ | ------------------------------------------------------------------------- |
+| Communication | No — can be unassigned               | Yes — marketing emails, unknown senders, one-offs                         |
+| Conversation  | No — doesn't need a topic or project | Yes — an ongoing exchange with a colleague that isn't part of any project |
+| Topic         | Yes — must belong to a project       | No — topics exist within projects                                         |
+| Project       | No — top-level entity                | Yes — always independent                                                  |
 
 ---
 
@@ -521,6 +532,7 @@ The hierarchy is a tool, not a requirement:
 The most structured and automatically captured communication type.
 
 **Characteristics:**
+
 - Rich content (text + HTML)
 - Native threading from providers (Gmail, Outlook, IMAP headers)
 - Heavy parsing needed (quotes, signatures, boilerplate)
@@ -534,6 +546,7 @@ The most structured and automatically captured communication type.
 Short text messages between phone numbers.
 
 **Characteristics:**
+
 - Very short content (typically 1-50 words)
 - No native threading — flat stream between participants
 - Minimal parsing needed
@@ -541,6 +554,7 @@ Short text messages between phone numbers.
 - Automatic sync via phone integration or SMS provider API
 
 **Conversation model:**
+
 - Default: All SMS between the same participant set forms one participant-based conversation.
 - User-driven: Specific messages can be assigned to topic-specific conversations.
 - The system cannot automatically determine which conversation an SMS belongs to beyond the participant match — it relies on user assignment for topic-level organization.
@@ -550,6 +564,7 @@ Short text messages between phone numbers.
 Phone calls with audio recordings captured via VoIP integration.
 
 **Characteristics:**
+
 - Recording stored as attachment
 - Transcript generated via speech-to-text becomes the communication content
 - A single transcribed call is processed like a long text communication — the transcript can be summarized by AI
@@ -561,6 +576,7 @@ Phone calls with audio recordings captured via VoIP integration.
 Phone calls without recordings — the user logs the interaction manually.
 
 **Characteristics:**
+
 - User enters: date, time, duration, participants, and notes
 - This is functionally a **Note** communication type — the user is the content source
 - The note captures key points, decisions, and action items from the call
@@ -571,6 +587,7 @@ Phone calls without recordings — the user logs the interaction manually.
 Video meetings with recordings captured via meeting platform integration (Zoom, Teams, etc.).
 
 **Characteristics:**
+
 - Recording stored as attachment
 - Transcript generated via speech-to-text becomes the communication content
 - Metadata auto-captured: participants, timestamp, duration
@@ -585,6 +602,7 @@ Same as unrecorded phone calls — user logs manually as a Note.
 Face-to-face meetings logged manually by the user.
 
 **Characteristics:**
+
 - User enters: date, time, attendees, location (optional), and notes
 - Functionally a Note — user is the content source
 - May be triggered by a calendar event (calendar integration creates placeholder, user adds notes after)
@@ -609,20 +627,24 @@ A single communication may address multiple topics. An email might say: "Attache
 The system uses a combined split and reference model:
 
 **Primary assignment (automatic):**
+
 - Each communication is automatically assigned to its primary conversation (via email thread ID, participant matching, or AI classification).
 - The full communication lives in the primary conversation.
 
 **Segment creation (user-driven):**
+
 - When a user identifies that a communication spans two conversations, they select a portion of the text.
 - They invoke an "Assign selected to different conversation" action.
 - This creates a **segment** — the selected text assigned to the target conversation.
 - The original communication now has references in both conversations.
 
 **What the user sees:**
+
 - In the primary conversation: the full communication, with the segmented portion highlighted or annotated.
 - In the secondary conversation: the segment (selected text), with a link back to the full original communication.
 
 **What is preserved:**
+
 - The original communication is never modified or moved — it stays in its primary conversation in full.
 - The segment is an additional reference, not a copy.
 - Both conversations show contextually relevant content.
@@ -674,6 +696,7 @@ Auto-organization is only useful if users can efficiently review and correct it.
 > "14 new communications since yesterday. 11 auto-assigned (review). 3 unassigned (needs your input)."
 
 The review workflow allows users to:
+
 - See all auto-assignments with confidence indicators
 - Accept or correct conversation assignment with minimal clicks
 - Accept or correct topic/project assignment
@@ -699,11 +722,11 @@ When a user corrects an assignment (moves a communication to a different convers
 
 Not all communications warrant AI summarization:
 
-| Content Length | Summarize? | Rationale |
-|---|---|---|
-| <50 words (e.g., short SMS, brief note) | No | The content itself is already concise enough |
-| 50-200 words (e.g., typical email) | Optional | May benefit from summary in conversation context |
-| >200 words (e.g., long email, call transcript) | Yes | Substantial content that benefits from distillation |
+| Content Length                                 | Summarize? | Rationale                                           |
+| ---------------------------------------------- | ---------- | --------------------------------------------------- |
+| <50 words (e.g., short SMS, brief note)        | No         | The content itself is already concise enough        |
+| 50-200 words (e.g., typical email)             | Optional   | May benefit from summary in conversation context    |
+| >200 words (e.g., long email, call transcript) | Yes        | Substantial content that benefits from distillation |
 
 Conversation-level summaries are always generated when the conversation has sufficient total content, regardless of individual communication lengths.
 
@@ -759,19 +782,20 @@ Here's the revised clause 5 with the $500K liability cap we discussed.
 ### 11.6 Re-Summarization Triggers
 
 Conversation summaries are automatically refreshed when:
+
 - A new communication is added to the conversation (any channel).
 - A user explicitly requests a refresh.
 - A communication is reassigned to or from the conversation.
 
 ### 11.7 Error Handling
 
-| Failure | Recovery |
-|---|---|
-| AI API timeout | Retry with exponential backoff (3 attempts); mark as pending |
-| AI API rate limit | Queue and retry after cooldown |
-| Malformed AI response | Return with error flag; log raw response |
-| AI API unavailable | Conversations remain visible without summaries; queue for processing when API returns |
-| Empty conversation content | Skip summarization; display "(no content to analyze)" |
+| Failure                    | Recovery                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| AI API timeout             | Retry with exponential backoff (3 attempts); mark as pending                          |
+| AI API rate limit          | Queue and retry after cooldown                                                        |
+| Malformed AI response      | Return with error flag; log raw response                                              |
+| AI API unavailable         | Conversations remain visible without summaries; queue for processing when API returns |
+| Empty conversation content | Skip summarization; display "(no content to analyze)"                                 |
 
 ---
 
@@ -786,11 +810,13 @@ Conversation summaries are automatically refreshed when:
 The Contact Intelligence system (defined in a separate PRD) is the **single source of truth** for identity resolution. The Conversations subsystem:
 
 **Consumes from Contact Intelligence:**
+
 - "This phone number belongs to Bob" → SMS messages route to Bob's conversations
 - "This email address belongs to Bob" → Emails associate with the same contact as Bob's phone
 - A unified contact record means communications across all channels are correctly attributed
 
 **Contributes to Contact Intelligence:**
+
 - A new email arrives from an unknown address → trigger identity resolution workflow
 - An SMS comes from an unknown number → trigger identity resolution workflow
 - A user creates a note about a meeting with "Sarah from Acme" → potential new contact signal
@@ -798,14 +824,14 @@ The Contact Intelligence system (defined in a separate PRD) is the **single sour
 
 ### 12.3 Identifier Types by Channel
 
-| Channel | Primary Identifier | Resolution Method |
-|---|---|---|
-| Email | Email address | Direct lookup in contact database |
-| SMS | Phone number | Phone number lookup in contact database |
-| Phone call (VoIP) | Phone number | Phone number lookup |
-| Phone call (manual) | User-specified | User selects contact during entry |
-| Video meeting | Platform display name + email | Email lookup; name matching as fallback |
-| In-person meeting | User-specified | User selects contacts during entry |
+| Channel             | Primary Identifier            | Resolution Method                       |
+| ------------------- | ----------------------------- | --------------------------------------- |
+| Email               | Email address                 | Direct lookup in contact database       |
+| SMS                 | Phone number                  | Phone number lookup in contact database |
+| Phone call (VoIP)   | Phone number                  | Phone number lookup                     |
+| Phone call (manual) | User-specified                | User selects contact during entry       |
+| Video meeting       | Platform display name + email | Email lookup; name matching as fallback |
+| In-person meeting   | User-specified                | User selects contacts during entry      |
 
 ### 12.4 Pending Identification State
 
@@ -853,37 +879,39 @@ Each provider is implemented as an **adapter** that normalizes email data to the
 
 ### 13.2 Gmail (Tier 1 — Primary)
 
-| Aspect | Detail |
-|---|---|
-| **API** | Gmail API v1 (RESTful) via `google-api-python-client` |
-| **Authentication** | OAuth 2.0 (desktop flow for PoC, web flow for production) |
-| **Scopes** | `gmail.readonly` (email access), `gmail.send` (future: outbound), `contacts.readonly` (contact sync) |
-| **Threading** | Native `threadId` — Gmail groups messages by subject and participants automatically |
-| **Initial sync** | `threads.list` with configurable query (default: `newer_than:90d`), paginated |
-| **Incremental sync** | `history.list` with `startHistoryId` — returns only changes since last sync |
-| **Real-time updates** | Google Pub/Sub push notifications (production); polling via history API (PoC fallback) |
-| **Rate limits** | 250 quota units/second per user; `threads.get` costs 10 units |
-| **Data available** | Full MIME structure, headers, body (text + HTML), labels, attachments metadata |
+| Aspect                | Detail                                                                                               |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| **API**               | Gmail API v1 (RESTful) via `google-api-python-client`                                                |
+| **Authentication**    | OAuth 2.0 (desktop flow for PoC, web flow for production)                                            |
+| **Scopes**            | `gmail.readonly` (email access), `gmail.send` (future: outbound), `contacts.readonly` (contact sync) |
+| **Threading**         | Native `threadId` — Gmail groups messages by subject and participants automatically                  |
+| **Initial sync**      | `threads.list` with configurable query (default: `newer_than:90d`), paginated                        |
+| **Incremental sync**  | `history.list` with `startHistoryId` — returns only changes since last sync                          |
+| **Real-time updates** | Google Pub/Sub push notifications (production); polling via history API (PoC fallback)               |
+| **Rate limits**       | 250 quota units/second per user; `threads.get` costs 10 units                                        |
+| **Data available**    | Full MIME structure, headers, body (text + HTML), labels, attachments metadata                       |
 
 **Gmail-specific considerations:**
+
 - Gmail's `threadId` is highly reliable but occasionally groups unrelated messages with the same subject.
 - Gmail wraps some email bodies inside `gmail_signature` divs, requiring a resilience check in the parser.
 - Gmail's History API may return `historyId` gaps; the system must handle "404 historyId not found" by falling back to a date-based re-sync.
 
 ### 13.3 Microsoft Outlook / Exchange (Tier 2)
 
-| Aspect | Detail |
-|---|---|
-| **API** | Microsoft Graph API v1.0 |
-| **Authentication** | OAuth 2.0 via Microsoft Identity Platform (MSAL) |
-| **Scopes** | `Mail.Read`, `Mail.Send` (future), `Contacts.Read` |
-| **Threading** | Native `conversationId` |
-| **Initial sync** | `/me/messages` with `$filter` on `receivedDateTime`, paginated |
-| **Incremental sync** | Delta queries (`/me/messages/delta`) returning a `deltaLink` |
-| **Real-time updates** | Webhook subscriptions (`/subscriptions`) |
-| **Rate limits** | 10,000 requests per 10 minutes per app per mailbox |
+| Aspect                | Detail                                                         |
+| --------------------- | -------------------------------------------------------------- |
+| **API**               | Microsoft Graph API v1.0                                       |
+| **Authentication**    | OAuth 2.0 via Microsoft Identity Platform (MSAL)               |
+| **Scopes**            | `Mail.Read`, `Mail.Send` (future), `Contacts.Read`             |
+| **Threading**         | Native `conversationId`                                        |
+| **Initial sync**      | `/me/messages` with `$filter` on `receivedDateTime`, paginated |
+| **Incremental sync**  | Delta queries (`/me/messages/delta`) returning a `deltaLink`   |
+| **Real-time updates** | Webhook subscriptions (`/subscriptions`)                       |
+| **Rate limits**       | 10,000 requests per 10 minutes per app per mailbox             |
 
 **Outlook-specific considerations:**
+
 - `div#appendonsend` separates composed content from quoted reply — content after it (siblings) must be removed.
 - `div#divRplyFwdMsg` serves a similar separator function.
 - Border-based separators (`border-top: solid #E1E1E1`) must be detected as cutoff points.
@@ -891,16 +919,17 @@ Each provider is implemented as an **adapter** that normalizes email data to the
 
 ### 13.4 IMAP (Tier 3 — Fallback)
 
-| Aspect | Detail |
-|---|---|
-| **Protocol** | IMAP4rev1 (RFC 3501) over TLS |
-| **Authentication** | Username/password or OAuth 2.0 (where supported) |
-| **Threading** | Reconstructed from RFC 5322 headers: `Message-ID`, `References`, `In-Reply-To` |
-| **Initial sync** | `FETCH` with UID range, scanning configured folders |
-| **Incremental sync** | `UIDVALIDITY` + last-synced UID |
-| **Real-time updates** | IMAP IDLE (RFC 2177) or polling (default: 5 min) |
+| Aspect                | Detail                                                                         |
+| --------------------- | ------------------------------------------------------------------------------ |
+| **Protocol**          | IMAP4rev1 (RFC 3501) over TLS                                                  |
+| **Authentication**    | Username/password or OAuth 2.0 (where supported)                               |
+| **Threading**         | Reconstructed from RFC 5322 headers: `Message-ID`, `References`, `In-Reply-To` |
+| **Initial sync**      | `FETCH` with UID range, scanning configured folders                            |
+| **Incremental sync**  | `UIDVALIDITY` + last-synced UID                                                |
+| **Real-time updates** | IMAP IDLE (RFC 2177) or polling (default: 5 min)                               |
 
 **IMAP-specific considerations:**
+
 - Thread reconstruction uses the JWZ threading algorithm from `Message-ID`, `References`, and `In-Reply-To` chains, with subject-line matching as fallback.
 - `UIDVALIDITY` changes require a full re-sync of the folder.
 - Sent mail must be explicitly synced from the Sent folder and merged with inbox threads.
@@ -942,11 +971,11 @@ All email providers normalize to the common Communication schema via an adapter 
 
 ### 14.2 Sync Cursor Mechanics
 
-| Provider | Cursor Type | Format |
-|---|---|---|
-| Gmail | `historyId` | Numeric string — monotonically increasing |
-| Outlook | `deltaLink` | URL string — opaque token from delta queries |
-| IMAP | `UIDVALIDITY:lastUID` | Compound string — detects mailbox rebuilds |
+| Provider | Cursor Type           | Format                                       |
+| -------- | --------------------- | -------------------------------------------- |
+| Gmail    | `historyId`           | Numeric string — monotonically increasing    |
+| Outlook  | `deltaLink`           | URL string — opaque token from delta queries |
+| IMAP     | `UIDVALIDITY:lastUID` | Compound string — detects mailbox rebuilds   |
 
 **Cursor lifecycle:** NULL → set on initial sync completion → advanced on each incremental sync → recorded in audit log.
 
@@ -954,16 +983,16 @@ All email providers normalize to the common Communication schema via an adapter 
 
 ### 14.3 Sync Reliability
 
-| Failure Scenario | Recovery |
-|---|---|
-| Provider API timeout | Exponential backoff retry (3 attempts) |
-| Provider rate limit (HTTP 429) | Respect `Retry-After` header |
-| Invalid sync cursor | Date-based re-sync |
-| Partial batch failure | Skip failed messages, log for retry |
-| Network interruption | Retry with backoff; queue for next sync |
-| Token expiration (HTTP 401) | Auto-refresh; re-authenticate if refresh fails |
-| Duplicate messages | INSERT OR IGNORE (UNIQUE constraint on provider message ID) |
-| Message deletion at provider | Delete DB row; recompute conversation metadata |
+| Failure Scenario               | Recovery                                                    |
+| ------------------------------ | ----------------------------------------------------------- |
+| Provider API timeout           | Exponential backoff retry (3 attempts)                      |
+| Provider rate limit (HTTP 429) | Respect `Retry-After` header                                |
+| Invalid sync cursor            | Date-based re-sync                                          |
+| Partial batch failure          | Skip failed messages, log for retry                         |
+| Network interruption           | Retry with backoff; queue for next sync                     |
+| Token expiration (HTTP 401)    | Auto-refresh; re-authenticate if refresh fails              |
+| Duplicate messages             | INSERT OR IGNORE (UNIQUE constraint on provider message ID) |
+| Message deletion at provider   | Delete DB row; recompute conversation metadata              |
 
 ### 14.4 Sync Audit Trail
 
@@ -999,19 +1028,19 @@ Input: body_html + body_plain
 
 **Phase 1 — Structural HTML removal** using quotequail + BeautifulSoup:
 
-| Selector | Client | Content Type |
-|---|---|---|
-| `div.gmail_quote` | Gmail | Quoted reply |
-| `div.gmail_attr` | Gmail | Attribution line |
-| `[data-smartmail=gmail_signature]` | Gmail | Signature |
-| `div.gmail_signature` | Gmail | Signature |
-| `div.yahoo_quoted` | Yahoo | Quoted reply |
-| `blockquote[type=cite]` | Apple Mail, Thunderbird | Quoted reply |
-| `div#appendonsend` + siblings | Outlook | Reply separator |
-| `div#divRplyFwdMsg` + siblings | Outlook | Reply/forward separator |
-| `div#Signature` | Outlook | Signature |
-| Elements with `border-top: solid #E1E1E1` + siblings | Outlook | Visual separator |
-| `div#ms-outlook-mobile-signature` | Outlook Mobile | Mobile signature |
+| Selector                                             | Client                  | Content Type            |
+| ---------------------------------------------------- | ----------------------- | ----------------------- |
+| `div.gmail_quote`                                    | Gmail                   | Quoted reply            |
+| `div.gmail_attr`                                     | Gmail                   | Attribution line        |
+| `[data-smartmail=gmail_signature]`                   | Gmail                   | Signature               |
+| `div.gmail_signature`                                | Gmail                   | Signature               |
+| `div.yahoo_quoted`                                   | Yahoo                   | Quoted reply            |
+| `blockquote[type=cite]`                              | Apple Mail, Thunderbird | Quoted reply            |
+| `div#appendonsend` + siblings                        | Outlook                 | Reply separator         |
+| `div#divRplyFwdMsg` + siblings                       | Outlook                 | Reply/forward separator |
+| `div#Signature`                                      | Outlook                 | Signature               |
+| Elements with `border-top: solid #E1E1E1` + siblings | Outlook                 | Visual separator        |
+| `div#ms-outlook-mobile-signature`                    | Outlook Mobile          | Mobile signature        |
 
 **Signature resilience check:** If signature removal empties the result (Gmail sometimes wraps bodies in `gmail_signature` divs), re-parse without signature removal.
 
@@ -1039,6 +1068,7 @@ Applied in order after track-specific processing:
 3. **Environmental messages** — "Please consider the environment before printing." Truncate.
 
 4. **Separator-based signature stripping** (three-pass chain):
+   
    - **Pass 1 — Dash-dash (`--`):** Truncate if content after is <500 chars, ≤10 lines, and contains signature markers.
    - **Pass 2 — Underscore (`__`):** Truncate if content after is <1,500 chars, ≤25 lines, and contains signature markers.
    - **Pass 3 — Dash-dash cleanup:** Re-run Pass 1 to catch separators exposed by Pass 2.
@@ -1057,24 +1087,24 @@ Applied in order after track-specific processing:
 
 ### 15.6 Parsing Quality Targets
 
-| Metric | Target | Current (PoC) |
-|---|---|---|
-| Emails improved after cleaning | >90% | 91.2% (3,752 production emails) |
-| Average character reduction | >50% | 58% |
-| False-positive empty results | 0% | 0% |
-| Test coverage | >100 test cases | 95 tests (60 plain-text + 35 HTML) |
-| Processing speed | <2ms per email | ~1.3ms per email |
+| Metric                         | Target          | Current (PoC)                      |
+| ------------------------------ | --------------- | ---------------------------------- |
+| Emails improved after cleaning | >90%            | 91.2% (3,752 production emails)    |
+| Average character reduction    | >50%            | 58%                                |
+| False-positive empty results   | 0%              | 0%                                 |
+| Test coverage                  | >100 test cases | 95 tests (60 plain-text + 35 HTML) |
+| Processing speed               | <2ms per email  | ~1.3ms per email                   |
 
 ### 15.7 Provider-Specific Parsing Challenges
 
-| Provider | Challenge | Mitigation |
-|---|---|---|
-| Gmail | Body wrapped in `gmail_signature` div | Resilience check: re-parse without signatures |
-| Outlook | `#appendonsend` content in siblings | Remove element AND all following siblings |
-| Outlook | Border separator (`border-top: solid #E1E1E1`) | Regex on inline style |
-| Apple Mail | Deep `blockquote` nesting | quotequail + CSS selector |
-| IMAP (generic) | No structural cues; plain-text only | Full plain-text pipeline |
-| All | Signatures without separators or valedictions | Standalone detection heuristics |
+| Provider       | Challenge                                      | Mitigation                                    |
+| -------------- | ---------------------------------------------- | --------------------------------------------- |
+| Gmail          | Body wrapped in `gmail_signature` div          | Resilience check: re-parse without signatures |
+| Outlook        | `#appendonsend` content in siblings            | Remove element AND all following siblings     |
+| Outlook        | Border separator (`border-top: solid #E1E1E1`) | Regex on inline style                         |
+| Apple Mail     | Deep `blockquote` nesting                      | quotequail + CSS selector                     |
+| IMAP (generic) | No structural cues; plain-text only            | Full plain-text pipeline                      |
+| All            | Signatures without separators or valedictions  | Standalone detection heuristics               |
 
 ---
 
@@ -1088,11 +1118,11 @@ Not every communication warrants AI analysis. Automated notifications, marketing
 
 #### Layer 1: Heuristic Junk Detection
 
-| Filter | What It Detects | Examples |
-|---|---|---|
-| **Automated sender** | Known automated patterns | `noreply@`, `notification@`, `billing@`, `alerts@` (16 patterns) |
+| Filter                | What It Detects          | Examples                                                           |
+| --------------------- | ------------------------ | ------------------------------------------------------------------ |
+| **Automated sender**  | Known automated patterns | `noreply@`, `notification@`, `billing@`, `alerts@` (16 patterns)   |
 | **Automated subject** | Known automated patterns | "out of office", "automatic reply", "password reset" (12 patterns) |
-| **Marketing content** | Marketing language | Body contains "unsubscribe" |
+| **Marketing content** | Marketing language       | Body contains "unsubscribe"                                        |
 
 #### Layer 2: Known-Contact Gate
 
@@ -1128,14 +1158,14 @@ A view is essentially any query the user might want to execute against the syste
 
 **Example views a user might create:**
 
-| View Name | Query |
-|---|---|
-| "My Open Action Items" | All action items across all conversations where AI status = Open, sorted by date |
-| "Stale Client Conversations" | Conversations with no activity in 14+ days, grouped by contact |
-| "Project X Status" | All conversations under Project X, grouped by topic, sorted by last activity |
-| "Unassigned This Week" | Communications from the last 7 days with no conversation assignment |
-| "All Comms with Bob" | Communications where Bob is a participant, across all channels, chronological |
-| "Pending Reviews" | Auto-assigned communications with low confidence scores |
+| View Name                    | Query                                                                            |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| "My Open Action Items"       | All action items across all conversations where AI status = Open, sorted by date |
+| "Stale Client Conversations" | Conversations with no activity in 14+ days, grouped by contact                   |
+| "Project X Status"           | All conversations under Project X, grouped by topic, sorted by last activity     |
+| "Unassigned This Week"       | Communications from the last 7 days with no conversation assignment              |
+| "All Comms with Bob"         | Communications where Bob is a participant, across all channels, chronological    |
+| "Pending Reviews"            | Auto-assigned communications with low confidence scores                          |
 
 ### 17.3 Shareable Views
 
@@ -1168,13 +1198,13 @@ Saved Query (filter criteria against the data model)
 
 ### 18.3 Alert Examples
 
-| Alert | Query | Frequency | Delivery |
-|---|---|---|---|
-| "New communication from VIP contacts" | Communications from contacts tagged "VIP" | Immediate | Push notification |
-| "Conversations going stale on Project X" | Conversations under Project X with no activity in 7+ days | Daily | Email digest |
-| "Unassigned items to review" | Communications with no conversation assignment or low-confidence assignment | Daily | In-app |
-| "Any change to the Acme Deal" | Any new communication in any conversation under the Acme Deal project | Immediate | Push notification |
-| "Weekly action item summary" | All open action items across all conversations | Weekly | Email digest |
+| Alert                                    | Query                                                                       | Frequency | Delivery          |
+| ---------------------------------------- | --------------------------------------------------------------------------- | --------- | ----------------- |
+| "New communication from VIP contacts"    | Communications from contacts tagged "VIP"                                   | Immediate | Push notification |
+| "Conversations going stale on Project X" | Conversations under Project X with no activity in 7+ days                   | Daily     | Email digest      |
+| "Unassigned items to review"             | Communications with no conversation assignment or low-confidence assignment | Daily     | In-app            |
+| "Any change to the Acme Deal"            | Any new communication in any conversation under the Acme Deal project       | Immediate | Push notification |
+| "Weekly action item summary"             | All open action items across all conversations                              | Weekly    | Email digest      |
 
 ### 18.4 Alert Frequency & Aggregation
 
@@ -1194,10 +1224,10 @@ When a user sets an alert on a broad query (e.g., "any change to Project X") tha
 
 Time-based, managed automatically:
 
-| Value | Trigger |
-|---|---|
-| `active` | New communication within the activity window |
-| `stale` | No activity for N days (configurable, default: 14) |
+| Value    | Trigger                                                    |
+| -------- | ---------------------------------------------------------- |
+| `active` | New communication within the activity window               |
+| `stale`  | No activity for N days (configurable, default: 14)         |
 | `closed` | No activity for M days (default: 30), or user manual close |
 
 **Transitions:** `active` ↔ `stale` ↔ `closed` — any state reopens to `active` when a new communication arrives.
@@ -1206,11 +1236,11 @@ Time-based, managed automatically:
 
 Semantic, from AI analysis:
 
-| Value | Meaning |
-|---|---|
-| `open` | Unresolved items, pending tasks, ongoing discussion |
-| `closed` | Definitively resolved or finished |
-| `uncertain` | Insufficient context |
+| Value       | Meaning                                             |
+| ----------- | --------------------------------------------------- |
+| `open`      | Unresolved items, pending tasks, ongoing discussion |
+| `closed`    | Definitively resolved or finished                   |
+| `uncertain` | Insufficient context                                |
 
 **Bias:** Toward OPEN for multi-message exchanges. Casual sign-offs don't close a conversation.
 
@@ -1221,6 +1251,7 @@ Whether the communication was filtered: NULL = passed, non-NULL = filtered with 
 ### 19.2 Status Independence
 
 The three dimensions are independent and complementary:
+
 - **System: active** + **AI: closed** → Recent messages, but the topic was resolved
 - **System: stale** + **AI: open** → No recent activity, but the last message asked an unanswered question
 - **Triage** is orthogonal — determines whether AI analysis happens at all
@@ -1231,13 +1262,13 @@ The three dimensions are independent and complementary:
 
 ### 20.1 Account Operations
 
-| Operation | Behavior |
-|---|---|
-| **Connect** | OAuth or credential entry → account registered → initial sync begins |
-| **Disconnect (retain data)** | Stop syncing, revoke access, keep existing data |
-| **Disconnect (delete data)** | Stop syncing, revoke access, cascade-delete all associated data |
-| **Re-authenticate** | Refresh credentials without affecting data |
-| **Pause/Resume sync** | Temporarily stop/resume without affecting credentials or data |
+| Operation                    | Behavior                                                             |
+| ---------------------------- | -------------------------------------------------------------------- |
+| **Connect**                  | OAuth or credential entry → account registered → initial sync begins |
+| **Disconnect (retain data)** | Stop syncing, revoke access, keep existing data                      |
+| **Disconnect (delete data)** | Stop syncing, revoke access, cascade-delete all associated data      |
+| **Re-authenticate**          | Refresh credentials without affecting data                           |
+| **Pause/Resume sync**        | Temporarily stop/resume without affecting credentials or data        |
 
 ### 20.2 Unified Feed
 
@@ -1255,16 +1286,16 @@ Multiple accounts produce a single, chronologically sorted communication/convers
 
 ### 21.1 Search Capabilities
 
-| Search Type | Scope |
-|---|---|
-| Full-text communication search | Body text, subjects across all channels |
-| Conversation search | AI summaries, topics, action items |
-| Contact-scoped | "All communications with Alice" across all channels |
-| Project/topic browsing | Navigate the hierarchy |
-| Channel filtering | "Only emails" or "Only SMS" |
-| Status filtering | Open, Closed, Uncertain, Stale |
-| Date-range filtering | Any time period |
-| Account filtering | Specific source accounts |
+| Search Type                    | Scope                                               |
+| ------------------------------ | --------------------------------------------------- |
+| Full-text communication search | Body text, subjects across all channels             |
+| Conversation search            | AI summaries, topics, action items                  |
+| Contact-scoped                 | "All communications with Alice" across all channels |
+| Project/topic browsing         | Navigate the hierarchy                              |
+| Channel filtering              | "Only emails" or "Only SMS"                         |
+| Status filtering               | Open, Closed, Uncertain, Stale                      |
+| Date-range filtering           | Any time period                                     |
+| Account filtering              | Specific source accounts                            |
 
 ### 21.2 Search Indexing
 
@@ -1276,26 +1307,26 @@ Communications and conversations are indexed asynchronously when created, update
 
 ### 22.1 What Gets Stored
 
-| Data | Format | Retention |
-|---|---|---|
-| Communication content (cleaned text) | Plain text | Configurable (default: indefinite) |
-| Email raw HTML | Original HTML | Same as content |
-| Call/video transcripts | Plain text | Same as content |
-| Attachments (files) | Binary in object storage | Configurable (default: on demand) |
-| Attachment metadata | Structured data | Same as content |
-| AI summaries/intelligence | Text fields | Regenerated on demand |
-| Sync cursors | Per-account | Overwritten each sync |
-| Sync audit log | Structured data | Configurable (default: 90 days) |
+| Data                                 | Format                   | Retention                          |
+| ------------------------------------ | ------------------------ | ---------------------------------- |
+| Communication content (cleaned text) | Plain text               | Configurable (default: indefinite) |
+| Email raw HTML                       | Original HTML            | Same as content                    |
+| Call/video transcripts               | Plain text               | Same as content                    |
+| Attachments (files)                  | Binary in object storage | Configurable (default: on demand)  |
+| Attachment metadata                  | Structured data          | Same as content                    |
+| AI summaries/intelligence            | Text fields              | Regenerated on demand              |
+| Sync cursors                         | Per-account              | Overwritten each sync              |
+| Sync audit log                       | Structured data          | Configurable (default: 90 days)    |
 
 ### 22.2 Storage Estimates
 
-| Data Type | Per Communication | 10,000 Communications |
-|---|---|---|
-| Cleaned text content | ~2 KB avg | ~20 MB |
-| Raw HTML (email only) | ~8 KB avg | ~80 MB |
-| Metadata + indexes | ~1 KB avg | ~10 MB |
-| AI intelligence | ~0.5 KB per conversation | ~2.5 MB (5,000 convos) |
-| Audio recordings (if stored) | ~1 MB/min | Highly variable |
+| Data Type                    | Per Communication        | 10,000 Communications  |
+| ---------------------------- | ------------------------ | ---------------------- |
+| Cleaned text content         | ~2 KB avg                | ~20 MB                 |
+| Raw HTML (email only)        | ~8 KB avg                | ~80 MB                 |
+| Metadata + indexes           | ~1 KB avg                | ~10 MB                 |
+| AI intelligence              | ~0.5 KB per conversation | ~2.5 MB (5,000 convos) |
+| Audio recordings (if stored) | ~1 MB/min                | Highly variable        |
 
 ---
 
@@ -1310,12 +1341,12 @@ Communications and conversations are indexed asynchronously when created, update
 
 ### 23.2 Compliance
 
-| Requirement | How Addressed |
-|---|---|
-| **GDPR — Access/Deletion/Portability** | Full export via API; cascade deletion; standard export formats |
-| **GDPR — Consent** | Account connection is explicit consent; AI processing disclosed |
-| **SOC 2 — Audit trails** | Sync logs, event sourcing, modification tracking |
-| **CCPA** | Same as GDPR; no sale of communication data |
+| Requirement                            | How Addressed                                                   |
+| -------------------------------------- | --------------------------------------------------------------- |
+| **GDPR — Access/Deletion/Portability** | Full export via API; cascade deletion; standard export formats  |
+| **GDPR — Consent**                     | Account connection is explicit consent; AI processing disclosed |
+| **SOC 2 — Audit trails**               | Sync logs, event sourcing, modification tracking                |
+| **CCPA**                               | Same as GDPR; no sale of communication data                     |
 
 ### 23.3 AI Data Handling
 
@@ -1384,12 +1415,12 @@ Communications and conversations are indexed asynchronously when created, update
 
 This PRD defines the conversation management system. Several aspects are covered by separate, dedicated PRDs:
 
-| PRD | Scope | Relationship |
-|---|---|---|
-| **AI Learning & Classification** | How the system learns from user corrections; classification algorithms; embedding/similarity approaches; model training; confidence scoring | This PRD establishes that the system learns; the AI PRD defines how |
-| **Contact Intelligence** | Identity resolution across channels; contact enrichment; OSINT; cross-channel contact unification | This PRD consumes contact resolution and contributes unknown-identifier signals |
-| **Permissions & Sharing** | Team access controls; who can see which conversations; role-based permissions; shared vs. private data | This PRD defers all permission concerns to the Permissions PRD |
-| **CRMExtender PRD v1.1** | Full platform architecture; event sourcing; Neo4j relationships; pipeline/deals; offline sync | This PRD is a subsystem of the broader platform |
+| PRD                              | Scope                                                                                                                                       | Relationship                                                                    |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **AI Learning & Classification** | How the system learns from user corrections; classification algorithms; embedding/similarity approaches; model training; confidence scoring | This PRD establishes that the system learns; the AI PRD defines how             |
+| **Contact Intelligence**         | Identity resolution across channels; contact enrichment; OSINT; cross-channel contact unification                                           | This PRD consumes contact resolution and contributes unknown-identifier signals |
+| **Permissions & Sharing**        | Team access controls; who can see which conversations; role-based permissions; shared vs. private data                                      | This PRD defers all permission concerns to the Permissions PRD                  |
+| **CRMExtender PRD v1.1**         | Full platform architecture; event sourcing; Neo4j relationships; pipeline/deals; offline sync                                               | This PRD is a subsystem of the broader platform                                 |
 
 ---
 
@@ -1397,26 +1428,26 @@ This PRD defines the conversation management system. Several aspects are covered
 
 ### Technical Dependencies
 
-| Dependency | Risk Level | Mitigation |
-|---|---|---|
-| Gmail API | Low | Stable, well-documented; quota management |
-| Microsoft Graph API | Low | Stable; MSAL handles auth |
-| Anthropic Claude API | Medium | Abstract model selection; pricing changes possible |
-| quotequail / mail-parser-reply | Medium | Niche libraries; could fork or internalize |
-| SMS provider integration | Medium | Provider TBD; adapter pattern isolates changes |
-| Speech-to-text service | Medium | Multiple options (Whisper, Google, AWS); adapter pattern |
+| Dependency                     | Risk Level | Mitigation                                               |
+| ------------------------------ | ---------- | -------------------------------------------------------- |
+| Gmail API                      | Low        | Stable, well-documented; quota management                |
+| Microsoft Graph API            | Low        | Stable; MSAL handles auth                                |
+| Anthropic Claude API           | Medium     | Abstract model selection; pricing changes possible       |
+| quotequail / mail-parser-reply | Medium     | Niche libraries; could fork or internalize               |
+| SMS provider integration       | Medium     | Provider TBD; adapter pattern isolates changes           |
+| Speech-to-text service         | Medium     | Multiple options (Whisper, Google, AWS); adapter pattern |
 
 ### Product Risks
 
-| Risk | Probability | Impact | Mitigation |
-|---|---|---|---|
-| AI auto-assignment accuracy too low | Medium | Users lose trust, stop using hierarchy | Conservative confidence thresholds; excellent review UX; rapid learning loop |
-| AI costs at scale | Medium | Expensive for high-volume tenants | Model tiering; summarization thresholds; configurable processing |
-| Cross-channel stitching is unreliable | Medium | Conversations fragmented across channels | Participant-based defaults; easy manual assignment; AI improvement over time |
-| Email parsing accuracy for new patterns | Medium | Unrecognized quote/signature patterns leak through | Continuous monitoring; user feedback; expandable pattern library |
-| SMS integration complexity | Medium | Fragmented provider landscape | Start with one integration; adapter pattern for flexibility |
-| IMAP threading accuracy | High | Inherently less reliable than provider-native | JWZ algorithm + subject fallback; manual correction; confidence indicators |
-| Privacy concerns about AI processing | Medium | User resistance | Clear disclosure; data minimization; opt-out capability |
+| Risk                                    | Probability | Impact                                             | Mitigation                                                                   |
+| --------------------------------------- | ----------- | -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| AI auto-assignment accuracy too low     | Medium      | Users lose trust, stop using hierarchy             | Conservative confidence thresholds; excellent review UX; rapid learning loop |
+| AI costs at scale                       | Medium      | Expensive for high-volume tenants                  | Model tiering; summarization thresholds; configurable processing             |
+| Cross-channel stitching is unreliable   | Medium      | Conversations fragmented across channels           | Participant-based defaults; easy manual assignment; AI improvement over time |
+| Email parsing accuracy for new patterns | Medium      | Unrecognized quote/signature patterns leak through | Continuous monitoring; user feedback; expandable pattern library             |
+| SMS integration complexity              | Medium      | Fragmented provider landscape                      | Start with one integration; adapter pattern for flexibility                  |
+| IMAP threading accuracy                 | High        | Inherently less reliable than provider-native      | JWZ algorithm + subject fallback; manual correction; confidence indicators   |
+| Privacy concerns about AI processing    | Medium      | User resistance                                    | Clear disclosure; data minimization; opt-out capability                      |
 
 ---
 
@@ -1450,29 +1481,29 @@ This PRD defines the conversation management system. Several aspects are covered
 
 ## 28. Glossary
 
-| Term | Definition |
-|---|---|
-| **Communication** | An individual interaction — a single email, SMS, phone call, video meeting, in-person meeting, or user-entered note. The atomic unit of the system. |
-| **Conversation** | A logical grouping of related communications between specific participants about a specific subject. Can span multiple channels. |
-| **Topic** | An organizational grouping within a project that represents a distinct subject area. Contains one or more conversations with different participants about the same subject. |
-| **Project** | The highest-level organizational container representing a business initiative, engagement, or deal. Contains topics and sub-projects. |
-| **Sub-project** | A child project nested within a parent project. Same structure as a project. |
-| **Segment** | A portion of a communication assigned to a different conversation than the primary. Created by user selection. |
-| **Channel** | The medium of a communication: email, SMS, phone, video, in-person, or note. |
-| **Provider adapter** | A module normalizing a specific source's API to the common Communication schema. |
-| **Sync cursor** | An opaque marker tracking the system's sync position in a provider's data stream. |
-| **Triage** | Classifying communications as real human interaction vs. automated/marketing noise. |
-| **Content extraction** | Removing quoted replies, signatures, and boilerplate from email bodies. |
-| **Dual-track pipeline** | Email parsing architecture: HTML-based structural removal with plain-text regex fallback. |
-| **Resilience check** | Re-parsing without signature removal if the HTML track produces an empty result. |
-| **Valediction** | A closing phrase (e.g., "Best regards") used as a signature detection anchor. |
-| **JWZ threading** | Algorithm reconstructing conversation threads from RFC 5322 message headers. |
-| **Known-contact gate** | Triage filter requiring at least one recognized CRM contact among participants. |
-| **Pending Identification** | State of an unrecognized contact identifier that is undergoing resolution. Does not block communication processing. |
-| **View** | A saved query against the data model, defining a user-customized lens into their data. Can be shared with team members. |
-| **Alert** | A view with an attached trigger, frequency, and delivery method — pushes notifications when results change. |
-| **Split/Reference model** | The approach for handling communications that span multiple conversations: primary assignment + segments with cross-references. |
-| **Auto-organization** | AI-driven classification and routing of communications into conversations, topics, and projects, with user review and correction. |
+| Term                       | Definition                                                                                                                                                                  |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Communication**          | An individual interaction — a single email, SMS, phone call, video meeting, in-person meeting, or user-entered note. The atomic unit of the system.                         |
+| **Conversation**           | A logical grouping of related communications between specific participants about a specific subject. Can span multiple channels.                                            |
+| **Topic**                  | An organizational grouping within a project that represents a distinct subject area. Contains one or more conversations with different participants about the same subject. |
+| **Project**                | The highest-level organizational container representing a business initiative, engagement, or deal. Contains topics and sub-projects.                                       |
+| **Sub-project**            | A child project nested within a parent project. Same structure as a project.                                                                                                |
+| **Segment**                | A portion of a communication assigned to a different conversation than the primary. Created by user selection.                                                              |
+| **Channel**                | The medium of a communication: email, SMS, phone, video, in-person, or note.                                                                                                |
+| **Provider adapter**       | A module normalizing a specific source's API to the common Communication schema.                                                                                            |
+| **Sync cursor**            | An opaque marker tracking the system's sync position in a provider's data stream.                                                                                           |
+| **Triage**                 | Classifying communications as real human interaction vs. automated/marketing noise.                                                                                         |
+| **Content extraction**     | Removing quoted replies, signatures, and boilerplate from email bodies.                                                                                                     |
+| **Dual-track pipeline**    | Email parsing architecture: HTML-based structural removal with plain-text regex fallback.                                                                                   |
+| **Resilience check**       | Re-parsing without signature removal if the HTML track produces an empty result.                                                                                            |
+| **Valediction**            | A closing phrase (e.g., "Best regards") used as a signature detection anchor.                                                                                               |
+| **JWZ threading**          | Algorithm reconstructing conversation threads from RFC 5322 message headers.                                                                                                |
+| **Known-contact gate**     | Triage filter requiring at least one recognized CRM contact among participants.                                                                                             |
+| **Pending Identification** | State of an unrecognized contact identifier that is undergoing resolution. Does not block communication processing.                                                         |
+| **View**                   | A saved query against the data model, defining a user-customized lens into their data. Can be shared with team members.                                                     |
+| **Alert**                  | A view with an attached trigger, frequency, and delivery method — pushes notifications when results change.                                                                 |
+| **Split/Reference model**  | The approach for handling communications that span multiple conversations: primary assignment + segments with cross-references.                                             |
+| **Auto-organization**      | AI-driven classification and routing of communications into conversations, topics, and projects, with user review and correction.                                           |
 
 ---
 

@@ -34,19 +34,19 @@ reads or writes.
 
 A single email message, parsed from the Gmail API.
 
-| Field          | Type              | Source                          |
-|----------------|-------------------|---------------------------------|
-| `message_id`   | `str`             | Gmail message ID                |
-| `thread_id`    | `str`             | Gmail thread ID                 |
-| `subject`      | `str`             | Decoded `Subject` header        |
-| `sender`       | `str`             | Display form, e.g. `"Name <addr>"` |
-| `sender_email` | `str`             | Bare address, lowercased        |
-| `recipients`   | `list[str]`       | `To` addresses                  |
-| `cc`           | `list[str]`       | `Cc` addresses                  |
-| `date`         | `datetime | None` | Parsed `Date` header or `internalDate` |
-| `body_plain`   | `str`             | Plain-text body                 |
-| `body_html`    | `str`             | Raw HTML body                   |
-| `snippet`      | `str`             | Gmail snippet (preview text)    |
+| Field          | Type        | Source                             |
+| -------------- | ----------- | ---------------------------------- |
+| `message_id`   | `str`       | Gmail message ID                   |
+| `thread_id`    | `str`       | Gmail thread ID                    |
+| `subject`      | `str`       | Decoded `Subject` header           |
+| `sender`       | `str`       | Display form, e.g. `"Name <addr>"` |
+| `sender_email` | `str`       | Bare address, lowercased           |
+| `recipients`   | `list[str]` | `To` addresses                     |
+| `cc`           | `list[str]` | `Cc` addresses                     |
+| `date`         | `datetime   | None`                              |
+| `body_plain`   | `str`       | Plain-text body                    |
+| `body_html`    | `str`       | Raw HTML body                      |
+| `snippet`      | `str`       | Gmail snippet (preview text)       |
 
 Property `all_participants` returns a deduplicated list of every email
 address involved (sender + recipients + cc), lowercased.
@@ -55,13 +55,13 @@ address involved (sender + recipients + cc), lowercased.
 
 A group of emails sharing one Gmail `threadId`.
 
-| Field              | Type                          | Notes                        |
-|--------------------|-------------------------------|------------------------------|
-| `thread_id`        | `str`                         | Gmail thread ID              |
-| `subject`          | `str`                         | From the first email         |
-| `emails`           | `list[ParsedEmail]`           | Chronological (ascending)    |
-| `participants`     | `list[str]`                   | Unique addresses across thread |
-| `matched_contacts` | `dict[str, KnownContact]`     | Populated by contact matcher |
+| Field              | Type                      | Notes                          |
+| ------------------ | ------------------------- | ------------------------------ |
+| `thread_id`        | `str`                     | Gmail thread ID                |
+| `subject`          | `str`                     | From the first email           |
+| `emails`           | `list[ParsedEmail]`       | Chronological (ascending)      |
+| `participants`     | `list[str]`               | Unique addresses across thread |
+| `matched_contacts` | `dict[str, KnownContact]` | Populated by contact matcher   |
 
 Properties: `message_count`, `date_range` (earliest, latest).
 
@@ -69,24 +69,24 @@ Properties: `message_count`, `date_range` (earliest, latest).
 
 A contact from the Google People API.
 
-| Field           | Type  | Notes                                |
-|-----------------|-------|--------------------------------------|
-| `email`         | `str` | Lowercased address                   |
-| `name`          | `str` | Display name from Google Contacts    |
+| Field           | Type  | Notes                                 |
+| --------------- | ----- | ------------------------------------- |
+| `email`         | `str` | Lowercased address                    |
+| `name`          | `str` | Display name from Google Contacts     |
 | `resource_name` | `str` | Google People API resource identifier |
 
 ### ConversationSummary
 
 The output of Claude summarization for one conversation.
 
-| Field          | Type                 | Notes                          |
-|----------------|----------------------|--------------------------------|
-| `thread_id`    | `str`                | Links back to `Conversation`   |
-| `status`       | `ConversationStatus` | OPEN, CLOSED, or UNCERTAIN     |
-| `summary`      | `str`                | 2-4 sentence summary           |
-| `action_items` | `list[str]`          | Things someone needs to do     |
-| `key_topics`   | `list[str]`          | 2-5 short topic phrases        |
-| `error`        | `str | None`         | Set on API or parse failure    |
+| Field          | Type                 | Notes                        |
+| -------------- | -------------------- | ---------------------------- |
+| `thread_id`    | `str`                | Links back to `Conversation` |
+| `status`       | `ConversationStatus` | OPEN, CLOSED, or UNCERTAIN   |
+| `summary`      | `str`                | 2-4 sentence summary         |
+| `action_items` | `list[str]`          | Things someone needs to do   |
+| `key_topics`   | `list[str]`          | 2-5 short topic phrases      |
+| `error`        | `str                 | None`                        |
 
 ### Enums
 
@@ -335,17 +335,17 @@ A two-layer filter that runs entirely on local data (no API calls):
 **Layer 1 -- Heuristic junk detection** (checked in order, first match
 wins):
 
-| Check                    | Function                | What it catches                             |
-|--------------------------|-------------------------|---------------------------------------------|
-| Automated sender address | `_is_automated_sender`  | `noreply@`, `donotreply@`, `notification@`, `billing@`, `alerts@`, etc. (16 patterns) |
+| Check                    | Function                | What it catches                                                                                          |
+| ------------------------ | ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| Automated sender address | `_is_automated_sender`  | `noreply@`, `donotreply@`, `notification@`, `billing@`, `alerts@`, etc. (16 patterns)                    |
 | Automated subject line   | `_is_automated_subject` | "out of office", "automatic reply", "delivery status notification", "password reset", etc. (12 patterns) |
-| Marketing content        | `_is_marketing`         | Any email body containing "unsubscribe"     |
+| Marketing content        | `_is_marketing`         | Any email body containing "unsubscribe"                                                                  |
 
 **Layer 2 -- Known-contact gate**:
 
-| Check                    | Function              | Rule                                          |
-|--------------------------|-----------------------|-----------------------------------------------|
-| Has known contact        | `_has_known_contact`  | At least one participant (excluding the authenticated user) must be in `matched_contacts` |
+| Check             | Function             | Rule                                                                                      |
+| ----------------- | -------------------- | ----------------------------------------------------------------------------------------- |
+| Has known contact | `_has_known_contact` | At least one participant (excluding the authenticated user) must be in `matched_contacts` |
 
 Conversations that pass both layers are added to the `kept` list.
 Filtered conversations are recorded as `TriageResult` objects with the
@@ -508,16 +508,16 @@ function that makes external requests.
 All settings are loaded from environment variables (via `.env` file)
 with sensible defaults.
 
-| Variable                       | Default                     | Purpose                                    |
-|--------------------------------|-----------------------------|--------------------------------------------|
-| `POC_GMAIL_QUERY`              | `newer_than:7d`             | Gmail search query                         |
-| `POC_GMAIL_MAX_THREADS`        | `50`                        | Threads per batch                          |
-| `POC_TARGET_CONVERSATIONS`     | `5`                         | Keep fetching until this many pass triage  |
-| `ANTHROPIC_API_KEY`            | *(none)*                    | Required for summarization                 |
-| `POC_CLAUDE_MODEL`             | `claude-sonnet-4-20250514`  | Claude model ID                            |
-| `POC_GMAIL_RATE_LIMIT`         | `5.0`                       | Gmail requests/second                      |
-| `POC_CLAUDE_RATE_LIMIT`        | `2.0`                       | Claude requests/second                     |
-| `POC_MAX_CONVERSATION_CHARS`   | `6000`                      | Max chars sent to Claude per conversation  |
+| Variable                     | Default                    | Purpose                                   |
+| ---------------------------- | -------------------------- | ----------------------------------------- |
+| `POC_GMAIL_QUERY`            | `newer_than:7d`            | Gmail search query                        |
+| `POC_GMAIL_MAX_THREADS`      | `50`                       | Threads per batch                         |
+| `POC_TARGET_CONVERSATIONS`   | `5`                        | Keep fetching until this many pass triage |
+| `ANTHROPIC_API_KEY`          | *(none)*                   | Required for summarization                |
+| `POC_CLAUDE_MODEL`           | `claude-sonnet-4-20250514` | Claude model ID                           |
+| `POC_GMAIL_RATE_LIMIT`       | `5.0`                      | Gmail requests/second                     |
+| `POC_CLAUDE_RATE_LIMIT`      | `2.0`                      | Claude requests/second                    |
+| `POC_MAX_CONVERSATION_CHARS` | `6000`                     | Max chars sent to Claude per conversation |
 
 Credential paths are derived from the project root:
 
@@ -530,18 +530,18 @@ Credential paths are derived from the project root:
 
 From `pyproject.toml` (Python >= 3.10):
 
-| Package                    | Version   | Used by                      |
-|----------------------------|-----------|------------------------------|
-| `google-api-python-client` | >= 2.100  | Gmail and People API access  |
-| `google-auth-oauthlib`     | >= 1.1    | OAuth 2.0 flow               |
-| `google-auth-httplib2`     | >= 0.1.1  | Auth HTTP transport          |
-| `anthropic`                | >= 0.39   | Claude API client            |
-| `rich`                     | >= 13.7   | Terminal display              |
-| `mail-parser-reply`        | >= 0.1.2  | Email quote detection        |
-| `python-dotenv`            | >= 1.0    | `.env` file loading          |
-| `quotequail`               | >= 0.3    | HTML quote region detection  |
-| `beautifulsoup4`           | >= 4.12   | HTML DOM parsing/manipulation|
-| `lxml`                     | >= 5.0    | HTML parser backend for BS4  |
+| Package                    | Version  | Used by                       |
+| -------------------------- | -------- | ----------------------------- |
+| `google-api-python-client` | >= 2.100 | Gmail and People API access   |
+| `google-auth-oauthlib`     | >= 1.1   | OAuth 2.0 flow                |
+| `google-auth-httplib2`     | >= 0.1.1 | Auth HTTP transport           |
+| `anthropic`                | >= 0.39  | Claude API client             |
+| `rich`                     | >= 13.7  | Terminal display              |
+| `mail-parser-reply`        | >= 0.1.2 | Email quote detection         |
+| `python-dotenv`            | >= 1.0   | `.env` file loading           |
+| `quotequail`               | >= 0.3   | HTML quote region detection   |
+| `beautifulsoup4`           | >= 4.12  | HTML DOM parsing/manipulation |
+| `lxml`                     | >= 5.0   | HTML parser backend for BS4   |
 
 ---
 
@@ -642,21 +642,21 @@ GROUP BY c.id
 
 ## Error Handling Summary
 
-| Failure                      | Location              | Recovery                                    |
-|------------------------------|-----------------------|---------------------------------------------|
-| Missing `client_secret.json` | `auth.py`             | `FileNotFoundError` with setup instructions |
-| Expired/invalid token        | `auth.py`             | Attempts refresh, then re-runs OAuth flow   |
-| Contact fetch failure        | `__main__.py`         | Logs warning, continues with empty contacts |
-| Gmail thread fetch failure   | `gmail_client.py`     | Logs warning per thread, skips to next      |
-| Message parse failure        | `gmail_client.py`     | Logs warning per message, skips it          |
-| HTML track failure           | `email_parser.py`     | Falls back to plain-text pipeline           |
-| HTML track empty result      | `email_parser.py`     | Falls back to plain-text pipeline           |
-| Signature removal empties HTML| `html_email_parser.py`| Re-parses without signature removal         |
-| `quotequail` failure         | `html_email_parser.py`| Continues with raw HTML structural removal  |
-| `mail-parser-reply` failure  | `email_parser.py`     | Falls back to regex-only quote stripping    |
-| Claude API error             | `summarizer.py`       | Returns summary with `error` field set      |
-| Claude JSON parse error      | `summarizer.py`       | Returns summary with `error` field set      |
-| No API key                   | `summarizer.py`       | Returns placeholder summaries for all       |
-| Project not found            | `auto_assign.py`      | `ValueError` with project name              |
-| No topics in project         | `auto_assign.py`      | `ValueError` with project name              |
-| No matching conversations    | `auto_assign.py`      | Returns report with `matched=0`             |
+| Failure                        | Location               | Recovery                                    |
+| ------------------------------ | ---------------------- | ------------------------------------------- |
+| Missing `client_secret.json`   | `auth.py`              | `FileNotFoundError` with setup instructions |
+| Expired/invalid token          | `auth.py`              | Attempts refresh, then re-runs OAuth flow   |
+| Contact fetch failure          | `__main__.py`          | Logs warning, continues with empty contacts |
+| Gmail thread fetch failure     | `gmail_client.py`      | Logs warning per thread, skips to next      |
+| Message parse failure          | `gmail_client.py`      | Logs warning per message, skips it          |
+| HTML track failure             | `email_parser.py`      | Falls back to plain-text pipeline           |
+| HTML track empty result        | `email_parser.py`      | Falls back to plain-text pipeline           |
+| Signature removal empties HTML | `html_email_parser.py` | Re-parses without signature removal         |
+| `quotequail` failure           | `html_email_parser.py` | Continues with raw HTML structural removal  |
+| `mail-parser-reply` failure    | `email_parser.py`      | Falls back to regex-only quote stripping    |
+| Claude API error               | `summarizer.py`        | Returns summary with `error` field set      |
+| Claude JSON parse error        | `summarizer.py`        | Returns summary with `error` field set      |
+| No API key                     | `summarizer.py`        | Returns placeholder summaries for all       |
+| Project not found              | `auto_assign.py`       | `ValueError` with project name              |
+| No topics in project           | `auto_assign.py`       | `ValueError` with project name              |
+| No matching conversations      | `auto_assign.py`       | Returns report with `matched=0`             |

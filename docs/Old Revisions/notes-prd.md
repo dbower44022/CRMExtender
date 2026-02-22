@@ -533,26 +533,26 @@ Three new settings in `poc/config.py`:
 
 ### New Files (11)
 
-| File                                           | Lines | Purpose                                       |
-| ---------------------------------------------- | ----- | --------------------------------------------- |
+| File                                           | Lines | Purpose                                                     |
+| ---------------------------------------------- | ----- | ----------------------------------------------------------- |
 | `poc/notes.py`                                 | ~580  | Core CRUD, FTS, mentions, attachments, search, multi-entity |
-| `poc/migrate_to_v12.py`                        | ~155  | Schema migration v11 to v12                   |
-| `poc/migrate_to_v13.py`                        | ~130  | Schema migration v12 to v13 (note_entities)   |
-| `poc/web/routes/notes.py`                      | ~380  | FastAPI router (14 endpoints)                 |
-| `poc/web/static/notes.js`                      | ~220  | Tiptap editor ES module                       |
-| `poc/web/static/notes.css`                     | ~110  | Editor and note card styles                   |
-| `poc/web/templates/notes/_notes.html`          | ~30   | Note list + add form partial                  |
-| `poc/web/templates/notes/_note_card.html`      | ~40   | Single note display partial                   |
-| `poc/web/templates/notes/_note_editor.html`    | ~25   | Edit form partial                             |
-| `poc/web/templates/notes/_note_revisions.html` | ~30   | Revision history partial                      |
-| `poc/web/templates/notes/search.html`          | ~48   | Global notes page                             |
-| `tests/test_notes.py`                          | ~700  | 92 tests                                      |
+| `poc/migrate_to_v12.py`                        | ~155  | Schema migration v11 to v12                                 |
+| `poc/migrate_to_v13.py`                        | ~130  | Schema migration v12 to v13 (note_entities)                 |
+| `poc/web/routes/notes.py`                      | ~380  | FastAPI router (14 endpoints)                               |
+| `poc/web/static/notes.js`                      | ~220  | Tiptap editor ES module                                     |
+| `poc/web/static/notes.css`                     | ~110  | Editor and note card styles                                 |
+| `poc/web/templates/notes/_notes.html`          | ~30   | Note list + add form partial                                |
+| `poc/web/templates/notes/_note_card.html`      | ~40   | Single note display partial                                 |
+| `poc/web/templates/notes/_note_editor.html`    | ~25   | Edit form partial                                           |
+| `poc/web/templates/notes/_note_revisions.html` | ~30   | Revision history partial                                    |
+| `poc/web/templates/notes/search.html`          | ~48   | Global notes page                                           |
+| `tests/test_notes.py`                          | ~470  | 71 tests                                                    |
 
 ### Modified Files (15)
 
 | File                                          | Change                                                                   |
 | --------------------------------------------- | ------------------------------------------------------------------------ |
-| `poc/database.py`                             | 6 table DDLs + 8 indexes + FTS5 virtual table in `init_db`               |
+| `poc/database.py`                             | 5 table DDLs + 7 indexes + FTS5 virtual table in `init_db`               |
 | `poc/config.py`                               | `UPLOAD_DIR`, `MAX_UPLOAD_SIZE_MB`, `ALLOWED_UPLOAD_TYPES`               |
 | `poc/web/app.py`                              | Import + register `notes.router` with `prefix="/notes"`                  |
 | `poc/web/templates/base.html`                 | Tiptap import map, `notes.css` link, `notes.js` script, "Notes" nav link |
@@ -572,16 +572,16 @@ Three new settings in `poc/config.py`:
 
 ## 19. Testing
 
-**92 tests** in `tests/test_notes.py`, organized by feature:
+**71 tests** in `tests/test_notes.py`, organized by feature:
 
 | Test Class               | Count | Covers                                                                      |
 | ------------------------ | ----- | --------------------------------------------------------------------------- |
 | `TestCreateNote`         | 5     | Basic create, no title, JSON content, invalid entity type, all entity types |
-| `TestGetNote`            | 2     | Existing + entities list, nonexistent                                       |
+| `TestGetNote`            | 2     | Existing, nonexistent                                                       |
 | `TestGetNotesForEntity`  | 4     | List, filtering, pinned-first sort, author name                             |
 | `TestUpdateNote`         | 4     | Basic update, revision creation, nonexistent, title preservation            |
 | `TestDeleteNote`         | 3     | Existing, nonexistent, cascade                                              |
-| `TestTogglePin`          | 3     | Pin/unpin with entity params, nonexistent, fallback to first entity         |
+| `TestTogglePin`          | 2     | Pin/unpin, nonexistent                                                      |
 | `TestRevisions`          | 3     | List, single, nonexistent                                                   |
 | `TestSearch`             | 6     | Basic, by title, empty query, no results, after edit, after delete          |
 | `TestExtractPlainText`   | 3     | Simple, nested, empty                                                       |
@@ -593,18 +593,16 @@ Three new settings in `poc/config.py`:
 | `TestNotesWebEdit`       | 2     | Form, nonexistent                                                           |
 | `TestNotesWebUpdate`     | 2     | Success, nonexistent                                                        |
 | `TestNotesWebDelete`     | 2     | Success, nonexistent                                                        |
-| `TestNotesWebPin`        | 3     | Toggle with entity params, nonexistent, toggle without entity params        |
+| `TestNotesWebPin`        | 2     | Toggle, nonexistent                                                         |
 | `TestNotesWebRevisions`  | 3     | List, detail, nonexistent                                                   |
 | `TestNotesWebUpload`     | 4     | Image, disallowed type, too large, serve file                               |
 | `TestNotesWebMentions`   | 2     | Autocomplete, empty query                                                   |
 | `TestNotesWebSearch`     | 2     | With results, empty                                                         |
 | `TestEntityIntegration`  | 3     | Contact, company, conversation detail pages show notes                      |
 | `TestSanitization`       | 2     | Script stripped, allowed tags preserved                                     |
-| `TestNoteEntities`       | 16    | Junction CRUD, multi-entity linking, per-entity pin scope, cascade, web routes |
-| `TestMigrationV12`       | 1     | All 5 tables created (v12)                                                  |
-| `TestMigrationV13`       | 3     | Junction populated, entity columns removed, version bumped (v13)            |
+| `TestMigration`          | 1     | All 5 tables created                                                        |
 
-**Full suite**: 1168 tests, 0 failures, 0 regressions.
+**Full suite**: 1147 tests, 0 failures, 0 regressions.
 
 ---
 
@@ -634,54 +632,9 @@ python3 -m poc.migrate_to_v12 --db data/crm_extender.db
 
 The migration is additive (new tables only), so it's safe and fast. Backup is automatically created before any changes.
 
-### `poc/migrate_to_v13.py` (Phase 18)
-
-Migrates from v12 to v13 — moves entity linkage from `notes` to `note_entities` junction table:
-
-1. Backup database
-2. `PRAGMA foreign_keys = OFF`
-3. Create `note_entities` table
-4. Populate from existing `notes` data: `INSERT INTO note_entities SELECT id, entity_type, entity_id, is_pinned, created_at FROM notes`
-5. `PRAGMA legacy_alter_table = ON` (prevents FK auto-rewrite)
-6. Rename `notes` → `notes_old`, recreate `notes` without `entity_type`/`entity_id`/`is_pinned`, copy data, drop `notes_old`
-7. `PRAGMA legacy_alter_table = OFF`
-8. Create indexes: `idx_ne_entity`, `idx_ne_note`, `idx_ne_pinned`
-9. Drop old indexes: `idx_notes_entity`, `idx_notes_pinned`
-10. `PRAGMA user_version = 13`
-
-**Usage**:
-
-```bash
-# Dry run (applies to backup copy)
-python3 -m poc.migrate_to_v13 --dry-run --db data/crm_extender.db
-
-# Production
-python3 -m poc.migrate_to_v13 --db data/crm_extender.db
-```
-
 ---
 
-## 21. Multi-Entity Notes (Phase 18)
-
-Phase 18 introduces the `note_entities` junction table, allowing a single note to be linked to multiple entities. This replaces the previous single `(entity_type, entity_id)` pair on the `notes` table.
-
-### Key Changes
-
-- **Junction table**: `note_entities(note_id, entity_type, entity_id, is_pinned, created_at)` with composite PK
-- **Per-entity pin scope**: `is_pinned` lives on the junction row, so pinning on entity A doesn't affect entity B
-- **Backward compatibility**: `create_note()` and `get_note()` return dicts that still include `entity_type`, `entity_id`, `is_pinned` at the top level (from the first linked entity), plus a new `entities` list
-- **New CRUD functions**: `add_note_entity()`, `remove_note_entity()`, `get_note_entities()`
-- **Correlated subqueries**: `search_notes()` and `get_recent_notes()` use correlated subqueries instead of JOIN+GROUP BY because FTS5 `snippet()` is incompatible with `GROUP BY`
-- **New web routes**: `POST /notes/{id}/entities` (link) and `DELETE /notes/{id}/entities/{et}/{eid}` (unlink)
-- **Template changes**: `_note_card.html` and `_note_editor.html` pass entity context through HTMX URLs and hidden form fields
-
-### Entity Detail Routes — No Changes
-
-All 5 entity detail routes continue to call `get_notes_for_entity(type, id)` unchanged. The junction JOIN is handled internally by the CRUD layer.
-
----
-
-## 22. Design Decisions
+## 21. Design Decisions
 
 | Decision                   | Choice                                  | Rationale                                                                                                              |
 | -------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -695,6 +648,3 @@ All 5 entity detail routes continue to call `get_notes_for_entity(type, id)` unc
 | **Editor delivery**        | ESM import map via `esm.sh`             | Consistent with existing CDN approach (PicoCSS, HTMX); no build tooling needed                                         |
 | **Entity-agnostic design** | Polymorphic `entity_type`/`entity_id`   | Same pattern as `addresses`, `phone_numbers`, `email_addresses`; one set of routes/templates serves all 5 entity types |
 | **Orphan uploads**         | `note_id=NULL` until note saves         | Images are uploaded mid-editing before the note exists; cleanup job handles abandoned uploads                          |
-| **Multi-entity junction**  | `note_entities` table (Phase 18)        | Enables linking a single note to multiple entities; per-entity pin scope; ON DELETE CASCADE for cleanup               |
-| **Correlated subqueries**  | Instead of JOIN+GROUP BY for search     | FTS5 `snippet()` function is incompatible with `GROUP BY`; correlated subqueries avoid the limitation                  |
-| **Backward-compat dicts**  | Top-level entity fields from first link | Existing code expecting `note["entity_type"]` continues to work; new code uses `note["entities"]` list                |

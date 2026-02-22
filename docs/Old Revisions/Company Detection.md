@@ -2,23 +2,25 @@
 
 ## Overview
 
-During Google Contact sync, each contact is affiliated with a company
+During  Contact import, each contact is reviewed to determine if they are affiliated with a company
 based on their **email domain** — the sole source of truth for company
 identity.  The Google Contacts organization name field is ignored because
-it's hand-entered, often stale, and sometimes wrong.
+it's hand-entered, often stale, and sometimes wrong.  This PRD defines the process used to detect if an email domain is affiliated with a company.
+
+The function used to implement this process is the _resolve_company_id function, and is documented in the resolve_company_id_flowchart.drawio.
 
 **Function:** `_resolve_company_id(conn, email, now, *, customer_id, user_id)`
 **Location:** `poc/sync.py`
 
 ## Parameters
 
-| Param       | Type               | Description                                      |
-|-------------|--------------------|--------------------------------------------------|
-| conn        | sqlite3.Connection | Open DB connection (caller manages transaction)  |
-| email       | str                | The contact's email address                      |
-| now         | str                | ISO timestamp for created_at/updated_at          |
-| customer_id | str \| None        | Tenant ID for multi-tenant scoping               |
-| user_id     | str \| None        | User who owns the auto-created company           |
+| Param       | Type               | Description                                     |
+| ----------- | ------------------ | ----------------------------------------------- |
+| conn        | sqlite3.Connection | Open DB connection (caller manages transaction) |
+| email       | str                | The contact's email address                     |
+| now         | str                | ISO timestamp for created_at/updated_at         |
+| customer_id | str \| None        | Tenant ID for multi-tenant scoping              |
+| user_id     | str \| None        | User who owns the auto-created company          |
 
 **Returns:** `str | None` — company ID, or None for public/no domain.
 
@@ -47,6 +49,7 @@ See `docs/sync_resolve_company_id_flowchart.mmd` for a Mermaid diagram.
 ### Step 2: Look Up Existing Company
 
 Calls `resolve_company_by_domain(conn, domain)` which checks:
+
 1. `companies.domain` column for an active company.
 2. Fallback: `company_identifiers` JOIN where `type='domain'`.
 
@@ -55,6 +58,7 @@ If found, returns the existing company's ID.
 ### Step 3: Auto-Create Company
 
 If no company matches the domain:
+
 1. Creates a new company with `name = domain` and `domain = domain`
    (e.g., name "dbllaw.com", domain "dbllaw.com").
 2. If `user_id` provided, creates a `user_companies` visibility row.
@@ -68,6 +72,7 @@ a domain but no completed enrichment run, and scrapes their websites to
 discover real names.
 
 **Name extraction sources (in order of confidence):**
+
 1. JSON-LD `Organization.name` (confidence 0.9)
 2. `og:site_name` meta tag (confidence 0.8)
 
@@ -107,12 +112,12 @@ dbllaw.com to discover the real company name.
 
 ## Entry Points
 
-| Entry Point | Location |
-|-------------|----------|
-| Contact sync | `poc/sync.py` → `sync_contacts()` |
-| Web UI sync | Dashboard "Sync Now" → `poc/web/routes/dashboard.py` |
-| CLI batch enrichment | `python -m poc enrich-new-companies` |
-| CLI single enrichment | `python -m poc enrich-company COMPANY_ID` |
+| Entry Point           | Location                                             |
+| --------------------- | ---------------------------------------------------- |
+| Contact sync          | `poc/sync.py` → `sync_contacts()`                    |
+| Web UI sync           | Dashboard "Sync Now" → `poc/web/routes/dashboard.py` |
+| CLI batch enrichment  | `python -m poc enrich-new-companies`                 |
+| CLI single enrichment | `python -m poc enrich-company COMPANY_ID`            |
 
 ## Tests
 

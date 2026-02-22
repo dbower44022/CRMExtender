@@ -33,16 +33,14 @@
 
 ## 1. Problem Statement
 
-CRMExtender's company records are currently simple data containers — a
-name, an optional domain, industry, and description.  Companies are
-auto-created from Google Contacts organization names during sync, and
-manually created through the web UI.  This creates several problems:
+CRMExtender's company records are frequently auto-created from import routines such as a Google Contacts organization names during sync, in addition to being
+manually created through the web UI.  The automatic import of companies creates several problems:
 
 - **Rampant duplicates** — the same company appears under multiple
   names ("Acme Corp", "Acme Corporation", "ACME") because auto-creation
   is name-based with no deduplication.  There is no canonical identifier
   to prevent this.
-- **Empty records** — auto-created companies have a name and nothing
+- **Empty records** — The google Contacts Organization may have a name and nothing
   else.  No domain, no address, no industry, no context.  Users must
   manually research and populate every field.
 - **No hierarchy** — parent/subsidiary relationships (Alphabet →
@@ -121,7 +119,10 @@ manually created through the web UI.  This creates several problems:
 The primary domain name is the canonical company duplicate identifier.
 Detection is strictly domain-based — no fuzzy name matching.
 
+The entire logic is identified in the file CompanyDetection.MD
+
 **Domain normalization rules:**
+
 - Strip `www.` prefix
 - Lowercase all characters
 - Extract root domain from subdomains: `mail.acme.com` →
@@ -139,11 +140,11 @@ are never used for company resolution.  The exclusion list includes:
 
 ### 3.2 Detection Triggers
 
-| Trigger | Timing | Action |
-|---|---|---|
-| Company create/edit | On domain entry | Check `company_identifiers` for existing match; flag if found |
-| Email sync | During processing | Extract all domains from sender, recipients, body; check against `company_identifiers` |
-| Retroactive scan | User-initiated | Batch scan all companies for domain overlap |
+| Trigger             | Timing            | Action                                                                                 |
+| ------------------- | ----------------- | -------------------------------------------------------------------------------------- |
+| Company create/edit | On domain entry   | Check `company_identifiers` for existing match; flag if found                          |
+| Email sync          | During processing | Extract all domains from sender, recipients, body; check against `company_identifiers` |
+| Retroactive scan    | User-initiated    | Batch scan all companies for domain overlap                                            |
 
 When a duplicate is detected during company creation or editing, the
 system blocks the operation and presents the user with the existing
@@ -166,13 +167,13 @@ hierarchy?"**
 
 2. **Entity reassignment** — all entities referencing the absorbed
    company are reassigned to the surviving company:
-
-   | Entity | Reassignment |
-   |---|---|
-   | `contacts.company_id` | UPDATE to surviving company ID |
+   
+   | Entity                                                                                           | Reassignment                           |
+   | ------------------------------------------------------------------------------------------------ | -------------------------------------- |
+   | `contacts.company_id`                                                                            | UPDATE to surviving company ID         |
    | `relationships` (where `from_entity_id` or `to_entity_id` = absorbed, `entity_type = 'company'`) | UPDATE entity IDs to surviving company |
-   | `event_participants` (where `entity_type = 'company'` and `entity_id` = absorbed) | UPDATE entity_id to surviving company |
-
+   | `event_participants` (where `entity_type = 'company'` and `entity_id` = absorbed)                | UPDATE entity_id to surviving company  |
+   
    Conversations and communications are **not** directly reassigned —
    they are linked to companies indirectly through contact participants.
    Reassigning `contacts.company_id` carries these associations
@@ -217,12 +218,12 @@ acquisitions, and spinoffs.
 
 ### 4.2 Hierarchy Types
 
-| Type | Description | Example |
-|---|---|---|
-| `subsidiary` | Parent company owns or controls a child company | Alphabet → Google |
-| `division` | Parent company's internal business unit | Google → Google Cloud |
-| `acquisition` | Parent company acquired the child company | Google → YouTube (2006) |
-| `spinoff` | Child company was spun off from the parent | eBay → PayPal |
+| Type          | Description                                     | Example                 |
+| ------------- | ----------------------------------------------- | ----------------------- |
+| `subsidiary`  | Parent company owns or controls a child company | Alphabet → Google       |
+| `division`    | Parent company's internal business unit         | Google → Google Cloud   |
+| `acquisition` | Parent company acquired the child company       | Google → YouTube (2006) |
+| `spinoff`     | Child company was spun off from the parent      | eBay → PayPal           |
 
 ### 4.3 Data Model
 
@@ -298,31 +299,31 @@ model where each data source implements a common interface.
 
 #### Tier 1: Owned Data (Free, Immediate)
 
-| Provider | Input | Output |
-|---|---|---|
-| **Website scraper** | Company domain | Description, address, phone, email, social links, structured data (schema.org) |
-| **Email signature parser** | Communications in database | Company address, phone, website, contact titles, social links |
+| Provider                   | Input                      | Output                                                                         |
+| -------------------------- | -------------------------- | ------------------------------------------------------------------------------ |
+| **Website scraper**        | Company domain             | Description, address, phone, email, social links, structured data (schema.org) |
+| **Email signature parser** | Communications in database | Company address, phone, website, contact titles, social links                  |
 
 Tier 1 providers run immediately on domain entry and retroactively
 over existing communications.
 
 #### Tier 2: Free Public APIs
 
-| Provider | Input | Output |
-|---|---|---|
-| **Wikidata / Wikipedia** | Company name/domain | Founding date, industry, headquarters, employee count, parent company, description |
-| **OpenCorporates** | Company name/jurisdiction | Corporate registration, status, officers |
-| **SEC EDGAR** | Company name/stock symbol | Filings, revenue, executive info (US public companies only) |
+| Provider                 | Input                     | Output                                                                             |
+| ------------------------ | ------------------------- | ---------------------------------------------------------------------------------- |
+| **Wikidata / Wikipedia** | Company name/domain       | Founding date, industry, headquarters, employee count, parent company, description |
+| **OpenCorporates**       | Company name/jurisdiction | Corporate registration, status, officers                                           |
+| **SEC EDGAR**            | Company name/stock symbol | Filings, revenue, executive info (US public companies only)                        |
 
 Tier 2 providers run as background batch jobs after initial creation.
 
 #### Tier 3: Paid APIs (Future)
 
-| Provider | Input | Output |
-|---|---|---|
-| **Clearbit** | Domain | Full company profile, tech stack, employee count, funding |
-| **Apollo** | Domain | Company data, employee directory, contact info |
-| **Crunchbase** | Company name | Funding rounds, investors, acquisitions, leadership |
+| Provider       | Input        | Output                                                    |
+| -------------- | ------------ | --------------------------------------------------------- |
+| **Clearbit**   | Domain       | Full company profile, tech stack, employee count, funding |
+| **Apollo**     | Domain       | Company data, employee directory, contact info            |
+| **Crunchbase** | Company name | Funding rounds, investors, acquisitions, leadership       |
 
 Tier 3 providers are integration points designed into the architecture
 but implemented in a later phase.
@@ -350,13 +351,13 @@ available to the enrichment pipeline.
 
 ### 5.4 Enrichment Triggers
 
-| Trigger | Behavior |
-|---|---|
-| **Domain entry** (create/edit) | Immediate: Tier 1 website scraping.  Background: Tier 2 API lookups. |
-| **Email sync** | Auto-create company for new non-public domains with valid websites; trigger Tier 1 enrichment. |
-| **Periodic refresh** | Scheduled job re-enriches companies whose data is older than the provider's `refresh_cadence`. |
-| **On-demand** | User clicks "Refresh" on a company detail page; runs all applicable providers. |
-| **Retroactive batch** | User initiates a scan; runs email signature parsing and Tier 2 lookups across all companies. |
+| Trigger                        | Behavior                                                                                       |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| **Domain entry** (create/edit) | Immediate: Tier 1 website scraping.  Background: Tier 2 API lookups.                           |
+| **Email sync**                 | Auto-create company for new non-public domains with valid websites; trigger Tier 1 enrichment. |
+| **Periodic refresh**           | Scheduled job re-enriches companies whose data is older than the provider's `refresh_cadence`. |
+| **On-demand**                  | User clicks "Refresh" on a company detail page; runs all applicable providers.                 |
+| **Retroactive batch**          | User initiates a scan; runs email signature parsing and Tier 2 lookups across all companies.   |
 
 ### 5.5 Field-Level Provenance
 
@@ -364,27 +365,27 @@ Every enriched value is tracked with full provenance:
 
 **`enrichment_runs`** — tracks the enrichment process:
 
-| Column | Description |
-|---|---|
-| `id` | UUID primary key |
-| `entity_type` | `'company'` or `'contact'` |
-| `entity_id` | UUID of the entity being enriched |
-| `provider` | Provider name (e.g., `'website_scraper'`, `'wikidata'`) |
-| `status` | `'pending'`, `'running'`, `'completed'`, `'failed'` |
-| `started_at` | ISO 8601 timestamp |
-| `completed_at` | ISO 8601 timestamp |
-| `error_message` | Error details if failed |
+| Column          | Description                                             |
+| --------------- | ------------------------------------------------------- |
+| `id`            | UUID primary key                                        |
+| `entity_type`   | `'company'` or `'contact'`                              |
+| `entity_id`     | UUID of the entity being enriched                       |
+| `provider`      | Provider name (e.g., `'website_scraper'`, `'wikidata'`) |
+| `status`        | `'pending'`, `'running'`, `'completed'`, `'failed'`     |
+| `started_at`    | ISO 8601 timestamp                                      |
+| `completed_at`  | ISO 8601 timestamp                                      |
+| `error_message` | Error details if failed                                 |
 
 **`enrichment_field_values`** — tracks individual field results:
 
-| Column | Description |
-|---|---|
-| `id` | UUID primary key |
-| `enrichment_run_id` | FK → `enrichment_runs(id)` |
-| `field_name` | Target field (e.g., `'description'`, `'industry'`) |
-| `field_value` | The enriched value |
-| `confidence` | 0.0–1.0 confidence score |
-| `is_accepted` | Whether this value was applied to the entity record |
+| Column              | Description                                         |
+| ------------------- | --------------------------------------------------- |
+| `id`                | UUID primary key                                    |
+| `enrichment_run_id` | FK → `enrichment_runs(id)`                          |
+| `field_name`        | Target field (e.g., `'description'`, `'industry'`)  |
+| `field_value`       | The enriched value                                  |
+| `confidence`        | 0.0–1.0 confidence score                            |
+| `is_accepted`       | Whether this value was applied to the entity record |
 
 ### 5.6 Confidence Thresholds
 
@@ -400,16 +401,17 @@ Default thresholds can be adjusted in system settings.
 When a new enrichment run returns a value for a field that already
 has one, the following priority hierarchy determines which value wins:
 
-| Priority | Source | Auto-Override Behavior |
-|---|---|---|
-| 1 (highest) | `manual` | Never auto-overridden by any source |
-| 2 | `paid_api` | Overrides lower-priority sources |
-| 3 | `free_api` | Overrides lower-priority sources |
-| 4 | `website_scrape` | Overrides lower-priority sources |
-| 5 | `email_signature` | Overrides only inferred |
-| 6 (lowest) | `inferred` | Overridden by any source |
+| Priority    | Source            | Auto-Override Behavior              |
+| ----------- | ----------------- | ----------------------------------- |
+| 1 (highest) | `manual`          | Never auto-overridden by any source |
+| 2           | `paid_api`        | Overrides lower-priority sources    |
+| 3           | `free_api`        | Overrides lower-priority sources    |
+| 4           | `website_scrape`  | Overrides lower-priority sources    |
+| 5           | `email_signature` | Overrides only inferred             |
+| 6 (lowest)  | `inferred`        | Overridden by any source            |
 
 Rules:
+
 - **Manual always wins** — user-entered data is never auto-overridden.
 - **Higher priority overrides lower** — a paid API result replaces a
   website scrape, but not vice versa.
@@ -456,13 +458,13 @@ communication patterns:
 
 **Factors (in priority order):**
 
-| Factor | Description | Weight |
-|---|---|---|
-| Recency | How recently the last communication occurred | Highest |
-| Frequency | How often communications occur | High |
-| Reciprocity | Ratio of inbound to outbound; balanced is best | Medium |
-| Breadth | Number of distinct contacts at the company in active conversations | Medium |
-| Duration | How long the communication relationship has existed | Lower |
+| Factor      | Description                                                        | Weight  |
+| ----------- | ------------------------------------------------------------------ | ------- |
+| Recency     | How recently the last communication occurred                       | Highest |
+| Frequency   | How often communications occur                                     | High    |
+| Reciprocity | Ratio of inbound to outbound; balanced is best                     | Medium  |
+| Breadth     | Number of distinct contacts at the company in active conversations | Medium  |
+| Duration    | How long the communication relationship has existed                | Lower   |
 
 **Directionality weighting:** Outbound (user-initiated) communications
 carry more weight than inbound, reflecting intentional relationship
@@ -482,16 +484,16 @@ priorities.
 Scores are precomputed and stored in the `entity_scores` table for
 fast sorting and display:
 
-| Column | Description |
-|---|---|
-| `id` | UUID primary key |
-| `entity_type` | `'company'` or `'contact'` |
-| `entity_id` | UUID of the entity |
-| `score_type` | `'relationship_strength'`, `'communication_trend'`, `'engagement_level'` |
-| `score_value` | Numeric value, sortable |
-| `factors` | JSON breakdown of contributing factors |
-| `computed_at` | ISO 8601 timestamp |
-| `triggered_by` | `'event'`, `'scheduled'`, `'manual'` |
+| Column         | Description                                                              |
+| -------------- | ------------------------------------------------------------------------ |
+| `id`           | UUID primary key                                                         |
+| `entity_type`  | `'company'` or `'contact'`                                               |
+| `entity_id`    | UUID of the entity                                                       |
+| `score_type`   | `'relationship_strength'`, `'communication_trend'`, `'engagement_level'` |
+| `score_value`  | Numeric value, sortable                                                  |
+| `factors`      | JSON breakdown of contributing factors                                   |
+| `computed_at`  | ISO 8601 timestamp                                                       |
+| `triggered_by` | `'event'`, `'scheduled'`, `'manual'`                                     |
 
 The `factors` JSON enables score transparency — users can click on a
 score to see the equation values and how each factor contributed.
@@ -500,30 +502,31 @@ score to see the equation values and how each factor contributed.
 
 Scores are recalculated using a hybrid approach:
 
-| Trigger | Description |
-|---|---|
+| Trigger          | Description                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------- |
 | **Event-driven** | New communication sent/received involving a company contact → recompute that company's scores |
-| **Time-based** | Scheduled job runs daily to apply time decay across all entities |
-| **Bulk** | After a merge, import, or sync completes → recompute affected entities |
-| **Manual** | User requests recalculation from the UI |
+| **Time-based**   | Scheduled job runs daily to apply time decay across all entities                              |
+| **Bulk**         | After a merge, import, or sync completes → recompute affected entities                        |
+| **Manual**       | User requests recalculation from the UI                                                       |
 
 ### 6.5 Derived Metrics
 
 Beyond relationship strength, the following metrics are derivable
 from existing data:
 
-| Metric | Source | Description |
-|---|---|---|
-| Communication volume | `communications` + `communication_participants` + `contacts.company_id` | Total communications over time per company |
-| Last contact | Same | Days/months/years since last communication |
-| Key contacts | Same | Top contacts at each company by communication volume and recency |
-| Topic distribution | `conversation_tags` + `conversation_participants` | What topics/tags are associated with conversations involving company contacts |
-| Meeting frequency | `events` + `event_participants` | How often meetings occur with company contacts |
-| Meeting-to-email ratio | `events` + `communications` | High-touch vs. low-touch relationship indicator |
+| Metric                 | Source                                                                  | Description                                                                   |
+| ---------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Communication volume   | `communications` + `communication_participants` + `contacts.company_id` | Total communications over time per company                                    |
+| Last contact           | Same                                                                    | Days/months/years since last communication                                    |
+| Key contacts           | Same                                                                    | Top contacts at each company by communication volume and recency              |
+| Topic distribution     | `conversation_tags` + `conversation_participants`                       | What topics/tags are associated with conversations involving company contacts |
+| Meeting frequency      | `events` + `event_participants`                                         | How often meetings occur with company contacts                                |
+| Meeting-to-email ratio | `events` + `communications`                                             | High-touch vs. low-touch relationship indicator                               |
 
 ### 6.6 Relative Time Display
 
 Communication recency is displayed as relative time:
+
 - Less than 30 days: "**X days**"
 - Less than 12 months: "**Y months**"
 - 12 months or more: "**Z years**"
@@ -538,6 +541,7 @@ than interruptive alerts.  Users pull information when they are ready,
 rather than being pushed notifications.
 
 Example views:
+
 - "Companies — declining engagement (30-day trend)"
 - "Contacts — no communication in 90+ days"
 - "Companies — highest relationship strength"
@@ -564,12 +568,12 @@ data (job title, connections, endorsements).
 
 Social media profiles are discovered through:
 
-| Source | Method |
-|---|---|
-| Website scraping | Social links in headers, footers, contact pages |
-| Email signature parsing | LinkedIn, Twitter, etc. links in signatures |
-| Manual entry | User adds profiles directly |
-| Enrichment APIs | Paid providers return social URLs |
+| Source                  | Method                                          |
+| ----------------------- | ----------------------------------------------- |
+| Website scraping        | Social links in headers, footers, contact pages |
+| Email signature parsing | LinkedIn, Twitter, etc. links in signatures     |
+| Manual entry            | User adds profiles directly                     |
+| Enrichment APIs         | Paid providers return social URLs               |
 
 Social profiles are **not** auto-discovered from company domains or
 contact names.  The risk of creating invalid connections to wrong
@@ -581,12 +585,12 @@ links found in scraped or user-provided data.
 Each entity (contact or company) is assigned a monitoring tier that
 controls scanning frequency and extraction depth:
 
-| Tier | Scan Cadence | Extraction Depth | Use Case |
-|---|---|---|---|
-| **High** | Weekly | Full profile, posts, changes, employment | Family, key clients, close network |
-| **Standard** | Monthly | Profile changes, employment, bio | Active business contacts |
-| **Low** | Quarterly | Employment changes only | Peripheral contacts, dormant relationships |
-| **None** | Never | Nothing | Noise contacts, opt-out |
+| Tier         | Scan Cadence | Extraction Depth                         | Use Case                                   |
+| ------------ | ------------ | ---------------------------------------- | ------------------------------------------ |
+| **High**     | Weekly       | Full profile, posts, changes, employment | Family, key clients, close network         |
+| **Standard** | Monthly      | Profile changes, employment, bio         | Active business contacts                   |
+| **Low**      | Quarterly    | Employment changes only                  | Peripheral contacts, dormant relationships |
+| **None**     | Never        | Nothing                                  | Noise contacts, opt-out                    |
 
 - **System default** — stored in system settings (default: `standard`).
 - **Per-entity override** — user can set a specific tier for any contact
@@ -600,14 +604,14 @@ controls scanning frequency and extraction depth:
 
 Configuration is stored in the `monitoring_preferences` table:
 
-| Column | Description |
-|---|---|
-| `entity_type` | `'company'` or `'contact'` |
-| `entity_id` | UUID of the entity |
-| `monitoring_tier` | `'high'`, `'standard'`, `'low'`, `'none'` |
-| `tier_source` | `'manual'`, `'auto_suggested'`, `'default'` |
-| `created_at` | ISO 8601 timestamp |
-| `updated_at` | ISO 8601 timestamp |
+| Column            | Description                                 |
+| ----------------- | ------------------------------------------- |
+| `entity_type`     | `'company'` or `'contact'`                  |
+| `entity_id`       | UUID of the entity                          |
+| `monitoring_tier` | `'high'`, `'standard'`, `'low'`, `'none'`   |
+| `tier_source`     | `'manual'`, `'auto_suggested'`, `'default'` |
+| `created_at`      | ISO 8601 timestamp                          |
+| `updated_at`      | ISO 8601 timestamp                          |
 
 ### 7.4 Change Detection
 
@@ -627,13 +631,13 @@ Each social media platform is implemented as a separate scanning
 provider with its own extraction rules, rate limits, and Terms of
 Service compliance approach:
 
-| Platform | Key Signals | Notes |
-|---|---|---|
-| **LinkedIn** | Title, company, position changes, connections | Richest professional signal; strictest ToS |
-| **Twitter/X** | Bio changes, posting activity, follower trends | More public, easier access |
-| **Facebook** | Life events, employment | Mostly personal, limited API |
-| **GitHub** | Activity level, repos, contributions | Relevant for tech contacts |
-| **Instagram** | Business accounts: branding, activity | Less professional value |
+| Platform      | Key Signals                                    | Notes                                      |
+| ------------- | ---------------------------------------------- | ------------------------------------------ |
+| **LinkedIn**  | Title, company, position changes, connections  | Richest professional signal; strictest ToS |
+| **Twitter/X** | Bio changes, posting activity, follower trends | More public, easier access                 |
+| **Facebook**  | Life events, employment                        | Mostly personal, limited API               |
+| **GitHub**    | Activity level, repos, contributions           | Relevant for tech contacts                 |
+| **Instagram** | Business accounts: branding, activity          | Less professional value                    |
 
 ToS compliance is addressed individually per platform.
 
@@ -677,6 +681,7 @@ Google Contacts organization names.
 
 6. **If no match** — validate the domain has a working website (HTTP
    check).  If valid:
+   
    - Auto-create a company record with the domain as the initial name.
    - Add the domain to `company_identifiers`.
    - Set the domain as the company's primary domain (denormalized on
@@ -931,17 +936,17 @@ CREATE TABLE monitoring_preferences (
 
 ### 10.1 New Columns on `companies` Table
 
-| Column | Type | Description |
-|---|---|---|
-| `website` | TEXT | Company website URL (distinct from domain) |
-| `stock_symbol` | TEXT | Stock ticker symbol (e.g., `GOOGL`, `AAPL`) |
-| `size_range` | TEXT | Employee count range (see 10.2) |
-| `employee_count` | INTEGER | Raw employee count when known |
-| `founded_year` | INTEGER | Year the company was founded |
-| `revenue_range` | TEXT | Annual revenue range |
-| `funding_total` | TEXT | Total funding raised |
-| `funding_stage` | TEXT | Latest funding stage |
-| `headquarters_location` | TEXT | Denormalized from primary address for display |
+| Column                  | Type    | Description                                   |
+| ----------------------- | ------- | --------------------------------------------- |
+| `website`               | TEXT    | Company website URL (distinct from domain)    |
+| `stock_symbol`          | TEXT    | Stock ticker symbol (e.g., `GOOGL`, `AAPL`)   |
+| `size_range`            | TEXT    | Employee count range (see 10.2)               |
+| `employee_count`        | INTEGER | Raw employee count when known                 |
+| `founded_year`          | INTEGER | Year the company was founded                  |
+| `revenue_range`         | TEXT    | Annual revenue range                          |
+| `funding_total`         | TEXT    | Total funding raised                          |
+| `funding_stage`         | TEXT    | Latest funding stage                          |
+| `headquarters_location` | TEXT    | Denormalized from primary address for display |
 
 ```sql
 ALTER TABLE companies ADD COLUMN website TEXT;
@@ -959,16 +964,16 @@ ALTER TABLE companies ADD COLUMN headquarters_location TEXT;
 
 Ranges are aligned with LinkedIn's widely-used classification:
 
-| Range | Value |
-|---|---|
-| 1–10 | `1-10` |
-| 11–50 | `11-50` |
-| 51–200 | `51-200` |
-| 201–500 | `201-500` |
-| 501–1,000 | `501-1000` |
-| 1,001–5,000 | `1001-5000` |
+| Range        | Value        |
+| ------------ | ------------ |
+| 1–10         | `1-10`       |
+| 11–50        | `11-50`      |
+| 51–200       | `51-200`     |
+| 201–500      | `201-500`    |
+| 501–1,000    | `501-1000`   |
+| 1,001–5,000  | `1001-5000`  |
 | 5,001–10,000 | `5001-10000` |
-| 10,001+ | `10001+` |
+| 10,001+      | `10001+`     |
 
 When a raw `employee_count` is available, `size_range` is derived
 from it.  When only a range is available from a provider, `size_range`
@@ -976,17 +981,17 @@ is stored directly and `employee_count` remains NULL.
 
 ### 10.3 Funding Stage Values
 
-| Value | Description |
-|---|---|
-| `pre_seed` | Pre-seed funding |
-| `seed` | Seed round |
-| `series_a` | Series A |
-| `series_b` | Series B |
-| `series_c` | Series C |
-| `series_d_plus` | Series D or later |
-| `ipo` | Publicly traded |
-| `private` | Private, no known funding |
-| `bootstrapped` | Self-funded |
+| Value           | Description               |
+| --------------- | ------------------------- |
+| `pre_seed`      | Pre-seed funding          |
+| `seed`          | Seed round                |
+| `series_a`      | Series A                  |
+| `series_b`      | Series B                  |
+| `series_c`      | Series C                  |
+| `series_d_plus` | Series D or later         |
+| `ipo`           | Publicly traded           |
+| `private`       | Private, no known funding |
+| `bootstrapped`  | Self-funded               |
 
 ---
 
@@ -1009,6 +1014,7 @@ data/assets/{hash[0:2]}/{hash[2:4]}/{full_hash}.{extension}
 ```
 
 Example: a PNG logo with hash `ab3def7890...` is stored at:
+
 ```
 data/assets/ab/3d/ab3def7890abcdef1234567890abcdef1234567890abcdef1234567890abcdef.png
 ```
@@ -1200,13 +1206,13 @@ Each factor is normalized to a 0.0–1.0 range before weighting.
 
 ### 14.2 Default Weights
 
-| Factor | Default Weight | Notes |
-|---|---|---|
-| Recency | 0.35 | Highest — recent contact matters most |
-| Frequency | 0.25 | High — regular engagement signals active relationship |
-| Reciprocity | 0.20 | Medium — balanced communication is healthier |
-| Breadth | 0.12 | Medium — multi-contact relationships are stronger |
-| Duration | 0.08 | Lower — longevity alone doesn't indicate strength |
+| Factor      | Default Weight | Notes                                                 |
+| ----------- | -------------- | ----------------------------------------------------- |
+| Recency     | 0.35           | Highest — recent contact matters most                 |
+| Frequency   | 0.25           | High — regular engagement signals active relationship |
+| Reciprocity | 0.20           | Medium — balanced communication is healthier          |
+| Breadth     | 0.12           | Medium — multi-contact relationships are stronger     |
+| Duration    | 0.08           | Lower — longevity alone doesn't indicate strength     |
 
 ### 14.3 Directionality Multiplier
 
@@ -1214,9 +1220,9 @@ Within each factor's calculation, outbound (user-initiated)
 communications carry a higher multiplier than inbound:
 
 | Direction | Multiplier |
-|---|---|
-| Outbound | 1.0x |
-| Inbound | 0.6x |
+| --------- | ---------- |
+| Outbound  | 1.0x       |
+| Inbound   | 0.6x       |
 
 This reflects that initiating communication is a stronger signal of
 relationship investment than passively receiving it.
@@ -1352,8 +1358,9 @@ With hundreds of companies and thousands of communications, computing
 relationship strength at query time for a sorted list would be
 prohibitively slow.  Precomputed scores enable instant `ORDER BY`
 sorting on any list page.  The hybrid recalculation model (event-driven
+
 + time-based decay) keeps scores fresh without requiring full
-recomputation on every page load.
+  recomputation on every page load.
 
 ### Why views over alerts?
 

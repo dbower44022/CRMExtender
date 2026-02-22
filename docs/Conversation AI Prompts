@@ -602,3 +602,150 @@ Strong principle — every communication should have identified contacts, and th
 
   What would you like to tackle next?
 
+
+
+Here is Claude's plan:
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ Plan: Pre-Filter Conversation Creation                                   
+
+ Context
+
+ Currently, _store_thread() in poc/sync.py creates a conversation row for every Gmail thread — then process_conversations() triages 93.8% of them after the
+ fact. This is wasteful (3,315 of 3,535 conversations are immediately hidden) and fills the DB with meaningless rows.
+
+ Goal: Only create conversations when the thread is meaningful. Communications (raw emails) are always stored. Conversations are selective.
+
+ Three Rules for Conversation Creation
+
+ ┌──────┬────────────────────────────────────────────────────────────────────────────────────────┬─────────────────────────┐
+ │ Rule │                                       Condition                                        │  Creates Conversation?  │
+ ├──────┼────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────┤
+ │ 1    │ Single inbound email from a known, non-blocked contact                                 │ Yes                     │
+ ├──────┼────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────┤
+ │ 2    │ Single outbound email to a known contact                                               │ Yes                     │
+ ├──────┼────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────┤
+ │ 2b   │ Single outbound email to unknown recipient                                             │ No (communication only) │
+ ├──────┼────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────┤
+ │ 3    │ Multi-email thread (2+) where the user sent at least one email                         │ Yes                     │
+ ├──────┼────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────┤
+ │ 3b   │ Multi-email thread (2+) where at least one participant is a known, non-blocked contact │ Yes                     │
+ ├──────┼────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────┤
+ │ —    │ Single inbound from unknown or blocked sender                                          │ No                      │
+ ├──────┼────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────┤
+ │ —    │ Multi-email thread, no known contacts, user never sent                                 │ No                      │
+ └──────┴────────────────────────────────────────────────────────────────────────────────────────┴─────────────────────────┘
+
+ "Blocked" = current automated sender patterns from triage.py (noreply@, notification@, billing@, etc.). A configurable blocked_senders table is a future
+ enhancement.
+
+ Key behavior: When a reply arrives to a previously-skipped thread, Rule 3 triggers and the conversation is created retroactively, linking ALL existing
+ communications in that thread.
+
+ Files to Modify
+
+ 1. poc/sync.py — Core changes
+
+ Add _is_blocked_sender(addr) (~line 270, before _store_thread):
+ - Import and reuse _AUTOMATED_SENDER_PATTERNS from poc/triage.py
+ - Simple function: returns True if address matches any pattern
+
+ Add _should_create_conversation() (new function):
+ Args: all_thread_comms (list of DB rows), account_email, contact_index
+ Returns: bool
+
+ Logic:
+   - Determine total_emails count
+   - Check if user sent any email (sender_address == account_email)
+   - Check if any non-user participant is a known, non-blocked contact
+     (check both senders and recipients via communication_participants)
+   - For single-message threads:
+     - If outbound (user sent): return has_known_recipient
+     - If inbound (user received): return sender is known AND not blocked
+   - For multi-message threads:
+     - return user_sent OR has_known_contact
+
+ Restructure _store_thread():
+ 1. Always store communications first (move INSERT OR IGNORE communications + participants BEFORE conversation decision)
+ 2. Check for existing conversation (current provider_thread_id lookup)
+ 3. If existing conversation found → link new communications to it (current behavior)
+ 4. If no existing conversation → query ALL communications with this provider_thread_id from DB
+ 5. Call _should_create_conversation() with the full set
+ 6. If True → CREATE conversation, link ALL thread communications (retroactive linkage)
+ 7. If False → leave communications unlinked (no conversation row)
+
+ Simplify process_conversations() (~line 742):
+ - Remove triage logic (lines 817-828)
+ - Keep AI summarization logic
+ - Query becomes: WHERE ai_summarized_at IS NULL AND dismissed = 0
+ - Remove triage_conversations() call and FilterReason handling
+
+ 2. poc/triage.py — Export patterns
+
+ - Export _AUTOMATED_SENDER_PATTERNS (rename to AUTOMATED_SENDER_PATTERNS — make public)
+ - The triage_conversations() function becomes dead code but leave it for now (no breaking changes)
+
+ 3. tests/test_conversation_rules.py — New test file
+
+ Test the 3 rules with clear scenarios:
+
+ Rule 1 tests (single inbound):
+ - Known contact sends email → conversation created
+ - Unknown sender → no conversation
+ - Blocked sender (noreply@) who IS a known contact → no conversation
+ - Known contact, single email → conversation has correct participant data
+
+ Rule 2 tests (single outbound):
+ - User sends to known contact → conversation created
+ - User sends to unknown recipient → no conversation (communication stored)
+
+ Rule 3 tests (multi-email threads):
+ - User sends to unknown → unknown replies → conversation created with both communications linked
+ - Two emails from unknown senders, user not involved → no conversation
+ - Multi-email thread, one participant is known contact → conversation created
+ - Thread grows: first email skipped, reply triggers conversation + retroactive linkage
+
+ Blocked sender tests:
+ - noreply@company.com → blocked
+ - notification@service.com → blocked
+ - john@company.com → not blocked
+
+ Edge cases:
+ - Empty thread → (False, False), no changes
+ - Existing conversation + new emails → communications added (current behavior unchanged)
+ - Multi-account: same thread synced from two accounts
+
+ 4. docs/conversation_creation_flowchart.drawio — Update diagram
+
+ Update all 3 pages to reflect the new flow:
+ - Page 1: Show communications stored first, then rule evaluation
+ - Page 2: _store_thread() with the new decision diamond for _should_create_conversation()
+ - Page 3: Replace triage cascade with the 3-rule decision tree
+
+ Implementation Order
+
+ 1. Export AUTOMATED_SENDER_PATTERNS from triage.py
+ 2. Add _is_blocked_sender() and _should_create_conversation() to sync.py
+ 3. Restructure _store_thread() — store comms first, then evaluate rules
+ 4. Simplify process_conversations() — remove triage, keep summarization
+ 5. Write tests in tests/test_conversation_rules.py
+ 6. Run full test suite to catch regressions
+ 7. Update the flowchart
+
+ What Does NOT Change
+
+ - communications table — all emails always stored
+ - communication_participants table — always populated
+ - conversation_communications junction — only created when conversation exists
+ - conversation_participants — only created when conversation exists
+ - Existing conversations in DB — left as-is (new rules apply going forward only)
+ - Conversation list UI queries — work unchanged (triage_result IS NULL still valid)
+ - AI summarization — still runs on conversations that exist
+
+ Verification
+
+ 1. python3 -m pytest tests/test_conversation_rules.py -v — new tests pass
+ 2. python3 -m pytest tests/ -v — full suite passes (no regressions)
+ 3. Manual: run sync on production DB, verify fewer conversations created
+
+
+

@@ -8,6 +8,8 @@ interface NavigationState {
   selectedRowIndex: number
   selectedRowIds: Set<string>
   loadedRowCount: number
+  focusAnchorIndex: number
+  focusedColumn: number
   sort: string | null
   sortDirection: 'asc' | 'desc'
   search: string
@@ -19,8 +21,11 @@ interface NavigationState {
   toggleRowSelection: (id: string) => void
   selectAllRows: (ids: string[]) => void
   deselectAllRows: () => void
+  selectRange: (fromIndex: number, toIndex: number, rows: Record<string, unknown>[]) => void
   setLoadedRowCount: (count: number) => void
+  setFocusedColumn: (col: number) => void
   setSort: (field: string, direction: 'asc' | 'desc') => void
+  clearSort: () => void
   setSearch: (search: string) => void
   toggleQuickFilter: (filter: QuickFilter) => void
   reset: () => void
@@ -33,6 +38,8 @@ const DEFAULTS = {
   selectedRowIndex: -1,
   selectedRowIds: new Set<string>(),
   loadedRowCount: 0,
+  focusAnchorIndex: -1,
+  focusedColumn: 0,
   sort: null as string | null,
   sortDirection: 'asc' as const,
   search: '',
@@ -49,6 +56,8 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
       selectedRowId: null,
       selectedRowIndex: -1,
       selectedRowIds: new Set<string>(),
+      focusAnchorIndex: -1,
+      focusedColumn: 0,
       sort: null,
       sortDirection: 'asc',
       search: '',
@@ -61,11 +70,13 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
       selectedRowId: null,
       selectedRowIndex: -1,
       selectedRowIds: new Set<string>(),
+      focusAnchorIndex: -1,
+      focusedColumn: 0,
       quickFilters: [],
     }),
 
   setSelectedRow: (id, index) =>
-    set({ selectedRowId: id, selectedRowIndex: index }),
+    set({ selectedRowId: id, selectedRowIndex: index, focusAnchorIndex: index }),
 
   toggleRowSelection: (id) =>
     set((state) => {
@@ -81,13 +92,36 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
   deselectAllRows: () =>
     set({ selectedRowIds: new Set<string>() }),
 
+  selectRange: (fromIndex, toIndex, rows) =>
+    set((state) => {
+      const lo = Math.min(fromIndex, toIndex)
+      const hi = Math.max(fromIndex, toIndex)
+      const next = new Set(state.selectedRowIds)
+      for (let i = lo; i <= hi; i++) {
+        const row = rows[i]
+        if (row) next.add(String(row.id))
+      }
+      return { selectedRowIds: next }
+    }),
+
   setLoadedRowCount: (count) =>
     set({ loadedRowCount: count }),
+
+  setFocusedColumn: (col) =>
+    set({ focusedColumn: col }),
 
   setSort: (field, direction) =>
     set({
       sort: field,
       sortDirection: direction,
+      selectedRowId: null,
+      selectedRowIndex: -1,
+    }),
+
+  clearSort: () =>
+    set({
+      sort: null,
+      sortDirection: 'asc',
       selectedRowId: null,
       selectedRowIndex: -1,
     }),

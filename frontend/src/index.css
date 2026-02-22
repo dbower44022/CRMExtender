@@ -93,6 +93,12 @@ body {
   }
 }
 
+/* Cell focus indicator */
+.cell-focused {
+  outline: 2px solid var(--color-primary-400);
+  outline-offset: -2px;
+}
+
 /* Adaptive Grid Intelligence — demotion styles */
 .cell-collapsed-dot {
   display: inline-block;

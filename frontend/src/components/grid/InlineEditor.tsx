@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useCellEdit } from '../../api/views.ts'
+import { Loader2, Check } from 'lucide-react'
 import type { FieldDef } from '../../types/api.ts'
 
 interface InlineEditorProps {
@@ -8,6 +9,7 @@ interface InlineEditorProps {
   fieldKey: string
   fieldDef: FieldDef
   currentValue: string
+  initialChars?: string
   onClose: () => void
 }
 
@@ -17,18 +19,27 @@ export function InlineEditor({
   fieldKey,
   fieldDef,
   currentValue,
+  initialChars,
   onClose,
 }: InlineEditorProps) {
-  const [value, setValue] = useState(currentValue)
+  const [value, setValue] = useState(initialChars ?? currentValue)
+  const [showCheck, setShowCheck] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement>(null)
   const cellEdit = useCellEdit()
 
   useEffect(() => {
-    inputRef.current?.focus()
-    if (inputRef.current instanceof HTMLInputElement) {
-      inputRef.current.select()
+    const el = inputRef.current
+    if (!el) return
+    el.focus()
+    if (el instanceof HTMLInputElement) {
+      if (initialChars) {
+        // Position cursor at end of initial chars
+        el.setSelectionRange(initialChars.length, initialChars.length)
+      } else {
+        el.select()
+      }
     }
-  }, [])
+  }, [initialChars])
 
   const save = () => {
     if (value === currentValue) {
@@ -44,8 +55,11 @@ export function InlineEditor({
       },
       {
         onSuccess: () => {
-          flashCell('success')
-          onClose()
+          setShowCheck(true)
+          setTimeout(() => {
+            flashCell('success')
+            onClose()
+          }, 300)
         },
         onError: () => {
           flashCell('error')
@@ -120,14 +134,28 @@ export function InlineEditor({
   }
 
   return (
-    <input
-      ref={inputRef as React.RefObject<HTMLInputElement>}
-      type="text"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={save}
-      onKeyDown={handleKeyDown}
-      className="h-full w-full border border-primary-400 bg-surface-0 px-1 text-sm outline-none"
-    />
+    <div className="relative flex items-center">
+      <input
+        ref={inputRef as React.RefObject<HTMLInputElement>}
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={handleKeyDown}
+        className="h-full w-full border border-primary-400 bg-surface-0 px-1 pr-6 text-sm outline-none"
+      />
+      {cellEdit.isPending && (
+        <Loader2
+          size={12}
+          className="absolute right-1 animate-spin text-primary-500"
+        />
+      )}
+      {showCheck && (
+        <Check
+          size={12}
+          className="absolute right-1 text-green-500"
+        />
+      )}
+    </div>
   )
 }

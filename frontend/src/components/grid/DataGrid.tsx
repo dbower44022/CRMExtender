@@ -11,14 +11,17 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { useLayoutStore } from '../../stores/layout.ts'
 import { useEntityRegistry } from '../../api/registry.ts'
-import { useViewConfig, useInfiniteViewData } from '../../api/views.ts'
-import { useArrowNavigation } from '../../hooks/useArrowNavigation.ts'
+import { useViewConfig, useInfiniteViewData, useCellEdit } from '../../api/views.ts'
+import { useGridKeyboard } from '../../hooks/useGridKeyboard.ts'
 import { usePrefetch } from '../../hooks/usePrefetch.ts'
 import { useGridIntelligence } from '../../hooks/useGridIntelligence.ts'
 import { CellRenderer } from './CellRenderer.tsx'
 import { InlineEditor } from './InlineEditor.tsx'
+import { RecordModal } from './RecordModal.tsx'
+import { RowContextMenu } from './RowContextMenu.tsx'
+import { ColumnHeaderMenu } from './ColumnHeaderMenu.tsx'
 import { useUpdateViewColumns } from '../../api/views.ts'
-import { ChevronUp, ChevronDown, Loader2, Square, CheckSquare } from 'lucide-react'
+import { ChevronUp, ChevronDown, Loader2, Square, CheckSquare, MinusSquare } from 'lucide-react'
 import type { FieldDef, ViewColumn, CellAlignment, ComputedColumn } from '../../types/api.ts'
 
 type RowData = Record<string, unknown>
@@ -32,11 +35,17 @@ export function DataGrid() {
   const quickFilters = useNavigationStore((s) => s.quickFilters)
   const selectedRowId = useNavigationStore((s) => s.selectedRowId)
   const selectedRowIds = useNavigationStore((s) => s.selectedRowIds)
+  const selectedRowIndex = useNavigationStore((s) => s.selectedRowIndex)
+  const focusedColumn = useNavigationStore((s) => s.focusedColumn)
+  const focusAnchorIndex = useNavigationStore((s) => s.focusAnchorIndex)
   const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
   const toggleRowSelection = useNavigationStore((s) => s.toggleRowSelection)
   const selectAllRows = useNavigationStore((s) => s.selectAllRows)
+  const deselectAllRows = useNavigationStore((s) => s.deselectAllRows)
+  const selectRange = useNavigationStore((s) => s.selectRange)
   const setLoadedRowCount = useNavigationStore((s) => s.setLoadedRowCount)
   const setSort = useNavigationStore((s) => s.setSort)
+  const clearSort = useNavigationStore((s) => s.clearSort)
   const showDetailPanel = useLayoutStore((s) => s.showDetailPanel)
 
   const { data: registry } = useEntityRegistry()
@@ -85,10 +94,36 @@ export function DataGrid() {
   const [editingCell, setEditingCell] = useState<{
     rowId: string
     fieldKey: string
+    initialChars?: string
   } | null>(null)
 
-  // Force browser to recalculate overflow after data populates.
-  // Without this, overflowY:'auto' doesn't engage until a resize event.
+  // Fast double-click state
+  const lastClickRef = useRef<{ rowId: string; time: number; timer: ReturnType<typeof setTimeout> | null }>({
+    rowId: '',
+    time: 0,
+    timer: null,
+  })
+  const [recordModal, setRecordModal] = useState<{ entityType: string; entityId: string } | null>(null)
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    x: number
+    y: number
+    rowId: string
+    rowIndex: number
+  } | null>(null)
+
+  // Column header context menu state
+  const [headerMenu, setHeaderMenu] = useState<{
+    x: number
+    y: number
+    fieldKey: string
+  } | null>(null)
+
+  // Sort double-click tracking
+  const lastSortClickRef = useRef<{ fieldKey: string; time: number }>({ fieldKey: '', time: 0 })
+
+  // Force browser to recalculate overflow after data populates
   useEffect(() => {
     const el = tableContainerRef.current
     if (!el || !rows.length) return
@@ -126,11 +161,44 @@ export function DataGrid() {
     }
   }, [rows, selectAllRows])
 
+  // Listen for detail panel prev/next navigation
+  useEffect(() => {
+    const handleNavigate = (e: Event) => {
+      const { direction } = (e as CustomEvent).detail
+      const navState = useNavigationStore.getState()
+      const newIndex = navState.selectedRowIndex + direction
+      if (newIndex >= 0 && newIndex < rows.length) {
+        const row = rows[newIndex]
+        setSelectedRow(String(row.id), newIndex)
+      }
+    }
+    window.addEventListener('detailPanel:navigate', handleNavigate)
+    return () => window.removeEventListener('detailPanel:navigate', handleNavigate)
+  }, [rows, setSelectedRow])
+
+  // Listen for cell clear events from keyboard handler
+  const cellEdit = useCellEdit()
+  useEffect(() => {
+    const handleClearCell = (e: Event) => {
+      const { rowId, fieldKey } = (e as CustomEvent).detail
+      const fd = entityDef?.fields[fieldKey]
+      if (!fd) return
+      cellEdit.mutate({
+        entity_type: activeEntityType,
+        entity_id: rowId,
+        field_key: fd.db_column ?? fieldKey,
+        value: '',
+      })
+    }
+    window.addEventListener('grid:clearCell', handleClearCell)
+    return () => window.removeEventListener('grid:clearCell', handleClearCell)
+  }, [entityDef, activeEntityType, cellEdit])
+
   // Build TanStack columns from view config + entity registry + computed layout
+  const demotionEnabled = viewConfig?.column_demotion !== 0
+
   const columns = useMemo<ColumnDef<RowData>[]>(() => {
     if (!entityDef) return []
-
-    const demotionEnabled = viewConfig?.column_demotion !== 0
 
     // Checkbox column for row multi-selection
     const checkboxCol: ColumnDef<RowData> = {
@@ -148,7 +216,6 @@ export function DataGrid() {
       .filter((vc: ViewColumn) => {
         const fd = entityDef.fields[vc.field_key]
         if (!fd || fd.type === 'hidden') return false
-        // Filter out hidden-demoted columns when demotion is enabled
         if (demotionEnabled) {
           const cc = computedColumnMap.get(vc.field_key)
           if (cc?.demotionTier === 'hidden') return false
@@ -160,7 +227,6 @@ export function DataGrid() {
         const cc = computedColumnMap.get(vc.field_key)
         const computedWidth = cc?.computedWidth ?? vc.width_px ?? 150
 
-        // Header text — for header_only demotion, annotate with dominant value
         let headerText = vc.label_override || fd.label
         if (cc?.demotionTier === 'header_only' && cc.dominantValue) {
           headerText = `${fd.label}: ${cc.dominantValue}`
@@ -176,9 +242,7 @@ export function DataGrid() {
           enableResizing: true,
           enableSorting: fd.sortable,
           cell: ({ getValue, row }) => {
-            // Header-only demotion: cells render empty
             if (cc?.demotionTier === 'header_only') return null
-            // Collapsed demotion: minimal indicator
             if (cc?.demotionTier === 'collapsed') {
               const val = getValue()
               return val != null && val !== '' ? (
@@ -199,7 +263,13 @@ export function DataGrid() {
       })
 
     return [checkboxCol, ...dataCols]
-  }, [entityDef, viewColumns, activeEntityType, computedColumnMap, viewConfig])
+  }, [entityDef, viewColumns, activeEntityType, computedColumnMap, demotionEnabled])
+
+  // Visible data column keys (excluding __select) — for keyboard navigation
+  const visibleColumnKeys = useMemo(
+    () => columns.filter((c) => c.id !== '__select').map((c) => c.id!),
+    [columns],
+  )
 
   const columnResizeMode: ColumnResizeMode = 'onChange'
 
@@ -221,8 +291,6 @@ export function DataGrid() {
   const columnSizingState = table.getState().columnSizing
 
   useEffect(() => {
-    // Skip empty or initial sizing
-    // Skip if only the checkbox column changed, or no real data columns
     const realSizing = Object.keys(columnSizingState).filter((k) => k !== '__select')
     if (realSizing.length === 0 || !activeViewId || !viewColumns.length) return
 
@@ -270,25 +338,96 @@ export function DataGrid() {
     return () => el.removeEventListener('scroll', onScroll)
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  // Row selection
+  // Row click with modifier key support
   const handleRowClick = useCallback(
-    (row: Row<RowData>, index: number) => {
+    (row: Row<RowData>, index: number, e: React.MouseEvent) => {
       const id = String(row.original.id)
-      if (id === selectedRowId) {
-        setSelectedRow(null, -1)
-      } else {
+
+      if (e.ctrlKey || e.metaKey) {
+        // Ctrl/Cmd+Click: focus + toggle checkbox
+        setSelectedRow(id, index)
+        toggleRowSelection(id)
+        showDetailPanel()
+        return
+      }
+
+      if (e.shiftKey) {
+        // Shift+Click: range selection from anchor to clicked row
+        const anchor = focusAnchorIndex >= 0 ? focusAnchorIndex : 0
+        selectRange(anchor, index, rows)
         setSelectedRow(id, index)
         showDetailPanel()
+        return
       }
+
+      // Plain click with fast-double-click detection
+      const now = Date.now()
+      const last = lastClickRef.current
+
+      if (last.rowId === id && now - last.time < 300) {
+        // Fast double-click — open modal
+        if (last.timer) clearTimeout(last.timer)
+        lastClickRef.current = { rowId: '', time: 0, timer: null }
+        setRecordModal({ entityType: activeEntityType, entityId: id })
+        return
+      }
+
+      // First click — set timer for delayed focus
+      if (last.timer) clearTimeout(last.timer)
+      const timer = setTimeout(() => {
+        setSelectedRow(id, index)
+        showDetailPanel()
+      }, 200)
+      lastClickRef.current = { rowId: id, time: now, timer }
     },
-    [selectedRowId, setSelectedRow, showDetailPanel],
+    [
+      focusAnchorIndex,
+      rows,
+      activeEntityType,
+      setSelectedRow,
+      toggleRowSelection,
+      selectRange,
+      showDetailPanel,
+    ],
   )
 
-  // Arrow key navigation
-  useArrowNavigation({
+  // Checkbox click with modifier key support
+  const handleCheckboxClick = useCallback(
+    (e: React.MouseEvent, rowId: string, rowIndex: number) => {
+      e.stopPropagation()
+      if (e.shiftKey) {
+        // Shift+Click on checkbox: range selection, do NOT move focus
+        const anchor = focusAnchorIndex >= 0 ? focusAnchorIndex : 0
+        selectRange(anchor, rowIndex, rows)
+      } else {
+        // Plain checkbox click: toggle only
+        toggleRowSelection(rowId)
+      }
+    },
+    [focusAnchorIndex, rows, toggleRowSelection, selectRange],
+  )
+
+  // Master checkbox in header
+  const allSelected = rows.length > 0 && selectedRowIds.size === rows.length
+  const someSelected = selectedRowIds.size > 0 && !allSelected
+  const handleMasterCheckbox = useCallback(() => {
+    if (allSelected || someSelected) {
+      deselectAllRows()
+    } else {
+      selectAllRows(rows.map((r) => String(r.id)))
+    }
+  }, [allSelected, someSelected, rows, selectAllRows, deselectAllRows])
+
+  // Keyboard navigation
+  useGridKeyboard({
     rows: tableRows,
-    onSelect: handleRowClick,
+    allRows: rows,
+    visibleColumnKeys,
+    entityDef: entityDef?.fields,
+    entityType: activeEntityType,
     containerRef: tableContainerRef,
+    editingCell,
+    setEditingCell,
   })
 
   // Prefetch adjacent records
@@ -298,14 +437,62 @@ export function DataGrid() {
     entityType: activeEntityType,
   })
 
-  // Column sort handler
-  const handleSort = (fieldKey: string) => {
-    const fd = entityDef?.fields[fieldKey]
-    if (!fd?.sortable) return
-    const newDir =
-      sort === fieldKey && sortDirection === 'asc' ? 'desc' : 'asc'
-    setSort(fieldKey, newDir)
-  }
+  // Column sort handler with double-click sort cycle
+  const handleSort = useCallback(
+    (fieldKey: string) => {
+      const fd = entityDef?.fields[fieldKey]
+      if (!fd?.sortable) return
+
+      const now = Date.now()
+      const last = lastSortClickRef.current
+
+      if (last.fieldKey === fieldKey && now - last.time < 400) {
+        // Double-click sort cycle: asc → desc → clear
+        lastSortClickRef.current = { fieldKey: '', time: 0 }
+        if (sort === fieldKey) {
+          if (sortDirection === 'asc') {
+            setSort(fieldKey, 'desc')
+          } else {
+            clearSort()
+          }
+        } else {
+          setSort(fieldKey, 'asc')
+        }
+        return
+      }
+
+      lastSortClickRef.current = { fieldKey, time: now }
+
+      // Single click: toggle asc/desc
+      const newDir =
+        sort === fieldKey && sortDirection === 'asc' ? 'desc' : 'asc'
+      setSort(fieldKey, newDir)
+    },
+    [entityDef, sort, sortDirection, setSort, clearSort],
+  )
+
+  // Row context menu
+  const handleRowContextMenu = useCallback(
+    (e: React.MouseEvent, rowId: string, rowIndex: number) => {
+      e.preventDefault()
+      // If no checkboxes selected, focus this row
+      if (selectedRowIds.size === 0) {
+        setSelectedRow(rowId, rowIndex)
+        showDetailPanel()
+      }
+      setContextMenu({ x: e.clientX, y: e.clientY, rowId, rowIndex })
+    },
+    [selectedRowIds.size, setSelectedRow, showDetailPanel],
+  )
+
+  // Column header context menu
+  const handleHeaderContextMenu = useCallback(
+    (e: React.MouseEvent, fieldKey: string) => {
+      e.preventDefault()
+      setHeaderMenu({ x: e.clientX, y: e.clientY, fieldKey })
+    },
+    [],
+  )
 
   // Scroll selected row into view
   useEffect(() => {
@@ -337,6 +524,9 @@ export function DataGrid() {
 
   const demotedCount = computedLayout?.demotedCount ?? 0
 
+  // Master checkbox icon
+  const MasterCheckIcon = allSelected ? CheckSquare : someSelected ? MinusSquare : Square
+
   return (
     <div>
       <div
@@ -348,6 +538,27 @@ export function DataGrid() {
           <div className="flex" style={{ width: totalWidth }}>
             {table.getHeaderGroups().map((headerGroup) =>
               headerGroup.headers.map((header) => {
+                // Master checkbox header
+                if (header.id === '__select') {
+                  return (
+                    <div
+                      key={header.id}
+                      className="flex shrink-0 items-center justify-center"
+                      style={{ width: 36 }}
+                    >
+                      <button
+                        onClick={handleMasterCheckbox}
+                        className="flex items-center justify-center p-0.5 text-surface-400 hover:text-surface-600"
+                      >
+                        <MasterCheckIcon
+                          size={14}
+                          className={allSelected || someSelected ? 'text-primary-600' : ''}
+                        />
+                      </button>
+                    </div>
+                  )
+                }
+
                 const canSort =
                   entityDef?.fields[header.id]?.sortable ?? false
                 const isSorted = sort === header.id
@@ -364,6 +575,7 @@ export function DataGrid() {
                       width: header.column.getSize(),
                       textAlign: align,
                     }}
+                    onContextMenu={(e) => handleHeaderContextMenu(e, header.id)}
                   >
                     <div
                       onClick={() => canSort && handleSort(header.id)}
@@ -386,6 +598,20 @@ export function DataGrid() {
                           <ChevronDown size={12} />
                         ))}
                     </div>
+                    {/* Column header menu chevron on hover */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setHeaderMenu({
+                          x: e.currentTarget.getBoundingClientRect().left,
+                          y: e.currentTarget.getBoundingClientRect().bottom,
+                          fieldKey: header.id,
+                        })
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 hidden rounded p-0.5 text-surface-400 hover:bg-surface-200 hover:text-surface-600 group-hover/header:block"
+                    >
+                      <ChevronDown size={10} />
+                    </button>
                     {/* Column resize handle */}
                     {header.column.getCanResize() && (
                       <div
@@ -443,9 +669,10 @@ export function DataGrid() {
                   key={row.id}
                   data-index={virtualRow.index}
                   ref={rowVirtualizer.measureElement}
-                  onClick={() =>
-                    handleRowClick(row, virtualRow.index)
+                  onClick={(e) =>
+                    handleRowClick(row, virtualRow.index, e)
                   }
+                  onContextMenu={(e) => handleRowContextMenu(e, rowId, virtualRow.index)}
                   className={`absolute left-0 flex cursor-pointer items-center border-b border-surface-100 transition-colors ${
                     isHighlighted
                       ? 'bg-primary-50'
@@ -457,7 +684,7 @@ export function DataGrid() {
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  {row.getVisibleCells().map((cell) => {
+                  {row.getVisibleCells().map((cell, cellIndex) => {
                     const fieldKey = cell.column.id
 
                     // Checkbox column
@@ -468,10 +695,7 @@ export function DataGrid() {
                           key={cell.id}
                           className="flex shrink-0 items-center justify-center"
                           style={{ width: 36 }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            toggleRowSelection(rowId)
-                          }}
+                          onClick={(e) => handleCheckboxClick(e, rowId, virtualRow.index)}
                         >
                           <SelectIcon
                             size={14}
@@ -495,6 +719,12 @@ export function DataGrid() {
                       editingCell?.fieldKey === fieldKey
                     const align = getAlignment(fieldKey)
 
+                    // Cell-level focus indicator
+                    const dataColIndex = cellIndex - 1 // subtract 1 for checkbox column
+                    const isCellFocused =
+                      isDetailSelected &&
+                      focusedColumn === dataColIndex
+
                     return (
                       <div
                         key={cell.id}
@@ -507,7 +737,7 @@ export function DataGrid() {
                           isEditable && !isEditing
                             ? 'cell-editable'
                             : ''
-                        }`}
+                        } ${isCellFocused ? 'cell-focused' : ''}`}
                         style={{
                           width: cell.column.getSize(),
                           textAlign: align,
@@ -533,6 +763,7 @@ export function DataGrid() {
                             currentValue={String(
                               row.original[fieldKey] ?? '',
                             )}
+                            initialChars={editingCell?.initialChars}
                             onClose={() => setEditingCell(null)}
                           />
                         ) : (
@@ -573,6 +804,62 @@ export function DataGrid() {
           <span className="text-primary-500">Updating...</span>
         )}
       </div>
+
+      {/* Record modal (fast double-click) */}
+      {recordModal && (
+        <RecordModal
+          entityType={recordModal.entityType}
+          entityId={recordModal.entityId}
+          onClose={() => setRecordModal(null)}
+        />
+      )}
+
+      {/* Row context menu */}
+      {contextMenu && (
+        <RowContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          rowId={contextMenu.rowId}
+          rowIndex={contextMenu.rowIndex}
+          entityType={activeEntityType}
+          selectedRowIds={selectedRowIds}
+          onClose={() => setContextMenu(null)}
+          onOpenDetail={() => {
+            setSelectedRow(contextMenu.rowId, contextMenu.rowIndex)
+            showDetailPanel()
+            setContextMenu(null)
+          }}
+          onOpenModal={() => {
+            setRecordModal({ entityType: activeEntityType, entityId: contextMenu.rowId })
+            setContextMenu(null)
+          }}
+          onEdit={() => {
+            // Find first editable field
+            const firstEditable = visibleColumnKeys.find((k) => {
+              const fd = entityDef?.fields[k]
+              return fd?.editable && (activeEntityType === 'contact' || activeEntityType === 'company')
+            })
+            if (firstEditable) {
+              setEditingCell({ rowId: contextMenu.rowId, fieldKey: firstEditable })
+            }
+            setContextMenu(null)
+          }}
+        />
+      )}
+
+      {/* Column header context menu */}
+      {headerMenu && (
+        <ColumnHeaderMenu
+          x={headerMenu.x}
+          y={headerMenu.y}
+          fieldKey={headerMenu.fieldKey}
+          entityDef={entityDef}
+          viewConfig={viewConfig ?? null}
+          currentSort={sort}
+          currentSortDirection={sortDirection}
+          onClose={() => setHeaderMenu(null)}
+        />
+      )}
     </div>
   )
 }

@@ -37,6 +37,7 @@ import { MergeCompaniesModal } from './MergeCompaniesModal.tsx'
 import { AddContactModal } from './AddContactModal.tsx'
 import { AddCompanyModal } from './AddCompanyModal.tsx'
 import { GridDisplaySettings } from './GridDisplaySettings.tsx'
+import { ToolbarContextMenu } from './ToolbarContextMenu.tsx'
 
 interface EntityActionConfig {
   primary: { label: string; icon: typeof Plus }[]
@@ -484,6 +485,7 @@ export function GridToolbar() {
   const [showColumns, setShowColumns] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [showDisplaySettings, setShowDisplaySettings] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   const filterCount = viewConfig?.filters?.length ?? 0
   const demotedCount = (computedLayout?.demotedCount ?? 0) + (computedLayout?.hiddenCount ?? 0)
@@ -511,8 +513,42 @@ export function GridToolbar() {
     inputRef.current?.focus()
   }
 
+  const handleToolbarContext = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    if (target.closest('input, textarea')) return
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY })
+  }
+
+  const handleContextAction = useCallback((action: string) => {
+    setContextMenu(null)
+    switch (action) {
+      case 'columns':
+        setShowColumns(true)
+        setShowFilters(false)
+        setShowDisplaySettings(false)
+        break
+      case 'filters':
+        setShowFilters(true)
+        setShowColumns(false)
+        setShowDisplaySettings(false)
+        break
+      case 'display':
+        setShowDisplaySettings(true)
+        setShowColumns(false)
+        setShowFilters(false)
+        break
+      default:
+        toast('Coming soon')
+    }
+  }, [])
+
   return (
-    <div className="border-b border-surface-200 px-4 py-2">
+    <div
+      className="border-b border-surface-200 px-4 py-2"
+      onContextMenu={handleToolbarContext}
+      onDoubleClick={handleToolbarContext}
+    >
       <div className="flex min-w-0 items-center gap-2">
         {/* Left zone — Selection control + Columns */}
         <div className="shrink-0">
@@ -617,6 +653,15 @@ export function GridToolbar() {
 
       {/* Quick filters row */}
       <QuickFilters />
+
+      {contextMenu && (
+        <ToolbarContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onAction={handleContextAction}
+        />
+      )}
     </div>
   )
 }

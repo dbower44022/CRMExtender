@@ -17,6 +17,12 @@ import {
   Pencil,
   Trash2,
   Download,
+  HelpCircle,
+  Tag,
+  Archive,
+  Merge,
+  Sparkles,
+  UserCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigationStore } from '../../stores/navigation.ts'
@@ -26,45 +32,118 @@ import { ColumnPicker } from './ColumnPicker.tsx'
 import { FilterBuilder } from './FilterBuilder.tsx'
 import { QuickFilters } from './QuickFilters.tsx'
 
-const ENTITY_ACTIONS: Record<string, { label: string; icon: typeof Plus }[]> = {
-  contact: [
-    { label: 'New Contact', icon: Plus },
-    { label: 'Import', icon: Upload },
-  ],
-  company: [
-    { label: 'New Company', icon: Plus },
-    { label: 'Import', icon: Upload },
-  ],
-  communication: [
-    { label: 'New Communication', icon: Plus },
-    { label: 'Sync Now', icon: RefreshCw },
-  ],
-  conversation: [
-    { label: 'New Conversation', icon: Plus },
-  ],
-  event: [
-    { label: 'New Event', icon: Plus },
-    { label: 'Sync Calendars', icon: Calendar },
-  ],
-  note: [
-    { label: 'New Note', icon: Plus },
-  ],
-  project: [
-    { label: 'New Project', icon: Plus },
-  ],
+interface EntityActionConfig {
+  primary: { label: string; icon: typeof Plus }[]
+  other: { label: string; icon: typeof Plus }[]
 }
 
-function SelectionControl() {
+const ENTITY_ACTIONS: Record<string, EntityActionConfig> = {
+  contact: {
+    primary: [
+      { label: 'Add Contact', icon: Plus },
+      { label: 'Import', icon: Upload },
+    ],
+    other: [
+      { label: 'Export', icon: Download },
+      { label: 'Merge Duplicates', icon: Merge },
+      { label: 'Bulk Edit', icon: Pencil },
+    ],
+  },
+  company: {
+    primary: [
+      { label: 'Add Company', icon: Plus },
+      { label: 'Import', icon: Upload },
+    ],
+    other: [
+      { label: 'Export', icon: Download },
+      { label: 'Enrich All', icon: Sparkles },
+      { label: 'Bulk Edit', icon: Pencil },
+    ],
+  },
+  communication: {
+    primary: [
+      { label: 'Add Communication', icon: Plus },
+      { label: 'Sync Now', icon: RefreshCw },
+    ],
+    other: [
+      { label: 'Export', icon: Download },
+      { label: 'Bulk Assign', icon: UserCheck },
+    ],
+  },
+  conversation: {
+    primary: [
+      { label: 'Add Conversation', icon: Plus },
+    ],
+    other: [
+      { label: 'Export', icon: Download },
+      { label: 'Bulk Merge', icon: Merge },
+    ],
+  },
+  event: {
+    primary: [
+      { label: 'Add Event', icon: Plus },
+      { label: 'Sync Calendars', icon: Calendar },
+    ],
+    other: [
+      { label: 'Export', icon: Download },
+      { label: 'Bulk Edit', icon: Pencil },
+    ],
+  },
+  note: {
+    primary: [
+      { label: 'Add Note', icon: Plus },
+    ],
+    other: [
+      { label: 'Export', icon: Download },
+      { label: 'Bulk Tag', icon: Tag },
+    ],
+  },
+  project: {
+    primary: [
+      { label: 'Add Project', icon: Plus },
+    ],
+    other: [
+      { label: 'Export', icon: Download },
+      { label: 'Archive', icon: Archive },
+    ],
+  },
+}
+
+const BULK_OTHER_ITEMS: { label: string; icon: typeof Plus }[] = [
+  { label: 'Bulk Assign', icon: UserCheck },
+  { label: 'Bulk Export', icon: Download },
+  { label: 'Bulk Tag', icon: Tag },
+  { label: 'Bulk Archive', icon: Archive },
+]
+
+const comingSoon = () => toast('Coming soon')
+
+const btnClass =
+  'flex h-8 items-center gap-1.5 rounded-md border border-surface-200 bg-surface-0 px-2.5 text-xs font-medium text-surface-600 hover:bg-surface-50 transition-colors whitespace-nowrap'
+
+const dropdownItemClass =
+  'flex w-full items-center gap-2 px-3 py-1.5 text-xs text-surface-600 hover:bg-surface-50'
+
+const dropdownClass =
+  'absolute top-full z-50 mt-1 min-w-[160px] rounded-md border border-surface-200 bg-surface-0 py-1 shadow-lg'
+
+function SelectionControl({
+  showColumns,
+  setShowColumns,
+  setShowFilters,
+}: {
+  showColumns: boolean
+  setShowColumns: (v: boolean) => void
+  setShowFilters: (v: boolean) => void
+}) {
   const selectedRowIds = useNavigationStore((s) => s.selectedRowIds)
   const loadedRowCount = useNavigationStore((s) => s.loadedRowCount)
-  const selectAllRows = useNavigationStore((s) => s.selectAllRows)
   const deselectAllRows = useNavigationStore((s) => s.deselectAllRows)
-  const totalLoaded = loadedRowCount
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const selectedCount = selectedRowIds.size
-  const allSelected = totalLoaded > 0 && selectedCount === totalLoaded
+  const allSelected = loadedRowCount > 0 && selectedCount === loadedRowCount
   const someSelected = selectedCount > 0 && !allSelected
 
   useEffect(() => {
@@ -79,54 +158,145 @@ function SelectionControl() {
 
   const CheckIcon = allSelected ? CheckSquare : someSelected ? MinusSquare : Square
 
+  // Selection active state — show "N selected ▾"
+  if (selectedCount > 0) {
+    return (
+      <div className="flex items-center gap-2" ref={dropdownRef}>
+        <div className="relative">
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-primary-600 hover:bg-primary-50"
+          >
+            <CheckIcon size={16} />
+            {selectedCount} selected
+            <ChevronDown size={12} />
+          </button>
+          {showDropdown && (
+            <div className={`${dropdownClass} left-0`}>
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('grid:selectAll'))
+                  setShowDropdown(false)
+                }}
+                className={dropdownItemClass}
+              >
+                Select All
+              </button>
+              <button
+                onClick={() => {
+                  deselectAllRows()
+                  setShowDropdown(false)
+                }}
+                className={dropdownItemClass}
+              >
+                Deselect All
+              </button>
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('grid:invertSelection'))
+                  setShowDropdown(false)
+                }}
+                className={dropdownItemClass}
+              >
+                Invert Selection
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Columns button stays in left zone during selection */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              setShowColumns(!showColumns)
+              setShowFilters(false)
+            }}
+            className={`flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors ${
+              showColumns
+                ? 'border-primary-300 bg-primary-50 text-primary-700'
+                : 'border-surface-200 bg-surface-0 text-surface-600 hover:bg-surface-50'
+            }`}
+          >
+            <Columns3 size={14} />
+            Columns
+          </button>
+          {showColumns && <ColumnPicker onClose={() => setShowColumns(false)} />}
+        </div>
+      </div>
+    )
+  }
+
+  // Default state — checkbox + dropdown + Columns
   return (
-    <div className="flex items-center gap-1" ref={dropdownRef}>
-      <button
-        onClick={() => {
-          if (selectedCount > 0) deselectAllRows()
-          else selectAllRows([]) // no-op without IDs; use dropdown
-        }}
-        className="flex h-8 items-center justify-center rounded-md p-1.5 text-surface-500 hover:bg-surface-100 hover:text-surface-700"
-      >
-        <CheckIcon size={16} />
-      </button>
+    <div className="flex items-center gap-2" ref={dropdownRef}>
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={() => {
+            if (selectedCount > 0) deselectAllRows()
+          }}
+          className="flex h-8 items-center justify-center rounded-md p-1.5 text-surface-500 hover:bg-surface-100 hover:text-surface-700"
+        >
+          <CheckIcon size={16} />
+        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="flex h-8 items-center justify-center rounded-md p-0.5 text-surface-400 hover:bg-surface-100 hover:text-surface-600"
+          >
+            <ChevronDown size={14} />
+          </button>
+          {showDropdown && (
+            <div className={`${dropdownClass} left-0`}>
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('grid:selectAll'))
+                  setShowDropdown(false)
+                }}
+                className={dropdownItemClass}
+              >
+                Select All
+              </button>
+              <button
+                onClick={() => {
+                  deselectAllRows()
+                  setShowDropdown(false)
+                }}
+                className={dropdownItemClass}
+              >
+                Deselect All
+              </button>
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('grid:invertSelection'))
+                  setShowDropdown(false)
+                }}
+                className={dropdownItemClass}
+              >
+                Invert Selection
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Columns button — in left zone per PRD */}
       <div className="relative">
         <button
-          onClick={() => setShowDropdown(!showDropdown)}
-          className="flex h-8 items-center justify-center rounded-md p-0.5 text-surface-400 hover:bg-surface-100 hover:text-surface-600"
+          onClick={() => {
+            setShowColumns(!showColumns)
+            setShowFilters(false)
+          }}
+          className={`flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors ${
+            showColumns
+              ? 'border-primary-300 bg-primary-50 text-primary-700'
+              : 'border-surface-200 bg-surface-0 text-surface-600 hover:bg-surface-50'
+          }`}
         >
-          <ChevronDown size={14} />
+          <Columns3 size={14} />
+          Columns
         </button>
-        {showDropdown && (
-          <div className="absolute left-0 top-full z-20 mt-1 min-w-[140px] rounded-md border border-surface-200 bg-surface-0 py-1 shadow-lg">
-            <button
-              onClick={() => {
-                // Will be wired with actual row IDs from DataGrid via store
-                // For now, emit event that DataGrid listens to
-                window.dispatchEvent(new CustomEvent('grid:selectAll'))
-                setShowDropdown(false)
-              }}
-              className="flex w-full items-center px-3 py-1.5 text-xs text-surface-600 hover:bg-surface-50"
-            >
-              Select All
-            </button>
-            <button
-              onClick={() => {
-                deselectAllRows()
-                setShowDropdown(false)
-              }}
-              className="flex w-full items-center px-3 py-1.5 text-xs text-surface-600 hover:bg-surface-50"
-            >
-              Deselect All
-            </button>
-          </div>
-        )}
+        {showColumns && <ColumnPicker onClose={() => setShowColumns(false)} />}
       </div>
-      {selectedCount > 0 && (
-        <span className="text-xs font-medium text-primary-600">
-          {selectedCount} selected
-        </span>
-      )}
     </div>
   )
 }
@@ -148,25 +318,17 @@ function EntityActions() {
   }, [])
 
   const selectedCount = selectedRowIds.size
-  const actions = ENTITY_ACTIONS[activeEntityType] ?? []
+  const config = ENTITY_ACTIONS[activeEntityType] ?? { primary: [], other: [] }
 
-  const btnClass =
-    'flex h-8 items-center gap-1.5 rounded-md border border-surface-200 bg-surface-0 px-2.5 text-xs font-medium text-surface-600 hover:bg-surface-50 transition-colors'
-
+  // Selection active — bulk action buttons
   if (selectedCount > 0) {
     return (
       <div className="flex items-center gap-2">
-        <button
-          onClick={() => toast('Coming soon')}
-          className={btnClass}
-        >
+        <button onClick={comingSoon} className={btnClass}>
           <Pencil size={14} />
           Bulk Edit ({selectedCount})
         </button>
-        <button
-          onClick={() => toast('Coming soon')}
-          className={btnClass}
-        >
+        <button onClick={comingSoon} className={btnClass}>
           <Trash2 size={14} />
           Bulk Delete ({selectedCount})
         </button>
@@ -179,13 +341,16 @@ function EntityActions() {
             Other
           </button>
           {showOther && (
-            <div className="absolute right-0 top-full z-20 mt-1 min-w-[140px] rounded-md border border-surface-200 bg-surface-0 py-1 shadow-lg">
-              <button
-                onClick={() => { toast('Coming soon'); setShowOther(false) }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-surface-600 hover:bg-surface-50"
-              >
-                <Download size={12} /> Export
-              </button>
+            <div className={`${dropdownClass} right-0`}>
+              {BULK_OTHER_ITEMS.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => { comingSoon(); setShowOther(false) }}
+                  className={dropdownItemClass}
+                >
+                  <item.icon size={12} /> {item.label}
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -193,45 +358,58 @@ function EntityActions() {
     )
   }
 
+  // Default — entity-specific primary actions + Other overflow
   return (
     <div className="flex items-center gap-2">
-      {actions.map((action) => (
-        <button
-          key={action.label}
-          onClick={() => toast('Coming soon')}
-          className={btnClass}
-        >
+      {config.primary.map((action) => (
+        <button key={action.label} onClick={comingSoon} className={btnClass}>
           <action.icon size={14} />
           {action.label}
         </button>
       ))}
-      {actions.length > 0 && (
-        <div className="relative" ref={otherRef}>
-          <button
-            onClick={() => setShowOther(!showOther)}
-            className={btnClass}
-          >
-            <MoreHorizontal size={14} />
-            Other
-          </button>
-          {showOther && (
-            <div className="absolute right-0 top-full z-20 mt-1 min-w-[140px] rounded-md border border-surface-200 bg-surface-0 py-1 shadow-lg">
+      <div className="relative" ref={otherRef}>
+        <button
+          onClick={() => setShowOther(!showOther)}
+          className={btnClass}
+        >
+          <MoreHorizontal size={14} />
+          Other
+        </button>
+        {showOther && (
+          <div className={`${dropdownClass} right-0`}>
+            {/* Primary actions repeated at top */}
+            {config.primary.map((action) => (
               <button
-                onClick={() => { toast('Coming soon'); setShowOther(false) }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-surface-600 hover:bg-surface-50"
+                key={action.label}
+                onClick={() => { comingSoon(); setShowOther(false) }}
+                className={dropdownItemClass}
               >
-                <Download size={12} /> Export
+                <action.icon size={12} /> {action.label}
               </button>
+            ))}
+            {/* Separator */}
+            <div className="my-1 border-t border-surface-200" />
+            {/* Additional actions */}
+            {config.other.map((action) => (
               <button
-                onClick={() => { toast('Coming soon'); setShowOther(false) }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-surface-600 hover:bg-surface-50"
+                key={action.label}
+                onClick={() => { comingSoon(); setShowOther(false) }}
+                className={dropdownItemClass}
               >
-                <Pencil size={12} /> Bulk Edit
+                <action.icon size={12} /> {action.label}
               </button>
-            </div>
-          )}
-        </div>
-      )}
+            ))}
+            {/* Separator + Help */}
+            <div className="my-1 border-t border-surface-200" />
+            <button
+              onClick={() => { comingSoon(); setShowOther(false) }}
+              className={dropdownItemClass}
+            >
+              <HelpCircle size={12} /> Help
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -277,15 +455,21 @@ export function GridToolbar() {
 
   return (
     <div className="border-b border-surface-200 px-4 py-2">
-      <div className="flex items-center gap-2">
-        {/* Left zone — Selection control */}
-        <SelectionControl />
+      <div className="flex min-w-0 items-center gap-2">
+        {/* Left zone — Selection control + Columns */}
+        <div className="shrink-0">
+          <SelectionControl
+            showColumns={showColumns}
+            setShowColumns={setShowColumns}
+            setShowFilters={setShowFilters}
+          />
+        </div>
 
-        <div className="mx-1 h-5 w-px bg-surface-200" />
+        <div className="mx-1 h-5 w-px shrink-0 bg-surface-200" />
 
-        {/* Center zone — Search, Columns, Filter, Demoted */}
-        <div className="flex flex-1 items-center gap-2">
-          <div className="relative flex-1 max-w-sm">
+        {/* Center zone — Search, Filter, Demoted */}
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+          <div className="relative min-w-0 flex-1 max-w-sm">
             <Search
               size={14}
               className="absolute left-2.5 top-1/2 -translate-y-1/2 text-surface-400"
@@ -295,7 +479,7 @@ export function GridToolbar() {
               type="text"
               value={localSearch}
               onChange={(e) => handleChange(e.target.value)}
-              placeholder="Search..."
+              placeholder="Search this view..."
               className="h-8 w-full rounded-md border border-surface-200 bg-surface-0 pl-8 pr-8 text-sm text-surface-700 outline-none transition-colors placeholder:text-surface-400 focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
             />
             {localSearch && (
@@ -306,25 +490,6 @@ export function GridToolbar() {
                 <X size={14} />
               </button>
             )}
-          </div>
-
-          {/* Columns button */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowColumns(!showColumns)
-                setShowFilters(false)
-              }}
-              className={`flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors ${
-                showColumns
-                  ? 'border-primary-300 bg-primary-50 text-primary-700'
-                  : 'border-surface-200 bg-surface-0 text-surface-600 hover:bg-surface-50'
-              }`}
-            >
-              <Columns3 size={14} />
-              Columns
-            </button>
-            {showColumns && <ColumnPicker onClose={() => setShowColumns(false)} />}
           </div>
 
           {/* Filter button */}
@@ -362,10 +527,12 @@ export function GridToolbar() {
           )}
         </div>
 
-        <div className="mx-1 h-5 w-px bg-surface-200" />
+        <div className="mx-1 h-5 w-px shrink-0 bg-surface-200" />
 
         {/* Right zone — Entity actions / Bulk actions */}
-        <EntityActions />
+        <div className="shrink-0">
+          <EntityActions />
+        </div>
       </div>
 
       {/* Quick filters row */}

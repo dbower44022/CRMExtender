@@ -9,14 +9,14 @@
 
 > **V1.0 (2026-02-19):**
 > Initial specification. Established application shell, navigation architecture, layout patterns, detail viewing modes, editing paradigms, and interaction patterns.
->
+> 
 > **V2.0 (2026-02-21):**
 > Major terminology alignment with Master Glossary V3. Renamed: Icon Rail → Entity Bar, Top Header Bar → Application Tool Bar, Content Area → Content Panel, Grid Toolbar → Content Tool Bar, Docked Panel → Docked Window, Full Takeover → Modal Full Overlay Window, Four-Zone Layout → Workspace Layout. Introduced Application Status Bar. Reframed Detail Panel as a layout location housing a Docked Window. Replaced Section 13 (Detail View Modes) with Window Type × Display Mode composable framework. Replaced Section 14's three-zone vertical structure (Identity Zone / Context Zone / Activity Timeline Zone) with Identity Card + Card Layout Area using the Card Type system (10 Card Types). Updated Section-Based Editing to reference Attribute Cards. Replaced local glossary (Section 30) with cross-reference to Master Glossary V3. Updated Section 9 to reflect Help on Application Tool Bar, Settings and Account on Entity Bar. Added Application Status Bar specification.
->
+> 
 > This document defines the GUI functional requirements for the CRMExtender production application. It establishes the application shell, navigation architecture, layout patterns, Window Types, Display Modes, Card Types, editing paradigms, and interaction patterns that all entity-specific interfaces plug into. This PRD is the "container" specification — it defines how the application works as a cohesive product, while entity-specific PRDs (Contacts, Companies, Tasks, etc.) define what appears within these containers.
->
+> 
 > This PRD does not duplicate interaction specifications already defined in entity-specific PRDs. Grid interactions (inline editing, row expansion, bulk actions, keyboard navigation) are defined in the [Views & Grid PRD](views-grid-prd_V4.md). Field type rendering and data layer behavior are defined in the [Custom Objects PRD](custom-objects-prd_v1.md). Filter, sort, and group mechanics are defined in the [Views & Grid PRD](views-grid-prd_V4.md) and [Data Sources PRD](data-sources-prd_V1.md). Rich text editing is defined in the [Notes PRD](notes-prd_V3.md).
->
+> 
 > **Tech stack context:** Flutter frontend (cross-platform: web, macOS, Windows, Linux), Python FastAPI backend, PostgreSQL with schema-per-tenant isolation. The web deployment runs as a PWA. Native desktop builds via Flutter's desktop embedding.
 
 ---
@@ -148,12 +148,12 @@ This principle prevents the gradual creep of global features into entity-specifi
 
 ### 3.1 Personas
 
-| Persona | Description | Screen Setup | Primary Need |
-|---|---|---|---|
-| **Power User (Sam)** | Sales professional managing 200+ contacts, 50+ active conversations, daily email triage | 27" 4K primary + 24" secondary | Maximum information density, keyboard-driven workflow, instant record browsing |
-| **Business Owner (Doug)** | Service business operator managing crews, jobs, customers across multiple cities | 27" 4K single monitor | Complete relationship visibility, quick context switching between entity types, action-oriented views |
-| **Team Lead (Maria)** | Manages a team of 5, reviews shared views, monitors pipeline health | 24" 1440p | Shared views, bulk operations, dashboard summaries |
-| **Occasional User (Tom)** | Uses CRM 2-3 times per week for lookups and basic updates | 15" laptop | Simple navigation, clear visual hierarchy, search-first workflow |
+| Persona                   | Description                                                                             | Screen Setup                   | Primary Need                                                                                          |
+| ------------------------- | --------------------------------------------------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| **Power User (Sam)**      | Sales professional managing 200+ contacts, 50+ active conversations, daily email triage | 27" 4K primary + 24" secondary | Maximum information density, keyboard-driven workflow, instant record browsing                        |
+| **Business Owner (Doug)** | Service business operator managing crews, jobs, customers across multiple cities        | 27" 4K single monitor          | Complete relationship visibility, quick context switching between entity types, action-oriented views |
+| **Team Lead (Maria)**     | Manages a team of 5, reviews shared views, monitors pipeline health                     | 24" 1440p                      | Shared views, bulk operations, dashboard summaries                                                    |
+| **Occasional User (Tom)** | Uses CRM 2-3 times per week for lookups and basic updates                               | 15" laptop                     | Simple navigation, clear visual hierarchy, search-first workflow                                      |
 
 ### 3.2 User Stories
 
@@ -226,12 +226,12 @@ The application shell consists of four primary vertical zones arranged left to r
 
 ### 4.2 Zone Dimensions (Reference, at 2× scaling on 4K 27")
 
-| Zone | Default Width | Min Width | Max Width | Resizable |
-|---|---|---|---|---|
-| Entity Bar | 60px | 60px | 60px | No — fixed width |
-| Action Panel | 280px | 200px | 400px | Yes — drag right edge |
+| Zone                 | Default Width                    | Min Width          | Max Width  | Resizable              |
+| -------------------- | -------------------------------- | ------------------ | ---------- | ---------------------- |
+| Entity Bar           | 60px                             | 60px               | 60px       | No — fixed width       |
+| Action Panel         | 280px                            | 200px              | 400px      | Yes — drag right edge  |
 | Content Panel (Grid) | Flexible — fills remaining space | 300px (≈2 columns) | No maximum | Yes — via Splitter Bar |
-| Detail Panel | 480px | 320px | 800px | Yes — via Splitter Bar |
+| Detail Panel         | 480px                            | 320px              | 800px      | Yes — via Splitter Bar |
 
 **Total at defaults (2× scaling, 1920px effective width):** 60 + 280 + 620 + 480 = 1440px content + chrome. At 1.5× scaling (2560px effective), the grid gains ~640px of additional width.
 
@@ -246,13 +246,13 @@ A draggable Splitter Bar divides the Content Panel (Grid) from the Detail Panel.
 
 ### 4.4 Zone Visibility States
 
-| State | Entity Bar | Action Panel | Content Panel | Detail Panel | Trigger |
-|---|---|---|---|---|---|
-| **Full layout** | Visible | Open | Visible | Open (Docked Window) | Default on large screens |
-| **Grid focus** | Visible | Collapsed | Full width | Closed | No row selected, Action Panel toggled off |
-| **Detail focus** | Visible | Collapsed | Narrow (1-2 cols) | Wide (Docked Window) | Splitter Bar dragged far left |
-| **Modal Full Overlay** | Visible | Open/collapsed | Hidden | Modal Full Overlay Window fills Content Panel | User activates Modal Full Overlay Window |
-| **Action collapsed** | Visible | Collapsed (0px) | Wider | Open | User toggles Action Panel off |
+| State                  | Entity Bar | Action Panel    | Content Panel     | Detail Panel                                  | Trigger                                   |
+| ---------------------- | ---------- | --------------- | ----------------- | --------------------------------------------- | ----------------------------------------- |
+| **Full layout**        | Visible    | Open            | Visible           | Open (Docked Window)                          | Default on large screens                  |
+| **Grid focus**         | Visible    | Collapsed       | Full width        | Closed                                        | No row selected, Action Panel toggled off |
+| **Detail focus**       | Visible    | Collapsed       | Narrow (1-2 cols) | Wide (Docked Window)                          | Splitter Bar dragged far left             |
+| **Modal Full Overlay** | Visible    | Open/collapsed  | Hidden            | Modal Full Overlay Window fills Content Panel | User activates Modal Full Overlay Window  |
+| **Action collapsed**   | Visible    | Collapsed (0px) | Wider             | Open                                          | User toggles Action Panel off             |
 
 ---
 
@@ -290,26 +290,29 @@ The Entity Bar is the outermost navigation layer. It contains **Entity Selectors
 
 ### 5.3 Entity Selector Specifications
 
-| Attribute | Value |
-|---|---|
-| Icon size | 24×24px |
-| Label | Small text below icon (10-11px) |
-| Item height | ~56px (icon + label + padding) |
-| Active indicator | Highlighted background + left accent bar |
-| Hover state | Subtle background highlight |
-| Selected state | Filled background, accent bar on left edge |
+| Attribute        | Value                                      |
+| ---------------- | ------------------------------------------ |
+| Icon size        | 24×24px                                    |
+| Label            | Small text below icon (10-11px)            |
+| Item height      | ~56px (icon + label + padding)             |
+| Active indicator | Highlighted background + left accent bar   |
+| Hover state      | Subtle background highlight                |
+| Selected state   | Filled background, accent bar on left edge |
 
 ### 5.4 Content Hierarchy
 
 **Top section (fixed):**
+
 - **Home** — an Administration Entity, always first. The operational hub for cross-cutting features. Clicking Home loads the Home screen into the Content Panel.
 
 **Middle section (data entity types — Entity Selectors):**
+
 - System entities in default order: Contacts, Companies, Conversations, Communications, Events, Notes, Tasks, Documents, Projects
 - Separator line
 - Custom object types in user-defined order
 
 **Bottom section (pinned to bottom — Administration Entities):**
+
 - **Settings** — navigates to Settings & Administration (Section 19)
 - **Account** avatar — opens a dropdown menu: user profile, workspace switcher (for multi-tenant users), logout
 
@@ -344,17 +347,20 @@ The Action Panel is the **view control center** — it shows the user what they'
 When the action panel opens for an entity type, it displays the following sections top to bottom:
 
 **View Switcher (top):**
+
 - Dropdown or searchable list showing all available views for this entity type
 - Grouped: "Personal Views", "Shared Views", "System Defaults"
 - The currently active view is highlighted
 - Clicking a different view loads it into the grid and updates the configuration section below
 
 **Folder Navigation (conditional):**
+
 - Displayed only for entity types that have folder hierarchies (e.g., Documents)
 - Tree view of folders; clicking a folder scopes the grid to that folder's contents
 - The view configuration below applies within the selected folder
 
 **View Configuration (main body):**
+
 - Full display of the active view's current settings:
   - **Active filters:** Each filter condition displayed as a readable chip or row (e.g., "Status = Active", "Region = Midwest"). Filters from the saved view definition shown as locked/base; temporary overlay filters shown as removable.
   - **Sort order:** Current sort field(s) and direction(s)
@@ -363,6 +369,7 @@ When the action panel opens for an entity type, it displays the following sectio
 - Each configuration element is interactive — clicking a filter opens an inline editor to modify it (as a temporary overlay), clicking the sort opens a sort picker, etc.
 
 **View Actions (bottom):**
+
 - "Reset" — discard all temporary modifications, return to the saved view state
 - "Save View" — save the current state (base + temporary overlay) as a new personal view
 - "Edit View" — enter edit mode to modify the existing view definition
@@ -397,12 +404,12 @@ The Content Panel consists of:
 
 When the Detail Panel is open (showing a Docked Window), clicking a row in the grid or using arrow-key navigation selects that row and instantly updates the Docked Window with the selected record's data.
 
-| Interaction | Behavior |
-|---|---|
-| **Click a row** | Row is selected (highlighted), Docked Window updates to show that record in Preview Mode |
-| **Arrow Up / Arrow Down** | Selection moves to the previous/next row, Docked Window updates instantly |
-| **No selection** | Docked Window shows an empty state prompt ("Select a record to preview") or closes |
-| **Prefetching** | The system prefetches the 2-3 records above and below the current selection so that arrow-key navigation triggers instant rendering with no loading delay |
+| Interaction               | Behavior                                                                                                                                                  |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Click a row**           | Row is selected (highlighted), Docked Window updates to show that record in Preview Mode                                                                  |
+| **Arrow Up / Arrow Down** | Selection moves to the previous/next row, Docked Window updates instantly                                                                                 |
+| **No selection**          | Docked Window shows an empty state prompt ("Select a record to preview") or closes                                                                        |
+| **Prefetching**           | The system prefetches the 2-3 records above and below the current selection so that arrow-key navigation triggers instant rendering with no loading delay |
 
 ### 7.4 View Type Rendering
 
@@ -437,11 +444,11 @@ Content rendered within the Detail Panel (via the Docked Window) follows all fiv
 
 ### 8.3 Panel States
 
-| State | Description |
-|---|---|
-| **Empty** | No row selected. The panel shows a minimal prompt: "Select a record to preview" or an entity-relevant tip. |
-| **Loaded** | A row is selected. The Docked Window displays the record using the Card-Based Architecture (Section 15): Identity Card at top, Card Layout Area below. |
-| **Loading** | A new row was selected but data is still loading (should be rare due to prefetching). A lightweight skeleton screen preserves the layout. |
+| State       | Description                                                                                                                                            |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Empty**   | No row selected. The panel shows a minimal prompt: "Select a record to preview" or an entity-relevant tip.                                             |
+| **Loaded**  | A row is selected. The Docked Window displays the record using the Card-Based Architecture (Section 15): Identity Card at top, Card Layout Area below. |
+| **Loading** | A new row was selected but data is still loading (should be rare due to prefetching). A lightweight skeleton screen preserves the layout.              |
 
 ---
 
@@ -463,25 +470,28 @@ The Application Tool Bar is a fixed, full-width bar at the top of the applicatio
 ### 9.3 Content
 
 **Left — Location Breadcrumb:**
+
 - Displays the current entity type name and active view name as a breadcrumb: `Contacts › All Contacts`
 - Updates automatically when the user switches entity types or views
 - The entity name portion is clickable (returns to the grid if in Modal Full Overlay Window mode)
 
 **Center — Global Search:**
+
 - A persistent search input field for cross-entity record search and navigation
 - See Section 12 for full specification
 
 **Right — Help:**
+
 - **Help icon** — Opens help documentation, contextual to the current screen
 
 ### 9.4 Dimensions
 
-| Attribute | Value |
-|---|---|
-| Height | 48px |
+| Attribute  | Value                                 |
+| ---------- | ------------------------------------- |
+| Height     | 48px                                  |
 | Background | Solid, contrasting with Content Panel |
-| Position | Fixed — does not scroll |
-| Z-index | Above all content zones |
+| Position   | Fixed — does not scroll               |
+| Z-index    | Above all content zones               |
 
 ---
 
@@ -493,23 +503,23 @@ The Application Status Bar is a fixed, full-width bar along the bottom of the ap
 
 ### 11.2 Content
 
-| Content | Position | Description |
-|---|---|---|
-| **Sync status** | Left | Current sync state for connected provider accounts (email, calendar) |
-| **Background job progress** | Left-center | Progress indicators for bulk operations, imports, enrichment runs |
-| **View record count** | Center | Total record count for the current View's result set (e.g., "1,247 records") |
-| **Selection context** | Center | When rows are selected: "15 of 1,247 selected" |
-| **Non-intrusive notifications** | Right | Transient error/warning/success messages that auto-dismiss |
+| Content                         | Position    | Description                                                                  |
+| ------------------------------- | ----------- | ---------------------------------------------------------------------------- |
+| **Sync status**                 | Left        | Current sync state for connected provider accounts (email, calendar)         |
+| **Background job progress**     | Left-center | Progress indicators for bulk operations, imports, enrichment runs            |
+| **View record count**           | Center      | Total record count for the current View's result set (e.g., "1,247 records") |
+| **Selection context**           | Center      | When rows are selected: "15 of 1,247 selected"                               |
+| **Non-intrusive notifications** | Right       | Transient error/warning/success messages that auto-dismiss                   |
 
 ### 11.3 Dimensions
 
-| Attribute | Value |
-|---|---|
-| Height | 24-28px |
+| Attribute  | Value                                            |
+| ---------- | ------------------------------------------------ |
+| Height     | 24-28px                                          |
 | Background | Subtle, lower contrast than Application Tool Bar |
-| Position | Fixed — does not scroll |
-| Z-index | Above all content zones |
-| Typography | Small text (11-12px), monospace for counts |
+| Position   | Fixed — does not scroll                          |
+| Z-index    | Above all content zones                          |
+| Typography | Small text (11-12px), monospace for counts       |
 
 ### 11.4 Scope
 
@@ -523,7 +533,7 @@ Detailed content specification and interaction patterns are deferred to a future
 
 ### 11.1 Purpose
 
-The Content Tool Bar is a fixed bar at the top of the Content Panel (below the Application Tool Bar) that provides multi-select management, view-scoped search, and entity-specific actions. It is the primary action bar for the current grid context.
+The Content Tool Bar is a fixed bar at the top of the Content Panel (below the Application Tool Bar) that provides multi-select management, column setup, view-scoped search, and entity-specific actions. It is the primary action bar for the current grid context.
 
 ### 11.2 Layout
 
@@ -536,44 +546,53 @@ The Content Tool Bar is a fixed bar at the top of the Content Panel (below the A
 
 ### 11.3 Content — Default State (No Selection)
 
-**Left — Multi-Select Management:**
+**Left — Multi-Select Management and Column Setup:**
+
 - Checkbox (master select/deselect toggle)
-- Dropdown arrow that opens a menu: Select All, Deselect All, Select All on Page, Invert Selection
+- Dropdown arrow that opens a menu: Select All, Deselect All,  Invert Selection and eventually custom designed selections (EX: "All Email")
+- The Columns button that allows users to select and configure displayed columns
 
 **Center — View-Scoped Quick Filter:**
+
 - Text input field for the view-scoped quick filter (Section 13)
 - Placeholder text: "Search this view..." or "Filter by field:value..."
+- The Filters button that allows users to select and configure filter options.
+- The QuickFilter action buttons.
 
 **Right — Entity Action Buttons:**
+
 - **Two primary action buttons** — the most common actions for this entity type, displayed as prominent buttons
-- **"Other" overflow button** — dropdown menu containing all remaining actions applicable to the entity grid
+- **"Other" overflow button** — dropdown menu containing all actions with the Two Primary Action Buttons being the first two in the list, then a separation bar, and all of the remaining actions. Finally another separation bar and then the "Help" function that will launch context specific help.
 
 The two primary action buttons are **entity-specific**. Each entity type defines which two actions are promoted to primary position:
 
-| Entity Type | Action 1 | Action 2 | Other (examples) |
-|---|---|---|---|
-| Contacts | New Contact | Import | Export, Merge Duplicates, Bulk Edit |
-| Companies | New Company | Import | Export, Enrich All, Bulk Edit |
-| Communications | New Communication | Sync Now | Export, Bulk Assign |
-| Conversations | New Conversation | — | Export, Bulk Merge |
-| Events | New Event | Sync Calendars | Export, Bulk Edit |
-| Notes | New Note | — | Export, Bulk Tag |
-| Tasks | New Task | My Tasks | Export, Bulk Complete, Bulk Assign |
-| Documents | Upload | New Folder | Export, Bulk Move |
-| Projects | New Project | — | Export, Archive |
-| Custom Objects | New [Entity] | Export | Import, Bulk Edit |
+| Entity Type    | Action 1          | Action 2       | Other (examples)                    |
+| -------------- | ----------------- | -------------- | ----------------------------------- |
+| Contacts       | Add Contact       | Import         | Export, Merge Duplicates, Bulk Edit |
+| Companies      | Add Company       | Import         | Export, Enrich All, Bulk Edit       |
+| Communications | Add Communication | Sync Now       | Export, Bulk Assign                 |
+| Conversations  | Add Conversation  | —              | Export, Bulk Merge                  |
+| Events         | Add Event         | Sync Calendars | Export, Bulk Edit                   |
+| Notes          | Add Note          | —              | Export, Bulk Tag                    |
+| Tasks          | Add Task          | My Tasks       | Export, Bulk Complete, Bulk Assign  |
+| Documents      | Upload            | View           | Export, Bulk Move                   |
+| Projects       | Add Project       | —              | Export, Archive                     |
+| Custom Objects | Add [Entity]      | Export         | Import, Bulk Edit                   |
 
 ### 11.4 Content — Active Selection State
 
 When one or more rows are selected via checkboxes, the toolbar transitions to the **selection context**:
 
 **Left — Selection Info:**
+
 - Selection count with dropdown: "15 selected ▾" — dropdown offers Select All, Deselect All, Select All Matching Records (across all pages), Invert Selection
 
 **Center — View-Scoped Quick Filter:**
+
 - Unchanged — the search remains available during selection
 
 **Right — Bulk Action Buttons:**
+
 - **Two primary bulk action buttons** — the most common bulk operations, displayed with record count: `[Bulk Edit (15)]` `[Bulk Delete (15)]`
 - **"Other" overflow button** — dropdown menu containing all remaining bulk actions: Bulk Assign, Bulk Export, Bulk Tag, Bulk Archive, etc.
 
@@ -602,23 +621,23 @@ The global search follows the ClickUp-style self-contained modal pattern:
 
 ### 12.3 Search Behavior
 
-| Attribute | Behavior |
-|---|---|
-| **Scope** | All entity types the user has access to |
-| **Matching** | Searches across display name fields and secondary identification fields (email, phone, etc.) |
-| **Ranking** | Results ranked by relevance; recently accessed records boosted |
-| **Grouping** | Results grouped by entity type, with a count per group |
-| **Result limit** | Top 5 results per entity type initially; "Show all N results" expander per group |
-| **Empty state** | "No matching records found" with suggestion to refine the query |
+| Attribute        | Behavior                                                                                     |
+| ---------------- | -------------------------------------------------------------------------------------------- |
+| **Scope**        | All entity types the user has access to                                                      |
+| **Matching**     | Searches across display name fields and secondary identification fields (email, phone, etc.) |
+| **Ranking**      | Results ranked by relevance; recently accessed records boosted                               |
+| **Grouping**     | Results grouped by entity type, with a count per group                                       |
+| **Result limit** | Top 5 results per entity type initially; "Show all N results" expander per group             |
+| **Empty state**  | "No matching records found" with suggestion to refine the query                              |
 
 ### 12.4 Modal Dimensions
 
-| Attribute | Value |
-|---|---|
-| Width | 700-800px (centered) |
-| Height | Up to 80% of viewport height |
-| Background overlay | Semi-transparent dark scrim |
-| Close | Escape key, click outside modal, or X button |
+| Attribute          | Value                                        |
+| ------------------ | -------------------------------------------- |
+| Width              | 700-800px (centered)                         |
+| Height             | Up to 80% of viewport height                 |
+| Background overlay | Semi-transparent dark scrim                  |
+| Close              | Escape key, click outside modal, or X button |
 
 ---
 
@@ -639,16 +658,19 @@ The view-scoped quick filter is a text input embedded in the Content Tool Bar th
 ### 13.3 Query Syntax
 
 **Plain text search:**
+
 - Type any text → matches records where any visible field contains the text
 - Example: `Acme` → returns all rows where any field contains "Acme"
 
 **Field-scoped search:**
+
 - Syntax: `field_name:value`
 - Example: `city:Cleveland` → matches only the City field
 - Example: `status:active` → matches only the Status field
 - Field names are case-insensitive and match on the field's display name or slug
 
 **Relative date syntax:**
+
 - Syntax: `date_field:relative_expression`
 - Example: `due:tomorrow` → records where the Due Date field is tomorrow
 - Example: `created:this week` → records created within the current week
@@ -658,21 +680,22 @@ The view-scoped quick filter is a text input embedded in the Content Tool Bar th
 
 **Supported relative date expressions:**
 
-| Expression | Resolves To |
-|---|---|
-| `today` | Current date |
-| `tomorrow` | Current date + 1 |
-| `yesterday` | Current date − 1 |
-| `this week` | Monday through Sunday of current week |
-| `last week` | Previous Monday through Sunday |
-| `next week` | Following Monday through Sunday |
-| `this month` | First through last day of current month |
-| `last month` | Previous calendar month |
-| `next month` | Following calendar month |
-| `last N days` | Today minus N days through today |
-| `next N days` | Today through today plus N days |
+| Expression    | Resolves To                             |
+| ------------- | --------------------------------------- |
+| `today`       | Current date                            |
+| `tomorrow`    | Current date + 1                        |
+| `yesterday`   | Current date − 1                        |
+| `this week`   | Monday through Sunday of current week   |
+| `last week`   | Previous Monday through Sunday          |
+| `next week`   | Following Monday through Sunday         |
+| `this month`  | First through last day of current month |
+| `last month`  | Previous calendar month                 |
+| `next month`  | Following calendar month                |
+| `last N days` | Today minus N days through today        |
+| `next N days` | Today through today plus N days         |
 
 **Numeric comparison syntax:**
+
 - Syntax: `numeric_field:operator value`
 - Example: `revenue:>500000` → records where Revenue exceeds 500,000
 - Example: `age:<30` → records where Age is less than 30
@@ -701,25 +724,25 @@ Entity data is displayed using a composable system of **Window Types** (the UI c
 
 A Window Type defines the UI container in which entity data renders — its size, position, and relationship to other workspace elements.
 
-| Window Type | Description | Supported Display Modes | Use Case |
-|---|---|---|---|
-| **Docked Window** | Renders within the Detail Panel zone, alongside the Content Panel, connected by a Splitter Bar. Contains an Identity Card (top) and Card Layout Area below in a single-column stack. | Preview, View, Edit | Default — rapid browsing, arrow-key navigation |
-| **Modal Full Overlay Window** | Expands to fill the entire Content Panel space, hiding the view beneath it. Cards can be arranged in multi-column layouts optimized for the wider space. | View, Edit | Deep work on a single record, reviewing full history |
-| **Modal Partial Overlay Window** | Centered overlay with a scrim, covering part of the workspace without full-screen takeover. | View | Focused interactions needing more space than a Floating Modal |
-| **Floating Modal** | Floats over the workspace as a dialog, blocks interaction with content behind it until dismissed. | Edit | Confirmation dialogs, creation forms, focused interactions requiring user response |
-| **Floating Unmodal** | Floats over the workspace without blocking interaction with content behind it. | Preview | Hover cards, entity preview popovers, contextual information displays |
-| **Undocked Window** | Separate floating panel (web) or OS-level window (native desktop). Can be placed on a second monitor. | Preview, View, Edit | Multi-monitor setups, maximum width for both grid and detail |
-| **Search Window** | Modal Partial Overlay Window dedicated to Global Search. Search input at top, results below grouped by entity type. | Preview, View | Cross-entity search and record browsing without disturbing workspace state |
+| Window Type                      | Description                                                                                                                                                                          | Supported Display Modes | Use Case                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------- | ---------------------------------------------------------------------------------- |
+| **Docked Window**                | Renders within the Detail Panel zone, alongside the Content Panel, connected by a Splitter Bar. Contains an Identity Card (top) and Card Layout Area below in a single-column stack. | Preview, View, Edit     | Default — rapid browsing, arrow-key navigation                                     |
+| **Modal Full Overlay Window**    | Expands to fill the entire Content Panel space, hiding the view beneath it. Cards can be arranged in multi-column layouts optimized for the wider space.                             | View, Edit              | Deep work on a single record, reviewing full history                               |
+| **Modal Partial Overlay Window** | Centered overlay with a scrim, covering part of the workspace without full-screen takeover.                                                                                          | View                    | Focused interactions needing more space than a Floating Modal                      |
+| **Floating Modal**               | Floats over the workspace as a dialog, blocks interaction with content behind it until dismissed.                                                                                    | Edit                    | Confirmation dialogs, creation forms, focused interactions requiring user response |
+| **Floating Unmodal**             | Floats over the workspace without blocking interaction with content behind it.                                                                                                       | Preview                 | Hover cards, entity preview popovers, contextual information displays              |
+| **Undocked Window**              | Separate floating panel (web) or OS-level window (native desktop). Can be placed on a second monitor.                                                                                | Preview, View, Edit     | Multi-monitor setups, maximum width for both grid and detail                       |
+| **Search Window**                | Modal Partial Overlay Window dedicated to Global Search. Search input at top, results below grouped by entity type.                                                                  | Preview, View           | Cross-entity search and record browsing without disturbing workspace state         |
 
 ### 14.3 Display Modes
 
 A Display Mode defines the interaction level for viewing entity data within a Window.
 
-| Display Mode | Description | Input Controls | Empty Fields |
-|---|---|---|---|
-| **Preview Mode** | Compact, read-only summary. Enough information to identify the record and scan key attributes without opening it fully. | None — formatted text only | Suppressed entirely |
-| **View Mode** | Full, comprehensive, read-only display. All fields, relationships, and activity visible. | None — formatted text only | Suppressed entirely |
-| **Edit Mode** | Modifying entity data. Can be scoped to a single Attribute Card (Section-Based Editing), a single cell (inline grid edit), or a full creation form. | Active input fields | Shown as editable placeholders |
+| Display Mode     | Description                                                                                                                                         | Input Controls             | Empty Fields                   |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | ------------------------------ |
+| **Preview Mode** | Compact, read-only summary. Enough information to identify the record and scan key attributes without opening it fully.                             | None — formatted text only | Suppressed entirely            |
+| **View Mode**    | Full, comprehensive, read-only display. All fields, relationships, and activity visible.                                                            | None — formatted text only | Suppressed entirely            |
+| **Edit Mode**    | Modifying entity data. Can be scoped to a single Attribute Card (Section-Based Editing), a single cell (inline grid edit), or a full creation form. | Active input fields        | Shown as editable placeholders |
 
 ### 14.4 Window Type Specifications
 
@@ -748,6 +771,7 @@ A Display Mode defines the interaction level for viewing entity data within a Wi
 The Undocked Window separates the record view into an independent, resizable container:
 
 **Web/PWA implementation:**
+
 - The Window becomes a freely draggable, resizable floating panel within the application viewport
 - The grid expands to fill the Content Panel at full width
 - The floating Window can be positioned anywhere within the browser window, overlapping the grid as needed
@@ -755,6 +779,7 @@ The Undocked Window separates the record view into an independent, resizable con
 - A "Re-dock" button or keyboard shortcut snaps it back to the Docked Window position
 
 **Native desktop implementation (macOS, Windows, Linux):**
+
 - The Window opens as a true OS-level window, managed by the operating system
 - The window can be moved to a second monitor
 - Arrow-key navigation in the main window's grid updates the Undocked Window in real time
@@ -780,14 +805,14 @@ The Undocked Window separates the record view into an independent, resizable con
 
 ### 14.5 Window Type Switching
 
-| From | To | Trigger |
-|---|---|---|
-| Docked Window | Modal Full Overlay Window | Maximize button on Docked Window header, or keyboard shortcut |
-| Docked Window | Undocked Window | Undock button on Docked Window header, or keyboard shortcut |
-| Modal Full Overlay Window | Docked Window | Back button, Escape key, or keyboard shortcut |
-| Modal Full Overlay Window | Undocked Window | Undock button |
-| Undocked Window | Docked Window | Re-dock button, or close the Undocked Window |
-| Undocked Window | Modal Full Overlay Window | Maximize button within the Undocked Window |
+| From                      | To                        | Trigger                                                       |
+| ------------------------- | ------------------------- | ------------------------------------------------------------- |
+| Docked Window             | Modal Full Overlay Window | Maximize button on Docked Window header, or keyboard shortcut |
+| Docked Window             | Undocked Window           | Undock button on Docked Window header, or keyboard shortcut   |
+| Modal Full Overlay Window | Docked Window             | Back button, Escape key, or keyboard shortcut                 |
+| Modal Full Overlay Window | Undocked Window           | Undock button                                                 |
+| Undocked Window           | Docked Window             | Re-dock button, or close the Undocked Window                  |
+| Undocked Window           | Modal Full Overlay Window | Maximize button within the Undocked Window                    |
 
 ---
 
@@ -902,18 +927,18 @@ The Card Layout Area is the region below the Identity Card where the entity's co
 
 The platform defines ten Card Types, each representing a distinct data presentation pattern. Entity-specific PRDs define which Card Types are used for each entity and what data populates them.
 
-| Card Type | Purpose | Content | Example Usage |
-|---|---|---|---|
-| **Identity Card** | Essential identifying information | Name, avatar, primary identifiers, quick-action buttons. Always fixed at top of Window. | Contact name + email + phone; Task title + status + priority |
-| **Attribute Card** | Field name/value pairs | Fields from the entity's Field Registry, organized by Field Groups. Supports Section-Based Editing via pencil icon. | "Name: John Smith, Title: VP Sales, Phone: 555-1234" |
-| **Relation Card** | Connected entities | Entities linked via Relation Types. Each related entity renders as a compact chip or row with Display Name Field + key attributes. | "Contacts at this Company", "Projects linked to this Conversation" |
-| **Content Card** | Rich text content | A Communication's content_clean, a Note's body, a Published Summary. Scrollable within the card. **Original content**, not derived. | Email body, Note text |
-| **Activity Card** | Chronological interaction stream | Past interactions related to the entity, filterable by channel, date range, and entity type. Shows *what happened*. | Unified timeline of emails, calls, meetings, notes |
-| **Calendar Card** | Forward-looking scheduled events | Upcoming meetings, deadlines, appointments. Rendered as compact agenda list or mini-calendar. Shows *what's scheduled*. | Next 5 upcoming meetings for a Contact |
-| **Timeline Card** | Gantt-style temporal visualization | Duration bars on a horizontal axis. Overlapping durations, dependencies, progress. | Project task progression, deal stage history |
-| **List Card** | Tabular list of child/attached records | Mini-grid within the card. Subtasks on a Task, Documents attached to a Contact, child Conversations in an Aggregate. | Task subtask list, Document attachments |
-| **Metric Card** | Computed scores, statistics, KPIs | Relationship Strength, engagement scores, communication frequency, completion percentage. Compact numerical displays with optional sparklines. | Contact engagement score, Project completion % |
-| **Summary Card** | AI-generated or user-written distillations | Derived/synthesized summaries of entity state. Distinguished from Content Card in that summaries are not original content. | Conversation AI summary, Project health overview |
+| Card Type          | Purpose                                    | Content                                                                                                                                        | Example Usage                                                      |
+| ------------------ | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Identity Card**  | Essential identifying information          | Name, avatar, primary identifiers, quick-action buttons. Always fixed at top of Window.                                                        | Contact name + email + phone; Task title + status + priority       |
+| **Attribute Card** | Field name/value pairs                     | Fields from the entity's Field Registry, organized by Field Groups. Supports Section-Based Editing via pencil icon.                            | "Name: John Smith, Title: VP Sales, Phone: 555-1234"               |
+| **Relation Card**  | Connected entities                         | Entities linked via Relation Types. Each related entity renders as a compact chip or row with Display Name Field + key attributes.             | "Contacts at this Company", "Projects linked to this Conversation" |
+| **Content Card**   | Rich text content                          | A Communication's content_clean, a Note's body, a Published Summary. Scrollable within the card. **Original content**, not derived.            | Email body, Note text                                              |
+| **Activity Card**  | Chronological interaction stream           | Past interactions related to the entity, filterable by channel, date range, and entity type. Shows *what happened*.                            | Unified timeline of emails, calls, meetings, notes                 |
+| **Calendar Card**  | Forward-looking scheduled events           | Upcoming meetings, deadlines, appointments. Rendered as compact agenda list or mini-calendar. Shows *what's scheduled*.                        | Next 5 upcoming meetings for a Contact                             |
+| **Timeline Card**  | Gantt-style temporal visualization         | Duration bars on a horizontal axis. Overlapping durations, dependencies, progress.                                                             | Project task progression, deal stage history                       |
+| **List Card**      | Tabular list of child/attached records     | Mini-grid within the card. Subtasks on a Task, Documents attached to a Contact, child Conversations in an Aggregate.                           | Task subtask list, Document attachments                            |
+| **Metric Card**    | Computed scores, statistics, KPIs          | Relationship Strength, engagement scores, communication frequency, completion percentage. Compact numerical displays with optional sparklines. | Contact engagement score, Project completion %                     |
+| **Summary Card**   | AI-generated or user-written distillations | Derived/synthesized summaries of entity state. Distinguished from Content Card in that summaries are not original content.                     | Conversation AI summary, Project health overview                   |
 
 ### 15.6 Activity Card Specification
 
@@ -923,14 +948,14 @@ The Activity Card replaces the former "Activity Timeline Zone" and displays a un
 
 The Activity Card aggregates items from multiple entity types into a single interleaved stream:
 
-| Item Type | Source | Display |
-|---|---|---|
-| Emails | Communications (channel = email) | Subject line, sender, date, brief content preview |
-| Calls | Communications (channel = phone) | Duration, direction (inbound/outbound), date, participant |
-| Meetings | Events linked to this record | Title, date/time, participant count |
-| Notes | Notes linked to this record | Title or content preview, author, date |
-| Tasks | Tasks linked to this record | Title, status, assignee, due date |
-| Conversations | Conversations involving this record | Title, status, last activity date |
+| Item Type     | Source                              | Display                                                   |
+| ------------- | ----------------------------------- | --------------------------------------------------------- |
+| Emails        | Communications (channel = email)    | Subject line, sender, date, brief content preview         |
+| Calls         | Communications (channel = phone)    | Duration, direction (inbound/outbound), date, participant |
+| Meetings      | Events linked to this record        | Title, date/time, participant count                       |
+| Notes         | Notes linked to this record         | Title or content preview, author, date                    |
+| Tasks         | Tasks linked to this record         | Title, status, assignee, due date                         |
+| Conversations | Conversations involving this record | Title, status, last activity date                         |
 
 **Rendering rules:**
 
@@ -969,15 +994,15 @@ Each Attribute Card header displays a **pencil icon** (right-aligned) when the u
 
 ### 16.3 Edit Mode Behavior
 
-| Aspect | Behavior |
-|---|---|
-| **Transition** | The Attribute Card's compact, view-optimized rendering is replaced by editable input fields |
-| **Controls** | The pencil icon is replaced by Save (checkmark) and Cancel (X) buttons |
-| **Scope** | Only the clicked Attribute Card enters Edit Mode; all other Cards remain in View Mode |
-| **Compound fields** | An address that renders as 2 lines in View Mode expands to individual fields (Street, City, State, ZIP) in Edit Mode |
-| **Validation** | Field validation rules (from Custom Objects PRD Section 12) are enforced inline with error indicators |
-| **Save** | Clicking Save (or pressing Enter on single-field Attribute Cards) commits changes and transitions back to View Mode |
-| **Cancel** | Clicking Cancel (or pressing Escape) discards changes and transitions back to View Mode |
+| Aspect                 | Behavior                                                                                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Transition**         | The Attribute Card's compact, view-optimized rendering is replaced by editable input fields                                                     |
+| **Controls**           | The pencil icon is replaced by Save (checkmark) and Cancel (X) buttons                                                                          |
+| **Scope**              | Only the clicked Attribute Card enters Edit Mode; all other Cards remain in View Mode                                                           |
+| **Compound fields**    | An address that renders as 2 lines in View Mode expands to individual fields (Street, City, State, ZIP) in Edit Mode                            |
+| **Validation**         | Field validation rules (from Custom Objects PRD Section 12) are enforced inline with error indicators                                           |
+| **Save**               | Clicking Save (or pressing Enter on single-field Attribute Cards) commits changes and transitions back to View Mode                             |
+| **Cancel**             | Clicking Cancel (or pressing Escape) discards changes and transitions back to View Mode                                                         |
 | **Concurrent editing** | Only one Attribute Card can be in Edit Mode at a time. Attempting to edit a second Attribute Card prompts the user to save or cancel the first. |
 
 ### 16.4 Permission Integration
@@ -1007,15 +1032,16 @@ When a user modifies a view's filters, sort, or grouping through the action pane
 
 ### 17.3 Visual Indicators
 
-| State | Visual Treatment |
-|---|---|
-| **Saved view, no modifications** | View name displayed normally in the action panel and header breadcrumb |
+| State                                 | Visual Treatment                                                                                                                                                                                                          |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Saved view, no modifications**      | View name displayed normally in the action panel and header breadcrumb                                                                                                                                                    |
 | **Saved view with temporary overlay** | View name shown with a "modified" indicator (e.g., `All Contacts (modified)` or a subtle dot/badge). Temporary filter chips shown in a distinct style (e.g., dashed border) to differentiate from the view's base filters |
-| **Reset available** | A "Reset" action is visible in the action panel whenever temporary modifications exist |
+| **Reset available**                   | A "Reset" action is visible in the action panel whenever temporary modifications exist                                                                                                                                    |
 
 ### 17.4 Save Workflow
 
 **Save as new view:**
+
 1. User has a view with temporary modifications
 2. User clicks "Save View" in the action panel
 3. System prompts for a view name
@@ -1023,6 +1049,7 @@ When a user modifies a view's filters, sort, or grouping through the action pane
 5. The user is switched to the new view
 
 **Edit existing view:**
+
 1. User clicks "Edit View" in the action panel
 2. The action panel enters edit mode — configuration fields become fully interactive, and a Save/Cancel toolbar appears
 3. If temporary modifications are already active, the system prompts: "You have unsaved changes — save these as the new version of '[View Name]'?"
@@ -1052,19 +1079,23 @@ The Home screen is the operational hub for **cross-cutting concerns** — featur
 The Home screen content is defined at a high level here, with detailed specification deferred to a future Home Screen PRD:
 
 **Notifications Panel:**
+
 - Recent notifications: new communications received, task due dates approaching, @mentions in notes, shared view modifications, provider sync status/errors
 - Grouped by time (Today, Yesterday, This Week, Older)
 - Each notification links to the relevant record
 
 **Activity Summary:**
+
 - Recent activity across all entity types: records created, modified, communications received
 - Filterable by entity type and time range
 
 **Quick Access:**
+
 - Pinned or frequently accessed views across all entity types
 - Recent records the user interacted with
 
 **Dashboard Widgets (future):**
+
 - Configurable dashboard with summary metrics, charts, and KPIs
 - Pipeline summaries, task completion rates, communication volume trends
 - Detailed specification deferred to a Dashboards PRD
@@ -1083,16 +1114,16 @@ Settings is accessible via the Settings Entity Selector on the Entity Bar (botto
 
 ### 19.2 Settings Scope (High-Level)
 
-| Category | Examples |
-|---|---|
-| **Profile** | Display name, email, avatar, timezone, date format preferences |
-| **Workspace** | Workspace name, branding, member management, billing |
-| **Entity Types** | Custom object management (create, edit field groups, manage fields, set icons) |
-| **Entity Bar Customization** | Reorder Entity Selectors, show/hide entity types, manage custom object icons |
-| **Integrations** | Provider account management (email, calendar, phone), API keys, webhook configuration |
-| **Permissions** | Role definitions, permission assignments (per Permissions & Sharing PRD) |
-| **Data Management** | Import/export, bulk operations, data cleanup tools |
-| **Notifications** | Notification preferences (which events trigger notifications, delivery method) |
+| Category                     | Examples                                                                              |
+| ---------------------------- | ------------------------------------------------------------------------------------- |
+| **Profile**                  | Display name, email, avatar, timezone, date format preferences                        |
+| **Workspace**                | Workspace name, branding, member management, billing                                  |
+| **Entity Types**             | Custom object management (create, edit field groups, manage fields, set icons)        |
+| **Entity Bar Customization** | Reorder Entity Selectors, show/hide entity types, manage custom object icons          |
+| **Integrations**             | Provider account management (email, calendar, phone), API keys, webhook configuration |
+| **Permissions**              | Role definitions, permission assignments (per Permissions & Sharing PRD)              |
+| **Data Management**          | Import/export, bulk operations, data cleanup tools                                    |
+| **Notifications**            | Notification preferences (which events trigger notifications, delivery method)        |
 
 ### 19.3 Layout
 
@@ -1108,16 +1139,16 @@ Empty states should be helpful and action-oriented, not just decorative. When a 
 
 ### 20.2 Empty State Patterns
 
-| Context | Empty State |
-|---|---|
-| **Grid with no records (new entity type)** | Centered message: "No [entity] records yet" with prominent Create and Import buttons |
-| **Grid with no matching records (filter active)** | "No records match your current filters" with a "Reset Filters" button |
-| **Grid with no matching records (quick filter active)** | "No records match '[search text]'" with a "Clear Search" link |
-| **Detail panel with no selection** | "Select a record to preview" — minimal, unobtrusive |
-| **Attribute Card (no field data)** | Card is suppressed entirely; remaining Cards expand upward |
-| **Activity Card (no activity)** | Minimal message: "No activity yet" — no large illustrations or excessive text |
-| **Action panel view list (no saved views)** | "No saved views" with a "Create View" action. The system default view is always available. |
-| **Home screen notifications (none)** | "You're all caught up" — brief and positive |
+| Context                                                 | Empty State                                                                                |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **Grid with no records (new entity type)**              | Centered message: "No [entity] records yet" with prominent Create and Import buttons       |
+| **Grid with no matching records (filter active)**       | "No records match your current filters" with a "Reset Filters" button                      |
+| **Grid with no matching records (quick filter active)** | "No records match '[search text]'" with a "Clear Search" link                              |
+| **Detail panel with no selection**                      | "Select a record to preview" — minimal, unobtrusive                                        |
+| **Attribute Card (no field data)**                      | Card is suppressed entirely; remaining Cards expand upward                                 |
+| **Activity Card (no activity)**                         | Minimal message: "No activity yet" — no large illustrations or excessive text              |
+| **Action panel view list (no saved views)**             | "No saved views" with a "Create View" action. The system default view is always available. |
+| **Home screen notifications (none)**                    | "You're all caught up" — brief and positive                                                |
 
 ### 20.3 Design Guidelines
 
@@ -1132,14 +1163,14 @@ Empty states should be helpful and action-oriented, not just decorative. When a 
 
 ### 21.1 Loading States
 
-| Context | Loading Pattern |
-|---|---|
-| **Initial app load** | Full-screen loading indicator with app logo |
-| **Entity switch (Entity Selector click)** | Grid displays skeleton screen (row outlines) while data loads. Action Panel updates immediately (view list is cached). |
-| **View switch** | Grid displays skeleton screen. Previous data is cleared immediately to prevent stale data confusion. |
-| **Docked Window update (arrow key)** | Instant update if prefetched (target: >95% of cases). Lightweight inline skeleton if not prefetched. Never a full Window reload. |
-| **Search results** | Results stream in as available; skeleton rows show expected result count |
-| **Attribute Card edit save** | Inline saving indicator (subtle spinner on the Save button). Attribute Card returns to View Mode on completion. |
+| Context                                   | Loading Pattern                                                                                                                  |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Initial app load**                      | Full-screen loading indicator with app logo                                                                                      |
+| **Entity switch (Entity Selector click)** | Grid displays skeleton screen (row outlines) while data loads. Action Panel updates immediately (view list is cached).           |
+| **View switch**                           | Grid displays skeleton screen. Previous data is cleared immediately to prevent stale data confusion.                             |
+| **Docked Window update (arrow key)**      | Instant update if prefetched (target: >95% of cases). Lightweight inline skeleton if not prefetched. Never a full Window reload. |
+| **Search results**                        | Results stream in as available; skeleton rows show expected result count                                                         |
+| **Attribute Card edit save**              | Inline saving indicator (subtle spinner on the Save button). Attribute Card returns to View Mode on completion.                  |
 
 ### 21.2 Skeleton Screens
 
@@ -1150,14 +1181,14 @@ Skeleton screens (grey placeholder blocks showing the expected layout) are used 
 
 ### 21.3 Error Handling
 
-| Error Type | Handling |
-|---|---|
-| **Network error (data load)** | Inline error banner at the top of the affected zone: "Unable to load data. [Retry]" — other zones remain functional |
-| **Network error (save)** | Inline error on the Attribute Card being edited: "Save failed. [Retry]" — data remains in Edit Mode so the user doesn't lose changes |
-| **Permission error** | Inline message: "You don't have permission to [action]" — displayed where the action was attempted |
-| **Validation error (edit)** | Inline field-level error indicators (red border + tooltip) per the Views & Grid PRD |
-| **Server error (500)** | Inline error banner with retry. Never a full-page error screen unless the entire application is unreachable. |
-| **Stale data conflict** | If a save fails because the record was modified by another user, show: "This record was modified by [user] at [time]. [Reload] [Force Save]" |
+| Error Type                    | Handling                                                                                                                                     |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Network error (data load)** | Inline error banner at the top of the affected zone: "Unable to load data. [Retry]" — other zones remain functional                          |
+| **Network error (save)**      | Inline error on the Attribute Card being edited: "Save failed. [Retry]" — data remains in Edit Mode so the user doesn't lose changes         |
+| **Permission error**          | Inline message: "You don't have permission to [action]" — displayed where the action was attempted                                           |
+| **Validation error (edit)**   | Inline field-level error indicators (red border + tooltip) per the Views & Grid PRD                                                          |
+| **Server error (500)**        | Inline error banner with retry. Never a full-page error screen unless the entire application is unreachable.                                 |
+| **Stale data conflict**       | If a save fails because the record was modified by another user, show: "This record was modified by [user] at [time]. [Reload] [Force Save]" |
 
 ### 21.4 Error Isolation
 
@@ -1173,13 +1204,13 @@ CRMExtender is designed large-screen-first and uses **progressive collapse** to 
 
 ### 22.2 Breakpoint Definitions
 
-| Breakpoint | Effective Width | Description |
-|---|---|---|
-| **XL (primary target)** | ≥1920px | Full Workspace Layout. All zones visible simultaneously. |
-| **L** | 1440–1919px | Four zones visible but tighter. Action panel may default to collapsed. |
-| **M** | 1024–1439px | Grid + Detail Panel only. Action panel is an overlay. Rail collapses to icon-only (no labels). |
-| **S** | 768–1023px | Single-zone focus. Grid or detail panel, not both. Detail panel is a Modal Full Overlay Window or slide-over. |
-| **XS** | <768px | Mobile layout. Bottom tab bar replaces rail. Full-screen views. This is a minimal-support tier. |
+| Breakpoint              | Effective Width | Description                                                                                                   |
+| ----------------------- | --------------- | ------------------------------------------------------------------------------------------------------------- |
+| **XL (primary target)** | ≥1920px         | Full Workspace Layout. All zones visible simultaneously.                                                      |
+| **L**                   | 1440–1919px     | Four zones visible but tighter. Action panel may default to collapsed.                                        |
+| **M**                   | 1024–1439px     | Grid + Detail Panel only. Action panel is an overlay. Rail collapses to icon-only (no labels).                |
+| **S**                   | 768–1023px      | Single-zone focus. Grid or detail panel, not both. Detail panel is a Modal Full Overlay Window or slide-over. |
+| **XS**                  | <768px          | Mobile layout. Bottom tab bar replaces rail. Full-screen views. This is a minimal-support tier.               |
 
 ### 22.3 Progressive Collapse Sequence
 
@@ -1210,20 +1241,20 @@ Keyboard shortcuts are available for the most frequent navigation and action tas
 
 ### 23.2 Shortcut Definitions
 
-| Shortcut | Action | Context |
-|---|---|---|
-| **Cmd/Ctrl + K** | Open Search Window | Global — works from any screen |
-| **/** | Focus the view-scoped quick filter | When grid is focused |
-| **Escape** | Close Window / cancel edit / deselect / close Docked Window | Context-dependent cascade |
-| **↑ / ↓** | Navigate between grid rows (syncs Docked Window) | When grid is focused |
-| **Enter** | Open selected record in Modal Full Overlay Window | When grid row is focused |
-| **Space** | Toggle row expansion / Docked Window | When grid row is focused |
-| **Cmd/Ctrl + N** | Create new record (current entity type) | Within entity workspace |
-| **Cmd/Ctrl + \\** | Toggle Action Panel open/closed | Global — works from any screen |
-| **Cmd/Ctrl + Shift + D** | Toggle Docked Window / Undocked Window | When Docked Window is visible |
-| **Cmd/Ctrl + Shift + F** | Toggle Docked Window / Modal Full Overlay Window | When Docked Window is visible |
-| **Cmd/Ctrl + Shift + \\** | Toggle Detail Panel open/closed | Within entity workspace |
-| **Tab** | Move focus between zones (Entity Bar → Action Panel → grid → Detail Panel) | Global focus management |
+| Shortcut                  | Action                                                                     | Context                        |
+| ------------------------- | -------------------------------------------------------------------------- | ------------------------------ |
+| **Cmd/Ctrl + K**          | Open Search Window                                                         | Global — works from any screen |
+| **/**                     | Focus the view-scoped quick filter                                         | When grid is focused           |
+| **Escape**                | Close Window / cancel edit / deselect / close Docked Window                | Context-dependent cascade      |
+| **↑ / ↓**                 | Navigate between grid rows (syncs Docked Window)                           | When grid is focused           |
+| **Enter**                 | Open selected record in Modal Full Overlay Window                          | When grid row is focused       |
+| **Space**                 | Toggle row expansion / Docked Window                                       | When grid row is focused       |
+| **Cmd/Ctrl + N**          | Create new record (current entity type)                                    | Within entity workspace        |
+| **Cmd/Ctrl + \\**         | Toggle Action Panel open/closed                                            | Global — works from any screen |
+| **Cmd/Ctrl + Shift + D**  | Toggle Docked Window / Undocked Window                                     | When Docked Window is visible  |
+| **Cmd/Ctrl + Shift + F**  | Toggle Docked Window / Modal Full Overlay Window                           | When Docked Window is visible  |
+| **Cmd/Ctrl + Shift + \\** | Toggle Detail Panel open/closed                                            | Within entity workspace        |
+| **Tab**                   | Move focus between zones (Entity Bar → Action Panel → grid → Detail Panel) | Global focus management        |
 
 ### 23.3 Escape Key Cascade
 
@@ -1246,15 +1277,15 @@ The cascade resolves to the **first matching condition** — pressing Escape onc
 
 The visual design system is built on design tokens that ensure consistency across all components. Detailed values are deferred to the implementation phase; this section establishes the categories.
 
-| Category | Examples |
-|---|---|
-| **Colors** | Primary, secondary, accent, background, surface, text, border, error, warning, success, info |
-| **Typography** | Font family (system font stack for performance), heading sizes (H1-H4), body text, caption, monospace |
-| **Spacing** | Base unit (4px), consistent padding/margin scale (4, 8, 12, 16, 24, 32, 48) |
-| **Border radius** | Small (4px), medium (8px), large (12px) |
-| **Elevation** | Flat (grid), raised (action panel, modals), overlay (global search modal) |
-| **Iconography** | Monochrome icon set, 24×24 standard size, 16×16 compact size |
-| **Density** | Compact row height (32-36px), standard row height (40-44px), comfortable row height (48-52px). Default: compact. |
+| Category          | Examples                                                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Colors**        | Primary, secondary, accent, background, surface, text, border, error, warning, success, info                     |
+| **Typography**    | Font family (system font stack for performance), heading sizes (H1-H4), body text, caption, monospace            |
+| **Spacing**       | Base unit (4px), consistent padding/margin scale (4, 8, 12, 16, 24, 32, 48)                                      |
+| **Border radius** | Small (4px), medium (8px), large (12px)                                                                          |
+| **Elevation**     | Flat (grid), raised (action panel, modals), overlay (global search modal)                                        |
+| **Iconography**   | Monochrome icon set, 24×24 standard size, 16×16 compact size                                                     |
+| **Density**       | Compact row height (32-36px), standard row height (40-44px), comfortable row height (48-52px). Default: compact. |
 
 ### 24.2 Dark Mode
 
@@ -1264,11 +1295,11 @@ Dark mode support is planned but deferred to a future phase. The design token ar
 
 Users can choose from three density levels that affect row heights, padding, and spacing:
 
-| Density | Row Height | Padding Scale | Use Case |
-|---|---|---|---|
-| **Compact** | 32-36px | Tight (4-8px) | Power users with large screens (default) |
-| **Standard** | 40-44px | Normal (8-12px) | General use |
-| **Comfortable** | 48-52px | Generous (12-16px) | Touch devices, accessibility needs |
+| Density         | Row Height | Padding Scale      | Use Case                                 |
+| --------------- | ---------- | ------------------ | ---------------------------------------- |
+| **Compact**     | 32-36px    | Tight (4-8px)      | Power users with large screens (default) |
+| **Standard**    | 40-44px    | Normal (8-12px)    | General use                              |
+| **Comfortable** | 48-52px    | Generous (12-16px) | Touch devices, accessibility needs       |
 
 The default is Compact, consistent with the information-density design philosophy.
 
@@ -1380,21 +1411,21 @@ Mobile-first design produces UIs optimized for constrained viewports — large t
 
 ## 27. Dependencies & Related PRDs
 
-| PRD | Relationship |
-|---|---|
-| **[Custom Objects PRD](custom-objects-prd_v1.md)** | Defines Field Groups (Attribute Card sections), field types (rendering behavior), Relation Types (clickable links), and entity type framework (Entity Bar items). The GUI PRD is the presentation layer for the Custom Objects data model. |
-| **[Views & Grid PRD](views-grid-prd_V4.md)** | Defines all grid-level interactions: inline editing, row expansion, bulk actions, keyboard navigation, filter/sort/group mechanics, view persistence, and view sharing. The GUI PRD wraps the grid in the application shell. |
-| **[Data Sources PRD](data-sources-prd_V1.md)** | Defines the query abstraction that feeds views. The Action Panel surfaces data source configuration; the quick filter queries the data source result set. |
-| **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** | Determines which Attribute Card edit pencil icons appear, which action buttons are available, which views are accessible, and Edit View eligibility. |
-| **[Contact Management PRD](contact-management-prd_V5.md)** | Defines Contact-specific Identity Card fields, Card configuration, action buttons, and Activity Card content sources. |
-| **[Company Management PRD](company-management-prd_V1.md)** | Defines Company-specific Identity Card fields, hierarchy display, and action buttons. |
-| **[Communications PRD](communications-prd_V3.md)** | Defines Communication records that populate the Activity Card in entity Windows. |
-| **[Conversations PRD](conversations-prd_V4.md)** | Defines Conversation records that appear in the Activity Card. |
-| **[Events PRD](events-prd_V3.md)** | Defines Event records for Activity Card display and calendar view integration. |
-| **[Notes PRD](notes-prd_V3.md)** | Defines Note records for Activity Card display and the rich text editing model used in Section-Based Editing. |
-| **[Tasks PRD](tasks-prd_V2.md)** | Defines Task records for Activity Card display and task-specific Content Tool Bar actions. |
-| **[Documents PRD](documents-prd_V2.md)** | Defines the folder navigation model that the Action Panel renders for Document entity workspaces. |
-| **[Projects PRD](projects-prd_V3.md)** | Defines Project-specific Card layouts and action buttons. |
+| PRD                                                            | Relationship                                                                                                                                                                                                                               |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **[Custom Objects PRD](custom-objects-prd_v1.md)**             | Defines Field Groups (Attribute Card sections), field types (rendering behavior), Relation Types (clickable links), and entity type framework (Entity Bar items). The GUI PRD is the presentation layer for the Custom Objects data model. |
+| **[Views & Grid PRD](views-grid-prd_V4.md)**                   | Defines all grid-level interactions: inline editing, row expansion, bulk actions, keyboard navigation, filter/sort/group mechanics, view persistence, and view sharing. The GUI PRD wraps the grid in the application shell.               |
+| **[Data Sources PRD](data-sources-prd_V1.md)**                 | Defines the query abstraction that feeds views. The Action Panel surfaces data source configuration; the quick filter queries the data source result set.                                                                                  |
+| **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** | Determines which Attribute Card edit pencil icons appear, which action buttons are available, which views are accessible, and Edit View eligibility.                                                                                       |
+| **[Contact Management PRD](contact-management-prd_V5.md)**     | Defines Contact-specific Identity Card fields, Card configuration, action buttons, and Activity Card content sources.                                                                                                                      |
+| **[Company Management PRD](company-management-prd_V1.md)**     | Defines Company-specific Identity Card fields, hierarchy display, and action buttons.                                                                                                                                                      |
+| **[Communications PRD](communications-prd_V3.md)**             | Defines Communication records that populate the Activity Card in entity Windows.                                                                                                                                                           |
+| **[Conversations PRD](conversations-prd_V4.md)**               | Defines Conversation records that appear in the Activity Card.                                                                                                                                                                             |
+| **[Events PRD](events-prd_V3.md)**                             | Defines Event records for Activity Card display and calendar view integration.                                                                                                                                                             |
+| **[Notes PRD](notes-prd_V3.md)**                               | Defines Note records for Activity Card display and the rich text editing model used in Section-Based Editing.                                                                                                                              |
+| **[Tasks PRD](tasks-prd_V2.md)**                               | Defines Task records for Activity Card display and task-specific Content Tool Bar actions.                                                                                                                                                 |
+| **[Documents PRD](documents-prd_V2.md)**                       | Defines the folder navigation model that the Action Panel renders for Document entity workspaces.                                                                                                                                          |
+| **[Projects PRD](projects-prd_V3.md)**                         | Defines Project-specific Card layouts and action buttons.                                                                                                                                                                                  |
 
 ---
 

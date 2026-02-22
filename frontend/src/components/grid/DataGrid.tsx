@@ -105,14 +105,25 @@ export function DataGrid() {
     setLoadedRowCount(rows.length)
   }, [rows.length, setLoadedRowCount])
 
-  // Listen for "Select All" event from toolbar
+  // Listen for selection events from toolbar
   useEffect(() => {
-    const handler = () => {
+    const handleSelectAll = () => {
       const allIds = rows.map((r) => String(r.id))
       selectAllRows(allIds)
     }
-    window.addEventListener('grid:selectAll', handler)
-    return () => window.removeEventListener('grid:selectAll', handler)
+    const handleInvert = () => {
+      const currentSelection = useNavigationStore.getState().selectedRowIds
+      const inverted = rows
+        .map((r) => String(r.id))
+        .filter((id) => !currentSelection.has(id))
+      selectAllRows(inverted)
+    }
+    window.addEventListener('grid:selectAll', handleSelectAll)
+    window.addEventListener('grid:invertSelection', handleInvert)
+    return () => {
+      window.removeEventListener('grid:selectAll', handleSelectAll)
+      window.removeEventListener('grid:invertSelection', handleInvert)
+    }
   }, [rows, selectAllRows])
 
   // Build TanStack columns from view config + entity registry + computed layout

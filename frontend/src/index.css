@@ -117,6 +117,12 @@ body {
   font-style: italic;
 }
 
+/* Grid display settings — alternating row stripe */
+.grid-row-alt { background-color: var(--color-surface-50); }
+
+/* Grid display settings — vertical gridline on cells */
+.grid-cell-border-r { border-right: 1px solid var(--color-surface-100); }
+
 .separator-handle {
   flex-basis: 6px !important;
   background: var(--color-surface-200);

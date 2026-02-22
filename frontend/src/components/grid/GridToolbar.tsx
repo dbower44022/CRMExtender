@@ -23,6 +23,7 @@ import {
   Merge,
   Sparkles,
   UserCheck,
+  Settings2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigationStore } from '../../stores/navigation.ts'
@@ -35,6 +36,7 @@ import { MergeContactsModal } from './MergeContactsModal.tsx'
 import { MergeCompaniesModal } from './MergeCompaniesModal.tsx'
 import { AddContactModal } from './AddContactModal.tsx'
 import { AddCompanyModal } from './AddCompanyModal.tsx'
+import { GridDisplaySettings } from './GridDisplaySettings.tsx'
 
 interface EntityActionConfig {
   primary: { label: string; icon: typeof Plus }[]
@@ -481,6 +483,7 @@ export function GridToolbar() {
 
   const [showColumns, setShowColumns] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
+  const [showDisplaySettings, setShowDisplaySettings] = useState(false)
 
   const filterCount = viewConfig?.filters?.length ?? 0
   const demotedCount = (computedLayout?.demotedCount ?? 0) + (computedLayout?.hiddenCount ?? 0)
@@ -570,6 +573,28 @@ export function GridToolbar() {
             </button>
             {showFilters && (
               <FilterBuilder onClose={() => setShowFilters(false)} />
+            )}
+          </div>
+
+          {/* Display settings button */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowDisplaySettings(!showDisplaySettings)
+                setShowColumns(false)
+                setShowFilters(false)
+              }}
+              className={`flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors ${
+                showDisplaySettings
+                  ? 'border-primary-300 bg-primary-50 text-primary-700'
+                  : 'border-surface-200 bg-surface-0 text-surface-600 hover:bg-surface-50'
+              }`}
+            >
+              <Settings2 size={14} />
+              Display
+            </button>
+            {showDisplaySettings && (
+              <GridDisplaySettings onClose={() => setShowDisplaySettings(false)} />
             )}
           </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react'
 import type { Row } from '@tanstack/react-table'
 import { useNavigationStore } from '../stores/navigation.ts'
 import { useLayoutStore } from '../stores/layout.ts'
+import { useGridDisplayStore, DENSITY_ROW_HEIGHT } from '../stores/gridDisplay.ts'
 import type { FieldDef } from '../types/api.ts'
 
 type RowData = Record<string, unknown>
@@ -38,6 +39,7 @@ export function useGridKeyboard({
   const selectRange = useNavigationStore((s) => s.selectRange)
   const showDetailPanel = useLayoutStore((s) => s.showDetailPanel)
   const toggleDetailPanel = useLayoutStore((s) => s.toggleDetailPanel)
+  const density = useGridDisplayStore((s) => s.density)
 
   // Check if a field is editable for this entity type
   const isFieldEditable = useCallback(
@@ -258,7 +260,7 @@ export function useGridKeyboard({
         e.preventDefault()
         if (rows.length === 0 || selectedRowIndex < 0) return
         const container = containerRef.current
-        const visibleCount = container ? Math.floor(container.clientHeight / 34) : 10
+        const visibleCount = container ? Math.floor(container.clientHeight / DENSITY_ROW_HEIGHT[density]) : 10
         const delta = e.key === 'PageDown' ? visibleCount : -visibleCount
         const newIndex = Math.max(0, Math.min(rows.length - 1, selectedRowIndex + delta))
         if (newIndex !== selectedRowIndex) {
@@ -313,5 +315,6 @@ export function useGridKeyboard({
     findNextEditableColumn,
     setEditingCell,
     containerRef,
+    density,
   ])
 }

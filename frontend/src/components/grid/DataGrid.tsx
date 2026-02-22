@@ -21,6 +21,9 @@ import { RecordModal } from './RecordModal.tsx'
 import { RowContextMenu } from './RowContextMenu.tsx'
 import { ColumnHeaderMenu } from './ColumnHeaderMenu.tsx'
 import { useUpdateViewColumns } from '../../api/views.ts'
+import { useLayoutOverrides } from '../../api/layoutOverrides.ts'
+import { useGridDisplayStore, DENSITY_ROW_HEIGHT, FONT_SIZE_CLASS, type Density } from '../../stores/gridDisplay.ts'
+import { buildDisplayProfile } from '../../lib/displayProfile.ts'
 import { ChevronUp, ChevronDown, Loader2, Square, CheckSquare, MinusSquare } from 'lucide-react'
 import type { FieldDef, ViewColumn, CellAlignment, ComputedColumn } from '../../types/api.ts'
 
@@ -89,6 +92,27 @@ export function DataGrid() {
     }
     return map
   }, [computedLayout])
+
+  // Grid display settings
+  const storeDensity = useGridDisplayStore((s) => s.density)
+  const fontSize = useGridDisplayStore((s) => s.fontSize)
+  const alternatingRows = useGridDisplayStore((s) => s.alternatingRows)
+  const gridlines = useGridDisplayStore((s) => s.gridlines)
+  const rowHover = useGridDisplayStore((s) => s.rowHover)
+
+  // Density cascade: per-view layout override → localStorage store → 'compact'
+  const { data: layoutOverrides } = useLayoutOverrides(activeViewId)
+  const effectiveDensity = useMemo<Density>(() => {
+    if (layoutOverrides) {
+      const tier = buildDisplayProfile().displayTier
+      const tierOv = layoutOverrides.find((o) => o.display_tier === tier)
+      if (tierOv?.density) return tierOv.density as Density
+    }
+    return storeDensity
+  }, [layoutOverrides, storeDensity])
+
+  const rowHeight = DENSITY_ROW_HEIGHT[effectiveDensity]
+  const fontSizeClass = FONT_SIZE_CLASS[fontSize]
 
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const [editingCell, setEditingCell] = useState<{
@@ -317,7 +341,7 @@ export function DataGrid() {
   const rowVirtualizer = useVirtualizer({
     count: tableRows.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 34,
+    estimateSize: () => rowHeight,
     overscan: 10,
   })
 
@@ -664,6 +688,10 @@ export function DataGrid() {
               const isDetailSelected = rowId === selectedRowId
               const isMultiSelected = selectedRowIds.has(rowId)
               const isHighlighted = isDetailSelected || isMultiSelected
+              const isOddRow = virtualRow.index % 2 === 1
+              const showHBorder = gridlines === 'horizontal' || gridlines === 'both'
+              const hoverClass = !isHighlighted && rowHover ? 'hover:bg-surface-50' : ''
+              const altClass = !isHighlighted && alternatingRows && isOddRow ? 'grid-row-alt' : ''
               return (
                 <div
                   key={row.id}
@@ -673,14 +701,14 @@ export function DataGrid() {
                     handleRowClick(row, virtualRow.index, e)
                   }
                   onContextMenu={(e) => handleRowContextMenu(e, rowId, virtualRow.index)}
-                  className={`absolute left-0 flex cursor-pointer items-center border-b border-surface-100 transition-colors ${
-                    isHighlighted
-                      ? 'bg-primary-50'
-                      : 'hover:bg-surface-50'
+                  className={`absolute left-0 flex cursor-pointer items-center transition-colors ${
+                    showHBorder ? 'border-b border-surface-100' : ''
+                  } ${
+                    isHighlighted ? 'bg-primary-50' : `${hoverClass} ${altClass}`
                   }`}
                   style={{
                     width: totalWidth,
-                    height: 34,
+                    height: rowHeight,
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
@@ -725,6 +753,8 @@ export function DataGrid() {
                       isDetailSelected &&
                       focusedColumn === dataColIndex
 
+                    const showVBorder = gridlines === 'vertical' || gridlines === 'both'
+
                     return (
                       <div
                         key={cell.id}
@@ -733,11 +763,11 @@ export function DataGrid() {
                             ? `${row.original.id}-${fieldKey}`
                             : undefined
                         }
-                        className={`shrink-0 truncate px-3 text-sm ${
+                        className={`shrink-0 truncate px-3 ${fontSizeClass} ${
                           isEditable && !isEditing
                             ? 'cell-editable'
                             : ''
-                        } ${isCellFocused ? 'cell-focused' : ''}`}
+                        } ${isCellFocused ? 'cell-focused' : ''} ${showVBorder ? 'grid-cell-border-r' : ''}`}
                         style={{
                           width: cell.column.getSize(),
                           textAlign: align,

@@ -185,3 +185,64 @@ export interface LayoutOverride {
   created_at: string
   updated_at: string
 }
+
+// --- Contact Merge types ---
+
+export interface MergePreviewContact {
+  id: string
+  name: string
+  source: string | null
+  status: string | null
+  identifier_count: number
+  affiliation_count: number
+  conversation_count: number
+  relationship_count: number
+  event_count: number
+  phone_count: number
+  address_count: number
+  email_count: number
+  social_profile_count: number
+  identifiers: { type: string; value: string; is_primary: number }[]
+  affiliations: { company_name: string; role_name: string | null; title: string | null }[]
+}
+
+export interface MergePreview {
+  contacts: MergePreviewContact[]
+  conflicts: {
+    name: string[]
+    source: string[]
+  }
+  totals: {
+    identifiers: number
+    combined_identifiers: number
+    affiliations: number
+    combined_affiliations: number
+    conversations: number
+    relationships: number
+    events: number
+    phones: number
+    addresses: number
+    emails: number
+    social_profiles: number
+  }
+}
+
+export interface MergeRequest {
+  surviving_id: string
+  absorbed_ids: string[]
+  chosen_name?: string
+  chosen_source?: string
+}
+
+export interface MergeResult {
+  merge_ids: string[]
+  surviving_id: string
+  absorbed_ids: string[]
+  identifiers_transferred: number
+  affiliations_transferred: number
+  affiliations_created: number
+  conversations_reassigned: number
+  relationships_reassigned: number
+  events_reassigned: number
+  relationships_deduplicated: number
+}

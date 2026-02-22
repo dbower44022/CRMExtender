@@ -721,3 +721,54 @@ class TestLayoutOverrides:
         assert data["auto_density"] == 1
         assert data["column_auto_sizing"] == 1
         assert data["column_demotion"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Contact Merge
+# ---------------------------------------------------------------------------
+
+class TestContactMerge:
+    def test_merge_preview(self, client):
+        _seed_contacts(2)
+        resp = client.post("/api/v1/contacts/merge-preview", json={
+            "contact_ids": ["contact-0", "contact-1"],
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "contacts" in data
+        assert len(data["contacts"]) == 2
+        assert "conflicts" in data
+        assert "totals" in data
+        assert data["totals"]["identifiers"] == 2
+
+    def test_merge_preview_insufficient(self, client):
+        _seed_contacts(1)
+        resp = client.post("/api/v1/contacts/merge-preview", json={
+            "contact_ids": ["contact-0"],
+        })
+        assert resp.status_code == 400
+        assert "At least two" in resp.json()["error"]
+
+    def test_merge_confirm(self, client):
+        _seed_contacts(2)
+        resp = client.post("/api/v1/contacts/merge", json={
+            "surviving_id": "contact-0",
+            "absorbed_ids": ["contact-1"],
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["surviving_id"] == "contact-0"
+        assert data["absorbed_ids"] == ["contact-1"]
+        assert "identifiers_transferred" in data
+        # Absorbed contact should be deleted
+        detail_resp = client.get("/api/v1/contacts/contact-1")
+        assert detail_resp.status_code == 404
+
+    def test_merge_confirm_invalid(self, client):
+        _seed_contacts(1)
+        resp = client.post("/api/v1/contacts/merge", json={
+            "surviving_id": "nonexistent",
+            "absorbed_ids": ["contact-0"],
+        })
+        assert resp.status_code == 400
+        assert "not found" in resp.json()["error"].lower()

@@ -31,6 +31,7 @@ import { useGridIntelligenceStore } from '../../stores/gridIntelligence.ts'
 import { ColumnPicker } from './ColumnPicker.tsx'
 import { FilterBuilder } from './FilterBuilder.tsx'
 import { QuickFilters } from './QuickFilters.tsx'
+import { MergeContactsModal } from './MergeContactsModal.tsx'
 
 interface EntityActionConfig {
   primary: { label: string; icon: typeof Plus }[]
@@ -305,6 +306,7 @@ function EntityActions() {
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)
   const selectedRowIds = useNavigationStore((s) => s.selectedRowIds)
   const [showOther, setShowOther] = useState(false)
+  const [showMergeModal, setShowMergeModal] = useState(false)
   const otherRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -319,6 +321,24 @@ function EntityActions() {
 
   const selectedCount = selectedRowIds.size
   const config = ENTITY_ACTIONS[activeEntityType] ?? { primary: [], other: [] }
+
+  // Build bulk Other items — add Merge Duplicates for contacts
+  const bulkOtherItems = activeEntityType === 'contact'
+    ? [{ label: 'Merge Duplicates', icon: Merge }, ...BULK_OTHER_ITEMS]
+    : BULK_OTHER_ITEMS
+
+  const handleBulkOtherClick = (label: string) => {
+    if (label === 'Merge Duplicates' && activeEntityType === 'contact') {
+      if (selectedCount < 2) {
+        toast.info('Select at least 2 contacts to merge')
+      } else {
+        setShowMergeModal(true)
+      }
+    } else {
+      comingSoon()
+    }
+    setShowOther(false)
+  }
 
   // Selection active — bulk action buttons
   if (selectedCount > 0) {
@@ -342,10 +362,10 @@ function EntityActions() {
           </button>
           {showOther && (
             <div className={`${dropdownClass} right-0`}>
-              {BULK_OTHER_ITEMS.map((item) => (
+              {bulkOtherItems.map((item) => (
                 <button
                   key={item.label}
-                  onClick={() => { comingSoon(); setShowOther(false) }}
+                  onClick={() => handleBulkOtherClick(item.label)}
                   className={dropdownItemClass}
                 >
                   <item.icon size={12} /> {item.label}
@@ -354,6 +374,13 @@ function EntityActions() {
             </div>
           )}
         </div>
+
+        {showMergeModal && activeEntityType === 'contact' && (
+          <MergeContactsModal
+            contactIds={Array.from(selectedRowIds)}
+            onClose={() => setShowMergeModal(false)}
+          />
+        )}
       </div>
     )
   }

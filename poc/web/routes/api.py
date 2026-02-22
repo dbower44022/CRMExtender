@@ -32,6 +32,7 @@ from ...views.layout_overrides import (
     upsert_layout_override,
 )
 from ...views.registry import ENTITY_TYPES
+from ...contact_merge import get_contact_merge_preview, merge_contacts
 
 router = APIRouter()
 
@@ -504,6 +505,83 @@ async def cell_edit_api(request: Request):
         return JSONResponse({"ok": False, "error": "Update failed"}, status_code=500)
 
     return JSONResponse({"ok": True, "value": updated.get(field_key, value)})
+
+
+# ------------------------------------------------------------------
+# Contact Merge
+# ------------------------------------------------------------------
+
+@router.post("/contacts/merge-preview")
+async def merge_preview_api(request: Request):
+    """Return a merge preview for the given contact IDs."""
+    cid = request.state.customer_id
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    contact_ids = body.get("contact_ids", [])
+
+    # Validate ownership
+    with get_connection() as conn:
+        for contact_id in contact_ids:
+            row = conn.execute(
+                "SELECT id FROM contacts WHERE id = ? AND customer_id = ?",
+                (contact_id, cid),
+            ).fetchone()
+            if not row:
+                return JSONResponse(
+                    {"error": f"Contact not found: {contact_id}"}, status_code=404,
+                )
+
+    try:
+        preview = get_contact_merge_preview(contact_ids)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+    return preview
+
+
+@router.post("/contacts/merge")
+async def merge_contacts_api(request: Request):
+    """Execute a contact merge."""
+    cid = request.state.customer_id
+    uid = request.state.user["id"] if request.state.user else None
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    surviving_id = body.get("surviving_id", "")
+    absorbed_ids = body.get("absorbed_ids", [])
+    chosen_name = body.get("chosen_name")
+    chosen_source = body.get("chosen_source")
+
+    # Validate ownership
+    all_ids = [surviving_id] + absorbed_ids
+    with get_connection() as conn:
+        for contact_id in all_ids:
+            row = conn.execute(
+                "SELECT id FROM contacts WHERE id = ? AND customer_id = ?",
+                (contact_id, cid),
+            ).fetchone()
+            if not row:
+                return JSONResponse(
+                    {"error": f"Contact not found: {contact_id}"}, status_code=400,
+                )
+
+    try:
+        result = merge_contacts(
+            surviving_id,
+            absorbed_ids,
+            merged_by=uid,
+            chosen_name=chosen_name,
+            chosen_source=chosen_source,
+        )
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+    return result
 
 
 # ------------------------------------------------------------------

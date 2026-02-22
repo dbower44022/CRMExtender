@@ -1465,66 +1465,188 @@ def note_detail_api(request: Request, note_id: str):
 # ------------------------------------------------------------------
 
 @router.get("/search")
-def search_entities(request: Request, q: str = Query("", min_length=2)):
+def search_entities(
+    request: Request,
+    q: str = Query("", min_length=2),
+    limit: int = Query(5, ge=1, le=50),
+    entity_type: str | None = Query(None),
+):
     cid = request.state.customer_id
-    results = []
     pattern = f"%{q}%"
 
+    # Config per entity type: (label, count_sql, results_sql, params_fn)
+    # params_fn returns tuple of params for count and results queries
+    _SEARCH_CONFIG: list[dict] = [
+        {
+            "entity_type": "contact",
+            "label": "Contacts",
+            "count_sql": (
+                "SELECT COUNT(DISTINCT c.id) FROM contacts c "
+                "LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email' "
+                "WHERE c.customer_id = ? AND (c.name LIKE ? COLLATE NOCASE OR ci.value LIKE ? COLLATE NOCASE)"
+            ),
+            "results_sql": (
+                "SELECT DISTINCT c.id, c.name, "
+                "  (SELECT ci2.value FROM contact_identifiers ci2 "
+                "   WHERE ci2.contact_id = c.id AND ci2.type = 'email' "
+                "   ORDER BY ci2.is_primary DESC, ci2.created_at ASC LIMIT 1) AS subtitle, "
+                "  (SELECT co.name FROM companies co "
+                "   JOIN contact_companies cc ON cc.company_id = co.id "
+                "   WHERE cc.contact_id = c.id AND cc.is_primary = 1 LIMIT 1) AS secondary "
+                "FROM contacts c "
+                "LEFT JOIN contact_identifiers ci ON ci.contact_id = c.id AND ci.type = 'email' "
+                "WHERE c.customer_id = ? AND (c.name LIKE ? COLLATE NOCASE OR ci.value LIKE ? COLLATE NOCASE) "
+                "ORDER BY c.name COLLATE NOCASE LIMIT ?"
+            ),
+            "count_params": lambda cid, pat: (cid, pat, pat),
+            "results_params": lambda cid, pat, lim: (cid, pat, pat, lim),
+        },
+        {
+            "entity_type": "company",
+            "label": "Companies",
+            "count_sql": (
+                "SELECT COUNT(*) FROM companies "
+                "WHERE customer_id = ? AND (name LIKE ? COLLATE NOCASE OR domain LIKE ? COLLATE NOCASE)"
+            ),
+            "results_sql": (
+                "SELECT id, name, domain AS subtitle, industry AS secondary "
+                "FROM companies "
+                "WHERE customer_id = ? AND (name LIKE ? COLLATE NOCASE OR domain LIKE ? COLLATE NOCASE) "
+                "ORDER BY name COLLATE NOCASE LIMIT ?"
+            ),
+            "count_params": lambda cid, pat: (cid, pat, pat),
+            "results_params": lambda cid, pat, lim: (cid, pat, pat, lim),
+        },
+        {
+            "entity_type": "conversation",
+            "label": "Conversations",
+            "count_sql": (
+                "SELECT COUNT(*) FROM conversations "
+                "WHERE customer_id = ? AND title LIKE ? COLLATE NOCASE"
+            ),
+            "results_sql": (
+                "SELECT id, title AS name, status AS subtitle, last_activity_at AS secondary "
+                "FROM conversations "
+                "WHERE customer_id = ? AND title LIKE ? COLLATE NOCASE "
+                "ORDER BY title COLLATE NOCASE LIMIT ?"
+            ),
+            "count_params": lambda cid, pat: (cid, pat),
+            "results_params": lambda cid, pat, lim: (cid, pat, lim),
+        },
+        {
+            "entity_type": "event",
+            "label": "Events",
+            "count_sql": (
+                "SELECT COUNT(*) FROM events e "
+                "JOIN provider_accounts pa ON pa.id = e.account_id "
+                "WHERE pa.customer_id = ? AND (e.title LIKE ? COLLATE NOCASE OR e.location LIKE ? COLLATE NOCASE)"
+            ),
+            "results_sql": (
+                "SELECT e.id, e.title AS name, e.location AS subtitle, "
+                "  COALESCE(e.start_datetime, e.start_date) AS secondary "
+                "FROM events e "
+                "JOIN provider_accounts pa ON pa.id = e.account_id "
+                "WHERE pa.customer_id = ? AND (e.title LIKE ? COLLATE NOCASE OR e.location LIKE ? COLLATE NOCASE) "
+                "ORDER BY e.title COLLATE NOCASE LIMIT ?"
+            ),
+            "count_params": lambda cid, pat: (cid, pat, pat),
+            "results_params": lambda cid, pat, lim: (cid, pat, pat, lim),
+        },
+        {
+            "entity_type": "project",
+            "label": "Projects",
+            "count_sql": (
+                "SELECT COUNT(*) FROM projects "
+                "WHERE customer_id = ? AND name LIKE ? COLLATE NOCASE"
+            ),
+            "results_sql": (
+                "SELECT id, name, status AS subtitle, NULL AS secondary "
+                "FROM projects "
+                "WHERE customer_id = ? AND name LIKE ? COLLATE NOCASE "
+                "ORDER BY name COLLATE NOCASE LIMIT ?"
+            ),
+            "count_params": lambda cid, pat: (cid, pat),
+            "results_params": lambda cid, pat, lim: (cid, pat, lim),
+        },
+        {
+            "entity_type": "note",
+            "label": "Notes",
+            "count_sql": (
+                "SELECT COUNT(*) FROM notes "
+                "WHERE customer_id = ? AND title LIKE ? COLLATE NOCASE"
+            ),
+            "results_sql": (
+                "SELECT n.id, n.title AS name, "
+                "  (SELECT u.name FROM users u WHERE u.id = n.created_by LIMIT 1) AS subtitle, "
+                "  n.created_at AS secondary "
+                "FROM notes n "
+                "WHERE n.customer_id = ? AND n.title LIKE ? COLLATE NOCASE "
+                "ORDER BY n.title COLLATE NOCASE LIMIT ?"
+            ),
+            "count_params": lambda cid, pat: (cid, pat),
+            "results_params": lambda cid, pat, lim: (cid, pat, lim),
+        },
+        {
+            "entity_type": "communication",
+            "label": "Communications",
+            "count_sql": (
+                "SELECT COUNT(*) FROM communications comm "
+                "JOIN provider_accounts pa ON pa.id = comm.account_id "
+                "WHERE pa.customer_id = ? AND (comm.subject LIKE ? COLLATE NOCASE "
+                "  OR comm.sender_address LIKE ? COLLATE NOCASE)"
+            ),
+            "results_sql": (
+                "SELECT comm.id, comm.subject AS name, "
+                "  COALESCE(comm.sender_name, comm.sender_address) AS subtitle, "
+                "  comm.timestamp AS secondary "
+                "FROM communications comm "
+                "JOIN provider_accounts pa ON pa.id = comm.account_id "
+                "WHERE pa.customer_id = ? AND (comm.subject LIKE ? COLLATE NOCASE "
+                "  OR comm.sender_address LIKE ? COLLATE NOCASE) "
+                "ORDER BY comm.subject COLLATE NOCASE LIMIT ?"
+            ),
+            "count_params": lambda cid, pat: (cid, pat, pat),
+            "results_params": lambda cid, pat, lim: (cid, pat, pat, lim),
+        },
+    ]
+
+    groups = []
+    grand_total = 0
+
     with get_connection() as conn:
-        # Contacts
-        for r in conn.execute(
-            "SELECT c.id, c.name FROM contacts c "
-            "WHERE c.customer_id = ? AND c.name LIKE ? LIMIT 10",
-            (cid, pattern),
-        ).fetchall():
-            results.append({
-                "entity_type": "contact",
-                "id": r["id"],
-                "name": r["name"],
+        for cfg in _SEARCH_CONFIG:
+            if entity_type and cfg["entity_type"] != entity_type:
+                continue
+
+            total = conn.execute(
+                cfg["count_sql"], cfg["count_params"](cid, pattern)
+            ).fetchone()[0]
+
+            if total == 0:
+                continue
+
+            rows = conn.execute(
+                cfg["results_sql"], cfg["results_params"](cid, pattern, limit)
+            ).fetchall()
+
+            results = []
+            for r in rows:
+                item = {"id": r["id"], "name": r["name"]}
+                if r["subtitle"]:
+                    item["subtitle"] = r["subtitle"]
+                if r["secondary"]:
+                    item["secondary"] = r["secondary"]
+                results.append(item)
+
+            groups.append({
+                "entity_type": cfg["entity_type"],
+                "label": cfg["label"],
+                "total": total,
+                "results": results,
             })
+            grand_total += total
 
-        # Contact by email
-        for r in conn.execute(
-            "SELECT ci.contact_id, ci.value, c.name "
-            "FROM contact_identifiers ci "
-            "JOIN contacts c ON c.id = ci.contact_id "
-            "WHERE c.customer_id = ? AND ci.type = 'email' AND ci.value LIKE ? LIMIT 5",
-            (cid, pattern),
-        ).fetchall():
-            if not any(x["id"] == r["contact_id"] for x in results):
-                results.append({
-                    "entity_type": "contact",
-                    "id": r["contact_id"],
-                    "name": r["name"],
-                    "subtitle": r["value"],
-                })
-
-        # Companies
-        for r in conn.execute(
-            "SELECT id, name, domain FROM companies "
-            "WHERE customer_id = ? AND (name LIKE ? OR domain LIKE ?) LIMIT 10",
-            (cid, pattern, pattern),
-        ).fetchall():
-            results.append({
-                "entity_type": "company",
-                "id": r["id"],
-                "name": r["name"],
-                "subtitle": r["domain"],
-            })
-
-        # Conversations
-        for r in conn.execute(
-            "SELECT id, title FROM conversations "
-            "WHERE customer_id = ? AND title LIKE ? LIMIT 10",
-            (cid, pattern),
-        ).fetchall():
-            results.append({
-                "entity_type": "conversation",
-                "id": r["id"],
-                "name": r["title"],
-            })
-
-    return {"results": results, "total": len(results)}
+    return {"groups": groups, "total": grand_total}
 
 
 # ------------------------------------------------------------------

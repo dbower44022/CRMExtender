@@ -1,25 +1,37 @@
 import { useQuery } from '@tanstack/react-query'
 import { get } from './client.ts'
 
-interface SearchResult {
-  entity_type: string
+export interface SearchResultItem {
   id: string
   name: string
   subtitle?: string
+  secondary?: string
 }
 
-interface SearchResponse {
-  results: SearchResult[]
+export interface SearchGroup {
+  entity_type: string
+  label: string
+  total: number
+  results: SearchResultItem[]
+}
+
+export interface GroupedSearchResponse {
+  groups: SearchGroup[]
   total: number
 }
 
-export function useSearch(query: string) {
+export function useGlobalSearch(
+  query: string,
+  options?: { entityType?: string; limit?: number },
+) {
+  const params = new URLSearchParams({ q: query })
+  if (options?.entityType) params.set('entity_type', options.entityType)
+  if (options?.limit) params.set('limit', String(options.limit))
+
   return useQuery({
-    queryKey: ['search', query],
-    queryFn: () => get<SearchResponse>(`/search?q=${encodeURIComponent(query)}`),
+    queryKey: ['search', query, options?.entityType ?? '', options?.limit ?? 5],
+    queryFn: () => get<GroupedSearchResponse>(`/search?${params.toString()}`),
     enabled: query.length >= 2,
     staleTime: 10 * 1000,
   })
 }
-
-export type { SearchResult, SearchResponse }

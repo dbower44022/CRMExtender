@@ -343,15 +343,18 @@ class TestSearch:
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] >= 1
-        names = [r["name"] for r in data["results"]]
+        groups = data["groups"]
+        contact_group = next(g for g in groups if g["entity_type"] == "contact")
+        names = [r["name"] for r in contact_group["results"]]
         assert "Contact 1" in names
 
     def test_search_companies(self, client):
         _seed_companies(3)
         resp = client.get("/api/v1/search?q=Company")
         data = resp.json()
-        co_results = [r for r in data["results"] if r["entity_type"] == "company"]
-        assert len(co_results) == 3
+        co_group = next(g for g in data["groups"] if g["entity_type"] == "company")
+        assert co_group["total"] == 3
+        assert len(co_group["results"]) == 3
 
     def test_search_minimum_length(self, client):
         resp = client.get("/api/v1/search?q=a")
@@ -362,13 +365,119 @@ class TestSearch:
         resp = client.get("/api/v1/search?q=contact1@test.com")
         data = resp.json()
         assert data["total"] >= 1
-        assert any(r["id"] == "contact-1" for r in data["results"])
+        contact_group = next(g for g in data["groups"] if g["entity_type"] == "contact")
+        assert any(r["id"] == "contact-1" for r in contact_group["results"])
 
     def test_search_empty_results(self, client):
         resp = client.get("/api/v1/search?q=zzzznonexistent")
         data = resp.json()
         assert data["total"] == 0
-        assert data["results"] == []
+        assert data["groups"] == []
+
+    def test_search_grouped_response_format(self, client):
+        """Verify grouped response structure with groups/total."""
+        _seed_contacts(2)
+        _seed_companies(2)
+        resp = client.get("/api/v1/search?q=Contact")
+        data = resp.json()
+        assert "groups" in data
+        assert "total" in data
+        for group in data["groups"]:
+            assert "entity_type" in group
+            assert "label" in group
+            assert "total" in group
+            assert "results" in group
+            for item in group["results"]:
+                assert "id" in item
+                assert "name" in item
+
+    def test_search_limit_param(self, client):
+        """Limit controls max results per group."""
+        _seed_contacts(5)
+        resp = client.get("/api/v1/search?q=Contact&limit=2")
+        data = resp.json()
+        contact_group = next(g for g in data["groups"] if g["entity_type"] == "contact")
+        assert len(contact_group["results"]) == 2
+        assert contact_group["total"] == 5
+
+    def test_search_entity_type_filter(self, client):
+        """entity_type param filters to single entity type."""
+        _seed_contacts(3)
+        _seed_companies(3)
+        resp = client.get("/api/v1/search?q=Co&entity_type=company")
+        data = resp.json()
+        assert all(g["entity_type"] == "company" for g in data["groups"])
+
+    def test_search_empty_groups_omitted(self, client):
+        """Groups with zero results are not included."""
+        _seed_contacts(2)
+        resp = client.get("/api/v1/search?q=Contact")
+        data = resp.json()
+        for group in data["groups"]:
+            assert group["total"] > 0
+            assert len(group["results"]) > 0
+
+    def test_search_conversations(self, client):
+        """Search finds conversations by title."""
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO conversations (id, customer_id, title, status, created_at, updated_at) "
+                "VALUES (?, ?, 'Budget Planning Q3', 'active', ?, ?)",
+                ("conv-search-1", CUST_ID, _NOW, _NOW),
+            )
+        resp = client.get("/api/v1/search?q=Budget")
+        data = resp.json()
+        conv_group = next(g for g in data["groups"] if g["entity_type"] == "conversation")
+        assert conv_group["total"] == 1
+        assert conv_group["results"][0]["name"] == "Budget Planning Q3"
+
+    def test_search_events(self, client):
+        """Search finds events by title."""
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO provider_accounts (id, customer_id, provider, email_address, is_active, created_at, updated_at) "
+                "VALUES (?, ?, 'google', 'test@test.com', 1, ?, ?)",
+                ("pa-search-1", CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO events (id, title, location, start_datetime, end_datetime, "
+                "event_type, source, account_id, created_at, updated_at) "
+                "VALUES (?, 'Team Standup', 'Room 42', ?, ?, 'meeting', 'manual', ?, ?, ?)",
+                ("evt-search-1", _NOW, _NOW, "pa-search-1", _NOW, _NOW),
+            )
+        resp = client.get("/api/v1/search?q=Standup")
+        data = resp.json()
+        evt_group = next(g for g in data["groups"] if g["entity_type"] == "event")
+        assert evt_group["total"] == 1
+        assert evt_group["results"][0]["subtitle"] == "Room 42"
+
+    def test_search_projects(self, client):
+        """Search finds projects by name."""
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO projects (id, customer_id, name, status, created_at, updated_at) "
+                "VALUES (?, ?, 'Website Redesign', 'active', ?, ?)",
+                ("proj-search-1", CUST_ID, _NOW, _NOW),
+            )
+        resp = client.get("/api/v1/search?q=Redesign")
+        data = resp.json()
+        proj_group = next(g for g in data["groups"] if g["entity_type"] == "project")
+        assert proj_group["total"] == 1
+        assert proj_group["results"][0]["name"] == "Website Redesign"
+
+    def test_search_notes(self, client):
+        """Search finds notes by title."""
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO notes (id, customer_id, title, created_by, updated_by, created_at, updated_at) "
+                "VALUES (?, ?, 'Meeting Notes Jan', ?, ?, ?, ?)",
+                ("note-search-1", CUST_ID, USER_ID, USER_ID, _NOW, _NOW),
+            )
+        resp = client.get("/api/v1/search?q=Meeting Notes")
+        data = resp.json()
+        note_group = next(g for g in data["groups"] if g["entity_type"] == "note")
+        assert note_group["total"] == 1
+        assert note_group["results"][0]["name"] == "Meeting Notes Jan"
 
 
 # ---------------------------------------------------------------------------

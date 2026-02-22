@@ -14,6 +14,7 @@ interface NavigationState {
   sortDirection: 'asc' | 'desc'
   search: string
   quickFilters: QuickFilter[]
+  pendingNavigation: { entityType: string; entityId: string } | null
 
   setActiveEntityType: (entityType: string) => void
   setActiveViewId: (viewId: string | null) => void
@@ -28,6 +29,7 @@ interface NavigationState {
   clearSort: () => void
   setSearch: (search: string) => void
   toggleQuickFilter: (filter: QuickFilter) => void
+  setPendingNavigation: (nav: { entityType: string; entityId: string } | null) => void
   reset: () => void
 }
 
@@ -44,6 +46,7 @@ const DEFAULTS = {
   sortDirection: 'asc' as const,
   search: '',
   quickFilters: [] as QuickFilter[],
+  pendingNavigation: null as { entityType: string; entityId: string } | null,
 }
 
 export const useNavigationStore = create<NavigationState>()((set) => ({
@@ -152,6 +155,8 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
         selectedRowIndex: -1,
       }
     }),
+
+  setPendingNavigation: (nav) => set({ pendingNavigation: nav }),
 
   reset: () => set(DEFAULTS),
 }))

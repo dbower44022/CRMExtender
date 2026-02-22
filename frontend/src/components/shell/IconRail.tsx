@@ -1,35 +1,13 @@
-import {
-  Home,
-  Users,
-  Building2,
-  MessageSquare,
-  Mail,
-  Calendar,
-  FolderKanban,
-  Link2,
-  StickyNote,
-  Settings,
-  type LucideIcon,
-} from 'lucide-react'
+import { Home, Settings } from 'lucide-react'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { useLayoutStore } from '../../stores/layout.ts'
+import { ENTITY_ICONS, ENTITY_LABELS } from '../../lib/entityIcons.ts'
 
-interface NavItem {
-  key: string
-  label: string
-  icon: LucideIcon
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { key: 'contact', label: 'Contacts', icon: Users },
-  { key: 'company', label: 'Companies', icon: Building2 },
-  { key: 'conversation', label: 'Conversations', icon: MessageSquare },
-  { key: 'communication', label: 'Communications', icon: Mail },
-  { key: 'event', label: 'Events', icon: Calendar },
-  { key: 'project', label: 'Projects', icon: FolderKanban },
-  { key: 'relationship', label: 'Relationships', icon: Link2 },
-  { key: 'note', label: 'Notes', icon: StickyNote },
-]
+const NAV_ITEMS = Object.entries(ENTITY_ICONS).map(([key, icon]) => ({
+  key,
+  label: ENTITY_LABELS[key] ?? key,
+  icon,
+}))
 
 export function IconRail() {
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)

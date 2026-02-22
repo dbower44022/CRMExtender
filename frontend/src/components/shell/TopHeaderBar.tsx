@@ -1,11 +1,13 @@
 import { Search } from 'lucide-react'
 import { useNavigationStore } from '../../stores/navigation.ts'
+import { useLayoutStore } from '../../stores/layout.ts'
 import { useEntityRegistry } from '../../api/registry.ts'
 import { useViewConfig } from '../../api/views.ts'
 
 export function TopHeaderBar() {
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)
   const activeViewId = useNavigationStore((s) => s.activeViewId)
+  const openSearchModal = useLayoutStore((s) => s.openSearchModal)
   const { data: registry } = useEntityRegistry()
   const { data: viewConfig } = useViewConfig(activeViewId)
 
@@ -26,6 +28,7 @@ export function TopHeaderBar() {
 
       <div className="ml-auto flex items-center gap-3">
         <button
+          onClick={() => openSearchModal()}
           className="flex h-8 items-center gap-2 rounded-lg border border-surface-200 bg-surface-50 px-3 text-xs text-surface-400 transition-colors hover:border-surface-300"
           title="Search (Ctrl+K)"
         >

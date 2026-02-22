@@ -164,6 +164,20 @@ export function DataGrid() {
     setLoadedRowCount(rows.length)
   }, [rows.length, setLoadedRowCount])
 
+  // Handle pending navigation from global search
+  const pendingNavigation = useNavigationStore((s) => s.pendingNavigation)
+  const setPendingNavigation = useNavigationStore((s) => s.setPendingNavigation)
+  useEffect(() => {
+    if (!pendingNavigation || rows.length === 0) return
+    if (pendingNavigation.entityType !== activeEntityType) return
+    const idx = rows.findIndex((r) => String(r.id) === pendingNavigation.entityId)
+    if (idx >= 0) {
+      setSelectedRow(pendingNavigation.entityId, idx)
+      showDetailPanel()
+      setPendingNavigation(null)
+    }
+  }, [pendingNavigation, rows, activeEntityType, setSelectedRow, showDetailPanel, setPendingNavigation])
+
   // Listen for selection events from toolbar
   useEffect(() => {
     const handleSelectAll = () => {

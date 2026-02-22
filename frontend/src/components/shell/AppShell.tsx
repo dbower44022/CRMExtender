@@ -14,6 +14,7 @@ import { TopHeaderBar } from './TopHeaderBar.tsx'
 import { ActionPanel } from './ActionPanel.tsx'
 import { ContentArea } from './ContentArea.tsx'
 import { DetailPanel } from './DetailPanel.tsx'
+import { GlobalSearchModal } from '../search/GlobalSearchModal.tsx'
 import { useDefaultView } from '../../hooks/useDefaultView.ts'
 
 const PREVIEW_PANEL_SIZE_MAP: Record<string, string> = {
@@ -27,6 +28,8 @@ const PREVIEW_PANEL_SIZE_MAP: Record<string, string> = {
 export function AppShell() {
   const actionPanelVisible = useLayoutStore((s) => s.actionPanelVisible)
   const detailPanelVisible = useLayoutStore((s) => s.detailPanelVisible)
+  const searchModalOpen = useLayoutStore((s) => s.searchModalOpen)
+  const openSearchModal = useLayoutStore((s) => s.openSearchModal)
   const activeViewId = useNavigationStore((s) => s.activeViewId)
   const { data: viewConfig } = useViewConfig(activeViewId)
 
@@ -63,7 +66,20 @@ export function AppShell() {
     }
   }, [detailPanelVisible, detailRef, viewConfig?.preview_panel_size])
 
+  // Ctrl+K / Cmd+K to open search modal
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        openSearchModal()
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [openSearchModal])
+
   return (
+    <>
     <div className="flex h-full w-full">
       <IconRail />
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -104,5 +120,7 @@ export function AppShell() {
         </Group>
       </div>
     </div>
+    {searchModalOpen && <GlobalSearchModal />}
+    </>
   )
 }

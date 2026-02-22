@@ -32,6 +32,9 @@ import { ColumnPicker } from './ColumnPicker.tsx'
 import { FilterBuilder } from './FilterBuilder.tsx'
 import { QuickFilters } from './QuickFilters.tsx'
 import { MergeContactsModal } from './MergeContactsModal.tsx'
+import { MergeCompaniesModal } from './MergeCompaniesModal.tsx'
+import { AddContactModal } from './AddContactModal.tsx'
+import { AddCompanyModal } from './AddCompanyModal.tsx'
 
 interface EntityActionConfig {
   primary: { label: string; icon: typeof Plus }[]
@@ -307,6 +310,7 @@ function EntityActions() {
   const selectedRowIds = useNavigationStore((s) => s.selectedRowIds)
   const [showOther, setShowOther] = useState(false)
   const [showMergeModal, setShowMergeModal] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
   const otherRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -322,15 +326,26 @@ function EntityActions() {
   const selectedCount = selectedRowIds.size
   const config = ENTITY_ACTIONS[activeEntityType] ?? { primary: [], other: [] }
 
-  // Build bulk Other items — add Merge Duplicates for contacts
-  const bulkOtherItems = activeEntityType === 'contact'
+  // Build bulk Other items — add Merge Duplicates for contacts and companies
+  const hasMerge = activeEntityType === 'contact' || activeEntityType === 'company'
+  const bulkOtherItems = hasMerge
     ? [{ label: 'Merge Duplicates', icon: Merge }, ...BULK_OTHER_ITEMS]
     : BULK_OTHER_ITEMS
 
+  const entityLabel = activeEntityType === 'contact' ? 'contacts' : 'companies'
+
+  const handleActionClick = (label: string) => {
+    if (label === 'Add Contact' || label === 'Add Company') {
+      setShowAddModal(true)
+    } else {
+      comingSoon()
+    }
+  }
+
   const handleBulkOtherClick = (label: string) => {
-    if (label === 'Merge Duplicates' && activeEntityType === 'contact') {
+    if (label === 'Merge Duplicates' && hasMerge) {
       if (selectedCount < 2) {
-        toast.info('Select at least 2 contacts to merge')
+        toast.info(`Select at least 2 ${entityLabel} to merge`)
       } else {
         setShowMergeModal(true)
       }
@@ -381,6 +396,12 @@ function EntityActions() {
             onClose={() => setShowMergeModal(false)}
           />
         )}
+        {showMergeModal && activeEntityType === 'company' && (
+          <MergeCompaniesModal
+            companyIds={Array.from(selectedRowIds)}
+            onClose={() => setShowMergeModal(false)}
+          />
+        )}
       </div>
     )
   }
@@ -389,7 +410,7 @@ function EntityActions() {
   return (
     <div className="flex items-center gap-2">
       {config.primary.map((action) => (
-        <button key={action.label} onClick={comingSoon} className={btnClass}>
+        <button key={action.label} onClick={() => handleActionClick(action.label)} className={btnClass}>
           <action.icon size={14} />
           {action.label}
         </button>
@@ -408,7 +429,7 @@ function EntityActions() {
             {config.primary.map((action) => (
               <button
                 key={action.label}
-                onClick={() => { comingSoon(); setShowOther(false) }}
+                onClick={() => { handleActionClick(action.label); setShowOther(false) }}
                 className={dropdownItemClass}
               >
                 <action.icon size={12} /> {action.label}
@@ -437,6 +458,13 @@ function EntityActions() {
           </div>
         )}
       </div>
+
+      {showAddModal && activeEntityType === 'contact' && (
+        <AddContactModal onClose={() => setShowAddModal(false)} />
+      )}
+      {showAddModal && activeEntityType === 'company' && (
+        <AddCompanyModal onClose={() => setShowAddModal(false)} />
+      )}
     </div>
   )
 }

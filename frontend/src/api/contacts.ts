@@ -1,6 +1,17 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { post } from './client.ts'
-import type { MergePreview, MergeRequest, MergeResult } from '../types/api.ts'
+import type { CreateContactRequest, MergePreview, MergeRequest, MergeResult } from '../types/api.ts'
+
+export function useCreateContact() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (request: CreateContactRequest) =>
+      post<Record<string, unknown>>('/contacts', request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['view-data'] })
+    },
+  })
+}
 
 export function useMergePreview() {
   return useMutation({

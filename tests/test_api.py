@@ -772,3 +772,111 @@ class TestContactMerge:
         })
         assert resp.status_code == 400
         assert "not found" in resp.json()["error"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Company Merge
+# ---------------------------------------------------------------------------
+
+class TestCompanyMerge:
+    def test_merge_preview(self, client):
+        _seed_companies(2)
+        resp = client.post("/api/v1/companies/merge-preview", json={
+            "company_ids": ["company-0", "company-1"],
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "companies" in data
+        assert len(data["companies"]) == 2
+        assert "conflicts" in data
+        assert "totals" in data
+        assert data["companies"][0]["name"] == "Company 0"
+
+    def test_merge_preview_insufficient(self, client):
+        _seed_companies(1)
+        resp = client.post("/api/v1/companies/merge-preview", json={
+            "company_ids": ["company-0"],
+        })
+        assert resp.status_code == 400
+        assert "At least two" in resp.json()["error"]
+
+    def test_merge_confirm(self, client):
+        _seed_companies(2)
+        resp = client.post("/api/v1/companies/merge", json={
+            "surviving_id": "company-0",
+            "absorbed_ids": ["company-1"],
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["surviving_id"] == "company-0"
+        assert data["absorbed_ids"] == ["company-1"]
+        assert "contacts_reassigned" in data
+        # Absorbed company should be deleted
+        detail_resp = client.get("/api/v1/companies/company-1")
+        assert detail_resp.status_code == 404
+
+    def test_merge_confirm_invalid(self, client):
+        _seed_companies(1)
+        resp = client.post("/api/v1/companies/merge", json={
+            "surviving_id": "nonexistent",
+            "absorbed_ids": ["company-0"],
+        })
+        assert resp.status_code == 400
+        assert "not found" in resp.json()["error"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Create Contact
+# ---------------------------------------------------------------------------
+
+class TestCreateContact:
+    def test_create_contact(self, client):
+        resp = client.post("/api/v1/contacts", json={
+            "name": "Jane Doe",
+            "email": "jane@example.com",
+            "source": "manual",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "Jane Doe"
+        assert data["source"] == "manual"
+        assert "id" in data
+
+        # Verify the contact is visible via detail endpoint
+        detail = client.get(f"/api/v1/contacts/{data['id']}")
+        assert detail.status_code == 200
+        assert detail.json()["identity"]["name"] == "Jane Doe"
+        assert "jane@example.com" in detail.json()["identity"]["emails"]
+
+    def test_create_contact_missing_name(self, client):
+        resp = client.post("/api/v1/contacts", json={"email": "no-name@test.com"})
+        assert resp.status_code == 400
+        assert "name" in resp.json()["error"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Create Company
+# ---------------------------------------------------------------------------
+
+class TestCreateCompany:
+    def test_create_company(self, client):
+        resp = client.post("/api/v1/companies", json={
+            "name": "Acme Corp",
+            "domain": "acme.com",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "Acme Corp"
+        assert data["domain"] == "acme.com"
+        assert "id" in data
+
+        # Verify the company is visible via detail endpoint
+        detail = client.get(f"/api/v1/companies/{data['id']}")
+        assert detail.status_code == 200
+        assert detail.json()["identity"]["name"] == "Acme Corp"
+
+    def test_create_company_duplicate_name(self, client):
+        client.post("/api/v1/companies", json={"name": "DupeCorp"})
+        resp = client.post("/api/v1/companies", json={"name": "DupeCorp"})
+        assert resp.status_code == 400
+        assert "already exists" in resp.json()["error"]

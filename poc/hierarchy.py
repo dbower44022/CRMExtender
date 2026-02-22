@@ -523,6 +523,38 @@ def remove_company_hierarchy(hierarchy_id: str) -> None:
 # Contacts
 # ---------------------------------------------------------------------------
 
+def create_contact(
+    name: str,
+    *,
+    source: str = "manual",
+    status: str = "active",
+    created_by: str | None = None,
+    customer_id: str | None = None,
+) -> dict:
+    """Create a contact. Returns the new row as a dict."""
+    now = datetime.now(timezone.utc).isoformat()
+    row = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "source": source,
+        "status": status,
+        "customer_id": customer_id,
+        "created_by": created_by,
+        "updated_by": created_by,
+        "created_at": now,
+        "updated_at": now,
+    }
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO contacts (id, name, source, status, customer_id, "
+            "created_by, updated_by, created_at, updated_at) "
+            "VALUES (:id, :name, :source, :status, :customer_id, "
+            ":created_by, :updated_by, :created_at, :updated_at)",
+            row,
+        )
+    return row
+
+
 def update_contact(contact_id: str, **fields) -> dict | None:
     """Update a contact's fields. Returns updated row dict or None."""
     allowed = {"name", "source", "status"}

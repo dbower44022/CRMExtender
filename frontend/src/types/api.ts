@@ -186,6 +186,22 @@ export interface LayoutOverride {
   updated_at: string
 }
 
+// --- Create Contact / Company types ---
+
+export interface CreateContactRequest {
+  name: string
+  email?: string
+  source?: string
+}
+
+export interface CreateCompanyRequest {
+  name: string
+  domain?: string
+  industry?: string
+  website?: string
+  headquarters_location?: string
+}
+
 // --- Contact Merge types ---
 
 export interface MergePreviewContact {
@@ -245,4 +261,55 @@ export interface MergeResult {
   relationships_reassigned: number
   events_reassigned: number
   relationships_deduplicated: number
+}
+
+// --- Company Merge types ---
+
+export interface CompanyMergePreviewCompany {
+  id: string
+  name: string
+  domain: string | null
+  industry: string | null
+  status: string | null
+  contact_count: number
+  relationship_count: number
+  event_count: number
+  identifier_count: number
+  phone_count: number
+  address_count: number
+  email_count: number
+  social_profile_count: number
+}
+
+export interface CompanyMergePreview {
+  companies: CompanyMergePreviewCompany[]
+  conflicts: {
+    name: string[]
+    domain: string[]
+    industry: string[]
+  }
+  totals: {
+    contacts: number
+    relationships: number
+    events: number
+    identifiers: number
+    phones: number
+    addresses: number
+    emails: number
+    social_profiles: number
+  }
+}
+
+export interface CompanyMergeRequest {
+  surviving_id: string
+  absorbed_ids: string[]
+}
+
+export interface CompanyMergeResult {
+  merge_ids: string[]
+  surviving_id: string
+  absorbed_ids: string[]
+  contacts_reassigned: number
+  relationships_reassigned: number
+  events_reassigned: number
 }

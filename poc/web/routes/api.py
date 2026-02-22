@@ -33,6 +33,7 @@ from ...views.layout_overrides import (
 )
 from ...views.registry import ENTITY_TYPES
 from ...contact_merge import get_contact_merge_preview, merge_contacts
+from ...company_merge import merge_companies
 
 router = APIRouter()
 
@@ -582,6 +583,257 @@ async def merge_contacts_api(request: Request):
         return JSONResponse({"error": str(e)}, status_code=400)
 
     return result
+
+
+# ------------------------------------------------------------------
+# Company Merge
+# ------------------------------------------------------------------
+
+@router.post("/companies/merge-preview")
+async def company_merge_preview_api(request: Request):
+    """Return a merge preview for the given company IDs."""
+    cid = request.state.customer_id
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    company_ids = body.get("company_ids", [])
+    if len(company_ids) < 2:
+        return JSONResponse(
+            {"error": "At least two companies are required for a merge."},
+            status_code=400,
+        )
+
+    with get_connection() as conn:
+        companies = []
+        for co_id in company_ids:
+            row = conn.execute(
+                "SELECT * FROM companies WHERE id = ? AND customer_id = ?",
+                (co_id, cid),
+            ).fetchone()
+            if not row:
+                return JSONResponse(
+                    {"error": f"Company not found: {co_id}"}, status_code=404,
+                )
+            c = dict(row)
+
+            c["contact_count"] = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM contact_companies WHERE company_id = ?",
+                (co_id,),
+            ).fetchone()["cnt"]
+            c["relationship_count"] = conn.execute(
+                """SELECT COUNT(*) AS cnt FROM relationships
+                   WHERE (from_entity_type = 'company' AND from_entity_id = ?)
+                      OR (to_entity_type = 'company' AND to_entity_id = ?)""",
+                (co_id, co_id),
+            ).fetchone()["cnt"]
+            c["event_count"] = conn.execute(
+                """SELECT COUNT(*) AS cnt FROM event_participants
+                   WHERE entity_type = 'company' AND entity_id = ?""",
+                (co_id,),
+            ).fetchone()["cnt"]
+            c["identifier_count"] = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM company_identifiers WHERE company_id = ?",
+                (co_id,),
+            ).fetchone()["cnt"]
+            c["phone_count"] = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM phone_numbers WHERE entity_type='company' AND entity_id=?",
+                (co_id,),
+            ).fetchone()["cnt"]
+            c["address_count"] = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM addresses WHERE entity_type='company' AND entity_id=?",
+                (co_id,),
+            ).fetchone()["cnt"]
+            c["email_count"] = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM email_addresses WHERE entity_type='company' AND entity_id=?",
+                (co_id,),
+            ).fetchone()["cnt"]
+            c["social_profile_count"] = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM company_social_profiles WHERE company_id = ?",
+                (co_id,),
+            ).fetchone()["cnt"]
+
+            companies.append(c)
+
+        # Conflicts: distinct values for key fields
+        names = list({c["name"] for c in companies if c.get("name")})
+        domains = list({c["domain"] for c in companies if c.get("domain")})
+        industries = list({c["industry"] for c in companies if c.get("industry")})
+
+    totals = {
+        "contacts": sum(c["contact_count"] for c in companies),
+        "relationships": sum(c["relationship_count"] for c in companies),
+        "events": sum(c["event_count"] for c in companies),
+        "identifiers": sum(c["identifier_count"] for c in companies),
+        "phones": sum(c["phone_count"] for c in companies),
+        "addresses": sum(c["address_count"] for c in companies),
+        "emails": sum(c["email_count"] for c in companies),
+        "social_profiles": sum(c["social_profile_count"] for c in companies),
+    }
+
+    return {
+        "companies": companies,
+        "conflicts": {
+            "name": names,
+            "domain": domains,
+            "industry": industries,
+        },
+        "totals": totals,
+    }
+
+
+@router.post("/companies/merge")
+async def company_merge_api(request: Request):
+    """Execute a company merge (one surviving, one or more absorbed)."""
+    cid = request.state.customer_id
+    uid = request.state.user["id"] if request.state.user else None
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    surviving_id = body.get("surviving_id", "")
+    absorbed_ids = body.get("absorbed_ids", [])
+
+    # Validate ownership
+    all_ids = [surviving_id] + absorbed_ids
+    with get_connection() as conn:
+        for co_id in all_ids:
+            row = conn.execute(
+                "SELECT id FROM companies WHERE id = ? AND customer_id = ?",
+                (co_id, cid),
+            ).fetchone()
+            if not row:
+                return JSONResponse(
+                    {"error": f"Company not found: {co_id}"}, status_code=400,
+                )
+
+    # Execute merges sequentially (backend is pairwise)
+    total_contacts = 0
+    total_relationships = 0
+    total_events = 0
+    merge_ids = []
+    try:
+        for absorbed_id in absorbed_ids:
+            result = merge_companies(
+                surviving_id,
+                absorbed_id,
+                merged_by=uid,
+            )
+            merge_ids.append(result["merge_id"])
+            total_contacts += result["contacts_reassigned"]
+            total_relationships += result["relationships_reassigned"]
+            total_events += result["events_reassigned"]
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+    return {
+        "merge_ids": merge_ids,
+        "surviving_id": surviving_id,
+        "absorbed_ids": absorbed_ids,
+        "contacts_reassigned": total_contacts,
+        "relationships_reassigned": total_relationships,
+        "events_reassigned": total_events,
+    }
+
+
+# ------------------------------------------------------------------
+# Create Contact / Company
+# ------------------------------------------------------------------
+
+@router.post("/contacts")
+async def create_contact_api(request: Request):
+    """Create a new contact."""
+    from ...hierarchy import add_contact_identifier, create_contact
+
+    cid = request.state.customer_id
+    uid = request.state.user["id"] if request.state.user else None
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    name = (body.get("name") or "").strip()
+    if not name:
+        return JSONResponse({"error": "name is required"}, status_code=400)
+
+    email = (body.get("email") or "").strip()
+    source = (body.get("source") or "manual").strip()
+
+    contact = create_contact(
+        name, source=source, created_by=uid, customer_id=cid,
+    )
+    contact_id = contact["id"]
+
+    # Add email identifier if provided
+    if email:
+        add_contact_identifier(contact_id, "email", email, is_primary=True, source=source)
+
+    # Create visibility row
+    now = contact["created_at"]
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO user_contacts "
+            "(id, user_id, contact_id, visibility, is_owner, created_at, updated_at) "
+            "VALUES (?, ?, ?, 'public', 1, ?, ?)",
+            (str(__import__("uuid").uuid4()), uid, contact_id, now, now),
+        )
+
+    return contact
+
+
+@router.post("/companies")
+async def create_company_api(request: Request):
+    """Create a new company."""
+    from ...hierarchy import create_company, update_company
+
+    cid = request.state.customer_id
+    uid = request.state.user["id"] if request.state.user else None
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    name = (body.get("name") or "").strip()
+    if not name:
+        return JSONResponse({"error": "name is required"}, status_code=400)
+
+    domain = (body.get("domain") or "").strip()
+    industry = (body.get("industry") or "").strip()
+
+    try:
+        company = create_company(
+            name, domain=domain, industry=industry,
+            created_by=uid, customer_id=cid,
+        )
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+    company_id = company["id"]
+
+    # Apply optional extra fields
+    extra = {}
+    for key in ("website", "headquarters_location"):
+        val = (body.get(key) or "").strip()
+        if val:
+            extra[key] = val
+    if extra:
+        update_company(company_id, **extra)
+
+    # Create visibility row
+    now = company["created_at"]
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO user_companies "
+            "(id, user_id, company_id, visibility, is_owner, created_at, updated_at) "
+            "VALUES (?, ?, ?, 'public', 1, ?, ?)",
+            (str(__import__("uuid").uuid4()), uid, company_id, now, now),
+        )
+
+    return company
 
 
 # ------------------------------------------------------------------

@@ -2,8 +2,10 @@
 
 ## Using Claude.ai and Claude Code for Large Project Development
 
-**Version:** 1.0
+**Version:** 2.0
 **Purpose:** This guide defines the standard methodology for developing large software projects using Claude.ai for product requirements and design, and Claude Code for implementation. It establishes document types, templates, workflows, and rationale for each decision.
+
+> **V2.0 (2026-02-23):** Added Key Processes as a PRD component (Section 3.5, 3.8). Added field-level metadata requirements — Editable, Sortable, Filterable — for Entity Base PRDs (Section 5.6). Expanded TDD methodology to describe the living document approach where Claude Code writes implementation decisions back into TDDs (Sections 3.2, 3.7, 4.4). Added the † caching convention for subquery-backed sortable fields.
 
 ---
 
@@ -42,31 +44,31 @@ The methodology uses a three-level hierarchy of documents, with supporting docum
 
 These documents describe the entire product and apply globally.
 
-| Document      | Purpose                                    | Contains                                                                                                                                      |
-| ------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Product PRD   | What the product is and why it exists      | Vision, competitive landscape, target users, product scope, principles                                                                        |
-| Product TDD   | Global technology and deployment decisions | Technology stack, database choices, API patterns, deployment infrastructure, with rationale                                                   |
-| GUI Standards | Reusable UI patterns and conventions       | Design philosophy, color system, typography, spacing, component patterns, layout conventions, interaction behaviors, data display conventions |
-| PRD Index     | Document registry and navigation           | Hierarchical status of all documents, retired document history, workflow notes                                                                |
+| Document | Purpose | Contains |
+|---|---|---|
+| Product PRD | What the product is and why it exists | Vision, competitive landscape, target users, product scope, principles |
+| Product TDD | Global technology and deployment decisions | Technology stack, database choices, API patterns, design principles, deployment infrastructure, with rationale. The foundation that all entity and action TDDs inherit from. |
+| GUI Standards | Reusable UI patterns and conventions | Design philosophy, color system, typography, spacing, component patterns, layout conventions, interaction behaviors, data display conventions |
+| PRD Index | Document registry and navigation | Hierarchical status of all documents, retired document history, workflow notes |
 
 ### 2.2 Entity Level
 
 These documents describe a single data entity (Contact, Company, Communication, etc.) and everything users can do with it.
 
-| Document        | Purpose                                              | Contains                                                                         |
-| --------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Entity Base PRD | Complete description of the entity                   | Definition, relationships, lifecycle, action catalog, cross-cutting concerns     |
-| Entity UI PRD   | Screen layouts and navigation for the entity         | Screen descriptions, interaction flows, simple action UI, task lists, test plans |
-| Entity TDD      | Entity-specific technical decisions (only if needed) | Decisions with rationale that apply only to this entity                          |
+| Document | Purpose | Contains |
+|---|---|---|
+| Entity Base PRD | Complete description of the entity | Definition, field-level metadata (editable/sortable/filterable), relationships, lifecycle, key processes, action catalog, cross-cutting concerns |
+| Entity UI PRD | Screen layouts and navigation for the entity | Screen descriptions, interaction flows, simple action UI, task lists, test plans |
+| Entity TDD | Entity-specific technical decisions (only if needed) | Decisions with rationale that deviate from or extend the Product TDD. Starts with your architectural decisions; grows as Claude Code adds implementation decisions. |
 
 ### 2.3 Action Level
 
 These documents describe a single complex action or group of related actions on an entity.
 
-| Document       | Purpose                                              | Contains                                                                                            |
-| -------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Action Sub-PRD | Detailed requirements for a complex action           | Overview, extracted context, requirements, UI specs, task lists, test plans                         |
-| Action TDD     | Action-specific technical decisions (only if needed) | Decisions with rationale that apply only to this action, including deployment-specific requirements |
+| Document | Purpose | Contains |
+|---|---|---|
+| Action Sub-PRD | Detailed requirements for a complex action | Overview, extracted context, key processes, requirements, UI specs, task lists, test plans |
+| Action TDD | Action-specific technical decisions (only if needed) | Decisions with rationale that apply only to this action. Same living document approach — you write initial decisions, Claude Code adds implementation decisions. |
 
 ### 2.4 Cross-Entity Workflows
 
@@ -102,6 +104,10 @@ The Product TDD captures global technology decisions that apply across the entir
 
 **Key principle:** Every decision includes rationale and rejected alternatives. This prevents revisiting settled decisions and helps Claude Code understand the constraints it's working within. Entity or action-specific technology choices do not belong here — they go in entity or action TDDs.
 
+**The Product TDD as foundation:** The Product TDD establishes the defaults that all entity and action TDDs inherit from. When an entity TDD is silent on a topic, the Product TDD applies. This means the Product TDD should cover: language and framework choices, database strategy, API conventions, authentication patterns, UI architecture patterns, design principles that constrain all implementation, testing patterns, configuration approach, and project structure. Entity TDDs only document decisions that deviate from or extend these defaults.
+
+**Design Principles section:** The Product TDD should include a Design Principles section that captures global constraints Claude Code must follow. These are not suggestions — they are rules. Examples include: "display speed is paramount" (denormalize for read speed), "idempotent writes" (all sync uses UPSERT), "editability is explicit" (Claude Code must not make fields editable unless the PRD says so). These principles save time by preventing Claude Code from making decisions that violate architectural intent.
+
 ### 3.3 GUI Standards
 
 **Template file:** `template-gui-standards.md`
@@ -132,6 +138,16 @@ The Entity Base PRD is the complete map of a single entity. It defines what the 
 
 **Key principle:** The Entity Base PRD is the map, not the directions. Someone reading it understands the full scope of the entity without reading any sub-PRDs. Simple actions are fully described in the action catalog. Complex actions are summarized with enough detail to understand what they do, with pointers to their sub-PRDs for implementation detail. No implementation or technology specifics appear here.
 
+**Key Processes:** Between the entity lifecycle and the action catalog, the Entity Base PRD defines Key Processes — end-to-end user journeys through the entity's core workflows. Each Key Process has a unique ID (e.g., KP-CONT-01), a name, a trigger, and a step-by-step walkthrough of the user experience from start to finish. Key Processes tie together multiple simple actions, UI interactions, and system behaviors into coherent workflows. Simple actions in the action catalog reference the Key Process IDs they participate in ("Supports processes: KP-CONT-01, KP-CONT-03"). This creates a two-way link: processes show how actions combine, and actions show which processes they serve.
+
+**Field-Level Metadata:** The Core Fields table in the Entity Base PRD includes three metadata columns beyond the field's description and valid values:
+
+- **Editable** — Declares how (or if) the user can modify the field. Values: `Direct` (inline edit), `Override` (computed with manual override), `Via [sub-entity]` (edit through related record), `Computed` (derived, not editable), `System` (never user-editable). This prevents Claude Code from making non-editable fields editable or routing edits through the wrong UI.
+- **Sortable** — Whether the field appears in sort options in list views. Fields backed by correlated subqueries that would be expensive to sort are marked with † and a note that the Entity TDD must define a caching or denormalization strategy. Fields without † are expected to sort at negligible cost (direct columns or JOINs).
+- **Filterable** — Whether the field appears in filter options in list views.
+
+These are product decisions, not technical decisions. The PRD declares the intended behavior; the TDD documents how to achieve it performantly.
+
 ### 3.6 Entity UI PRD
 
 **Template file:** `template-entity-ui-prd.md`
@@ -148,7 +164,19 @@ The Entity UI PRD describes the standard screens and navigation flows for an ent
 
 Entity TDDs are optional. They capture technical decisions that apply only to this entity and deviate from or extend the Product TDD.
 
-**When to create:** Only when the entity requires technical decisions not covered by the Product TDD. Many entities will not need one.
+**When to create:** Only when the entity requires technical decisions not covered by the Product TDD. Many entities will not need one. However, for core entities with complex data models (e.g., contacts with multi-identifier resolution, denormalized display fields, and event sourcing), an Entity TDD is strongly recommended.
+
+**TDD structure:** The Entity TDD mirrors the Product TDD's decision format — each decision has a title, the decision itself, rationale, alternatives rejected, and constraints/tradeoffs. The TDD does not include table schemas, full SQL, or implementation code. It captures decisions and their reasoning, not the implementation details that follow from those decisions.
+
+**Living document approach:** The Entity TDD is written in two phases:
+
+1. **You write the decisions you care about** as the product/architecture owner. These are decisions where you have opinions and Claude Code should not freelance — caching strategies, denormalization choices, algorithm design, data model patterns. Write only what you know needs to be decided. Leave areas where you don't have a strong opinion for Claude Code to resolve.
+
+2. **Claude Code writes its decisions back** during implementation. When Claude Code encounters technical decisions not covered by the TDD — index placement, query patterns, error handling approaches, adapter interfaces — it records those decisions with rationale in the appropriate section of the TDD. This creates a complete record of all technical decisions, not just the ones you anticipated.
+
+The result is a TDD that starts lean (only your architectural decisions) and grows organically as implementation proceeds. Future Claude Code sessions read the TDD and understand the existing codebase without re-deriving decisions or accidentally contradicting them.
+
+**Placeholder section:** The Entity TDD should end with a section titled "Decisions to Be Added by Claude Code" that lists the areas where Claude Code will likely need to make decisions. This serves as a roadmap and a reminder to document those decisions when they're made.
 
 ### 3.8 Action Sub-PRD
 
@@ -160,13 +188,17 @@ The Action Sub-PRD is the document Claude Code works from most directly. It cont
 
 **Key principle:** Self-contained. The document extracts relevant context from the Entity Base PRD so Claude Code can work from it without loading multiple documents. Requirements are organized into functional sections, each with their own task lists and test plans. The format of requirements (sequential workflow, business rules, or a mix) is the author's choice based on what best fits the action.
 
+**Key Processes in Action Sub-PRDs:** Complex actions define their own Key Processes using the same KP-ID pattern (e.g., KP-MERGE-01). These describe the end-to-end user journeys specific to that action. Functional sections within the Sub-PRD reference which Key Processes they support, creating the same two-way linkage as in the Entity Base PRD. This ensures Claude Code understands not just what to build, but how the pieces fit into complete user experiences.
+
 ### 3.9 Action TDD
 
 **Template file:** `template-action-tdd.md` (uses the same template as Entity TDD)
 
-Action TDDs are optional. They capture technical decisions specific to an action, including deployment requirements.
+Action TDDs are optional. They capture technical decisions specific to an action, including deployment requirements. They follow the same living document approach as Entity TDDs — you write the decisions you care about, Claude Code writes back the decisions it makes during implementation.
 
-**When to create:** Only when the action requires technology or deployment decisions not covered by the Product TDD or Entity TDD. For example, an Email Import action requiring AWS Lambda would have its own TDD.
+**When to create:** Only when the action requires technology or deployment decisions not covered by the Product TDD or Entity TDD. For example, an Email Import action requiring AWS Lambda would have its own TDD. Simple actions that follow standard patterns typically don't need a TDD. Complex actions with non-obvious algorithm design, transaction semantics, or external service integration benefit from one.
+
+**TDD hierarchy:** When Claude Code works on an action, it reads the Product TDD (platform defaults), the Entity TDD (entity-specific decisions), and the Action TDD (action-specific decisions), in that order. Each level overrides the one above for its specific scope.
 
 ---
 
@@ -203,13 +235,29 @@ This prevents Claude Code from losing track of where it is in a larger implement
 
 ### 4.4 Technical Decision Capture
 
-During implementation, Claude Code may encounter decisions not covered by existing TDDs — a library choice, an architectural pattern, a deployment detail. When this happens:
+During implementation, Claude Code will make technical decisions not covered by existing TDDs — a library choice, an architectural pattern, a query optimization, an index strategy. The methodology requires that these decisions are captured, not lost.
 
-1. Claude Code presents the decision, alternatives, and its recommendation
-2. You discuss and approve
-3. The decision is recorded in the appropriate TDD (product, entity, or action level)
+**The write-back workflow:**
 
-This ensures technical decisions are documented as they're made, maintaining consistency across the project.
+1. **Claude Code encounters a decision point** not covered by the Product TDD or Entity TDD — for example, which indexes to create on a table, how to structure an FTS virtual table, or how to handle a concurrency edge case.
+2. **Claude Code implements its chosen approach** and documents the decision in the appropriate TDD using the standard format (decision, rationale, alternatives rejected, constraints/tradeoffs).
+3. **You review the additions** during your next TDD review pass. You may approve, modify, or override Claude Code's decisions. The TDD always reflects the final approved state.
+
+**Where decisions go:**
+- Platform-wide decisions (e.g., "we use FTS5 for all full-text search") → Product TDD
+- Entity-specific decisions (e.g., "the contacts table uses these specific indexes") → Entity TDD
+- Action-specific decisions (e.g., "the merge transaction uses this locking strategy") → Action TDD
+
+**Why this matters:** Without write-back, Claude Code's implementation decisions exist only in the code. A future Claude Code session reading the TDD sees gaps and may make different decisions, creating inconsistencies. Write-back ensures the TDD is the authoritative record of both what was intended and what was actually built.
+
+**Detecting PRD-to-implementation gaps:** Claude Code may discover during implementation that a PRD requirement has performance or feasibility implications the PRD didn't account for. For example, a PRD may state "all fields are sortable" when some fields require expensive subqueries to sort. When this happens:
+
+1. Claude Code documents the gap and the technical constraint in the TDD
+2. Claude Code proposes a resolution (e.g., mark subquery fields non-sortable, or implement caching)
+3. You review and may update the PRD to reflect the corrected product decision
+4. The TDD documents the technical rationale for the PRD change
+
+This feedback loop — PRD states intent → Claude Code discovers constraint → TDD captures rationale → PRD is updated — keeps the documents honest and aligned with reality.
 
 ### 4.5 High-Level Tracking
 
@@ -260,6 +308,26 @@ The GUI Standards document handles reusable patterns. Entity and action PRDs han
 ### 5.5 Cross-Entity References
 
 When an action sub-PRD crosses entity boundaries (e.g., email import touches Communications, Contacts, and Companies), it references the other entity base PRDs by name but extracts the specific context it needs into its own document. This maintains self-containment while acknowledging dependencies.
+
+### 5.6 Field-Level Metadata in Entity Base PRDs
+
+Every field in an Entity Base PRD's Core Fields table must declare three behavioral attributes beyond its description and valid values: **Editable**, **Sortable**, and **Filterable**. These are product decisions that directly control what Claude Code builds.
+
+**Why this matters:** Without explicit field metadata, Claude Code makes assumptions. It may make a computed field editable (e.g., allowing inline editing of a display name that's derived from first + last name). It may add sort options to fields that require expensive subqueries. It may omit filter options for fields that users need to filter by. Each of these is a bug that traces back to an ambiguous PRD.
+
+**The Editable taxonomy:**
+- **Direct** — User edits this field inline. Claude Code renders an input or select control.
+- **Override** — Computed by default, but user can manually override. Claude Code needs to track whether the current value is computed or overridden, and provide a "reset to computed" action.
+- **Via [sub-entity]** — The displayed value summarizes a related record. Clicking it opens the sub-entity's editor, not an inline edit. This is the most common source of Claude Code bugs — it sees a field on the detail page and makes it editable when it should navigate to a different editor.
+- **Computed** — Derived from other data. Not editable at all. Claude Code renders it as read-only.
+- **System** — Set by the system. Never rendered with any edit affordance.
+
+**The † caching convention for sortable fields:** When a field is marked Sortable but is backed by a correlated subquery (e.g., primary email is resolved from a join on contact_identifiers), the PRD marks it with † and includes a note: "The Entity TDD must define a caching or denormalization strategy." This creates a clear contract:
+- The PRD says "users should be able to sort by this field" (product decision)
+- The TDD says "we cache this value in column X, kept in sync by Y" (technical decision)
+- Claude Code reads both and implements accordingly
+
+Without this convention, Claude Code either makes expensive subquery fields sortable (degrading performance) or silently makes them non-sortable (violating the PRD). The † makes the intent explicit and the responsibility clear.
 
 ---
 

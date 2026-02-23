@@ -26,10 +26,10 @@ Every communication has participants — senders, recipients, attendees. The par
 
 ### 2.1 Relevant Fields
 
-| Field | Role in This Action |
-|---|---|
-| Provider Account ID | Identifies the account owner for the is_account_owner flag. |
-| Channel | Determines which identifier type to use for resolution (email for email channel, phone number for SMS, etc.). |
+| Field               | Role in This Action                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Provider Account ID | Identifies the account owner for the is_account_owner flag.                                                   |
+| Channel             | Determines which identifier type to use for resolution (email for email channel, phone number for SMS, etc.). |
 
 ### 2.2 Relevant Relationships
 
@@ -90,26 +90,26 @@ Every communication has participants — senders, recipients, attendees. The par
 
 Communication participants are modeled as a system Relation Type in the Custom Objects framework:
 
-| Attribute | Value |
-|---|---|
-| Relation Type Name | Communication Participants |
-| Relation Type Slug | `communication_participants` |
-| Source Object Type | Communication (`com_`) |
-| Target Object Type | Contact (`con_`) |
-| Cardinality | Many-to-many |
-| Directionality | Bidirectional |
-| `is_system` | `true` |
-| Cascade (source archived) | Cascade archive participant links |
+| Attribute                 | Value                                                                  |
+| ------------------------- | ---------------------------------------------------------------------- |
+| Relation Type Name        | Communication Participants                                             |
+| Relation Type Slug        | `communication_participants`                                           |
+| Source Object Type        | Communication (`com_`)                                                 |
+| Target Object Type        | Contact (`con_`)                                                       |
+| Cardinality               | Many-to-many                                                           |
+| Directionality            | Bidirectional                                                          |
+| `is_system`               | `true`                                                                 |
+| Cascade (source archived) | Cascade archive participant links                                      |
 | Cascade (target archived) | Nullify (preserve communication, mark participant as archived contact) |
 
 ### 4.2 Metadata Fields
 
-| Field | Type | Description |
-|---|---|---|
-| `role` | Select | `sender`, `to`, `cc`, `bcc`, `participant` (calls/meetings) |
-| `address` | Text | The identifier used in this communication (email, phone number, etc.) |
-| `display_name` | Text | Display name from the communication header |
-| `is_account_owner` | Checkbox | Whether this participant is the CRM user |
+| Field              | Type     | Description                                                           |
+| ------------------ | -------- | --------------------------------------------------------------------- |
+| `role`             | Select   | `sender`, `to`, `cc`, `bcc`, `participant` (calls/meetings)           |
+| `address`          | Text     | The identifier used in this communication (email, phone number, etc.) |
+| `display_name`     | Text     | Display name from the communication header                            |
+| `is_account_owner` | Checkbox | Whether this participant is the CRM user                              |
 
 **Tasks:**
 
@@ -186,15 +186,15 @@ When a communication arrives with an unrecognized identifier:
 
 ### 6.1 Requirements
 
-| Channel | Primary Identifier | Resolution Method |
-|---|---|---|
-| `email` | Email address | Direct lookup in contact_identifiers |
-| `sms` / `mms` | Phone number | Phone number lookup in contact_identifiers |
-| `phone_recorded` | Phone number | Phone number lookup |
-| `phone_manual` | User-specified | User selects contact during entry |
-| `video_recorded` | Platform display name + email | Email lookup; name matching as fallback |
-| `video_manual` | User-specified | User selects contacts during entry |
-| `in_person` | User-specified | User selects contacts during entry |
+| Channel          | Primary Identifier            | Resolution Method                          |
+| ---------------- | ----------------------------- | ------------------------------------------ |
+| `email`          | Email address                 | Direct lookup in contact_identifiers       |
+| `sms` / `mms`    | Phone number                  | Phone number lookup in contact_identifiers |
+| `phone_recorded` | Phone number                  | Phone number lookup                        |
+| `phone_manual`   | User-specified                | User selects contact during entry          |
+| `video_recorded` | Platform display name + email | Email lookup; name matching as fallback    |
+| `video_manual`   | User-specified                | User selects contacts during entry         |
+| `in_person`      | User-specified                | User selects contacts during entry         |
 
 **Tasks:**
 
@@ -247,11 +247,11 @@ This means an email from `bob.smith@acmecorp.com` and an SMS from `+1-555-0199` 
 
 ### 8.1 Requirements
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/v1/communications/{id}/participants` | GET | List participants with roles and contact references |
-| `/api/v1/communications/{id}/participants` | POST | Add a participant (manual communications) |
-| `/api/v1/communications/{id}/participants/{contact_id}` | PATCH | Update participant metadata (role, etc.) |
+| Endpoint                                                | Method | Description                                         |
+| ------------------------------------------------------- | ------ | --------------------------------------------------- |
+| `/api/v1/communications/{id}/participants`              | GET    | List participants with roles and contact references |
+| `/api/v1/communications/{id}/participants`              | POST   | Add a participant (manual communications)           |
+| `/api/v1/communications/{id}/participants/{contact_id}` | PATCH  | Update participant metadata (role, etc.)            |
 
 **Tasks:**
 

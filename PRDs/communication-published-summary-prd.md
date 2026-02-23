@@ -28,15 +28,15 @@ The Communication **owns** its Published Summary. The Conversation references su
 
 ### 2.1 Relevant Fields
 
-| Field | Role in This Action |
-|---|---|
-| Content Clean | Input to AI summary generation. Displayed when user expands to view full original. |
-| Summary JSON | Editor-native rich text document format. Source of truth for re-editing. |
-| Summary HTML | Pre-rendered HTML rendered in the Conversation timeline. |
-| Summary Text | Plain text for FTS indexing and Conversation-level AI input. |
-| Summary Source | `ai_generated`, `user_authored`, `pass_through`. Drives UI display (badges). |
-| Current Summary Revision ID | Points to the active revision. |
-| Summary Revision Count | Tracks how many revisions exist. |
+| Field                       | Role in This Action                                                                |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| Content Clean               | Input to AI summary generation. Displayed when user expands to view full original. |
+| Summary JSON                | Editor-native rich text document format. Source of truth for re-editing.           |
+| Summary HTML                | Pre-rendered HTML rendered in the Conversation timeline.                           |
+| Summary Text                | Plain text for FTS indexing and Conversation-level AI input.                       |
+| Summary Source              | `ai_generated`, `user_authored`, `pass_through`. Drives UI display (badges).       |
+| Current Summary Revision ID | Points to the active revision.                                                     |
+| Summary Revision Count      | Tracks how many revisions exist.                                                   |
 
 ### 2.2 Relevant Relationships
 
@@ -138,17 +138,17 @@ The Published Summary sits at the end of a three-stage content pipeline:
 
 ### 5.1 Requirements
 
-| Channel | Summary Source | Generation Logic |
-|---|---|---|
-| `email` (< 50 words cleaned) | `pass_through` | content_clean copied directly to summary fields as rich text. |
-| `email` (≥ 50 words cleaned) | `ai_generated` | AI produces structured rich text: key points, decisions, requests, action items. |
-| `sms` / `mms` | `pass_through` | Message body is inherently short. Copy directly. |
-| `phone_recorded` | `ai_generated` | AI processes transcript to produce: key discussion points, decisions, action items, commitments. |
-| `phone_manual` | `user_authored` | User writes summary during creation. User's input IS the summary. |
-| `video_recorded` | `ai_generated` | Same approach as phone_recorded. |
-| `video_manual` | `user_authored` | Same as phone_manual. |
-| `in_person` | `user_authored` | Same as phone_manual. |
-| `note` | `user_authored` | Same as phone_manual. |
+| Channel                      | Summary Source  | Generation Logic                                                                                 |
+| ---------------------------- | --------------- | ------------------------------------------------------------------------------------------------ |
+| `email` (< 50 words cleaned) | `pass_through`  | content_clean copied directly to summary fields as rich text.                                    |
+| `email` (≥ 50 words cleaned) | `ai_generated`  | AI produces structured rich text: key points, decisions, requests, action items.                 |
+| `sms` / `mms`                | `pass_through`  | Message body is inherently short. Copy directly.                                                 |
+| `phone_recorded`             | `ai_generated`  | AI processes transcript to produce: key discussion points, decisions, action items, commitments. |
+| `phone_manual`               | `user_authored` | User writes summary during creation. User's input IS the summary.                                |
+| `video_recorded`             | `ai_generated`  | Same approach as phone_recorded.                                                                 |
+| `video_manual`               | `user_authored` | Same as phone_manual.                                                                            |
+| `in_person`                  | `user_authored` | Same as phone_manual.                                                                            |
+| `note`                       | `user_authored` | Same as phone_manual.                                                                            |
 
 **Tasks:**
 
@@ -173,11 +173,11 @@ The Published Summary sits at the end of a three-stage content pipeline:
 
 The summary storage model mirrors the Notes content architecture (Notes PRD Section 7.2). Three representations:
 
-| Column | Type | Purpose |
-|---|---|---|
+| Column         | Type  | Purpose                                                                                                                                |
+| -------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `summary_json` | JSONB | Editor-native document format. Source of truth for re-editing. Same JSON schema as Notes content_json. Backend treats as opaque JSONB. |
-| `summary_html` | TEXT | Pre-rendered HTML. What the Conversation timeline renders. Sanitized before storage. |
-| `summary_text` | TEXT | Plain text extracted from summary_html (all tags stripped). FTS indexing and Conversation-level AI input. |
+| `summary_html` | TEXT  | Pre-rendered HTML. What the Conversation timeline renders. Sanitized before storage.                                                   |
+| `summary_text` | TEXT  | Plain text extracted from summary_html (all tags stripped). FTS indexing and Conversation-level AI input.                              |
 
 **For AI-generated summaries:** AI pipeline produces structured HTML directly. summary_json generated for the editor. summary_text extracted.
 
@@ -242,12 +242,12 @@ Every summary change creates a new revision in `communication_summary_revisions`
 
 **Revision lifecycle:**
 
-| Action | Behavior |
-|---|---|
-| Initial summary generation | First revision (revision_number = 1). Communication summary fields updated. |
-| User edits AI summary | New revision. summary_source → `user_authored`. Original AI revision preserved. |
-| AI re-generates | New revision. summary_source → `ai_generated`. Previous revisions preserved. |
-| View old revision | Client requests revision by ID. Server returns revision's summary_html for display. |
+| Action                     | Behavior                                                                            |
+| -------------------------- | ----------------------------------------------------------------------------------- |
+| Initial summary generation | First revision (revision_number = 1). Communication summary fields updated.         |
+| User edits AI summary      | New revision. summary_source → `user_authored`. Original AI revision preserved.     |
+| AI re-generates            | New revision. summary_source → `ai_generated`. Previous revisions preserved.        |
+| View old revision          | Client requests revision by ID. Server returns revision's summary_html for display. |
 
 **Tasks:**
 
@@ -272,24 +272,24 @@ Every summary change creates a new revision in `communication_summary_revisions`
 
 ### 9.1 Requirements
 
-| Trigger | Behavior |
-|---|---|
-| Communication created (auto-synced) | Summary generation fires after content extraction completes. AI or pass-through per channel rules. |
-| Communication created (manual entry) | User writes summary during creation (user-authored channels). Transcript channels fire AI generation after transcript is available. |
-| content_clean updated | Re-processing of content extraction. Summary re-generated. Previous revisions preserved. |
-| User edits summary | User modifies via rich text editor. New revision. source → user_authored. |
-| User requests AI re-generation | Explicit request. New revision. source → ai_generated. |
-| Communication passes triage after override | If previously filtered, summary generation fires for the first time. |
+| Trigger                                    | Behavior                                                                                                                            |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Communication created (auto-synced)        | Summary generation fires after content extraction completes. AI or pass-through per channel rules.                                  |
+| Communication created (manual entry)       | User writes summary during creation (user-authored channels). Transcript channels fire AI generation after transcript is available. |
+| content_clean updated                      | Re-processing of content extraction. Summary re-generated. Previous revisions preserved.                                            |
+| User edits summary                         | User modifies via rich text editor. New revision. source → user_authored.                                                           |
+| User requests AI re-generation             | Explicit request. New revision. source → ai_generated.                                                                              |
+| Communication passes triage after override | If previously filtered, summary generation fires for the first time.                                                                |
 
 ### 9.2 Error Handling
 
-| Failure | Recovery |
-|---|---|
-| AI API timeout | Retry with exponential backoff (3 attempts). "[Summary pending]" placeholder in timeline. |
-| AI API rate limit | Queue and retry after cooldown. |
-| AI returns malformed output | Log raw response. Fall back to pass-through. Flag for review. |
-| AI API unavailable | Pass-through mode until API returns. Queue for AI processing when available. |
-| Empty content_clean | Skip summary generation. "[No content]" in timeline. |
+| Failure                     | Recovery                                                                                  |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| AI API timeout              | Retry with exponential backoff (3 attempts). "[Summary pending]" placeholder in timeline. |
+| AI API rate limit           | Queue and retry after cooldown.                                                           |
+| AI returns malformed output | Log raw response. Fall back to pass-through. Flag for review.                             |
+| AI API unavailable          | Pass-through mode until API returns. Queue for AI processing when available.              |
+| Empty content_clean         | Skip summary generation. "[No content]" in timeline.                                      |
 
 **Tasks:**
 

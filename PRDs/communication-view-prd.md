@@ -30,26 +30,26 @@ This document implements KP-4 (Viewing a Communication's Full Record) from the E
 
 ### 2.1 Relevant Fields
 
-| Field | Role in View |
-|---|---|
-| Channel | Determines rendering variant (email, SMS, phone, etc.) and icon display. |
-| Direction | Shown in header area. Drives directional language ("From" / "To" vs. "Participants"). |
-| Timestamp | Displayed prominently in header. Universal sequencing key. |
-| Subject | Email subject line or meeting title. Primary heading for email and meeting channels. NULL for SMS, most calls. |
-| Body Preview | First 200 characters of content_clean. Used only if content_clean is unavailable or for extremely constrained preview contexts. |
-| Content Clean | The processed, noise-removed content. Primary reading content in both Preview and full View. |
-| Content Raw | Original unprocessed content. Available via "View Original" expander in full View. |
-| Content HTML | Original email HTML. Not rendered directly to user — used only by content extraction pipeline. |
-| Summary JSON / Summary HTML / Summary Text | Published Summary fields. Rendered in the Summary Card in full View. |
-| Summary Source | `ai_generated`, `user_authored`, `pass_through`. Drives badge display on Summary Card. |
-| Summary Revision Count | Displayed on Summary Card if > 1. |
-| Triage Result | If non-NULL, the communication was filtered. Drives display of Triage Card. |
-| Triage Reason | Human-readable triage explanation. Displayed in Triage Card. |
-| Duration Seconds | Call/meeting duration. Displayed in header for applicable channels. |
-| Has Attachments / Attachment Count | Drives attachment indicator in Preview and Attachment Card in full View. |
-| Conversation ID | FK to parent conversation. Drives Conversation Card in full View. |
-| Provider Account ID | Identifies source account. Displayed in Metadata Card. |
-| Source | `synced`, `manual`, `imported`. Displayed in Metadata Card. |
+| Field                                      | Role in View                                                                                                                    |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Channel                                    | Determines rendering variant (email, SMS, phone, etc.) and icon display.                                                        |
+| Direction                                  | Shown in header area. Drives directional language ("From" / "To" vs. "Participants").                                           |
+| Timestamp                                  | Displayed prominently in header. Universal sequencing key.                                                                      |
+| Subject                                    | Email subject line or meeting title. Primary heading for email and meeting channels. NULL for SMS, most calls.                  |
+| Body Preview                               | First 200 characters of content_clean. Used only if content_clean is unavailable or for extremely constrained preview contexts. |
+| Content Clean                              | The processed, noise-removed content. Primary reading content in both Preview and full View.                                    |
+| Content Raw                                | Original unprocessed content. Available via "View Original" expander in full View.                                              |
+| Content HTML                               | Original email HTML. Not rendered directly to user — used only by content extraction pipeline.                                  |
+| Summary JSON / Summary HTML / Summary Text | Published Summary fields. Rendered in the Summary Card in full View.                                                            |
+| Summary Source                             | `ai_generated`, `user_authored`, `pass_through`. Drives badge display on Summary Card.                                          |
+| Summary Revision Count                     | Displayed on Summary Card if > 1.                                                                                               |
+| Triage Result                              | If non-NULL, the communication was filtered. Drives display of Triage Card.                                                     |
+| Triage Reason                              | Human-readable triage explanation. Displayed in Triage Card.                                                                    |
+| Duration Seconds                           | Call/meeting duration. Displayed in header for applicable channels.                                                             |
+| Has Attachments / Attachment Count         | Drives attachment indicator in Preview and Attachment Card in full View.                                                        |
+| Conversation ID                            | FK to parent conversation. Drives Conversation Card in full View.                                                               |
+| Provider Account ID                        | Identifies source account. Displayed in Metadata Card.                                                                          |
+| Source                                     | `synced`, `manual`, `imported`. Displayed in Metadata Card.                                                                     |
 
 ### 2.2 Relevant Relationships
 
@@ -138,19 +138,23 @@ Each channel renders its Preview Card differently to match the native reading ex
 ```
 
 **Header area:**
+
 - Channel icon (envelope) and sender display name, right-aligned timestamp
 - Recipient line: "To:" followed by display names (comma-separated). If CC recipients exist, append "CC:" followed by CC display names. If the recipient list exceeds the available width, truncate with ellipsis and count (e.g., "To: Doug Bower, +3 others")
 - Timestamp renders as time-only if today, date + time if this year, full date + time if older
 
 **Subject line:**
+
 - Rendered as a prominent heading below the header, above the content divider
 - If NULL (rare for email), the subject line is omitted and the content flows directly below the header
 
 **Content area:**
+
 - content_clean rendered as plain text, flowing naturally below the subject divider
 - Content fills all available space — no artificial truncation. If the email is long and the panel is short, the card scrolls.
 
 **Attachment indicator:**
+
 - If has_attachments is true, a compact attachment line renders at the bottom: paperclip icon followed by filenames (comma-separated). If more than 3 attachments, show first 2 filenames and "+N more"
 - Non-interactive in the Preview Card — no download actions. Just awareness that attachments exist.
 
@@ -167,10 +171,12 @@ Each channel renders its Preview Card differently to match the native reading ex
 ```
 
 **Header area:**
+
 - Channel icon (speech bubble), contact display name, direction indicator (→ Outbound, ← Inbound)
 - Timestamp on second line
 
 **Content area:**
+
 - content_clean rendered as plain text. SMS messages are short enough that the full content typically fits without scrolling.
 
 **No subject line, no attachment indicator** (unless MMS with media — in which case a media indicator renders similarly to the email attachment indicator).
@@ -190,10 +196,12 @@ Each channel renders its Preview Card differently to match the native reading ex
 ```
 
 **Header area:**
+
 - Channel icon (phone), contact display name, direction indicator
 - Timestamp and duration (formatted as "Xh Ym" or "X min")
 
 **Content area:**
+
 - content_clean (the processed transcript) rendered as plain text, filling available space.
 
 #### 4.2.4 Phone Call (Manual) / Video Meeting (Manual) / In-Person Meeting Preview
@@ -213,13 +221,16 @@ Each channel renders its Preview Card differently to match the native reading ex
 ```
 
 **Header area:**
+
 - Channel icon (phone, video camera, or people icon as appropriate), participant display names (comma-separated, truncated with count if many), direction shows "↔ Meeting" for mutual
 - Timestamp and duration (if provided)
 
 **Subject line:**
+
 - If subject is provided, rendered as heading above content divider. Otherwise omitted.
 
 **Content area:**
+
 - content_clean (the user's notes) rendered as plain text.
 
 #### 4.2.5 Video Meeting (Recorded) Preview
@@ -261,15 +272,15 @@ The indicator is a single line showing the triage_result in human-readable form.
 
 ### 4.4 Preview Card Rendering Rules Summary
 
-| Rule | Behavior |
-|---|---|
-| **Fills available space** | Content is never artificially truncated. The card uses all vertical space provided by the Window. If content exceeds available space, the card scrolls. |
-| **Non-interactive** | No action buttons, no clickable links, no editing affordances. The card is a pure reading surface. |
-| **Empty field suppression** | If a field has no value (e.g., no subject on an SMS), that element is omitted entirely. No labels without values. |
-| **Participant truncation** | If the participant list exceeds available width, truncate with count ("+N others"). |
-| **Timestamp formatting** | Today: time only. This year: "Mon DD, HH:MM AM/PM". Older: "Mon DD, YYYY HH:MM AM/PM". |
-| **Triage indicator** | Shown at top of card when triage_result is non-NULL. |
-| **Channel icon** | Always present at top-left of header. Provides instant visual identification of communication type. |
+| Rule                        | Behavior                                                                                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Fills available space**   | Content is never artificially truncated. The card uses all vertical space provided by the Window. If content exceeds available space, the card scrolls. |
+| **Non-interactive**         | No action buttons, no clickable links, no editing affordances. The card is a pure reading surface.                                                      |
+| **Empty field suppression** | If a field has no value (e.g., no subject on an SMS), that element is omitted entirely. No labels without values.                                       |
+| **Participant truncation**  | If the participant list exceeds available width, truncate with count ("+N others").                                                                     |
+| **Timestamp formatting**    | Today: time only. This year: "Mon DD, HH:MM AM/PM". Older: "Mon DD, YYYY HH:MM AM/PM".                                                                  |
+| **Triage indicator**        | Shown at top of card when triage_result is non-NULL.                                                                                                    |
+| **Channel icon**            | Always present at top-left of header. Provides instant visual identification of communication type.                                                     |
 
 **Tasks:**
 
@@ -310,22 +321,23 @@ The Communication full View uses a **content-aware responsive layout** that dete
 
 **Decision inputs:**
 
-| Input | How Measured |
-|---|---|
+| Input           | How Measured                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------- |
 | Available width | The rendering width of the Window (Modal Full Overlay, Undocked Window, or Docked Window in View Mode). |
-| Content volume | Word count of content_clean. |
+| Content volume  | Word count of content_clean.                                                                            |
 
 **Decision rules:**
 
-| Condition | Layout |
-|---|---|
-| Available width < two-column minimum threshold | Single column. Always. |
-| Available width ≥ threshold AND content volume ≤ short content threshold | Single column. Content is short enough that it flows naturally above the CRM cards without requiring the user to scroll past a wall of text. |
+| Condition                                                                | Layout                                                                                                                                                                                 |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Available width < two-column minimum threshold                           | Single column. Always.                                                                                                                                                                 |
+| Available width ≥ threshold AND content volume ≤ short content threshold | Single column. Content is short enough that it flows naturally above the CRM cards without requiring the user to scroll past a wall of text.                                           |
 | Available width ≥ threshold AND content volume > short content threshold | Two column. Content in the left column (wider), CRM cards stacked in the right column (narrower). This prevents the user from having to scroll past long content to reach CRM context. |
 
 **Two-column split:** When two-column layout is active, the Content Card occupies approximately 60-65% of the available width and the CRM card column occupies the remaining 35-40%. These proportions are initial defaults — exact values should be tuned during implementation to feel balanced across typical email lengths.
 
 **Threshold calibration:** The exact thresholds (minimum width for two-column, word count for "short" content) are implementation details to be determined during development and tuned based on visual testing. As a starting point:
+
 - Two-column minimum width: ~900px (the point where both columns can render comfortably)
 - Short content threshold: ~150 words (the point where single-column layout would push CRM cards below the fold on a typical display)
 
@@ -427,13 +439,13 @@ The Identity Card for a Communication is minimal — it establishes *what* this 
 
 **Fields displayed:**
 
-| Element | Source | Rendering |
-|---|---|---|
-| Channel icon + label | channel field | Icon and human-readable channel name (e.g., "✉ Email", "📞 Phone Call", "💬 SMS") |
-| Direction | direction field | "Inbound", "Outbound", or "Meeting" |
-| Source | source field | "Synced", "Manual", or "Imported" |
-| Provider account | provider_account_id → account_identifier | Account display name or email address. Omitted for manual entries. |
-| Timestamp | timestamp field | Full date and time, right-aligned |
+| Element              | Source                                   | Rendering                                                                         |
+| -------------------- | ---------------------------------------- | --------------------------------------------------------------------------------- |
+| Channel icon + label | channel field                            | Icon and human-readable channel name (e.g., "✉ Email", "📞 Phone Call", "💬 SMS") |
+| Direction            | direction field                          | "Inbound", "Outbound", or "Meeting"                                               |
+| Source               | source field                             | "Synced", "Manual", or "Imported"                                                 |
+| Provider account     | provider_account_id → account_identifier | Account display name or email address. Omitted for manual entries.                |
+| Timestamp            | timestamp field                          | Full date and time, right-aligned                                                 |
 
 The Identity Card does **not** show the subject, sender, recipients, or content — those belong in the Content Card where they form the natural reading experience. The Identity Card answers "what kind of record is this and where did it come from?"
 
@@ -589,12 +601,12 @@ Same structure as Phone Call (Recorded) with video icon and video playback contr
 
 ### 7.6 Content Card Rendering Rules
 
-| Rule | Behavior |
-|---|---|
-| **Participant links** | Resolved contacts are clickable links navigating to the Contact record. Unresolved participants render as plain text with a subtle indicator. |
+| Rule                      | Behavior                                                                                                                                                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Participant links**     | Resolved contacts are clickable links navigating to the Contact record. Unresolved participants render as plain text with a subtle indicator.                                                                                  |
 | **Fills available space** | No artificial truncation. Content flows to its natural length. Card scrolls if content exceeds available space (in single-column layout, the whole view scrolls; in two-column layout, the left column scrolls independently). |
-| **View Original** | Available only for channels where content_clean differs from content_raw (primarily email). Collapsed by default. |
-| **Attachment actions** | Download button on each attachment. Playback controls for audio/video recordings. These are the only interactive elements in the Content Card. |
+| **View Original**         | Available only for channels where content_clean differs from content_raw (primarily email). Collapsed by default.                                                                                                              |
+| **Attachment actions**    | Download button on each attachment. Playback controls for audio/video recordings. These are the only interactive elements in the Content Card.                                                                                 |
 
 **Tasks:**
 
@@ -650,12 +662,12 @@ Each participant renders as a compact row:
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element | Source | Rendering |
-|---|---|---|
-| Name | Contact display name (or participant display_name if unresolved) | Clickable link to Contact record (if resolved). Plain text with unresolved indicator if pending. |
-| Role | Participant relation metadata: role | "Sender", "To", "CC", "BCC", "Participant" — right-aligned on the name line |
-| Title + Company | Contact's current employment | Rendered below the name in lighter text. Omitted if the contact has no employment record. |
-| Account owner indicator | is_account_owner flag | "(You)" badge if this participant is the account owner |
+| Element                 | Source                                                           | Rendering                                                                                        |
+| ----------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Name                    | Contact display name (or participant display_name if unresolved) | Clickable link to Contact record (if resolved). Plain text with unresolved indicator if pending. |
+| Role                    | Participant relation metadata: role                              | "Sender", "To", "CC", "BCC", "Participant" — right-aligned on the name line                      |
+| Title + Company         | Contact's current employment                                     | Rendered below the name in lighter text. Omitted if the contact has no employment record.        |
+| Account owner indicator | is_account_owner flag                                            | "(You)" badge if this participant is the account owner                                           |
 
 ### 8.3 Suppression
 
@@ -706,14 +718,14 @@ The Summary Card displays the Communication's Published Summary — the distille
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element | Source | Rendering |
-|---|---|---|
-| Card header | "Summary" | Standard card header |
-| Source badge | summary_source | "🤖 AI Generated", "✍ User Authored", or "📋 Pass-through" — right of header |
-| Edit action | — | Pencil icon (✏). Opens the summary in the rich text editor for user editing. Creates a new summary revision on save. |
-| Regenerate action | — | Refresh icon (↻). Available only for AI-generated and pass-through summaries. Re-runs AI summary generation from content_clean. Creates a new summary revision. |
-| Summary content | summary_html | Rendered as rich text (headings, lists, bold). The HTML as produced by the AI or the user's editor. |
-| Revision info | summary_revision_count, current revision metadata | "Rev N of N · Last updated [date] by [AI or username]". Clicking opens revision history (future: revision comparison view). |
+| Element           | Source                                            | Rendering                                                                                                                                                       |
+| ----------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Card header       | "Summary"                                         | Standard card header                                                                                                                                            |
+| Source badge      | summary_source                                    | "🤖 AI Generated", "✍ User Authored", or "📋 Pass-through" — right of header                                                                                    |
+| Edit action       | —                                                 | Pencil icon (✏). Opens the summary in the rich text editor for user editing. Creates a new summary revision on save.                                            |
+| Regenerate action | —                                                 | Refresh icon (↻). Available only for AI-generated and pass-through summaries. Re-runs AI summary generation from content_clean. Creates a new summary revision. |
+| Summary content   | summary_html                                      | Rendered as rich text (headings, lists, bold). The HTML as produced by the AI or the user's editor.                                                             |
+| Revision info     | summary_revision_count, current revision metadata | "Rev N of N · Last updated [date] by [AI or username]". Clicking opens revision history (future: revision comparison view).                                     |
 
 ### 9.3 Suppression
 
@@ -768,13 +780,13 @@ The Conversation Card shows which conversation this communication belongs to, en
 
 **If assigned to a conversation:**
 
-| Element | Rendering |
-|---|---|
-| Conversation title | Clickable link navigating to the Conversation record |
-| Status | Conversation's current status |
-| Communication count | Number of communications in the conversation |
-| Last activity | Timestamp of the most recent communication in the conversation |
-| Open action | Navigates to the Conversation entity workspace with this conversation focused |
+| Element             | Rendering                                                                     |
+| ------------------- | ----------------------------------------------------------------------------- |
+| Conversation title  | Clickable link navigating to the Conversation record                          |
+| Status              | Conversation's current status                                                 |
+| Communication count | Number of communications in the conversation                                  |
+| Last activity       | Timestamp of the most recent communication in the conversation                |
+| Open action         | Navigates to the Conversation entity workspace with this conversation focused |
 
 **If unassigned (conversation_id is NULL):**
 
@@ -831,11 +843,11 @@ The Triage Card explains why a communication was filtered by the triage pipeline
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element | Source | Rendering |
-|---|---|---|
-| Classification | triage_result | Human-readable triage category |
-| Reason | triage_reason | Explanation of why the communication was filtered |
-| Override action | — | Button that clears triage_result, queues the communication for AI processing (summary generation, conversation assignment), and emits a `triage_overridden` event |
+| Element         | Source        | Rendering                                                                                                                                                         |
+| --------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Classification  | triage_result | Human-readable triage category                                                                                                                                    |
+| Reason          | triage_reason | Explanation of why the communication was filtered                                                                                                                 |
+| Override action | —             | Button that clears triage_result, queues the communication for AI processing (summary generation, conversation assignment), and emits a `triage_overridden` event |
 
 ### 11.3 Suppression
 
@@ -882,9 +894,9 @@ Each attached note renders as a compact entry:
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element | Rendering |
-|---|---|
-| Card header | "Notes" with count in parentheses. "+ Add" action to create a new note attached to this communication. |
+| Element      | Rendering                                                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Card header  | "Notes" with count in parentheses. "+ Add" action to create a new note attached to this communication.                                     |
 | Note entries | Author name, timestamp, and note content (content_text or a preview of content_html). Each note is clickable to open the full Note record. |
 
 ### 12.3 Suppression
@@ -932,14 +944,14 @@ The Metadata Card displays system and provider information about the communicati
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element | Source | Rendering |
-|---|---|---|
-| Source | source field | "Synced", "Manual", "Imported" |
-| Provider | provider_account → provider | Provider name. Omitted for manual entries. |
-| Account | provider_account → account_identifier | Account email/number. Omitted for manual entries. |
-| Provider IDs | provider_message_id, provider_thread_id | Raw provider identifiers. Omitted for manual entries. |
-| Created / Updated | created_at, updated_at | Timestamps |
-| Event History | communications_events | Collapsible list of event records. Collapsed by default. When expanded, shows event type, timestamp, changed_by, and change details. |
+| Element           | Source                                  | Rendering                                                                                                                            |
+| ----------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Source            | source field                            | "Synced", "Manual", "Imported"                                                                                                       |
+| Provider          | provider_account → provider             | Provider name. Omitted for manual entries.                                                                                           |
+| Account           | provider_account → account_identifier   | Account email/number. Omitted for manual entries.                                                                                    |
+| Provider IDs      | provider_message_id, provider_thread_id | Raw provider identifiers. Omitted for manual entries.                                                                                |
+| Created / Updated | created_at, updated_at                  | Timestamps                                                                                                                           |
+| Event History     | communications_events                   | Collapsible list of event records. Collapsed by default. When expanded, shows event type, timestamp, changed_by, and change details. |
 
 ### 13.3 Default State
 
@@ -984,9 +996,11 @@ In single-column layout, cards render in this order (top to bottom):
 In two-column layout:
 
 **Left column (primary — ~60-65% width):**
+
 1. Content Card
 
 **Right column (CRM layer — ~35-40% width):**
+
 1. Participants Card
 2. Summary Card
 3. Conversation Card
@@ -999,6 +1013,7 @@ The Identity Card spans full width above both columns.
 ### 14.3 Ordering Rationale
 
 The order prioritizes the most frequently needed information:
+
 - Content first (the communication itself is always the primary interest)
 - Participants next (who was involved)
 - Summary next (distilled intelligence)
@@ -1010,15 +1025,15 @@ The order prioritizes the most frequently needed information:
 
 ## Related Documents
 
-| Document | Relationship |
-|---|---|
-| [Communication Entity Base PRD](communication-entity-base-prd.md) | Parent entity PRD. Defines KP-4 which this document implements. |
-| [Communication Entity TDD](communication-entity-tdd.md) | Technical decisions for communication data storage and retrieval. |
-| [GUI Functional Requirements PRD](gui-functional-requirements-prd.md) | Card-Based Architecture, Window Types, Display Modes. |
-| [GUI Preview Card Amendment](gui-preview-card-amendment.md) | System-wide Preview Card type definition. |
-| [Published Summary Sub-PRD](communication-published-summary-prd.md) | Summary generation, edit, and regenerate workflows referenced by the Summary Card. |
+| Document                                                                      | Relationship                                                                         |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [Communication Entity Base PRD](communication-entity-base-prd.md)             | Parent entity PRD. Defines KP-4 which this document implements.                      |
+| [Communication Entity TDD](communication-entity-tdd.md)                       | Technical decisions for communication data storage and retrieval.                    |
+| [GUI Functional Requirements PRD](gui-functional-requirements-prd.md)         | Card-Based Architecture, Window Types, Display Modes.                                |
+| [GUI Preview Card Amendment](gui-preview-card-amendment.md)                   | System-wide Preview Card type definition.                                            |
+| [Published Summary Sub-PRD](communication-published-summary-prd.md)           | Summary generation, edit, and regenerate workflows referenced by the Summary Card.   |
 | [Participant Resolution Sub-PRD](communication-participant-resolution-prd.md) | Participant Relation Type and resolution status referenced by the Participants Card. |
-| [Triage Sub-PRD](communication-triage-prd.md) | Triage classification and override workflow referenced by the Triage Card. |
-| [Conversations PRD](conversations-prd.md) | Conversation assignment and navigation referenced by the Conversation Card. |
-| [Notes PRD](notes-prd.md) | Note attachment and creation referenced by the Notes Card. |
-| [Contact Entity Base PRD](contact-entity-base-prd.md) | Contact record navigation from participant links. |
+| [Triage Sub-PRD](communication-triage-prd.md)                                 | Triage classification and override workflow referenced by the Triage Card.           |
+| [Conversations PRD](conversations-prd.md)                                     | Conversation assignment and navigation referenced by the Conversation Card.          |
+| [Notes PRD](notes-prd.md)                                                     | Note attachment and creation referenced by the Notes Card.                           |
+| [Contact Entity Base PRD](contact-entity-base-prd.md)                         | Contact record navigation from participant links.                                    |

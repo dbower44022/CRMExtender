@@ -28,12 +28,12 @@ This framework is the foundation that channel-specific child PRDs (Email Provide
 
 ### 2.1 Relevant Fields
 
-| Field | Role in This Action |
-|---|---|
-| Source | Set to `synced` for provider-captured communications. |
-| Provider Account ID | Links communication to the account that captured it. |
+| Field               | Role in This Action                                                                |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| Source              | Set to `synced` for provider-captured communications.                              |
+| Provider Account ID | Links communication to the account that captured it.                               |
 | Provider Message ID | Provider's unique identifier, used for deduplication. UNIQUE per provider account. |
-| Provider Thread ID | Provider's thread identifier, used by Conversations PRD for grouping. |
+| Provider Thread ID  | Provider's thread identifier, used by Conversations PRD for grouping.              |
 
 ### 2.2 Relevant Relationships
 
@@ -126,31 +126,31 @@ This framework is the foundation that channel-specific child PRDs (Email Provide
 
 Provider accounts represent connected external services. The data model is shared across all integration types and defined in the Permissions & Sharing PRD Section 11.3.
 
-| Attribute | Type | Description |
-|---|---|---|
-| `id` | TEXT | Prefixed ULID: `int_` prefix |
-| `tenant_id` | TEXT | Owning tenant |
-| `owner_type` | TEXT | `user` (personal) or `tenant` (shared inbox) |
-| `owner_id` | TEXT | User ID or tenant ID |
-| `provider` | TEXT | `gmail`, `outlook`, `imap`, `openphone`, `twilio`, etc. |
-| `account_identifier` | TEXT | Email address, phone number, or account handle |
-| `credentials_encrypted` | BYTEA | Encrypted OAuth tokens or API keys |
-| `status` | TEXT | `active`, `paused`, `error`, `disconnected` |
-| `last_sync_at` | TIMESTAMPTZ | Last successful sync |
-| `sync_cursor` | TEXT | Opaque provider-specific sync position marker |
-| `sync_cursor_type` | TEXT | Cursor format identifier (e.g., `gmail_history_id`, `outlook_delta_link`) |
-| `created_at` | TIMESTAMPTZ | |
-| `created_by` | TEXT | FK → users |
+| Attribute               | Type        | Description                                                               |
+| ----------------------- | ----------- | ------------------------------------------------------------------------- |
+| `id`                    | TEXT        | Prefixed ULID: `int_` prefix                                              |
+| `tenant_id`             | TEXT        | Owning tenant                                                             |
+| `owner_type`            | TEXT        | `user` (personal) or `tenant` (shared inbox)                              |
+| `owner_id`              | TEXT        | User ID or tenant ID                                                      |
+| `provider`              | TEXT        | `gmail`, `outlook`, `imap`, `openphone`, `twilio`, etc.                   |
+| `account_identifier`    | TEXT        | Email address, phone number, or account handle                            |
+| `credentials_encrypted` | BYTEA       | Encrypted OAuth tokens or API keys                                        |
+| `status`                | TEXT        | `active`, `paused`, `error`, `disconnected`                               |
+| `last_sync_at`          | TIMESTAMPTZ | Last successful sync                                                      |
+| `sync_cursor`           | TEXT        | Opaque provider-specific sync position marker                             |
+| `sync_cursor_type`      | TEXT        | Cursor format identifier (e.g., `gmail_history_id`, `outlook_delta_link`) |
+| `created_at`            | TIMESTAMPTZ |                                                                           |
+| `created_by`            | TEXT        | FK → users                                                                |
 
 ### 4.2 Account Operations
 
-| Operation | Behavior |
-|---|---|
-| Connect | OAuth or credential entry → account registered → initial sync begins |
-| Disconnect (retain data) | Stop syncing, revoke provider access, keep existing records |
+| Operation                | Behavior                                                             |
+| ------------------------ | -------------------------------------------------------------------- |
+| Connect                  | OAuth or credential entry → account registered → initial sync begins |
+| Disconnect (retain data) | Stop syncing, revoke provider access, keep existing records          |
 | Disconnect (delete data) | Stop syncing, revoke access, cascade-delete all records from account |
-| Re-authenticate | Refresh credentials without affecting data |
-| Pause/Resume sync | Temporarily stop/resume without affecting credentials or data |
+| Re-authenticate          | Refresh credentials without affecting data                           |
+| Pause/Resume sync        | Temporarily stop/resume without affecting credentials or data        |
 
 **Tasks:**
 
@@ -189,14 +189,14 @@ ProviderAdapter
 
 ### 5.2 Adapter Responsibilities
 
-| Responsibility | Description |
-|---|---|
-| Authentication | Provider-specific OAuth or credential flows |
-| Fetching | Translating sync requests into provider API calls (initial batch, incremental delta, manual trigger) |
-| Normalization | Converting provider responses to the common Communication schema |
-| Cursor management | Tracking sync position in provider-specific format |
-| Error handling | Translating provider errors into common error types |
-| Rate limiting | Respecting provider-specific rate limits |
+| Responsibility    | Description                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| Authentication    | Provider-specific OAuth or credential flows                                                          |
+| Fetching          | Translating sync requests into provider API calls (initial batch, incremental delta, manual trigger) |
+| Normalization     | Converting provider responses to the common Communication schema                                     |
+| Cursor management | Tracking sync position in provider-specific format                                                   |
+| Error handling    | Translating provider errors into common error types                                                  |
+| Rate limiting     | Respecting provider-specific rate limits                                                             |
 
 **Tasks:**
 
@@ -225,16 +225,16 @@ ProviderAdapter
 
 ### 6.2 Sync Reliability
 
-| Failure Scenario | Recovery |
-|---|---|
-| Provider API timeout | Exponential backoff retry (3 attempts) |
-| Provider rate limit (HTTP 429) | Respect Retry-After header |
-| Invalid sync cursor | Date-based re-sync from last known timestamp |
-| Partial batch failure | Skip failed messages, log for retry |
-| Network interruption | Retry with backoff; queue for next sync |
-| Token expiration (HTTP 401) | Auto-refresh; re-authenticate if refresh fails |
-| Duplicate messages | INSERT ... ON CONFLICT DO NOTHING (UNIQUE constraint) |
-| Message deletion at provider | Mark Communication as archived; recompute conversation metadata |
+| Failure Scenario               | Recovery                                                        |
+| ------------------------------ | --------------------------------------------------------------- |
+| Provider API timeout           | Exponential backoff retry (3 attempts)                          |
+| Provider rate limit (HTTP 429) | Respect Retry-After header                                      |
+| Invalid sync cursor            | Date-based re-sync from last known timestamp                    |
+| Partial batch failure          | Skip failed messages, log for retry                             |
+| Network interruption           | Retry with backoff; queue for next sync                         |
+| Token expiration (HTTP 401)    | Auto-refresh; re-authenticate if refresh fails                  |
+| Duplicate messages             | INSERT ... ON CONFLICT DO NOTHING (UNIQUE constraint)           |
+| Message deletion at provider   | Mark Communication as archived; recompute conversation metadata |
 
 **Tasks:**
 
@@ -265,13 +265,13 @@ ProviderAdapter
 
 ### 7.1 Requirements
 
-| Aspect | Personal Account | Shared Account (Tenant-Level) |
-|---|---|---|
-| Connected by | Individual user | Sys Admin |
-| Credentials scoped to | One user | Tenant |
-| Data visibility | User's default visibility setting | Always public |
-| Examples | User's Gmail, personal phone | sales@company.com, support@company.com |
-| Attribution | created_by = account owner | created_by = system; sent_by tracks actual sender |
+| Aspect                | Personal Account                  | Shared Account (Tenant-Level)                     |
+| --------------------- | --------------------------------- | ------------------------------------------------- |
+| Connected by          | Individual user                   | Sys Admin                                         |
+| Credentials scoped to | One user                          | Tenant                                            |
+| Data visibility       | User's default visibility setting | Always public                                     |
+| Examples              | User's Gmail, personal phone      | sales@company.com, support@company.com            |
+| Attribution           | created_by = account owner        | created_by = system; sent_by tracks actual sender |
 
 ### 7.2 Shared Inbox Attribution
 
@@ -302,12 +302,12 @@ This dual attribution is critical for performance tracking, workload distributio
 
 ### 8.1 Sync API
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/v1/sync/trigger` | POST | Trigger sync for a specific provider account |
-| `/api/v1/sync/trigger-all` | POST | Trigger sync for all active accounts for current user |
-| `/api/v1/sync/status` | GET | Get sync status for all active accounts |
-| `/api/v1/sync/audit` | GET | Get sync audit log (paginated) |
+| Endpoint                   | Method | Description                                           |
+| -------------------------- | ------ | ----------------------------------------------------- |
+| `/api/v1/sync/trigger`     | POST   | Trigger sync for a specific provider account          |
+| `/api/v1/sync/trigger-all` | POST   | Trigger sync for all active accounts for current user |
+| `/api/v1/sync/status`      | GET    | Get sync status for all active accounts               |
+| `/api/v1/sync/audit`       | GET    | Get sync audit log (paginated)                        |
 
 ### 8.2 Sync Audit Trail
 

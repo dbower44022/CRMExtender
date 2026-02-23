@@ -28,12 +28,12 @@ Triage is a multi-layer pipeline: channel-specific heuristics (defined in channe
 
 ### 2.1 Relevant Fields
 
-| Field | Role in This Action |
-|---|---|
+| Field         | Role in This Action                                                                |
+| ------------- | ---------------------------------------------------------------------------------- |
 | Triage Result | NULL = passed triage (real interaction). Non-NULL = filtered with specific reason. |
-| Triage Reason | Human-readable explanation of the triage decision. |
-| Channel | Determines which channel-specific heuristics to apply. |
-| Source | Manual entries (`source = 'manual'`) bypass triage entirely. |
+| Triage Reason | Human-readable explanation of the triage decision.                                 |
+| Channel       | Determines which channel-specific heuristics to apply.                             |
+| Source        | Manual entries (`source = 'manual'`) bypass triage entirely.                       |
 
 ### 2.2 Relevant Relationships
 
@@ -222,13 +222,13 @@ Users can override any triage decision, which:
 
 ### 7.2 Triage Result Values
 
-| Value | Source | Description |
-|---|---|---|
-| `automated_sender` | Layer 1 (email) | Sender matches automated pattern (noreply@, etc.) |
-| `automated_subject` | Layer 1 (email) | Subject matches automated pattern (out of office, etc.) |
-| `marketing_content` | Layer 1 (email) | Body contains marketing indicators (unsubscribe) |
-| `no_known_contacts` | Layer 2 | No recognized CRM contacts among participants |
-| `user_filtered` | Layer 3 (future) | User-defined rule triggered |
+| Value               | Source           | Description                                             |
+| ------------------- | ---------------- | ------------------------------------------------------- |
+| `automated_sender`  | Layer 1 (email)  | Sender matches automated pattern (noreply@, etc.)       |
+| `automated_subject` | Layer 1 (email)  | Subject matches automated pattern (out of office, etc.) |
+| `marketing_content` | Layer 1 (email)  | Body contains marketing indicators (unsubscribe)        |
+| `no_known_contacts` | Layer 2          | No recognized CRM contacts among participants           |
+| `user_filtered`     | Layer 3 (future) | User-defined rule triggered                             |
 
 **Tasks:**
 
@@ -251,10 +251,10 @@ Users can override any triage decision, which:
 
 ### 8.1 Requirements
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/v1/communications/{id}/triage/override` | POST | Override a triage decision (un-filter a communication) |
-| `/api/v1/communications/triage/stats` | GET | Get triage statistics (filtered count by reason) |
+| Endpoint                                      | Method | Description                                            |
+| --------------------------------------------- | ------ | ------------------------------------------------------ |
+| `/api/v1/communications/{id}/triage/override` | POST   | Override a triage decision (un-filter a communication) |
+| `/api/v1/communications/triage/stats`         | GET    | Get triage statistics (filtered count by reason)       |
 
 **Tasks:**
 

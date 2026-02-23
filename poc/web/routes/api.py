@@ -35,6 +35,7 @@ from ...views.layout_overrides import (
 from ...views.registry import ENTITY_TYPES
 from ...contact_merge import get_contact_merge_preview, merge_contacts
 from ...company_merge import merge_companies
+from ... import config
 
 router = APIRouter()
 
@@ -2142,6 +2143,7 @@ def settings_reference_data(request: Request):
         "countries": [{"code": c, "name": n} for c, n in COMMON_COUNTRIES],
         "email_history_options": [{"value": v, "label": l} for v, l in EMAIL_HISTORY_OPTIONS],
         "roles": [dict(r) for r in roles],
+        "google_oauth_configured": bool(config.GOOGLE_OAUTH_CLIENT_ID),
     }
 
 

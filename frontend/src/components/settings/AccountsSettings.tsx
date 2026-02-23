@@ -1,14 +1,27 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useAccounts, useUpdateAccount, useToggleAccount } from '../../api/settings.ts'
+import { useAccounts, useUpdateAccount, useToggleAccount, useReferenceData } from '../../api/settings.ts'
 
 export function AccountsSettings() {
   const { data: accounts, isLoading } = useAccounts()
+  const { data: refData } = useReferenceData()
   const updateAccount = useUpdateAccount()
   const toggleAccount = useToggleAccount()
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+
+  // Show success toast if redirected back from OAuth
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('connected') === '1') {
+      toast.success('Google account connected successfully')
+      // Clean up the URL param without a full reload
+      const url = new URL(window.location.href)
+      url.searchParams.delete('connected')
+      window.history.replaceState({}, '', url.pathname + url.hash)
+    }
+  }, [])
 
   if (isLoading) {
     return <div className="text-sm text-surface-500">Loading...</div>
@@ -33,11 +46,33 @@ export function AccountsSettings() {
     )
   }
 
+  const googleConfigured = refData?.google_oauth_configured ?? false
+
   return (
     <div className="w-full">
-      <h1 className="mb-6 text-lg font-semibold text-surface-800">
-        Connected Accounts
-      </h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-surface-800">
+          Connected Accounts
+        </h1>
+
+        {googleConfigured && (
+          <a
+            href="/settings/accounts/connect"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Connect Google Account
+          </a>
+        )}
+      </div>
+
+      {!googleConfigured && (
+        <p className="mb-4 rounded-md border border-surface-200 bg-surface-50 px-3 py-2 text-sm text-surface-600">
+          Google OAuth is not configured. Use the CLI to set up <code className="rounded bg-surface-100 px-1 text-xs">client_secret.json</code> first.
+        </p>
+      )}
 
       {(!accounts || accounts.length === 0) && (
         <p className="text-sm text-surface-500">No accounts connected.</p>

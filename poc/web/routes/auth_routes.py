@@ -375,7 +375,15 @@ async def _handle_add_account(
             (str(uuid.uuid4()), uid, account_id, now),
         )
 
-    response = RedirectResponse(f"{accounts_url}?saved=1", status_code=302)
+    # Redirect back to React app if initiated from there, otherwise HTMX page
+    return_to = request.cookies.get("oauth_return_to", "")
+    if return_to:
+        redirect_url = f"{return_to}?connected=1"
+    else:
+        redirect_url = f"{accounts_url}?saved=1"
+
+    response = RedirectResponse(redirect_url, status_code=302)
     response.delete_cookie("oauth_state")
     response.delete_cookie("oauth_purpose")
+    response.delete_cookie("oauth_return_to")
     return response

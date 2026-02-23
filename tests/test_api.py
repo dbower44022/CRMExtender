@@ -1289,3 +1289,5 @@ class TestSettingsReferenceData:
         assert data["countries"][0]["code"] == "US"
         assert "email_history_options" in data
         assert "roles" in data
+        assert "google_oauth_configured" in data
+        assert isinstance(data["google_oauth_configured"], bool)

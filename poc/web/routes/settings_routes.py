@@ -438,6 +438,15 @@ async def accounts_connect(request: Request):
         "oauth_purpose", "add-account",
         httponly=True, samesite="lax", max_age=600,
     )
+
+    # If initiated from the React app, remember to redirect back there
+    referer = request.headers.get("referer", "")
+    if "/app/" in referer or referer.endswith("/app"):
+        response.set_cookie(
+            "oauth_return_to", "/app/",
+            httponly=True, samesite="lax", max_age=600,
+        )
+
     return response
 
 

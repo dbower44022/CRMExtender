@@ -52,6 +52,7 @@ interface ReferenceData {
   countries: Array<{ code: string; name: string }>
   email_history_options: Array<{ value: string; label: string }>
   roles: Array<{ id: string; name: string }>
+  google_oauth_configured: boolean
 }
 
 // --- Profile ---

@@ -36,6 +36,7 @@ export function DataGrid() {
   const sortDirection = useNavigationStore((s) => s.sortDirection)
   const search = useNavigationStore((s) => s.search)
   const quickFilters = useNavigationStore((s) => s.quickFilters)
+  const searchFilters = useNavigationStore((s) => s.searchFilters)
   const selectedRowId = useNavigationStore((s) => s.selectedRowId)
   const selectedRowIds = useNavigationStore((s) => s.selectedRowIds)
   const selectedRowIndex = useNavigationStore((s) => s.selectedRowIndex)
@@ -66,6 +67,7 @@ export function DataGrid() {
     sortDirection: sortDirection ?? (viewConfig?.sort_direction as 'asc' | 'desc'),
     search,
     quickFilters,
+    searchFilters,
   })
 
   const rows = useMemo(() => data?.pages.flatMap((p) => p.rows) ?? [], [data])
@@ -403,9 +405,19 @@ export function DataGrid() {
       const last = lastClickRef.current
 
       if (last.rowId === id && now - last.time < 300) {
-        // Fast double-click — open modal
+        // Fast double-click detected
         if (last.timer) clearTimeout(last.timer)
         lastClickRef.current = { rowId: '', time: 0, timer: null }
+
+        // If the click target is inside an editable cell, let the cell's
+        // onDoubleClick handle it instead of opening the record modal
+        const target = e.target as HTMLElement
+        if (target.closest('[data-edit-cell]')) {
+          setSelectedRow(id, index)
+          showDetailPanel()
+          return
+        }
+
         setRecordModal({ entityType: activeEntityType, entityId: id })
         return
       }

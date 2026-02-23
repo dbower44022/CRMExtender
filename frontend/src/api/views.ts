@@ -36,6 +36,7 @@ interface InfiniteViewDataParams {
   sortDirection?: 'asc' | 'desc'
   search?: string
   quickFilters?: QuickFilter[]
+  searchFilters?: QuickFilter[]
 }
 
 export function useInfiniteViewData({
@@ -44,17 +45,19 @@ export function useInfiniteViewData({
   sortDirection,
   search = '',
   quickFilters = [],
+  searchFilters = [],
 }: InfiniteViewDataParams) {
   return useInfiniteQuery({
-    queryKey: ['view-data', viewId, sort, sortDirection, search, quickFilters],
+    queryKey: ['view-data', viewId, sort, sortDirection, search, quickFilters, searchFilters],
     queryFn: ({ pageParam = 1 }) => {
       const params = new URLSearchParams()
       params.set('page', String(pageParam))
       if (sort) params.set('sort', sort)
       if (sortDirection) params.set('sort_direction', sortDirection)
       if (search) params.set('search', search)
-      if (quickFilters.length > 0) {
-        params.set('filters', JSON.stringify(quickFilters))
+      const allFilters = [...quickFilters, ...searchFilters]
+      if (allFilters.length > 0) {
+        params.set('filters', JSON.stringify(allFilters))
       }
       return get<ViewDataResponse>(`/views/${viewId}/data?${params.toString()}`)
     },

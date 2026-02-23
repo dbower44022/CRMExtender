@@ -28,16 +28,20 @@ import {
 import { toast } from 'sonner'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { useViewConfig } from '../../api/views.ts'
+import { useEntityRegistry } from '../../api/registry.ts'
 import { useGridIntelligenceStore } from '../../stores/gridIntelligence.ts'
+import { parseSearchQuery } from '../../lib/searchParser.ts'
 import { ColumnPicker } from './ColumnPicker.tsx'
 import { FilterBuilder } from './FilterBuilder.tsx'
 import { QuickFilters } from './QuickFilters.tsx'
+import { SearchAutocomplete } from './SearchAutocomplete.tsx'
 import { MergeContactsModal } from './MergeContactsModal.tsx'
 import { MergeCompaniesModal } from './MergeCompaniesModal.tsx'
 import { AddContactModal } from './AddContactModal.tsx'
 import { AddCompanyModal } from './AddCompanyModal.tsx'
 import { GridDisplaySettings } from './GridDisplaySettings.tsx'
 import { ToolbarContextMenu } from './ToolbarContextMenu.tsx'
+import type { AutocompleteSuggestion } from '../../lib/searchParser.ts'
 
 interface EntityActionConfig {
   primary: { label: string; icon: typeof Plus }[]
@@ -475,8 +479,11 @@ function EntityActions() {
 export function GridToolbar() {
   const search = useNavigationStore((s) => s.search)
   const setSearch = useNavigationStore((s) => s.setSearch)
+  const setSearchFilters = useNavigationStore((s) => s.setSearchFilters)
+  const activeEntityType = useNavigationStore((s) => s.activeEntityType)
   const activeViewId = useNavigationStore((s) => s.activeViewId)
   const { data: viewConfig } = useViewConfig(activeViewId)
+  const { data: registry } = useEntityRegistry()
   const computedLayout = useGridIntelligenceStore((s) => s.computedLayout)
   const [localSearch, setLocalSearch] = useState(search)
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -486,16 +493,29 @@ export function GridToolbar() {
   const [showFilters, setShowFilters] = useState(false)
   const [showDisplaySettings, setShowDisplaySettings] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  const [showAutocomplete, setShowAutocomplete] = useState(false)
+  const [cursorPos, setCursorPos] = useState(0)
 
   const filterCount = viewConfig?.filters?.length ?? 0
   const demotedCount = (computedLayout?.demotedCount ?? 0) + (computedLayout?.hiddenCount ?? 0)
+  const entityFields = registry?.[activeEntityType]?.fields ?? {}
 
   const debouncedSearch = useCallback(
     (value: string) => {
       if (timerRef.current) clearTimeout(timerRef.current)
-      timerRef.current = setTimeout(() => setSearch(value), 300)
+      timerRef.current = setTimeout(() => {
+        const fields = registry?.[activeEntityType]?.fields
+        if (fields && value.includes(':')) {
+          const parsed = parseSearchQuery(value, fields)
+          setSearch(parsed.freeText)
+          setSearchFilters(parsed.fieldFilters)
+        } else {
+          setSearch(value)
+          setSearchFilters([])
+        }
+      }, 300)
     },
-    [setSearch],
+    [setSearch, setSearchFilters, registry, activeEntityType],
   )
 
   useEffect(() => {
@@ -504,14 +524,59 @@ export function GridToolbar() {
 
   const handleChange = (value: string) => {
     setLocalSearch(value)
+    setCursorPos(inputRef.current?.selectionStart ?? value.length)
+    setShowAutocomplete(true)
     debouncedSearch(value)
   }
 
   const handleClear = () => {
     setLocalSearch('')
     setSearch('')
+    setSearchFilters([])
+    setShowAutocomplete(false)
     inputRef.current?.focus()
   }
+
+  const handleAcceptSuggestion = useCallback(
+    (suggestion: AutocompleteSuggestion) => {
+      const input = localSearch
+      const pos = cursorPos
+
+      // Find the start of the current word
+      const textUpToCursor = input.slice(0, pos)
+      const lastSpaceIdx = textUpToCursor.lastIndexOf(' ')
+      const wordStart = lastSpaceIdx + 1
+
+      // Replace the current word with the suggestion
+      const before = input.slice(0, wordStart)
+      const after = input.slice(pos)
+      const newValue = before + suggestion.insertText + (after ? '' : ' ') + after
+      setLocalSearch(newValue)
+
+      // Move cursor after the inserted text
+      const newCursorPos = wordStart + suggestion.insertText.length + (after ? 0 : 1)
+      setCursorPos(newCursorPos)
+
+      // If it's a field completion (ends with ":"), keep autocomplete open for value
+      if (suggestion.type === 'field') {
+        setShowAutocomplete(true)
+      } else {
+        setShowAutocomplete(false)
+      }
+
+      // Trigger search with the new value
+      debouncedSearch(newValue)
+
+      // Focus input and set cursor position after React render
+      requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.focus()
+          inputRef.current.setSelectionRange(newCursorPos, newCursorPos)
+        }
+      })
+    },
+    [localSearch, cursorPos, debouncedSearch],
+  )
 
   const handleToolbarContext = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
@@ -573,7 +638,17 @@ export function GridToolbar() {
               type="text"
               value={localSearch}
               onChange={(e) => handleChange(e.target.value)}
-              placeholder="Search this view..."
+              onFocus={() => setShowAutocomplete(true)}
+              onBlur={() => {
+                // Delay to allow click on suggestion
+                setTimeout(() => setShowAutocomplete(false), 200)
+              }}
+              onKeyUp={(e) => {
+                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') {
+                  setCursorPos(e.currentTarget.selectionStart ?? 0)
+                }
+              }}
+              placeholder="Search... (try status:active or created:today)"
               className="h-8 w-full rounded-md border border-surface-200 bg-surface-0 pl-8 pr-8 text-sm text-surface-700 outline-none transition-colors placeholder:text-surface-400 focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
             />
             {localSearch && (
@@ -584,6 +659,14 @@ export function GridToolbar() {
                 <X size={14} />
               </button>
             )}
+            <SearchAutocomplete
+              inputValue={localSearch}
+              cursorPosition={cursorPos}
+              fields={entityFields}
+              visible={showAutocomplete}
+              onAccept={handleAcceptSuggestion}
+              onDismiss={() => setShowAutocomplete(false)}
+            />
           </div>
 
           {/* Filter button */}

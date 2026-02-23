@@ -151,10 +151,7 @@ Document version history is managed by Git. Previous versions of any document ca
 | Participant Resolution Sub-PRD    | `communication-participant-resolution-prd.md` | Participant Relation Type, contact resolution integration, pending identification, identifier types by channel, cross-channel unification, participant API                           |
 | Triage & Filtering Sub-PRD        | `communication-triage-prd.md`                 | Multi-layer pipeline, channel-specific heuristic framework, known-contact gate, triage transparency, override mechanism, triage API                                                  |
 
-**Channel child PRDs** (build on the Provider & Sync Framework):
-
-| Child PRD | Scope | Status |
-| --------- | ----- | ------ |
+****Key decisions made:**
 
 - Direct provider API integration (no Nylas/third-party aggregation)
 - Communication Participants as a system Relation Type (replacing flat `from_address`/`to_addresses` columns)

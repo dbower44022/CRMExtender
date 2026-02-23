@@ -144,19 +144,19 @@ CREATE INDEX idx_comm_events_type ON communications_events (event_type);
 
 ### 4.2 Event Types
 
-| Event Type | Trigger | Description |
-|---|---|---|
-| `created` | New communication synced or manually entered | Full record snapshot in new_value |
-| `field_updated` | Any field change | Old and new values for the specific field |
-| `conversation_assigned` | Communication assigned to a conversation | conversation_id change |
-| `conversation_unassigned` | Communication removed from a conversation | conversation_id set to NULL |
-| `triage_overridden` | User overrides a triage decision | triage_result change |
-| `participant_added` | New participant linked | Participant details in metadata |
-| `participant_resolved` | Unknown participant identified | Contact resolution details in metadata |
-| `archived` | Communication soft-deleted | |
-| `unarchived` | Communication restored | |
-| `summary_generated` | Summary generation produces initial or re-generated summary | Summary revision ID and source in metadata |
-| `summary_revised` | User edits a summary | New revision ID in metadata |
+| Event Type                | Trigger                                                     | Description                                |
+| ------------------------- | ----------------------------------------------------------- | ------------------------------------------ |
+| `created`                 | New communication synced or manually entered                | Full record snapshot in new_value          |
+| `field_updated`           | Any field change                                            | Old and new values for the specific field  |
+| `conversation_assigned`   | Communication assigned to a conversation                    | conversation_id change                     |
+| `conversation_unassigned` | Communication removed from a conversation                   | conversation_id set to NULL                |
+| `triage_overridden`       | User overrides a triage decision                            | triage_result change                       |
+| `participant_added`       | New participant linked                                      | Participant details in metadata            |
+| `participant_resolved`    | Unknown participant identified                              | Contact resolution details in metadata     |
+| `archived`                | Communication soft-deleted                                  |                                            |
+| `unarchived`              | Communication restored                                      |                                            |
+| `summary_generated`       | Summary generation produces initial or re-generated summary | Summary revision ID and source in metadata |
+| `summary_revised`         | User edits a summary                                        | New revision ID in metadata                |
 
 ### 4.3 Sync Operation Events
 
@@ -170,27 +170,27 @@ Sync operations are logged separately from entity events for operational monitor
 
 **Decision:** Attachments are behavior-managed records, not a separate object type.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | **PK** | Prefixed ULID: `att_` prefix |
-| `communication_id` | TEXT | NOT NULL, FK → `communications(id)` ON DELETE CASCADE | Parent communication |
-| `filename` | TEXT | NOT NULL | Original filename |
-| `mime_type` | TEXT | NOT NULL | MIME type |
-| `size_bytes` | BIGINT | | File size |
-| `storage_key` | TEXT | | Reference in object storage (S3/MinIO) |
-| `source` | TEXT | | `synced`, `uploaded`, `recording`, `transcript` |
-| `created_at` | TIMESTAMPTZ | NOT NULL | |
+| Column             | Type        | Constraints                                           | Description                                     |
+| ------------------ | ----------- | ----------------------------------------------------- | ----------------------------------------------- |
+| `id`               | TEXT        | **PK**                                                | Prefixed ULID: `att_` prefix                    |
+| `communication_id` | TEXT        | NOT NULL, FK → `communications(id)` ON DELETE CASCADE | Parent communication                            |
+| `filename`         | TEXT        | NOT NULL                                              | Original filename                               |
+| `mime_type`        | TEXT        | NOT NULL                                              | MIME type                                       |
+| `size_bytes`       | BIGINT      |                                                       | File size                                       |
+| `storage_key`      | TEXT        |                                                       | Reference in object storage (S3/MinIO)          |
+| `source`           | TEXT        |                                                       | `synced`, `uploaded`, `recording`, `transcript` |
+| `created_at`       | TIMESTAMPTZ | NOT NULL                                              |                                                 |
 
 **Indexes:** `(communication_id)` for listing attachments per communication.
 
 ### 5.2 Storage Strategy
 
-| Attachment Type | Phase 1 | Phase 2+ |
-|---|---|---|
-| Email attachments | On-demand download from provider | Object storage (S3/MinIO) |
-| Call/video recordings | Object storage | Object storage |
-| User-uploaded files | Object storage | Object storage |
-| Transcripts | Stored as content_clean on Communication | Same |
+| Attachment Type       | Phase 1                                  | Phase 2+                  |
+| --------------------- | ---------------------------------------- | ------------------------- |
+| Email attachments     | On-demand download from provider         | Object storage (S3/MinIO) |
+| Call/video recordings | Object storage                           | Object storage            |
+| User-uploaded files   | Object storage                           | Object storage            |
+| Transcripts           | Stored as content_clean on Communication | Same                      |
 
 **Rationale:** On-demand download for email attachments reduces initial sync time and storage cost. Provider access is retained through OAuth tokens. Migration to object storage planned for Phase 2+ when provider-independent access is needed.
 
@@ -206,22 +206,22 @@ For recorded calls and video meetings, the transcript becomes the `content_clean
 
 **Decision:** Every sync operation is logged for operational monitoring.
 
-| Column | Type | Description |
-|---|---|---|
-| `sync_id` | TEXT | Unique identifier for this sync operation |
-| `provider_account_id` | TEXT | Which account was synced |
-| `sync_type` | TEXT | `initial`, `incremental`, `manual` |
-| `started_at` | TIMESTAMPTZ | |
-| `completed_at` | TIMESTAMPTZ | |
-| `messages_fetched` | INTEGER | Total messages from provider |
-| `messages_stored` | INTEGER | New Communications created |
-| `messages_skipped` | INTEGER | Duplicates or filtered |
-| `conversations_created` | INTEGER | New conversations formed |
-| `conversations_updated` | INTEGER | Existing conversations updated |
-| `cursor_before` | TEXT | Sync position before |
-| `cursor_after` | TEXT | Sync position after |
-| `status` | TEXT | `success`, `partial_failure`, `failed` |
-| `error_details` | TEXT | Error information if applicable |
+| Column                  | Type        | Description                               |
+| ----------------------- | ----------- | ----------------------------------------- |
+| `sync_id`               | TEXT        | Unique identifier for this sync operation |
+| `provider_account_id`   | TEXT        | Which account was synced                  |
+| `sync_type`             | TEXT        | `initial`, `incremental`, `manual`        |
+| `started_at`            | TIMESTAMPTZ |                                           |
+| `completed_at`          | TIMESTAMPTZ |                                           |
+| `messages_fetched`      | INTEGER     | Total messages from provider              |
+| `messages_stored`       | INTEGER     | New Communications created                |
+| `messages_skipped`      | INTEGER     | Duplicates or filtered                    |
+| `conversations_created` | INTEGER     | New conversations formed                  |
+| `conversations_updated` | INTEGER     | Existing conversations updated            |
+| `cursor_before`         | TEXT        | Sync position before                      |
+| `cursor_after`          | TEXT        | Sync position after                       |
+| `status`                | TEXT        | `success`, `partial_failure`, `failed`    |
+| `error_details`         | TEXT        | Error information if applicable           |
 
 **Retention:** 90 days by default (configurable).
 
@@ -283,13 +283,13 @@ CREATE INDEX idx_comm_search ON communications USING GIN (search_vector);
 
 ## 9. Storage Estimates
 
-| Data Type | Per Communication | 10,000 Communications |
-|---|---|---|
-| Record fields + metadata | ~1 KB avg | ~10 MB |
-| content_clean (text) | ~2 KB avg | ~20 MB |
-| content_html (email only) | ~8 KB avg | ~80 MB |
-| Event history | ~0.5 KB per event | ~5 MB (10K events) |
-| Audio recordings (if stored) | ~1 MB/min | Highly variable |
+| Data Type                    | Per Communication | 10,000 Communications |
+| ---------------------------- | ----------------- | --------------------- |
+| Record fields + metadata     | ~1 KB avg         | ~10 MB                |
+| content_clean (text)         | ~2 KB avg         | ~20 MB                |
+| content_html (email only)    | ~8 KB avg         | ~80 MB                |
+| Event history                | ~0.5 KB per event | ~5 MB (10K events)    |
+| Audio recordings (if stored) | ~1 MB/min         | Highly variable       |
 
 ---
 

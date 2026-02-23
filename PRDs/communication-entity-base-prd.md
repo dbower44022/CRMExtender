@@ -26,13 +26,13 @@ Communications normalize all interaction types to a channel-agnostic common sche
 
 ### 1.3 Performance Targets
 
-| Metric | Target |
-|---|---|
+| Metric                                          | Target  |
+| ----------------------------------------------- | ------- |
 | Communication list load (default view, 50 rows) | < 200ms |
-| Communication detail page load | < 200ms |
-| Incremental sync (0–20 new messages) | < 5s |
-| Initial sync (5,000 messages) | < 5 min |
-| Full-text search response | < 300ms |
+| Communication detail page load                  | < 200ms |
+| Incremental sync (0–20 new messages)            | < 5s    |
+| Initial sync (5,000 messages)                   | < 5 min |
+| Full-text search response                       | < 300ms |
 
 ### 1.4 Core Fields
 
@@ -46,65 +46,65 @@ Fields are described conceptually. Data types and storage details are specified 
 - **Computed** — Derived from other data. Not directly editable.
 - **System** — Set and managed by the system. Never user-editable.
 
-| Field | Description | Required | Editable | Sortable | Filterable | Valid Values / Rules |
-|---|---|---|---|---|---|---|
-| ID | Unique identifier. Prefixed ULID with `com_` prefix. Immutable. | Yes | System | No | Yes | Prefixed ULID |
-| Channel | Communication medium. Protected system options. | Yes | System (set on creation) | Yes | Yes | `email`, `sms`, `mms`, `phone_recorded`, `phone_manual`, `video_recorded`, `video_manual`, `in_person`, `note` |
-| Direction | Whether the user sent, received, or mutually participated. | Yes | System (set on creation) | Yes | Yes | `inbound`, `outbound`, `mutual` |
-| Timestamp | When the communication occurred. Universal sequencing key for all timeline views. For synced: provider's send/receive time. For manual: user-specified. | Yes | Direct (manual entries only) | Yes | Yes | Timestamp |
-| Subject | Email subject line, meeting title, or user-provided subject. Display name field. NULL for SMS, most calls. | No | Direct | Yes | Yes | Free text |
-| Body Preview | First 200 characters of cleaned content. Used in list views and search results. | No | Computed | No | No | Auto-generated from content_clean |
-| Content Raw | Original content as received from provider or entered by user. Not displayed directly. | No | System | No | No | Preserved for re-processing |
-| Content HTML | Original HTML content (email only). Used by content extraction pipeline. | No | System | No | No | Email channel only |
-| Content Clean | Processed content with channel-specific noise removed. What users see and AI processes. | No | Computed | No | No | Output of content extraction pipeline |
-| Source | How the communication entered the system. | Yes | System | Yes | Yes | `synced`, `manual`, `imported` |
-| Provider Account ID | The provider account that captured this communication. | No | System | No | Yes | FK to provider_accounts. NULL for manual entries. |
-| Provider Message ID | Provider's unique message identifier. Used for deduplication. | No | System | No | No | UNIQUE per provider account |
-| Provider Thread ID | Provider's thread/conversation identifier. Used for automatic conversation formation. | No | System | No | No | Provider-specific format |
-| Conversation ID | FK to parent conversation. NULL for unassigned communications. | No | Direct | No | Yes | FK to conversations |
-| Triage Result | NULL = passed triage. Non-NULL = filtered with reason. | No | Override (via triage override action) | Yes | Yes | `automated_sender`, `automated_subject`, `marketing_content`, `no_known_contacts`, `user_filtered` |
-| Triage Reason | Human-readable explanation of the triage decision. | No | System | No | No | Free text |
-| Duration Seconds | Duration for calls and meetings. NULL for text-based communications. | No | Direct (manual entries only) | Yes | Yes | Positive integer |
-| Has Attachments | Whether this communication has file attachments. Denormalized for fast filtering. | No | System | No | Yes | Boolean |
-| Attachment Count | Count of attached files. Denormalized for display. | No | System | No | No | Non-negative integer |
-| Status | Record lifecycle status. Active or archived. | Yes, defaults to active | System | Yes | Yes | `active`, `archived` |
-| Created By | User who created the record (NULL for auto-synced). | No | System | No | Yes | Reference to User |
-| Created At | Record creation timestamp. | Yes | System | Yes | Yes | Timestamp |
-| Updated At | Last modification timestamp. | Yes | System | Yes | Yes | Timestamp |
+| Field               | Description                                                                                                                                             | Required                | Editable                              | Sortable | Filterable | Valid Values / Rules                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------------------------------------- | -------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
+| ID                  | Unique identifier. Prefixed ULID with `com_` prefix. Immutable.                                                                                         | Yes                     | System                                | No       | Yes        | Prefixed ULID                                                                                                  |
+| Channel             | Communication medium. Protected system options.                                                                                                         | Yes                     | System (set on creation)              | Yes      | Yes        | `email`, `sms`, `mms`, `phone_recorded`, `phone_manual`, `video_recorded`, `video_manual`, `in_person`, `note` |
+| Direction           | Whether the user sent, received, or mutually participated.                                                                                              | Yes                     | System (set on creation)              | Yes      | Yes        | `inbound`, `outbound`, `mutual`                                                                                |
+| Timestamp           | When the communication occurred. Universal sequencing key for all timeline views. For synced: provider's send/receive time. For manual: user-specified. | Yes                     | Direct (manual entries only)          | Yes      | Yes        | Timestamp                                                                                                      |
+| Subject             | Email subject line, meeting title, or user-provided subject. Display name field. NULL for SMS, most calls.                                              | No                      | Direct                                | Yes      | Yes        | Free text                                                                                                      |
+| Body Preview        | First 200 characters of cleaned content. Used in list views and search results.                                                                         | No                      | Computed                              | No       | No         | Auto-generated from content_clean                                                                              |
+| Content Raw         | Original content as received from provider or entered by user. Not displayed directly.                                                                  | No                      | System                                | No       | No         | Preserved for re-processing                                                                                    |
+| Content HTML        | Original HTML content (email only). Used by content extraction pipeline.                                                                                | No                      | System                                | No       | No         | Email channel only                                                                                             |
+| Content Clean       | Processed content with channel-specific noise removed. What users see and AI processes.                                                                 | No                      | Computed                              | No       | No         | Output of content extraction pipeline                                                                          |
+| Source              | How the communication entered the system.                                                                                                               | Yes                     | System                                | Yes      | Yes        | `synced`, `manual`, `imported`                                                                                 |
+| Provider Account ID | The provider account that captured this communication.                                                                                                  | No                      | System                                | No       | Yes        | FK to provider_accounts. NULL for manual entries.                                                              |
+| Provider Message ID | Provider's unique message identifier. Used for deduplication.                                                                                           | No                      | System                                | No       | No         | UNIQUE per provider account                                                                                    |
+| Provider Thread ID  | Provider's thread/conversation identifier. Used for automatic conversation formation.                                                                   | No                      | System                                | No       | No         | Provider-specific format                                                                                       |
+| Conversation ID     | FK to parent conversation. NULL for unassigned communications.                                                                                          | No                      | Direct                                | No       | Yes        | FK to conversations                                                                                            |
+| Triage Result       | NULL = passed triage. Non-NULL = filtered with reason.                                                                                                  | No                      | Override (via triage override action) | Yes      | Yes        | `automated_sender`, `automated_subject`, `marketing_content`, `no_known_contacts`, `user_filtered`             |
+| Triage Reason       | Human-readable explanation of the triage decision.                                                                                                      | No                      | System                                | No       | No         | Free text                                                                                                      |
+| Duration Seconds    | Duration for calls and meetings. NULL for text-based communications.                                                                                    | No                      | Direct (manual entries only)          | Yes      | Yes        | Positive integer                                                                                               |
+| Has Attachments     | Whether this communication has file attachments. Denormalized for fast filtering.                                                                       | No                      | System                                | No       | Yes        | Boolean                                                                                                        |
+| Attachment Count    | Count of attached files. Denormalized for display.                                                                                                      | No                      | System                                | No       | No         | Non-negative integer                                                                                           |
+| Status              | Record lifecycle status. Active or archived.                                                                                                            | Yes, defaults to active | System                                | Yes      | Yes        | `active`, `archived`                                                                                           |
+| Created By          | User who created the record (NULL for auto-synced).                                                                                                     | No                      | System                                | No       | Yes        | Reference to User                                                                                              |
+| Created At          | Record creation timestamp.                                                                                                                              | Yes                     | System                                | Yes      | Yes        | Timestamp                                                                                                      |
+| Updated At          | Last modification timestamp.                                                                                                                            | Yes                     | System                                | Yes      | Yes        | Timestamp                                                                                                      |
 
 ### 1.5 Behavior-Managed Summary Fields
 
 These fields are stored on the communications table but **not registered in the field registry** (same pattern as Notes content fields). They are managed by the Summary generation behavior and described in the Published Summary Sub-PRD.
 
-| Field | Description |
-|---|---|
-| Summary JSON | Editor-native rich text document format. Source of truth for re-editing. |
-| Summary HTML | Pre-rendered HTML. What the Conversation timeline renders. |
-| Summary Text | Plain text for FTS indexing and AI consumption. |
-| Summary Source | How the summary was created: `ai_generated`, `user_authored`, `pass_through`. |
-| Current Summary Revision ID | FK to the active summary revision. |
-| Summary Revision Count | Count of summary revisions. |
+| Field                       | Description                                                                   |
+| --------------------------- | ----------------------------------------------------------------------------- |
+| Summary JSON                | Editor-native rich text document format. Source of truth for re-editing.      |
+| Summary HTML                | Pre-rendered HTML. What the Conversation timeline renders.                    |
+| Summary Text                | Plain text for FTS indexing and AI consumption.                               |
+| Summary Source              | How the summary was created: `ai_generated`, `user_authored`, `pass_through`. |
+| Current Summary Revision ID | FK to the active summary revision.                                            |
+| Summary Revision Count      | Count of summary revisions.                                                   |
 
 ### 1.6 Computed / Derived Fields
 
-| Field | Description | Editable | Derivation Logic |
-|---|---|---|---|
-| Body Preview | First 200 characters of cleaned content | Computed | Auto-truncated from content_clean on save. |
-| Content Clean | Noise-removed content | Computed | Output of channel-specific content extraction behavior. Re-derivable from content_raw/content_html. |
-| Has Attachments | Whether attachments exist | Computed | Denormalized from attachment count > 0. |
-| Attachment Count | Number of attachments | Computed | Count of attachment records for this communication. |
+| Field            | Description                             | Editable | Derivation Logic                                                                                    |
+| ---------------- | --------------------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| Body Preview     | First 200 characters of cleaned content | Computed | Auto-truncated from content_clean on save.                                                          |
+| Content Clean    | Noise-removed content                   | Computed | Output of channel-specific content extraction behavior. Re-derivable from content_raw/content_html. |
+| Has Attachments  | Whether attachments exist               | Computed | Denormalized from attachment count > 0.                                                             |
+| Attachment Count | Number of attachments                   | Computed | Count of attachment records for this communication.                                                 |
 
 ### 1.7 Registered Behaviors
 
 Per Custom Objects PRD, the Communication system object type registers these specialized behaviors:
 
-| Behavior | Trigger | Description |
-|---|---|---|
-| Channel-specific content extraction | On sync, on creation | Dispatches to the appropriate channel parser to produce content_clean from raw content. Defined in channel-specific child PRDs. |
-| Summary generation | On creation, on content update, on manual edit | Produces the Published Summary from content_clean. Creates a new summary revision. See Published Summary Sub-PRD. |
-| Triage classification | On sync, on creation | Runs the multi-layer triage pipeline to classify communications as real interactions vs. automated noise. See Triage Sub-PRD. |
-| Participant resolution | On sync, on creation | Extracts participant identifiers and triggers Contact Intelligence for resolution. See Participant Resolution Sub-PRD. |
-| Segmentation | On user action | User selects a content portion and assigns it to a different conversation. Defined in the Conversations PRD. |
+| Behavior                            | Trigger                                        | Description                                                                                                                     |
+| ----------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Channel-specific content extraction | On sync, on creation                           | Dispatches to the appropriate channel parser to produce content_clean from raw content. Defined in channel-specific child PRDs. |
+| Summary generation                  | On creation, on content update, on manual edit | Produces the Published Summary from content_clean. Creates a new summary revision. See Published Summary Sub-PRD.               |
+| Triage classification               | On sync, on creation                           | Runs the multi-layer triage pipeline to classify communications as real interactions vs. automated noise. See Triage Sub-PRD.   |
+| Participant resolution              | On sync, on creation                           | Extracts participant identifiers and triggers Contact Intelligence for resolution. See Participant Resolution Sub-PRD.          |
+| Segmentation                        | On user action                                 | User selects a content portion and assigns it to a different conversation. Defined in the Conversations PRD.                    |
 
 ---
 
@@ -154,17 +154,17 @@ Per Custom Objects PRD, the Communication system object type registers these spe
 
 The `channel` field has protected system options:
 
-| Channel | Display Name | Source | Content Type | Threading | Parsing | Child PRD |
-|---|---|---|---|---|---|---|
-| `email` | Email | Auto-synced | Rich (text + HTML) | Provider thread IDs | Heavy | Email Provider Sync PRD |
-| `sms` | SMS | Auto-synced | Short text | None | Minimal | SMS/MMS PRD |
-| `mms` | MMS | Auto-synced | Text + media | None | Minimal | SMS/MMS PRD |
-| `phone_recorded` | Phone Call (Recorded) | Auto-synced + transcription | Transcript | None | Some | Voice/VoIP PRD |
-| `phone_manual` | Phone Call (Logged) | Manual entry | User-written notes | None | None | — |
-| `video_recorded` | Video Meeting (Recorded) | Auto-synced + transcription | Transcript | None | Some | Video Meetings PRD |
-| `video_manual` | Video Meeting (Logged) | Manual entry | User-written notes | None | None | — |
-| `in_person` | In-Person Meeting | Manual entry | User-written notes | None | None | — |
-| `note` | Note | Manual entry | User-written notes | None | None | — |
+| Channel          | Display Name             | Source                      | Content Type       | Threading           | Parsing | Child PRD               |
+| ---------------- | ------------------------ | --------------------------- | ------------------ | ------------------- | ------- | ----------------------- |
+| `email`          | Email                    | Auto-synced                 | Rich (text + HTML) | Provider thread IDs | Heavy   | Email Provider Sync PRD |
+| `sms`            | SMS                      | Auto-synced                 | Short text         | None                | Minimal | SMS/MMS PRD             |
+| `mms`            | MMS                      | Auto-synced                 | Text + media       | None                | Minimal | SMS/MMS PRD             |
+| `phone_recorded` | Phone Call (Recorded)    | Auto-synced + transcription | Transcript         | None                | Some    | Voice/VoIP PRD          |
+| `phone_manual`   | Phone Call (Logged)      | Manual entry                | User-written notes | None                | None    | —                       |
+| `video_recorded` | Video Meeting (Recorded) | Auto-synced + transcription | Transcript         | None                | Some    | Video Meetings PRD      |
+| `video_manual`   | Video Meeting (Logged)   | Manual entry                | User-written notes | None                | None    | —                       |
+| `in_person`      | In-Person Meeting        | Manual entry                | User-written notes | None                | None    | —                       |
+| `note`           | Note                     | Manual entry                | User-written notes | None                | None    | —                       |
 
 ### 3.2 Boundary with the Notes PRD
 
@@ -181,26 +181,26 @@ Manually logged interactions (unrecorded phone calls, in-person meetings) create
 
 ### 4.1 Statuses
 
-| Status | Description |
-|---|---|
-| `active` | Normal operating state. Visible in views and search. May have a triage_result that filters it from default intelligence processing, but the record itself is active. |
-| `archived` | Soft-deleted. Excluded from default queries. All data preserved. Recoverable via unarchive. |
+| Status     | Description                                                                                                                                                          |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `active`   | Normal operating state. Visible in views and search. May have a triage_result that filters it from default intelligence processing, but the record itself is active. |
+| `archived` | Soft-deleted. Excluded from default queries. All data preserved. Recoverable via unarchive.                                                                          |
 
 ### 4.2 Transitions
 
-| From | To | Trigger |
-|---|---|---|
-| `active` | `archived` | User archives, or message deleted at provider during sync |
-| `archived` | `active` | User unarchives |
+| From       | To         | Trigger                                                   |
+| ---------- | ---------- | --------------------------------------------------------- |
+| `active`   | `archived` | User archives, or message deleted at provider during sync |
+| `archived` | `active`   | User unarchives                                           |
 
 ### 4.3 Creation Sources
 
-| Source | Initial Status | Notes |
-|---|---|---|
-| Provider sync | `active` | Auto-captured from Gmail, Outlook, SMS provider, etc. Triage pipeline runs immediately. |
-| Manual entry | `active` | User creates via UI. Triage is bypassed — user-entered content is always real. |
-| Import | `active` | Bulk import from CSV or migration. Triage may run depending on import configuration. |
-| Calendar-triggered | `active` | Scheduled meeting from calendar auto-creates a placeholder; user adds notes after. |
+| Source             | Initial Status | Notes                                                                                   |
+| ------------------ | -------------- | --------------------------------------------------------------------------------------- |
+| Provider sync      | `active`       | Auto-captured from Gmail, Outlook, SMS provider, etc. Triage pipeline runs immediately. |
+| Manual entry       | `active`       | User creates via UI. Triage is bypassed — user-entered content is always real.          |
+| Import             | `active`       | Bulk import from CSV or migration. Triage may run depending on import configuration.    |
+| Calendar-triggered | `active`       | Scheduled meeting from calendar auto-creates a placeholder; user adds notes after.      |
 
 ---
 
@@ -420,26 +420,26 @@ Summaries have natural structure: key points, decisions, action items. Plain tex
 
 ## Related Documents
 
-| Document | Relationship |
-|---|---|
-| [Communication Entity TDD](communication-entity-tdd.md) | Technical decisions for communication implementation |
-| [Published Summary Sub-PRD](communication-published-summary-prd.md) | Summary generation, revision history, content pipeline |
-| [Provider & Sync Framework Sub-PRD](communication-provider-sync-prd.md) | Provider accounts, adapter architecture, sync modes |
+| Document                                                                      | Relationship                                                             |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [Communication Entity TDD](communication-entity-tdd.md)                       | Technical decisions for communication implementation                     |
+| [Published Summary Sub-PRD](communication-published-summary-prd.md)           | Summary generation, revision history, content pipeline                   |
+| [Provider & Sync Framework Sub-PRD](communication-provider-sync-prd.md)       | Provider accounts, adapter architecture, sync modes                      |
 | [Participant Resolution Sub-PRD](communication-participant-resolution-prd.md) | Participant Relation Type, contact resolution, cross-channel unification |
-| [Triage Sub-PRD](communication-triage-prd.md) | Intelligent filtering pipeline |
-| [Conversations PRD](conversations-prd.md) | Conversation grouping, timeline rendering, AI intelligence |
-| [Contact Entity Base PRD](contact-entity-base-prd.md) | Contact identity resolution, employment linkage |
-| [Company Entity Base PRD](company-entity-base-prd.md) | Domain extraction triggers company creation |
-| [Custom Objects PRD](custom-objects-prd.md) | Unified object model, field registry, relation framework |
-| [Email Provider Sync PRD](email-provider-sync-prd.md) | Gmail, Outlook, IMAP adapters and email-specific parsing |
-| [Notes PRD](notes-prd.md) | Shared rich text content architecture |
-| [Master Glossary](glossary.md) | Term definitions |
+| [Triage Sub-PRD](communication-triage-prd.md)                                 | Intelligent filtering pipeline                                           |
+| [Conversations PRD](conversations-prd.md)                                     | Conversation grouping, timeline rendering, AI intelligence               |
+| [Contact Entity Base PRD](contact-entity-base-prd.md)                         | Contact identity resolution, employment linkage                          |
+| [Company Entity Base PRD](company-entity-base-prd.md)                         | Domain extraction triggers company creation                              |
+| [Custom Objects PRD](custom-objects-prd.md)                                   | Unified object model, field registry, relation framework                 |
+| [Email Provider Sync PRD](email-provider-sync-prd.md)                         | Gmail, Outlook, IMAP adapters and email-specific parsing                 |
+| [Notes PRD](notes-prd.md)                                                     | Shared rich text content architecture                                    |
+| [Master Glossary](glossary.md)                                                | Term definitions                                                         |
 
 ### Channel-Specific Child PRDs
 
-| Child PRD | Scope |
-|---|---|
-| [Email Provider Sync PRD](email-provider-sync-prd.md) | Gmail, Outlook, IMAP adapters; email parsing; email-specific triage |
-| SMS/MMS PRD (future) | SMS provider adapters; phone number resolution; MMS media |
-| Voice/VoIP PRD (future) | Call recording; transcription pipeline; call metadata |
-| Video Meetings PRD (future) | Zoom/Teams/Meet integration; transcript capture; recording management |
+| Child PRD                                             | Scope                                                                 |
+| ----------------------------------------------------- | --------------------------------------------------------------------- |
+| [Email Provider Sync PRD](email-provider-sync-prd.md) | Gmail, Outlook, IMAP adapters; email parsing; email-specific triage   |
+| SMS/MMS PRD (future)                                  | SMS provider adapters; phone number resolution; MMS media             |
+| Voice/VoIP PRD (future)                               | Call recording; transcription pipeline; call metadata                 |
+| Video Meetings PRD (future)                           | Zoom/Teams/Meet integration; transcript capture; recording management |

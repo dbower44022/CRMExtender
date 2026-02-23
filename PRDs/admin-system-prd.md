@@ -20,15 +20,16 @@ This PRD does not define the data models for Users, Customers, or Provider Accou
 
 ### 1.2 Actors
 
-| Actor | Role | Access Level |
-|---|---|---|
-| System Admin | Manages the deployment: users, tenants, provider accounts, settings, data operations | `admin` role |
-| End User | Manages their own settings and connected accounts | `user` role, own-data scope |
-| System | Automated processes: sync scheduling, session cleanup, score recomputation, health checks | Internal |
+| Actor        | Role                                                                                      | Access Level                |
+| ------------ | ----------------------------------------------------------------------------------------- | --------------------------- |
+| System Admin | Manages the deployment: users, tenants, provider accounts, settings, data operations      | `admin` role                |
+| End User     | Manages their own settings and connected accounts                                         | `user` role, own-data scope |
+| System       | Automated processes: sync scheduling, session cleanup, score recomputation, health checks | Internal                    |
 
 ### 1.3 Boundaries
 
 **In scope:**
+
 - User lifecycle management (invite, activate, suspend, deactivate, role assignment)
 - Provider account management (connect, configure, pause, reauth, disconnect Google accounts)
 - Settings management (system settings, user setting overrides, the 4-level cascade)
@@ -37,6 +38,7 @@ This PRD does not define the data models for Users, Customers, or Provider Accou
 - Onboarding workflows (first-run setup, initial account connection)
 
 **Out of scope (owned by other PRDs):**
+
 - User entity data model, fields, relationships — See User Entity Base PRD (to be created)
 - Customer/Tenant entity data model — See Customer Entity Base PRD (to be created)
 - Provider Account entity data model — See [data-sources-prd.md]
@@ -45,13 +47,13 @@ This PRD does not define the data models for Users, Customers, or Provider Accou
 
 ### 1.4 Related Documents
 
-| Document | Relationship |
-|---|---|
-| user-management-prd.md | Predecessor document. Contains auth, roles, settings, and data model content that will be decomposed into entity PRDs and this functional area PRD. |
-| permissions-sharing-prd.md | Defines the access control model that admin actions must respect. |
-| data-sources-prd.md | Defines provider account abstraction and query layer. |
-| technical-architecture-prd.md | Documents the as-built system including auth, sessions, settings cascade, CLI commands. |
-| product-tdd.md | Platform-level technical decisions governing implementation. |
+| Document                      | Relationship                                                                                                                                        |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| user-management-prd.md        | Predecessor document. Contains auth, roles, settings, and data model content that will be decomposed into entity PRDs and this functional area PRD. |
+| permissions-sharing-prd.md    | Defines the access control model that admin actions must respect.                                                                                   |
+| data-sources-prd.md           | Defines provider account abstraction and query layer.                                                                                               |
+| technical-architecture-prd.md | Documents the as-built system including auth, sessions, settings cascade, CLI commands.                                                             |
+| product-tdd.md                | Platform-level technical decisions governing implementation.                                                                                        |
 
 ---
 
@@ -83,23 +85,25 @@ Dashboard and alerting for operational health. Includes: sync status per provide
 
 ### 3.1 Configuration Table
 
-| Setting | Description | Type | Default | Scope | Editable By |
-|---|---|---|---|---|---|
-| timezone | Display timezone for dates and times | string | UTC | user | user (own), admin (any) |
-| email_history_window | How far back to sync email on initial account connection | select | 90d | user | user, admin |
-| sync_enabled | Global sync enable/disable | boolean | true | system | admin |
-| default_phone_country | Default country code for phone number parsing | string | US | system | admin |
-| company_name | Tenant company name, displayed in UI header | string | — | system | admin |
-| allow_self_registration | Whether new users can register without an admin invite | boolean | false | system | admin |
-| session_ttl_hours | How long login sessions last before requiring re-authentication | integer | 720 | system | admin |
-| max_upload_size_mb | Maximum file upload size | integer | 10 | system | admin |
-| auth_enabled | Whether authentication is enforced (disable for development only) | boolean | true | system | admin |
+| Setting                 | Description                                                       | Type    | Default | Scope  | Editable By             |
+| ----------------------- | ----------------------------------------------------------------- | ------- | ------- | ------ | ----------------------- |
+| timezone                | Display timezone for dates and times                              | string  | UTC     | user   | user (own), admin (any) |
+| email_history_window    | How far back to sync email on initial account connection          | select  | 90d     | user   | user, admin             |
+| sync_enabled            | Global sync enable/disable                                        | boolean | true    | system | admin                   |
+| default_phone_country   | Default country code for phone number parsing                     | string  | US      | system | admin                   |
+| company_name            | Tenant company name, displayed in UI header                       | string  | —       | system | admin                   |
+| allow_self_registration | Whether new users can register without an admin invite            | boolean | false   | system | admin                   |
+| session_ttl_hours       | How long login sessions last before requiring re-authentication   | integer | 720     | system | admin                   |
+| max_upload_size_mb      | Maximum file upload size                                          | integer | 10      | system | admin                   |
+| auth_enabled            | Whether authentication is enforced (disable for development only) | boolean | true    | system | admin                   |
 
 **Scope values:**
+
 - `system` — One value for the entire tenant. Set by admin.
 - `user` — Per-user override. Set by the user for themselves, or by admin for any user.
 
 **Editable By values:**
+
 - `admin` — Only users with the `admin` role.
 - `user` — Any authenticated user (for their own settings only).
 
@@ -121,6 +125,7 @@ Dashboard and alerting for operational health. Includes: sync status per provide
 **Actor:** System Admin
 
 **Steps:**
+
 1. System detects no users exist and presents the initial setup screen.
 2. Admin creates the first user account (username, email, password) with `admin` role.
 3. System creates the default customer/tenant record (`cust-default`).
@@ -138,6 +143,7 @@ Dashboard and alerting for operational health. Includes: sync status per provide
 **Actor:** System Admin
 
 **Steps:**
+
 1. Admin navigates to User Management and clicks "Invite User."
 2. Admin enters the new user's email address and assigns a role (`admin` or `user`).
 3. System creates a user record with status `invited` and sends an invitation email (or displays a registration link if email is not configured).
@@ -155,6 +161,7 @@ Dashboard and alerting for operational health. Includes: sync status per provide
 **Actor:** End User or System Admin
 
 **Steps:**
+
 1. User navigates to Settings → Connected Accounts and clicks "Add Google Account."
 2. System initiates Google OAuth 2.0 flow requesting `gmail.readonly`, `contacts.readonly`, `calendar.readonly` scopes.
 3. User authorizes in the Google consent screen.
@@ -171,6 +178,7 @@ Dashboard and alerting for operational health. Includes: sync status per provide
 **Actor:** End User or System Admin
 
 **Steps:**
+
 1. System detects token refresh failure during sync attempt.
 2. Provider account status changes to `needs_reauth`.
 3. User sees a notification in the UI indicating the account needs reauthorization.
@@ -186,6 +194,7 @@ Dashboard and alerting for operational health. Includes: sync status per provide
 **Actor:** System Admin
 
 **Steps:**
+
 1. Admin navigates to Data Operations → GDPR Requests.
 2. Admin searches for the contact to be purged by name or email.
 3. System displays all data associated with the contact: profile, identifiers, communications (as participant), conversations, relationships, intelligence items, enrichment data.
@@ -207,6 +216,7 @@ Dashboard and alerting for operational health. Includes: sync status per provide
 **Actor:** System Admin
 
 **Steps:**
+
 1. Admin navigates to Settings → System Settings.
 2. System displays all system-scoped settings with their current values, defaults, and descriptions.
 3. Admin modifies one or more settings.
@@ -320,11 +330,11 @@ Dashboard and alerting for operational health. Includes: sync status per provide
 
 ### 5.2 Complex Actions (Sub-PRDs)
 
-| Action | Sub-PRD | Description |
-|---|---|---|
-| GDPR/CCPA Data Purge | admin-gdpr-purge-prd (to be created) | Full data subject deletion with export, anonymization, and audit trail. Multi-step workflow with confirmation gates. |
-| Schema Migration Execution | admin-migration-prd (to be created) | Running schema migrations with backup, validation, dry-run, and rollback. High-consequence operation. |
-| Bulk Data Import | See [contact-import-export-prd.md] | CSV and vCard import are admin-initiated but owned by the Contact entity's import/export sub-PRD. |
+| Action                     | Sub-PRD                              | Description                                                                                                          |
+| -------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| GDPR/CCPA Data Purge       | admin-gdpr-purge-prd (to be created) | Full data subject deletion with export, anonymization, and audit trail. Multi-step workflow with confirmation gates. |
+| Schema Migration Execution | admin-migration-prd (to be created)  | Running schema migrations with backup, validation, dry-run, and rollback. High-consequence operation.                |
+| Bulk Data Import           | See [contact-import-export-prd.md]   | CSV and vCard import are admin-initiated but owned by the Contact entity's import/export sub-PRD.                    |
 
 ---
 
@@ -338,17 +348,17 @@ Audit-logged actions include: user creation/modification/suspension/deactivation
 
 ### 6.2 Permissions & Access Control
 
-| Action Category | Admin | User |
-|---|---|---|
-| User lifecycle (create, suspend, deactivate) | ✓ | ✗ |
-| Change user role | ✓ | ✗ |
-| System settings | ✓ | ✗ |
-| User settings (own) | ✓ | ✓ |
-| User settings (others) | ✓ | ✗ |
-| Provider accounts (own) | ✓ | ✓ |
-| Provider accounts (others) | ✓ | ✗ |
-| Data operations (backup, purge, migrate) | ✓ | ✗ |
-| System health monitoring | ✓ | ✗ |
+| Action Category                              | Admin | User |
+| -------------------------------------------- | ----- | ---- |
+| User lifecycle (create, suspend, deactivate) | ✓     | ✗    |
+| Change user role                             | ✓     | ✗    |
+| System settings                              | ✓     | ✗    |
+| User settings (own)                          | ✓     | ✓    |
+| User settings (others)                       | ✓     | ✗    |
+| Provider accounts (own)                      | ✓     | ✓    |
+| Provider accounts (others)                   | ✓     | ✗    |
+| Data operations (backup, purge, migrate)     | ✓     | ✗    |
+| System health monitoring                     | ✓     | ✗    |
 
 ### 6.3 Error Handling
 
@@ -387,22 +397,22 @@ Administrative actions that fail should never leave the system in an inconsisten
 
 ## 8. Test Plan
 
-| Test ID | Description | Type | Covers |
-|---|---|---|---|
-| ADMIN-T01 | Create user with valid email and role, verify record created with correct status | Unit | ADMIN-01, ADMIN-02 |
-| ADMIN-T02 | Attempt to create user with duplicate email, verify rejection | Unit | ADMIN-02 |
-| ADMIN-T03 | Suspend user, verify sessions invalidated and login blocked | Integration | ADMIN-04 |
-| ADMIN-T04 | Attempt to suspend last admin, verify rejection | Unit | ADMIN-04 |
-| ADMIN-T05 | Attempt to demote last admin, verify rejection | Unit | ADMIN-05 |
-| ADMIN-T06 | Connect Google account via OAuth, verify provider account created and sync starts | Integration | ADMIN-07 |
-| ADMIN-T07 | Pause sync, verify no new data fetched, resume and verify sync continues from cursor | Integration | ADMIN-08 |
-| ADMIN-T08 | Disconnect account, verify tokens deleted and data preserved | Integration | ADMIN-08 |
-| ADMIN-T09 | Simulate token expiry, verify reauth notification appears and flow works | Integration | ADMIN-09 |
-| ADMIN-T10 | Update system setting, verify new value takes effect immediately | Unit | ADMIN-10 |
-| ADMIN-T11 | Update system setting with invalid value, verify rejection | Unit | ADMIN-10 |
-| ADMIN-T12 | Set user-level override, verify it takes precedence over system setting | Unit | ADMIN-11 |
-| ADMIN-T13 | Verify 4-level cascade: user → system → default → hardcoded | Unit | ADMIN-11 |
-| ADMIN-T14 | Create manual backup, verify file created and registered | Integration | ADMIN-14 |
-| ADMIN-T15 | Verify all admin actions produce audit log entries | Integration | ADMIN-17 |
-| ADMIN-T16 | Verify non-admin users cannot access admin-only actions | Unit | Cross-cutting |
-| ADMIN-T17 | Verify users can manage own provider accounts but not others' | Unit | Cross-cutting |
+| Test ID   | Description                                                                          | Type        | Covers             |
+| --------- | ------------------------------------------------------------------------------------ | ----------- | ------------------ |
+| ADMIN-T01 | Create user with valid email and role, verify record created with correct status     | Unit        | ADMIN-01, ADMIN-02 |
+| ADMIN-T02 | Attempt to create user with duplicate email, verify rejection                        | Unit        | ADMIN-02           |
+| ADMIN-T03 | Suspend user, verify sessions invalidated and login blocked                          | Integration | ADMIN-04           |
+| ADMIN-T04 | Attempt to suspend last admin, verify rejection                                      | Unit        | ADMIN-04           |
+| ADMIN-T05 | Attempt to demote last admin, verify rejection                                       | Unit        | ADMIN-05           |
+| ADMIN-T06 | Connect Google account via OAuth, verify provider account created and sync starts    | Integration | ADMIN-07           |
+| ADMIN-T07 | Pause sync, verify no new data fetched, resume and verify sync continues from cursor | Integration | ADMIN-08           |
+| ADMIN-T08 | Disconnect account, verify tokens deleted and data preserved                         | Integration | ADMIN-08           |
+| ADMIN-T09 | Simulate token expiry, verify reauth notification appears and flow works             | Integration | ADMIN-09           |
+| ADMIN-T10 | Update system setting, verify new value takes effect immediately                     | Unit        | ADMIN-10           |
+| ADMIN-T11 | Update system setting with invalid value, verify rejection                           | Unit        | ADMIN-10           |
+| ADMIN-T12 | Set user-level override, verify it takes precedence over system setting              | Unit        | ADMIN-11           |
+| ADMIN-T13 | Verify 4-level cascade: user → system → default → hardcoded                          | Unit        | ADMIN-11           |
+| ADMIN-T14 | Create manual backup, verify file created and registered                             | Integration | ADMIN-14           |
+| ADMIN-T15 | Verify all admin actions produce audit log entries                                   | Integration | ADMIN-17           |
+| ADMIN-T16 | Verify non-admin users cannot access admin-only actions                              | Unit        | Cross-cutting      |
+| ADMIN-T17 | Verify users can manage own provider accounts but not others'                        | Unit        | Cross-cutting      |

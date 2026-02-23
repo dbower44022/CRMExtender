@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 10.0
+**Version:** 11.0
 **Last Updated:** 2026-02-23
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V11.0 (2026-02-23):** Decomposed Company Management PRD (1,380 lines) into Company Entity Base PRD + 6 Action Sub-PRDs (Domain Resolution, Merge, Hierarchy, Enrichment, Intelligence & Scoring, Social Profiles) + Company Entity TDD. Follows same V2 methodology pattern as Contact entity decomposition: field metadata, Key Processes, embedded task/test plans. Monolithic company-management-prd.md retained as superseded reference.
 
 > **V10.0 (2026-02-23):** Added Product TDD and Contact Entity TDD to status tracking. Added Contact Entity Base PRD and six Contact Action Sub-PRDs as hierarchical children of Contact Management. Updated methodology guide to V2. Added new terms to glossary (V4). Updated template-tdd to V2 (living document approach) and template-product-tdd to V2 (matches actual structure). Migrated all PRD system documents from `docs/` to `PRDs/` at repo root. Removed version suffixes from filenames — Git provides version control. Replaced Retired table and Files to Add/Remove with Git-based version history.
 
@@ -36,7 +38,15 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | └ Enrichment | 2.0 | `contact-enrichment-prd.md` | Draft — Key Processes added | 2026-02-23 |
 | └ AI Intelligence | 2.0 | `contact-ai-intelligence-prd.md` | Draft — Key Processes added | 2026-02-23 |
 | └ Relationship Intelligence | 2.0 | `contact-relationship-intelligence-prd.md` | Draft — Key Processes added | 2026-02-23 |
-| Company Management | 1.0 | `company-management-prd.md` | Draft — Terminology standardized; needs V2 Custom Objects reconciliation | 2026-02-22 |
+| Company Management | 1.0 | `company-management-prd.md` | Superseded — decomposed into Entity Base + 6 Sub-PRDs + TDD | 2026-02-23 |
+| └ Company Entity Base | 1.0 | `company-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
+| &nbsp;&nbsp;└ Company Entity TDD | 1.0 | `company-entity-tdd.md` | Draft — Living document, 9 sections | 2026-02-23 |
+| └ Domain Resolution | 1.0 | `company-domain-resolution-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Duplicate Detection & Merging | 1.0 | `company-merge-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Company Hierarchy | 1.0 | `company-hierarchy-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Enrichment Pipeline | 1.0 | `company-enrichment-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Intelligence & Scoring | 1.0 | `company-intelligence-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Social Media Profiles | 1.0 | `company-social-profiles-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Event Management | 3.0 | `events-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Notes | 3.0 | `notes-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Tasks | 2.0 | `tasks-prd.md` | Draft — Terminology standardized | 2026-02-22 |
@@ -65,7 +75,7 @@ Document version history is managed by Git. Previous versions of any document ca
 - 2026-02-19: Topic entity eliminated; Projects PRD extracted from Conversations PRD
 - 2026-02-21: GUI terminology standardization (V2); Adaptive Grid Intelligence terminology alignment
 - 2026-02-22: Full ecosystem terminology alignment across all PRDs; Custom Objects V2; mojibake cleanup
-- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; migrated from versioned filenames to Git-based versioning
+- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
 
 ---
 
@@ -262,10 +272,23 @@ Document version history is managed by Git. Previous versions of any document ca
 
 ### 5. Company Management
 
-**File:** `company-management-prd.md`
-**Scope:** Company as a CRM entity with firmographic data, domain-based resolution, and relationship to contacts.
+**File:** `company-management-prd.md` (superseded — retained as historical reference)
+**Scope:** Company as a CRM entity with firmographic data, domain-based resolution, enrichment, hierarchy, scoring, and social media tracking.
 
-> **Note:** This PRD has been terminology-standardized but has not yet been structurally reconciled with the Custom Objects framework. Needs V2 rewrite similar to Events V2 (prefixed ULIDs, field registry, relation types, event sourcing).
+> **Note:** The monolithic Company Management PRD (1,380 lines) has been decomposed into an Entity Base PRD, Entity TDD, and six Action Sub-PRDs following the V2 methodology. The original file is retained in the repository for reference; all active development should use the decomposed documents.
+
+**Decomposed documents:** The Company entity is fully decomposed per methodology V2:
+
+| Document | File | Description |
+|---|---|---|
+| Company Entity Base PRD | `company-entity-base-prd.md` | Entity definition, field registry (with Editable/Sortable/Filterable metadata), relationships, lifecycle, Key Processes, Action Catalog |
+| Company Entity TDD | `company-entity-tdd.md` | Read model table DDL, identifiers model, shared tables (addresses, phones, emails), asset storage, event sourcing, Neo4j graph sync, score storage |
+| Domain Resolution Sub-PRD | `company-domain-resolution-prd.md` | Domain extraction, normalization, public domain exclusion, auto-creation, contact linking, identifier management |
+| Merge Sub-PRD | `company-merge-prd.md` | Domain-based duplicate detection, merge preview, merge execution, entity reassignment, audit trail, split (undo) |
+| Hierarchy Sub-PRD | `company-hierarchy-prd.md` | Parent/subsidiary/division/acquisition/spinoff relationships, Relation Type definition, temporal tracking, communication separation |
+| Enrichment Sub-PRD | `company-enrichment-prd.md` | Three-tier source architecture (website scraper, Wikidata, paid APIs), provider interface, triggers, run tracking, confidence/conflict resolution, overwrite guard |
+| Intelligence & Scoring Sub-PRD | `company-intelligence-prd.md` | Five-factor relationship strength scoring, time decay, factor transparency, derived metrics, intelligence views |
+| Social Profiles Sub-PRD | `company-social-profiles-prd.md` | Social media tracking (LinkedIn, Twitter, Facebook, GitHub, Instagram), monitoring tiers, change detection |
 
 ---
 
@@ -789,9 +812,9 @@ Cross-cutting PRDs:
 
 | Item | PRDs Involved | Status | Details |
 |---|---|---|---|
-| **Company Management Custom Objects reconciliation** | Company Mgmt, Custom Objects | **Queued** | Company PRD needs V2 rewrite to align with Custom Objects (prefixed ULIDs, field registry, relation types, event sourcing). Similar scope to Events V2 rewrite. Terminology standardization complete; structural reconciliation remains. |
+| **Company Management decomposition** | Company Mgmt, Custom Objects | **Completed** | Company PRD decomposed into Entity Base PRD + 6 Sub-PRDs + TDD. Aligned with Custom Objects framework (prefixed ULIDs, field registry, relation types, event sourcing). V2 methodology applied. |
 | **Communications attachment migration** | Communications, Documents | **Queued** | Communications PRD Section 12 (`communication_attachments`) superseded by Documents PRD `communication_documents` relation. Needs Communications V3 update. Phase 3 of Documents roadmap. |
-| **Company Management entity_assets migration** | Company Mgmt, Documents | **Queued** | Company Management PRD `entity_assets` table superseded by Documents PRD. Profile assets (logos, headshots, banners) become Document entities. Needs Company Mgmt V2 update. Phase 3 of Documents roadmap. |
+| **Company Management entity_assets migration** | Company Mgmt, Documents | **Addressed** | Company Entity TDD documents content-addressable asset storage (Section 5). Documents PRD migration path deferred to Documents PRD roadmap Phase 3. |
 | **Custom Objects PRD Topic removal** | Custom Objects, Conversations V3 | **Queued** | Custom Objects PRD still references `top_` prefix for Topic system object type. Topic needs to be removed from the system object type registry and cross-PRD reconciliation notes. |
 
 ### Open Items
@@ -804,9 +827,9 @@ Cross-cutting PRDs:
 
 ## Suggested Development Order
 
-Based on dependency analysis (all reconciliation complete except Company Management):
+Based on dependency analysis (all entity reconciliation complete):
 
-1. **Company Management V2** — Reconcile with Custom Objects framework (prefixed ULIDs, field registry, relation types, event sourcing). Similar effort to Events V2.
+1. ~~**Company Management V2**~~ — **Completed.** Decomposed into Entity Base PRD + 6 Sub-PRDs + TDD.
 2. **Email Provider Sync PRD** — First channel child PRD. Gmail, Outlook, IMAP adapters; dual-track parsing pipeline; email-specific triage. Parent (Communications PRD) is complete.
 3. **AI Learning & Classification PRD** — Requirements established by Conversations PRD. Depends on Communications (triage correction signals) and Conversations (assignment correction signals).
 4. **SMS/MMS PRD** — Second channel child PRD. Provider selection still open (Twilio vs. OpenPhone).
@@ -836,7 +859,15 @@ PRDs/
 ├── contact-enrichment-prd.md                 # Enrichment sub-PRD
 ├── contact-ai-intelligence-prd.md            # AI intelligence sub-PRD
 ├── contact-relationship-intelligence-prd.md  # Relationship intelligence sub-PRD
-├── company-management-prd.md
+├── company-management-prd.md                 # Company Management (monolithic, superseded)
+├── company-entity-base-prd.md                # Company entity definition
+├── company-entity-tdd.md                     # Company technical decisions
+├── company-domain-resolution-prd.md          # Domain resolution sub-PRD
+├── company-merge-prd.md                      # Duplicate detection & merging sub-PRD
+├── company-hierarchy-prd.md                  # Company hierarchy sub-PRD
+├── company-enrichment-prd.md                 # Enrichment pipeline sub-PRD
+├── company-intelligence-prd.md               # Intelligence & scoring sub-PRD
+├── company-social-profiles-prd.md            # Social media profiles sub-PRD
 ├── communications-prd.md
 ├── conversations-prd.md
 ├── events-prd.md

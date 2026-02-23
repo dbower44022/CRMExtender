@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 14.0
+**Version:** 15.0
 **Last Updated:** 2026-02-23
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V15.0 (2026-02-23):** Decomposed Events PRD (1,236 lines) into Event Entity Base PRD + 2 Action Sub-PRDs (Participants & Attendance Intelligence, Calendar Sync Pipeline) + Event Entity TDD. Follows V2 methodology. Monolithic events-prd.md retained as superseded reference (includes PoC Appendix).
 
 > **V14.0 (2026-02-23):** Decomposed Documents PRD (1,331 lines) into Document Entity Base PRD + 3 Action Sub-PRDs (Upload/Versioning/Storage, Content Processing Pipeline, Communication & Profile Asset Integration) + Document Entity TDD. Follows V2 methodology. Monolithic documents-prd.md retained as superseded reference.
 
@@ -64,7 +66,11 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | └ Enrichment Pipeline | 1.0 | `company-enrichment-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Intelligence & Scoring | 1.0 | `company-intelligence-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Social Media Profiles | 1.0 | `company-social-profiles-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| Event Management | 3.0 | `events-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+| Event Management | 3.0 | `events-prd.md` | Superseded — decomposed into Entity Base + 2 Sub-PRDs + TDD | 2026-02-23 |
+| └ Event Entity Base | 1.0 | `event-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
+| &nbsp;&nbsp;└ Event Entity TDD | 1.0 | `event-entity-tdd.md` | Draft — Living document, 10 sections | 2026-02-23 |
+| └ Participants & Attendance | 1.0 | `event-participants-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Calendar Sync Pipeline | 1.0 | `event-calendar-sync-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Notes | 3.0 | `notes-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Tasks | 2.0 | `tasks-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Documents | 2.0 | `documents-prd.md` | Superseded — decomposed into Entity Base + 3 Sub-PRDs + TDD | 2026-02-23 |
@@ -97,7 +103,7 @@ Document version history is managed by Git. Previous versions of any document ca
 - 2026-02-19: Topic entity eliminated; Projects PRD extracted from Conversations PRD
 - 2026-02-21: GUI terminology standardization (V2); Adaptive Grid Intelligence terminology alignment
 - 2026-02-22: Full ecosystem terminology alignment across all PRDs; Custom Objects V2; mojibake cleanup
-- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
+- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Event entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
 
 ---
 
@@ -284,21 +290,19 @@ Document version history is managed by Git. Previous versions of any document ca
 
 ### 6. Event Management
 
-**File:** `events-prd.md`
+**File:** `events-prd.md` (superseded — retained as historical reference, includes PoC Appendix)
 **Scope:** Event as a system object type for calendar events, meetings, and temporal relationship intelligence.
 
-**Key sections:**
+> **Note:** The monolithic Events PRD (1,236 lines) has been decomposed into an Entity Base PRD, Entity TDD, and two Action Sub-PRDs following the V2 methodology. The original file is retained for reference (includes PoC Appendix A); all active development should use the decomposed documents.
 
-- Event as system object type (`evt_` prefix, full field registry)
-- Calendar sync via provider account framework (Google Calendar adapter)
-- Event↔Contact Relation Type (`event_attendees`)
-- Event↔Conversation Relation Type (`event_conversations`)
-- Birthday auto-generation behavior
-- Recurrence defaulting behavior
-- Event sourcing (`events_events`)
-- RSVP tracking
+**Decomposed documents:**
 
-**Reconciliation status:** Fully reconciled with Custom Objects PRD as of V2.
+| Document | File | Description |
+|---|---|---|
+| Event Entity Base PRD | `event-entity-base-prd.md` | Entity definition, field registry (with Editable/Sortable/Filterable metadata), event types (6 system + custom, provider mapping), recurrence model (RRULE + denormalized select), conversation linking Relation Type, registered behaviors, Key Processes, Action Catalog |
+| Event Entity TDD | `event-entity-tdd.md` | Read model DDL with temporal/provider indexes, Event→Contact and Event→Company participation junction tables, Event→Conversation junction table, event_all_participants convenience VIEW, event sourcing (9 event types), virtual schema, API design (4 groups) |
+| Participants & Attendance Sub-PRD | `event-participants-prd.md` | Two system Relation Types (Contact with role/RSVP, Company with role), attendee resolution via contact_identifiers, RSVP mapping from Google, birthday auto-generation, co-attendance scoring |
+| Calendar Sync Pipeline Sub-PRD | `event-calendar-sync-prd.md` | Provider account reuse (same OAuth token), Google Calendar API client, sync orchestration with incremental tokens, UPSERT deduplication, field mapping, calendar selection settings, error handling |
 
 ---
 
@@ -844,7 +848,11 @@ PRDs/
 ├── conversation-formation-prd.md             # Formation & stitching sub-PRD
 ├── conversation-ai-intelligence-prd.md       # AI intelligence & review sub-PRD
 ├── conversation-views-alerts-prd.md          # Views & alerts sub-PRD
-├── events-prd.md
+├── events-prd.md                             # Events (monolithic, superseded)
+├── event-entity-base-prd.md                  # Event entity definition
+├── event-entity-tdd.md                       # Event technical decisions
+├── event-participants-prd.md                  # Participants & attendance sub-PRD
+├── event-calendar-sync-prd.md                # Calendar sync pipeline sub-PRD
 ├── notes-prd.md
 ├── tasks-prd.md
 ├── documents-prd.md                          # Documents (monolithic, superseded)

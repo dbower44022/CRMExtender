@@ -33,11 +33,11 @@ The Contact is a **system object type** in the unified framework (`is_system = t
 
 These are entity-wide targets. Action-specific performance targets live in the relevant Action Sub-PRDs.
 
-| Target | Value |
-|---|---|
-| Contact auto-creation rate | > 90% of communication participants have matching contacts |
-| Contact detail page load | < 200ms p95 |
-| Data freshness for monitored contacts | < 7 days since last enrichment check |
+| Target                                | Value                                                      |
+| ------------------------------------- | ---------------------------------------------------------- |
+| Contact auto-creation rate            | > 90% of communication participants have matching contacts |
+| Contact detail page load              | < 200ms p95                                                |
+| Data freshness for monitored contacts | < 7 days since last enrichment check                       |
 
 ### 1.4 Core Fields
 
@@ -53,27 +53,27 @@ Fields are described conceptually. Data types and storage details are specified 
 
 **Sortable / Filterable columns** declare whether the user can sort and filter by each field in list views and grid context menus. Fields marked with † are derived from subqueries; the Entity TDD must implement a caching or denormalization strategy to ensure acceptable sort performance.
 
-| Field | Description | Required | Editable | Sortable | Filterable | Valid Values / Rules |
-|---|---|---|---|---|---|---|
-| ID | Unique identifier. Prefixed ULID with `con_` prefix (e.g., `con_01HX7VFBK3...`). Immutable after creation. | Yes | System | No | Yes | Prefixed ULID |
-| First Name | First name or given name. | No | Direct | Yes | Yes | Free text |
-| Last Name | Last name or family name. | No | Direct | Yes | Yes | Free text |
-| Display Name | The name shown in all UI contexts. Computed from first + last name unless manually overridden by the user. | Yes | Override | Yes | Yes | Free text, auto-computed |
-| Primary Email | The contact's primary email address. Kept in sync with the identifiers model. | No | Via Identifiers | Yes † | Yes | Valid email format |
-| Primary Phone | The contact's primary phone number. Kept in sync with the identifiers model. | No | Via Identifiers | No | Yes | E.164 format |
-| Job Title | Current job title, derived from the most recent current employment record. | No | Via Employment | Yes | Yes | Free text |
-| Current Company | Reference to the company the contact currently works for, derived from the most recent current employment record. | No | Via Employment | No | Yes | Reference to Company entity |
-| Company Name | The current company's name, maintained for display efficiency. | No | Computed | Yes | Yes | Free text, derived from Company |
-| Avatar URL | Profile photo. May come from enrichment, social profiles, or manual upload. | No | Direct | No | No | Valid URL |
-| Lead Source | How this contact first entered the system. | No | Direct | Yes | Yes | `email_sync`, `google_contacts`, `csv_import`, `vcard_import`, `linkedin_capture`, `manual`, `enrichment`, `referral` |
-| Lead Status | Sales lifecycle stage. | No, defaults to `new` | Direct | Yes | Yes | `new`, `contacted`, `qualified`, `nurturing`, `customer`, `lost`, `inactive` |
-| Engagement Score | Composite metric reflecting the health and recency of the relationship. Recomputed periodically from behavioral signals. | No, defaults to 0.0 | Computed | Yes † | Yes | 0.0–1.0 |
-| Intelligence Score | Data completeness metric reflecting how much the system knows about this contact. Recomputed on enrichment, merge, and on a daily schedule. | No, defaults to 0.0 | Computed | Yes † | Yes | 0.0–1.0 |
-| Source | The first source that created this contact. | No | System | Yes | Yes | Same values as Lead Source |
-| Status | Contact lifecycle status. See Lifecycle section. | Yes, defaults to `active` | System | Yes | Yes | `active`, `incomplete`, `archived`, `merged` |
-| Created By | The user who created the contact, or null for auto-created contacts. | No | System | No | Yes | Reference to User |
-| Created At | When the contact was created. | Yes | System | Yes | Yes | Timestamp |
-| Updated At | When the contact was last modified. | Yes | System | Yes | Yes | Timestamp |
+| Field              | Description                                                                                                                                 | Required                  | Editable        | Sortable | Filterable | Valid Values / Rules                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | --------------- | -------- | ---------- | --------------------------------------------------------------------------------------------------------------------- |
+| ID                 | Unique identifier. Prefixed ULID with `con_` prefix (e.g., `con_01HX7VFBK3...`). Immutable after creation.                                  | Yes                       | System          | No       | Yes        | Prefixed ULID                                                                                                         |
+| First Name         | First name or given name.                                                                                                                   | No                        | Direct          | Yes      | Yes        | Free text                                                                                                             |
+| Last Name          | Last name or family name.                                                                                                                   | No                        | Direct          | Yes      | Yes        | Free text                                                                                                             |
+| Display Name       | The name shown in all UI contexts. Computed from first + last name unless manually overridden by the user.                                  | Yes                       | Override        | Yes      | Yes        | Free text, auto-computed                                                                                              |
+| Primary Email      | The contact's primary email address. Kept in sync with the identifiers model.                                                               | No                        | Via Identifiers | Yes †    | Yes        | Valid email format                                                                                                    |
+| Primary Phone      | The contact's primary phone number. Kept in sync with the identifiers model.                                                                | No                        | Via Identifiers | No       | Yes        | E.164 format                                                                                                          |
+| Job Title          | Current job title, derived from the most recent current employment record.                                                                  | No                        | Via Employment  | Yes      | Yes        | Free text                                                                                                             |
+| Current Company    | Reference to the company the contact currently works for, derived from the most recent current employment record.                           | No                        | Via Employment  | No       | Yes        | Reference to Company entity                                                                                           |
+| Company Name       | The current company's name, maintained for display efficiency.                                                                              | No                        | Computed        | Yes      | Yes        | Free text, derived from Company                                                                                       |
+| Avatar URL         | Profile photo. May come from enrichment, social profiles, or manual upload.                                                                 | No                        | Direct          | No       | No         | Valid URL                                                                                                             |
+| Lead Source        | How this contact first entered the system.                                                                                                  | No                        | Direct          | Yes      | Yes        | `email_sync`, `google_contacts`, `csv_import`, `vcard_import`, `linkedin_capture`, `manual`, `enrichment`, `referral` |
+| Lead Status        | Sales lifecycle stage.                                                                                                                      | No, defaults to `new`     | Direct          | Yes      | Yes        | `new`, `contacted`, `qualified`, `nurturing`, `customer`, `lost`, `inactive`                                          |
+| Engagement Score   | Composite metric reflecting the health and recency of the relationship. Recomputed periodically from behavioral signals.                    | No, defaults to 0.0       | Computed        | Yes †    | Yes        | 0.0–1.0                                                                                                               |
+| Intelligence Score | Data completeness metric reflecting how much the system knows about this contact. Recomputed on enrichment, merge, and on a daily schedule. | No, defaults to 0.0       | Computed        | Yes †    | Yes        | 0.0–1.0                                                                                                               |
+| Source             | The first source that created this contact.                                                                                                 | No                        | System          | Yes      | Yes        | Same values as Lead Source                                                                                            |
+| Status             | Contact lifecycle status. See Lifecycle section.                                                                                            | Yes, defaults to `active` | System          | Yes      | Yes        | `active`, `incomplete`, `archived`, `merged`                                                                          |
+| Created By         | The user who created the contact, or null for auto-created contacts.                                                                        | No                        | System          | No       | Yes        | Reference to User                                                                                                     |
+| Created At         | When the contact was created.                                                                                                               | Yes                       | System          | Yes      | Yes        | Timestamp                                                                                                             |
+| Updated At         | When the contact was last modified.                                                                                                         | Yes                       | System          | Yes      | Yes        | Timestamp                                                                                                             |
 
 **† Requires caching:** Fields marked with † are derived from subqueries or cross-table computations. The Entity TDD must define a caching or denormalization strategy (e.g., `contacts.primary_email_cache`, `contacts.engagement_score`) with triggers or application logic to keep cached values in sync. Without caching, sorting these fields on large datasets will degrade performance.
 
@@ -83,17 +83,17 @@ A contact is not an email address. A person has multiple emails, phones, social 
 
 Each identifier has:
 
-| Attribute | Description | Rules |
-|---|---|---|
-| Type | The kind of identifier. | `email`, `phone`, `linkedin`, `twitter`, `github`, `slack`, `custom` |
-| Value | The identifier itself, normalized. | Emails are lowercased and trimmed. Phones are in E.164 format. LinkedIn URLs are canonicalized. |
-| Label | User-facing classification. | `work`, `personal`, `mobile`, `home`, `old`, etc. |
-| Is Primary | Whether this is the primary identifier for its type. | At most one primary per contact per type. |
-| Status | Lifecycle state of the identifier. | `active`, `inactive`, `unverified` |
-| Source | How this identifier was discovered. | `google_contacts`, `email_sync`, `linkedin_capture`, `enrichment_apollo`, `enrichment_clearbit`, `manual`, `osint` |
-| Confidence | How confident the system is that this identifier belongs to this contact. | 0.0–1.0. User-entered identifiers have 1.0. Enrichment and auto-detection sources have lower confidence. |
-| Verified | Whether the identifier has been confirmed. | Confirmed by user, enrichment match, or verified source. |
-| Valid From / Valid Until | Temporal bounds for when this identifier was active. | Enables tracking of old email addresses, previous phone numbers, etc. Null Valid Until means still active. |
+| Attribute                | Description                                                               | Rules                                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Type                     | The kind of identifier.                                                   | `email`, `phone`, `linkedin`, `twitter`, `github`, `slack`, `custom`                                               |
+| Value                    | The identifier itself, normalized.                                        | Emails are lowercased and trimmed. Phones are in E.164 format. LinkedIn URLs are canonicalized.                    |
+| Label                    | User-facing classification.                                               | `work`, `personal`, `mobile`, `home`, `old`, etc.                                                                  |
+| Is Primary               | Whether this is the primary identifier for its type.                      | At most one primary per contact per type.                                                                          |
+| Status                   | Lifecycle state of the identifier.                                        | `active`, `inactive`, `unverified`                                                                                 |
+| Source                   | How this identifier was discovered.                                       | `google_contacts`, `email_sync`, `linkedin_capture`, `enrichment_apollo`, `enrichment_clearbit`, `manual`, `osint` |
+| Confidence               | How confident the system is that this identifier belongs to this contact. | 0.0–1.0. User-entered identifiers have 1.0. Enrichment and auto-detection sources have lower confidence.           |
+| Verified                 | Whether the identifier has been confirmed.                                | Confirmed by user, enrichment match, or verified source.                                                           |
+| Valid From / Valid Until | Temporal bounds for when this identifier was active.                      | Enables tracking of old email addresses, previous phone numbers, etc. Null Valid Until means still active.         |
 
 **Key business rules:**
 
@@ -105,16 +105,16 @@ Each identifier has:
 
 These fields are derived from other data. The Editable column indicates how the user changes the underlying data. None of these fields support inline editing on the contact card — the user must edit the source data through the appropriate sub-entity editor, and the computed field updates automatically.
 
-| Field | Description | Editable | Derivation Logic |
-|---|---|---|---|
-| Display Name | Name shown in UI | Override | Computed from `first_name + ' ' + last_name` unless manually overridden. |
-| Primary Email | Main email for display | Via Identifiers | Synced from identifier with `type=email`, `is_primary=true`. If no primary designated, uses the earliest active email. |
-| Primary Phone | Main phone for display | Via Identifiers | Synced from identifier with `type=phone`, `is_primary=true`. If no primary designated, uses the earliest active phone. |
-| Job Title | Current job title | Via Employment | Derived from the most recent employment record where the position is current. |
-| Current Company | Company reference | Via Employment | Derived from the most recent employment record where the position is current. |
-| Company Name | Company name for display | Computed | Derived from the Current Company's name. |
-| Engagement Score | Relationship health metric (0.0–1.0) | Computed | Weighted composite of communication frequency, recency, reciprocity, depth, and channel diversity. Recomputed daily. See AI Contact Intelligence Sub-PRD for computation details. |
-| Intelligence Score | Data completeness metric (0.0–1.0) | Computed | Weighted scoring based on presence and quality of profile data across categories (name, email, phone, company, social, etc.). Recomputed on enrichment, merge, and daily. See Contact Enrichment Sub-PRD for computation details. |
+| Field              | Description                          | Editable        | Derivation Logic                                                                                                                                                                                                                  |
+| ------------------ | ------------------------------------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Display Name       | Name shown in UI                     | Override        | Computed from `first_name + ' ' + last_name` unless manually overridden.                                                                                                                                                          |
+| Primary Email      | Main email for display               | Via Identifiers | Synced from identifier with `type=email`, `is_primary=true`. If no primary designated, uses the earliest active email.                                                                                                            |
+| Primary Phone      | Main phone for display               | Via Identifiers | Synced from identifier with `type=phone`, `is_primary=true`. If no primary designated, uses the earliest active phone.                                                                                                            |
+| Job Title          | Current job title                    | Via Employment  | Derived from the most recent employment record where the position is current.                                                                                                                                                     |
+| Current Company    | Company reference                    | Via Employment  | Derived from the most recent employment record where the position is current.                                                                                                                                                     |
+| Company Name       | Company name for display             | Computed        | Derived from the Current Company's name.                                                                                                                                                                                          |
+| Engagement Score   | Relationship health metric (0.0–1.0) | Computed        | Weighted composite of communication frequency, recency, reciprocity, depth, and channel diversity. Recomputed daily. See AI Contact Intelligence Sub-PRD for computation details.                                                 |
+| Intelligence Score | Data completeness metric (0.0–1.0)   | Computed        | Weighted scoring based on presence and quality of profile data across categories (name, email, phone, company, social, etc.). Recomputed on enrichment, merge, and daily. See Contact Enrichment Sub-PRD for computation details. |
 
 ---
 
@@ -196,35 +196,35 @@ These relationships power key intelligence features: warm introduction path find
 
 ### 3.1 Statuses
 
-| Status | Description |
-|---|---|
-| `incomplete` | Auto-created from an unknown identifier. Minimal data — typically just an email address or phone number. Awaiting enrichment or manual completion. |
-| `active` | Fully identified contact with at least a name and one verified identifier. The standard working state. |
-| `archived` | User-archived contact. Excluded from active lists and search results, but all data is preserved. Identifiers still resolve for historical communications. |
-| `merged` | Duplicate contact that was absorbed into another record during a merge operation. Soft-deleted — the record is retained for audit purposes. |
+| Status       | Description                                                                                                                                               |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `incomplete` | Auto-created from an unknown identifier. Minimal data — typically just an email address or phone number. Awaiting enrichment or manual completion.        |
+| `active`     | Fully identified contact with at least a name and one verified identifier. The standard working state.                                                    |
+| `archived`   | User-archived contact. Excluded from active lists and search results, but all data is preserved. Identifiers still resolve for historical communications. |
+| `merged`     | Duplicate contact that was absorbed into another record during a merge operation. Soft-deleted — the record is retained for audit purposes.               |
 
 ### 3.2 Transitions
 
-| From | To | Trigger |
-|---|---|---|
-| `incomplete` | `active` | Enrichment populates sufficient data (name + verified identifier), or user manually completes the record. |
-| `active` | `archived` | User archives the contact. |
-| `active` | `merged` | Contact is identified as a duplicate and absorbed into another contact during merge. |
-| `archived` | `active` | User unarchives the contact. |
-| `merged` | `active` | Split (undo merge) operation restores the original contact from event history. |
+| From         | To         | Trigger                                                                                                   |
+| ------------ | ---------- | --------------------------------------------------------------------------------------------------------- |
+| `incomplete` | `active`   | Enrichment populates sufficient data (name + verified identifier), or user manually completes the record. |
+| `active`     | `archived` | User archives the contact.                                                                                |
+| `active`     | `merged`   | Contact is identified as a duplicate and absorbed into another contact during merge.                      |
+| `archived`   | `active`   | User unarchives the contact.                                                                              |
+| `merged`     | `active`   | Split (undo merge) operation restores the original contact from event history.                            |
 
 ### 3.3 Creation Sources
 
-| Source | Trigger | Initial Status | Auto-Enrichment |
-|---|---|---|---|
-| `email_sync` | Unknown email participant during sync | `incomplete` | Yes |
-| `google_contacts` | Google People API sync | `active` | Yes |
-| `linkedin_capture` | Browser extension captures LinkedIn profile | `active` | Optional |
-| `csv_import` | CSV file upload | `active` (if name present) or `incomplete` | Yes |
-| `vcard_import` | vCard file upload | `active` | Yes |
-| `manual` | User creates via UI | `active` | Yes |
-| `enrichment` | Enrichment discovers a new related contact | `incomplete` | Yes (chain enrichment) |
-| `referral` | User explicitly links a referral relationship | `active` | Yes |
+| Source             | Trigger                                       | Initial Status                             | Auto-Enrichment        |
+| ------------------ | --------------------------------------------- | ------------------------------------------ | ---------------------- |
+| `email_sync`       | Unknown email participant during sync         | `incomplete`                               | Yes                    |
+| `google_contacts`  | Google People API sync                        | `active`                                   | Yes                    |
+| `linkedin_capture` | Browser extension captures LinkedIn profile   | `active`                                   | Optional               |
+| `csv_import`       | CSV file upload                               | `active` (if name present) or `incomplete` | Yes                    |
+| `vcard_import`     | vCard file upload                             | `active`                                   | Yes                    |
+| `manual`           | User creates via UI                           | `active`                                   | Yes                    |
+| `enrichment`       | Enrichment discovers a new related contact    | `incomplete`                               | Yes (chain enrichment) |
+| `referral`         | User explicitly links a referral relationship | `active`                                   | Yes                    |
 
 ### 3.4 Deletion & Data Retention
 
@@ -481,20 +481,20 @@ All contact mutations are stored as immutable events. The system can reconstruct
 
 ## Related Documents
 
-| Document | Relationship |
-|---|---|
-| [CRMExtender Product PRD] | Parent product document |
-| [Contact Entity UI PRD] | Screen layouts and navigation for contact views |
-| [Contact Entity TDD] | Technical decisions for contact implementation |
-| [Contact Identity Resolution Sub-PRD] | Detailed identity resolution and entity matching requirements |
-| [Contact Merge & Split Sub-PRD] | Detailed merge and split requirements |
-| [Contact Import & Export Sub-PRD] | Detailed import and export requirements |
-| [Contact Enrichment Sub-PRD] | Detailed enrichment pipeline and intelligence scoring requirements |
-| [Contact AI Intelligence Sub-PRD] | Detailed AI-powered intelligence feature requirements |
-| [Contact Relationship Intelligence Sub-PRD] | Detailed graph-based relationship intelligence requirements |
-| [Company Management Entity Base PRD](company-management-prd.md) | Company entity — contact-to-company relationship details |
-| [Custom Objects PRD](custom-objects-prd.md) | Unified object model, field registry, and relation framework |
-| [Communications PRD](communications-prd.md) | Communication entity — participant resolution |
-| [Conversations PRD](conversations-prd.md) | Conversation entity — cross-channel thread stitching |
-| [GUI Standards] | UI component patterns and design conventions |
-| [Master Glossary](glossary.md) | Term definitions |
+| Document                                                        | Relationship                                                       |
+| --------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [CRMExtender Product PRD]                                       | Parent product document                                            |
+| [Contact Entity UI PRD]                                         | Screen layouts and navigation for contact views                    |
+| [Contact Entity TDD]                                            | Technical decisions for contact implementation                     |
+| [Contact Identity Resolution Sub-PRD]                           | Detailed identity resolution and entity matching requirements      |
+| [Contact Merge & Split Sub-PRD]                                 | Detailed merge and split requirements                              |
+| [Contact Import & Export Sub-PRD]                               | Detailed import and export requirements                            |
+| [Contact Enrichment Sub-PRD]                                    | Detailed enrichment pipeline and intelligence scoring requirements |
+| [Contact AI Intelligence Sub-PRD]                               | Detailed AI-powered intelligence feature requirements              |
+| [Contact Relationship Intelligence Sub-PRD]                     | Detailed graph-based relationship intelligence requirements        |
+| [Company Management Entity Base PRD](company-management-prd.md) | Company entity — contact-to-company relationship details           |
+| [Custom Objects PRD](custom-objects-prd.md)                     | Unified object model, field registry, and relation framework       |
+| [Communications PRD](communications-prd.md)                     | Communication entity — participant resolution                      |
+| [Conversations PRD](conversations-prd.md)                       | Conversation entity — cross-channel thread stitching               |
+| [GUI Standards]                                                 | UI component patterns and design conventions                       |
+| [Master Glossary](glossary.md)                                  | Term definitions                                                   |

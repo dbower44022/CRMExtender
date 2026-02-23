@@ -22,63 +22,64 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 
 ## PRD & TDD Status Summary
 
-| Document | Version | File | Status | Date |
-|---|---|---|---|---|
-| **Product Level** | | | | |
-| PRD Methodology Guide | 2.0 | `prd-methodology-guide.md` | Updated — Key Processes, field metadata, † convention | 2026-02-23 |
-| Product TDD | 1.0 | `product-tdd.md` | Draft — 13 sections, living document | 2026-02-23 |
-| GUI Functional Requirements | 2.0 | `gui-functional-requirements-prd.md` | Draft — Terminology standardized | 2026-02-21 |
-| Custom Objects | 2.0 | `custom-objects-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Communications | 3.0 | `communications-prd.md` | Superseded — decomposed into Entity Base + 4 Sub-PRDs + TDD | 2026-02-23 |
-| └ Communication Entity Base | 1.0 | `communication-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
-| &nbsp;&nbsp;└ Communication Entity TDD | 1.0 | `communication-entity-tdd.md` | Draft — Living document, 10 sections | 2026-02-23 |
-| └ Published Summary | 1.0 | `communication-published-summary-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| └ Provider & Sync Framework | 1.0 | `communication-provider-sync-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| └ Participant Resolution | 1.0 | `communication-participant-resolution-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| └ Triage & Intelligent Filtering | 1.0 | `communication-triage-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| Conversations | 4.0 | `conversations-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Contact Management | 5.0 | `contact-management-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| └ Contact Entity Base | 9.0 | `contact-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
-| &nbsp;&nbsp;└ Contact Entity TDD | 1.0 | `contact-entity-tdd.md` | Draft — Living document, 9 sections | 2026-02-23 |
-| └ Identity Resolution | 2.0 | `contact-identity-resolution-prd.md` | Draft — Key Processes added | 2026-02-23 |
-| └ Merge & Split | 2.0 | `contact-merge-split-prd.md` | Draft — Key Processes added | 2026-02-23 |
-| └ Import & Export | 2.0 | `contact-import-export-prd.md` | Draft — Key Processes added | 2026-02-23 |
-| └ Enrichment | 2.0 | `contact-enrichment-prd.md` | Draft — Key Processes added | 2026-02-23 |
-| └ AI Intelligence | 2.0 | `contact-ai-intelligence-prd.md` | Draft — Key Processes added | 2026-02-23 |
-| └ Relationship Intelligence | 2.0 | `contact-relationship-intelligence-prd.md` | Draft — Key Processes added | 2026-02-23 |
-| Company Management | 1.0 | `company-management-prd.md` | Superseded — decomposed into Entity Base + 6 Sub-PRDs + TDD | 2026-02-23 |
-| └ Company Entity Base | 1.0 | `company-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
-| &nbsp;&nbsp;└ Company Entity TDD | 1.0 | `company-entity-tdd.md` | Draft — Living document, 9 sections | 2026-02-23 |
-| └ Domain Resolution | 1.0 | `company-domain-resolution-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| └ Duplicate Detection & Merging | 1.0 | `company-merge-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| └ Company Hierarchy | 1.0 | `company-hierarchy-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| └ Enrichment Pipeline | 1.0 | `company-enrichment-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| └ Intelligence & Scoring | 1.0 | `company-intelligence-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| └ Social Media Profiles | 1.0 | `company-social-profiles-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| Event Management | 3.0 | `events-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Notes | 3.0 | `notes-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Tasks | 2.0 | `tasks-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Documents | 2.0 | `documents-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Projects | 3.0 | `projects-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Outbound Email | 2.0 | `outbound-email-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Views & Grid | 5.0 | `views-grid-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Data Sources | 1.0 | `data-sources-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Permissions & Sharing | 2.0 | `permissions-sharing-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Adaptive Grid Intelligence | 2.0 | `adaptive-grid-intelligence-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Master Glossary | 4.0 | `glossary.md` | Active — Key Process, field metadata, † caching terms added | 2026-02-23 |
-| Email Parsing & Content Extraction | 1.0 | `email-stripping.md` | Technical spec — Mojibake cleaned | 2026-02-22 |
-| Email Provider Sync | — | — | **Planned** — parent (Communications) complete | — |
-| SMS/MMS | — | — | **Planned** — parent (Communications) complete | — |
-| Voice/VoIP | — | — | **Planned** — parent (Communications) complete | — |
-| Video Meetings | — | — | **Planned** — parent (Communications) complete | — |
-| AI Learning & Classification | — | — | **Planned** — requirements established in Conversations PRD | — |
-| Contact Intelligence | — | — | **Planned** — depends on Contact Mgmt + Communications | — |
+| Document                               | Version | File                                          | Status                                                      | Date       |
+| -------------------------------------- | ------- | --------------------------------------------- | ----------------------------------------------------------- | ---------- |
+| **Product Level**                      |         |                                               |                                                             |            |
+| Product TDD                            | 1.0     | `product-tdd.md`                              | Draft — 13 sections, living document                        | 2026-02-23 |
+| GUI Functional Requirements            | 2.0     | `gui-functional-requirements-prd.md`          | Draft — Terminology standardized                            | 2026-02-21 |
+| Custom Objects                         | 2.0     | `custom-objects-prd.md`                       | Draft — Terminology standardized                            | 2026-02-22 |
+| Communications                         | 3.0     | `communications-prd.md`                       | Superseded — decomposed into Entity Base + 4 Sub-PRDs + TDD | 2026-02-23 |
+| └ Communication Entity Base            | 1.0     | `communication-entity-base-prd.md`            | Draft — V2 methodology (field metadata, Key Processes)      | 2026-02-23 |
+| &nbsp;&nbsp;└ Communication Entity TDD | 1.0     | `communication-entity-tdd.md`                 | Draft — Living document, 10 sections                        | 2026-02-23 |
+| └ Published Summary                    | 1.0     | `communication-published-summary-prd.md`      | Draft — Key Processes, task/test plan                       | 2026-02-23 |
+| └ Provider & Sync Framework            | 1.0     | `communication-provider-sync-prd.md`          | Draft — Key Processes, task/test plan                       | 2026-02-23 |
+| └ Participant Resolution               | 1.0     | `communication-participant-resolution-prd.md` | Draft — Key Processes, task/test plan                       | 2026-02-23 |
+| └ Triage & Intelligent Filtering       | 1.0     | `communication-triage-prd.md`                 | Draft — Key Processes, task/test plan                       | 2026-02-23 |
+| Conversations                          | 4.0     | `conversations-prd.md`                        | Draft — Terminology standardized                            | 2026-02-22 |
+| Contact Management                     | 5.0     | `contact-management-prd.md`                   | Draft — Terminology standardized                            | 2026-02-22 |
+| └ Contact Entity Base                  | 9.0     | `contact-entity-base-prd.md`                  | Draft — V2 methodology (field metadata, Key Processes)      | 2026-02-23 |
+| &nbsp;&nbsp;└ Contact Entity TDD       | 1.0     | `contact-entity-tdd.md`                       | Draft — Living document, 9 sections                         | 2026-02-23 |
+| └ Identity Resolution                  | 2.0     | `contact-identity-resolution-prd.md`          | Draft — Key Processes added                                 | 2026-02-23 |
+| └ Merge & Split                        | 2.0     | `contact-merge-split-prd.md`                  | Draft — Key Processes added                                 | 2026-02-23 |
+| └ Import & Export                      | 2.0     | `contact-import-export-prd.md`                | Draft — Key Processes added                                 | 2026-02-23 |
+| └ Enrichment                           | 2.0     | `contact-enrichment-prd.md`                   | Draft — Key Processes added                                 | 2026-02-23 |
+| └ AI Intelligence                      | 2.0     | `contact-ai-intelligence-prd.md`              | Draft — Key Processes added                                 | 2026-02-23 |
+| └ Relationship Intelligence            | 2.0     | `contact-relationship-intelligence-prd.md`    | Draft — Key Processes added                                 | 2026-02-23 |
+| Company Management                     | 1.0     | `company-management-prd.md`                   | Superseded — decomposed into Entity Base + 6 Sub-PRDs + TDD | 2026-02-23 |
+| └ Company Entity Base                  | 1.0     | `company-entity-base-prd.md`                  | Draft — V2 methodology (field metadata, Key Processes)      | 2026-02-23 |
+| &nbsp;&nbsp;└ Company Entity TDD       | 1.0     | `company-entity-tdd.md`                       | Draft — Living document, 9 sections                         | 2026-02-23 |
+| └ Domain Resolution                    | 1.0     | `company-domain-resolution-prd.md`            | Draft — Key Processes, task/test plan                       | 2026-02-23 |
+| └ Duplicate Detection & Merging        | 1.0     | `company-merge-prd.md`                        | Draft — Key Processes, task/test plan                       | 2026-02-23 |
+| └ Company Hierarchy                    | 1.0     | `company-hierarchy-prd.md`                    | Draft — Key Processes, task/test plan                       | 2026-02-23 |
+| └ Enrichment Pipeline                  | 1.0     | `company-enrichment-prd.md`                   | Draft — Key Processes, task/test plan                       | 2026-02-23 |
+| └ Intelligence & Scoring               | 1.0     | `company-intelligence-prd.md`                 | Draft — Key Processes, task/test plan                       | 2026-02-23 |
+| └ Social Media Profiles                | 1.0     | `company-social-profiles-prd.md`              | Draft — Key Processes, task/test plan                       | 2026-02-23 |
+| Event Management                       | 3.0     | `events-prd.md`                               | Draft — Terminology standardized                            | 2026-02-22 |
+| Notes                                  | 3.0     | `notes-prd.md`                                | Draft — Terminology standardized                            | 2026-02-22 |
+| Tasks                                  | 2.0     | `tasks-prd.md`                                | Draft — Terminology standardized                            | 2026-02-22 |
+| Documents                              | 2.0     | `documents-prd.md`                            | Draft — Terminology standardized                            | 2026-02-22 |
+| Projects                               | 3.0     | `projects-prd.md`                             | Draft — Terminology standardized                            | 2026-02-22 |
+| Outbound Email                         | 2.0     | `outbound-email-prd.md`                       | Draft — Terminology standardized                            | 2026-02-22 |
+| Views & Grid                           | 5.0     | `views-grid-prd.md`                           | Draft — Terminology standardized                            | 2026-02-22 |
+| Data Sources                           | 1.0     | `data-sources-prd.md`                         | Draft — Terminology standardized                            | 2026-02-22 |
+| Permissions & Sharing                  | 2.0     | `permissions-sharing-prd.md`                  | Draft — Terminology standardized                            | 2026-02-22 |
+| Adaptive Grid Intelligence             | 2.0     | `adaptive-grid-intelligence-prd.md`           | Draft — Terminology standardized                            | 2026-02-22 |
+| Master Glossary                        | 4.0     | `glossary.md`                                 | Active — Key Process, field metadata, † caching terms added | 2026-02-23 |
+| Email Parsing & Content Extraction     | 1.0     | `email-stripping.md`                          | Technical spec — Mojibake cleaned                           | 2026-02-22 |
+| Email Provider Sync                    | —       | —                                             | **Planned** — parent (Communications) complete              | —          |
+| SMS/MMS                                | —       | —                                             | **Planned** — parent (Communications) complete              | —          |
+| Voice/VoIP                             | —       | —                                             | **Planned** — parent (Communications) complete              | —          |
+| Video Meetings                         | —       | —                                             | **Planned** — parent (Communications) complete              | —          |
+| AI Learning & Classification           | —       | —                                             | **Planned** — requirements established in Conversations PRD | —          |
+| Contact Intelligence                   | —       | —                                             | **Planned** — depends on Contact Mgmt + Communications      | —          |
+| PRD Methodology Guide                  | 2.0     | `prd-methodology-guide.md`                    | Updated — Key Processes, field metadata, † convention       | 2026-02-23 |
 
 ### Version History
 
 Document version history is managed by Git. Previous versions of any document can be accessed via `git log --follow PRDs/<filename>`. The version number inside each document's header records the current logical version.
 
 **Notable version milestones:**
+
 - 2026-02-18: Communication & Conversation Intelligence PRD decomposed into Communications + Conversations PRDs
 - 2026-02-19: Topic entity eliminated; Projects PRD extracted from Conversations PRD
 - 2026-02-21: GUI terminology standardization (V2); Adaptive Grid Intelligence terminology alignment
@@ -141,23 +142,38 @@ Document version history is managed by Git. Previous versions of any document ca
 
 **Decomposed documents:** The Communication entity is fully decomposed per methodology V2:
 
-| Document | File | Description |
-|---|---|---|
-| Communication Entity Base PRD | `communication-entity-base-prd.md` | Entity definition, field registry (with Editable/Sortable/Filterable metadata), channel types, relationships, lifecycle, Key Processes, Action Catalog |
-| Communication Entity TDD | `communication-entity-tdd.md` | Read model table DDL, summary revisions table, event sourcing, attachment model, sync audit trail, virtual schema, FTS implementation, storage estimates |
-| Published Summary Sub-PRD | `communication-published-summary-prd.md` | Three-stage content pipeline, per-channel generation rules, rich text storage contract, AI summary structure, revision history, generation triggers, error handling |
-| Provider & Sync Framework Sub-PRD | `communication-provider-sync-prd.md` | Provider account model, adapter interface, sync modes (initial/incremental/manual), sync reliability, personal vs. shared accounts, shared inbox attribution, sync API & audit trail |
-| Participant Resolution Sub-PRD | `communication-participant-resolution-prd.md` | Participant Relation Type, contact resolution integration, pending identification, identifier types by channel, cross-channel unification, participant API |
-| Triage & Filtering Sub-PRD | `communication-triage-prd.md` | Multi-layer pipeline, channel-specific heuristic framework, known-contact gate, triage transparency, override mechanism, triage API |
+| Document                          | File                                          | Description                                                                                                                                                                          |
+| --------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Communication Entity Base PRD     | `communication-entity-base-prd.md`            | Entity definition, field registry (with Editable/Sortable/Filterable metadata), channel types, relationships, lifecycle, Key Processes, Action Catalog                               |
+| Communication Entity TDD          | `communication-entity-tdd.md`                 | Read model table DDL, summary revisions table, event sourcing, attachment model, sync audit trail, virtual schema, FTS implementation, storage estimates                             |
+| Published Summary Sub-PRD         | `communication-published-summary-prd.md`      | Three-stage content pipeline, per-channel generation rules, rich text storage contract, AI summary structure, revision history, generation triggers, error handling                  |
+| Provider & Sync Framework Sub-PRD | `communication-provider-sync-prd.md`          | Provider account model, adapter interface, sync modes (initial/incremental/manual), sync reliability, personal vs. shared accounts, shared inbox attribution, sync API & audit trail |
+| Participant Resolution Sub-PRD    | `communication-participant-resolution-prd.md` | Participant Relation Type, contact resolution integration, pending identification, identifier types by channel, cross-channel unification, participant API                           |
+| Triage & Filtering Sub-PRD        | `communication-triage-prd.md`                 | Multi-layer pipeline, channel-specific heuristic framework, known-contact gate, triage transparency, override mechanism, triage API                                                  |
 
 **Channel child PRDs** (build on the Provider & Sync Framework):
 
 | Child PRD | Scope | Status |
-|---|---|---|
+| --------- | ----- | ------ |
+
+- Direct provider API integration (no Nylas/third-party aggregation)
+- Communication Participants as a system Relation Type (replacing flat `from_address`/`to_addresses` columns)
+- `conversation_id` as FK column (not Relation Type) — simpler for strict many:1
+- Three-tier content model: `content_raw`, `content_html`, `content_clean`
+- Published Summary architecture (V2): rich text summaries per channel type, revision history, Conversation timeline renders by reference
+- Channel-specific parsing delegated to child PRDs
+- `note` channel type is distinct from Notes system object type (interactions vs. commentary)
+- Manual logged interactions (unrecorded calls, in-person meetings) are Communications, not Notes
+- Provider account framework shared across all integration types
+
+**Channel child PRDs:**
+
+| Child PRD               | Scope                                                                                     | Status                    |
+| ----------------------- | ----------------------------------------------------------------------------------------- | ------------------------- |
 | Email Provider Sync PRD | Gmail, Outlook, IMAP adapters; dual-track parsing; email threading; email-specific triage | Planned — parent complete |
-| SMS/MMS PRD | Twilio/OpenPhone adapters; message sync; phone number resolution; MMS media | Planned |
-| Voice/VoIP PRD | Call recording integration; transcription pipeline; provider adapters | Planned |
-| Video Meetings PRD | Zoom/Teams/Meet integration; transcript capture; recording management | Planned |
+| SMS/MMS PRD             | Twilio/OpenPhone adapters; message sync; phone number resolution; MMS media               | Planned                   |
+| Voice/VoIP PRD          | Call recording integration; transcription pipeline; provider adapters                     | Planned                   |
+| Video Meetings PRD      | Zoom/Teams/Meet integration; transcript capture; recording management                     | Planned                   |
 
 ---
 
@@ -209,16 +225,16 @@ Document version history is managed by Git. Previous versions of any document ca
 
 **Decomposed documents:** The Contact entity is fully decomposed per methodology V2:
 
-| Document | File | Version | Description |
-|---|---|---|---|
-| Contact Entity Base PRD | `contact-entity-base-prd.md` | 9.0 | Entity definition, field registry with Editable/Sortable/Filterable metadata, relationships, lifecycle, Key Processes, action catalog |
-| Contact Entity TDD | `contact-entity-tdd.md` | 1.0 | Read model, identifier model, employment history, display name, status transitions, phone normalization. Living document with Claude Code placeholder section. |
-| Identity Resolution Sub-PRD | `contact-identity-resolution-prd.md` | 2.0 | Multi-identifier matching, confidence scoring, Key Processes |
-| Merge & Split Sub-PRD | `contact-merge-split-prd.md` | 2.0 | Contact merge/split workflows, audit trails, Key Processes |
-| Import & Export Sub-PRD | `contact-import-export-prd.md` | 2.0 | CSV import, Google Contacts sync, export formats, Key Processes |
-| Enrichment Sub-PRD | `contact-enrichment-prd.md` | 2.0 | Apollo/Clearbit/PDL adapters, enrichment pipeline, Key Processes |
-| AI Intelligence Sub-PRD | `contact-ai-intelligence-prd.md` | 2.0 | AI briefings, tag suggestions, NL search, Key Processes |
-| Relationship Intelligence Sub-PRD | `contact-relationship-intelligence-prd.md` | 2.0 | Neo4j graph, relationship scoring, influence mapping, Key Processes |
+| Document                          | File                                       | Version | Description                                                                                                                                                    |
+| --------------------------------- | ------------------------------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contact Entity Base PRD           | `contact-entity-base-prd.md`               | 9.0     | Entity definition, field registry with Editable/Sortable/Filterable metadata, relationships, lifecycle, Key Processes, action catalog                          |
+| Contact Entity TDD                | `contact-entity-tdd.md`                    | 1.0     | Read model, identifier model, employment history, display name, status transitions, phone normalization. Living document with Claude Code placeholder section. |
+| Identity Resolution Sub-PRD       | `contact-identity-resolution-prd.md`       | 2.0     | Multi-identifier matching, confidence scoring, Key Processes                                                                                                   |
+| Merge & Split Sub-PRD             | `contact-merge-split-prd.md`               | 2.0     | Contact merge/split workflows, audit trails, Key Processes                                                                                                     |
+| Import & Export Sub-PRD           | `contact-import-export-prd.md`             | 2.0     | CSV import, Google Contacts sync, export formats, Key Processes                                                                                                |
+| Enrichment Sub-PRD                | `contact-enrichment-prd.md`                | 2.0     | Apollo/Clearbit/PDL adapters, enrichment pipeline, Key Processes                                                                                               |
+| AI Intelligence Sub-PRD           | `contact-ai-intelligence-prd.md`           | 2.0     | AI briefings, tag suggestions, NL search, Key Processes                                                                                                        |
+| Relationship Intelligence Sub-PRD | `contact-relationship-intelligence-prd.md` | 2.0     | Neo4j graph, relationship scoring, influence mapping, Key Processes                                                                                            |
 
 **Key sections (monolithic PRD):**
 
@@ -265,16 +281,16 @@ Document version history is managed by Git. Previous versions of any document ca
 
 **Decomposed documents:** The Company entity is fully decomposed per methodology V2:
 
-| Document | File | Description |
-|---|---|---|
-| Company Entity Base PRD | `company-entity-base-prd.md` | Entity definition, field registry (with Editable/Sortable/Filterable metadata), relationships, lifecycle, Key Processes, Action Catalog |
-| Company Entity TDD | `company-entity-tdd.md` | Read model table DDL, identifiers model, shared tables (addresses, phones, emails), asset storage, event sourcing, Neo4j graph sync, score storage |
-| Domain Resolution Sub-PRD | `company-domain-resolution-prd.md` | Domain extraction, normalization, public domain exclusion, auto-creation, contact linking, identifier management |
-| Merge Sub-PRD | `company-merge-prd.md` | Domain-based duplicate detection, merge preview, merge execution, entity reassignment, audit trail, split (undo) |
-| Hierarchy Sub-PRD | `company-hierarchy-prd.md` | Parent/subsidiary/division/acquisition/spinoff relationships, Relation Type definition, temporal tracking, communication separation |
-| Enrichment Sub-PRD | `company-enrichment-prd.md` | Three-tier source architecture (website scraper, Wikidata, paid APIs), provider interface, triggers, run tracking, confidence/conflict resolution, overwrite guard |
-| Intelligence & Scoring Sub-PRD | `company-intelligence-prd.md` | Five-factor relationship strength scoring, time decay, factor transparency, derived metrics, intelligence views |
-| Social Profiles Sub-PRD | `company-social-profiles-prd.md` | Social media tracking (LinkedIn, Twitter, Facebook, GitHub, Instagram), monitoring tiers, change detection |
+| Document                       | File                               | Description                                                                                                                                                        |
+| ------------------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Company Entity Base PRD        | `company-entity-base-prd.md`       | Entity definition, field registry (with Editable/Sortable/Filterable metadata), relationships, lifecycle, Key Processes, Action Catalog                            |
+| Company Entity TDD             | `company-entity-tdd.md`            | Read model table DDL, identifiers model, shared tables (addresses, phones, emails), asset storage, event sourcing, Neo4j graph sync, score storage                 |
+| Domain Resolution Sub-PRD      | `company-domain-resolution-prd.md` | Domain extraction, normalization, public domain exclusion, auto-creation, contact linking, identifier management                                                   |
+| Merge Sub-PRD                  | `company-merge-prd.md`             | Domain-based duplicate detection, merge preview, merge execution, entity reassignment, audit trail, split (undo)                                                   |
+| Hierarchy Sub-PRD              | `company-hierarchy-prd.md`         | Parent/subsidiary/division/acquisition/spinoff relationships, Relation Type definition, temporal tracking, communication separation                                |
+| Enrichment Sub-PRD             | `company-enrichment-prd.md`        | Three-tier source architecture (website scraper, Wikidata, paid APIs), provider interface, triggers, run tracking, confidence/conflict resolution, overwrite guard |
+| Intelligence & Scoring Sub-PRD | `company-intelligence-prd.md`      | Five-factor relationship strength scoring, time decay, factor transparency, derived metrics, intelligence views                                                    |
+| Social Profiles Sub-PRD        | `company-social-profiles-prd.md`   | Social media tracking (LinkedIn, Twitter, Facebook, GitHub, Instagram), monitoring tiers, change detection                                                         |
 
 ---
 
@@ -682,22 +698,22 @@ Document version history is managed by Git. Previous versions of any document ca
 
 ## System Object Type Registry
 
-| Object Type | Prefix | Slug | Defined In | Behaviors |
-|---|---|---|---|---|
-| Contact | `con_` | `contacts` | Contact Management PRD | Identity resolution, auto-enrichment, engagement scoring, intelligence scoring |
-| Company | `cmp_` | `companies` | Company Management PRD | Firmographic enrichment, domain resolution |
-| Conversation | `cvr_` | `conversations` | Conversations PRD V3 | AI status detection, summarization, action item extraction. Aggregate roll-up (when `is_aggregate = true`). |
-| Communication | `com_` | `communications` | Communications PRD | Channel-specific parsing, triage classification, participant resolution, segmentation |
-| Project | `prj_` | `projects` | Projects PRD | Entity aggregation |
-| ~~Topic~~ | ~~`top_`~~ | ~~`topics`~~ | ~~Conversations PRD~~ | **Removed in V3** — replaced by aggregate Conversations (`is_aggregate = true` on `cvr_` entity) |
-| Event | `evt_` | `events` | Event Management PRD | Attendee resolution, birthday auto-generation, recurrence defaulting |
-| Note | `not_` | `notes` | Notes PRD | Revision management, FTS sync, mention extraction, orphan attachment cleanup |
-| Task | `tsk_` | `tasks` | Tasks PRD | Status category enforcement, subtask cascade (warn), subtask count sync, recurrence generation, AI action-item extraction, due date reminders, overdue detection |
-| Document | `doc_` | `documents` | Documents PRD | Thumbnail generation, metadata extraction, text extraction, duplicate detection, FTS sync, visibility cascade, orphan cleanup |
-| Data Source | `dts_` | `data_sources` | Data Sources PRD | — |
-| View | `viw_` | `views` | Views & Grid PRD | — |
-| User | `usr_` | `users` | Permissions & Sharing PRD | — |
-| Segment | `seg_` | `segments` | Contact Management PRD | — |
+| Object Type   | Prefix     | Slug             | Defined In                | Behaviors                                                                                                                                                        |
+| ------------- | ---------- | ---------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contact       | `con_`     | `contacts`       | Contact Management PRD    | Identity resolution, auto-enrichment, engagement scoring, intelligence scoring                                                                                   |
+| Company       | `cmp_`     | `companies`      | Company Management PRD    | Firmographic enrichment, domain resolution                                                                                                                       |
+| Conversation  | `cvr_`     | `conversations`  | Conversations PRD V3      | AI status detection, summarization, action item extraction. Aggregate roll-up (when `is_aggregate = true`).                                                      |
+| Communication | `com_`     | `communications` | Communications PRD        | Channel-specific parsing, triage classification, participant resolution, segmentation                                                                            |
+| Project       | `prj_`     | `projects`       | Projects PRD              | Entity aggregation                                                                                                                                               |
+| ~~Topic~~     | ~~`top_`~~ | ~~`topics`~~     | ~~Conversations PRD~~     | **Removed in V3** — replaced by aggregate Conversations (`is_aggregate = true` on `cvr_` entity)                                                                 |
+| Event         | `evt_`     | `events`         | Event Management PRD      | Attendee resolution, birthday auto-generation, recurrence defaulting                                                                                             |
+| Note          | `not_`     | `notes`          | Notes PRD                 | Revision management, FTS sync, mention extraction, orphan attachment cleanup                                                                                     |
+| Task          | `tsk_`     | `tasks`          | Tasks PRD                 | Status category enforcement, subtask cascade (warn), subtask count sync, recurrence generation, AI action-item extraction, due date reminders, overdue detection |
+| Document      | `doc_`     | `documents`      | Documents PRD             | Thumbnail generation, metadata extraction, text extraction, duplicate detection, FTS sync, visibility cascade, orphan cleanup                                    |
+| Data Source   | `dts_`     | `data_sources`   | Data Sources PRD          | —                                                                                                                                                                |
+| View          | `viw_`     | `views`          | Views & Grid PRD          | —                                                                                                                                                                |
+| User          | `usr_`     | `users`          | Permissions & Sharing PRD | —                                                                                                                                                                |
+| Segment       | `seg_`     | `segments`       | Contact Management PRD    | —                                                                                                                                                                |
 
 ---
 
@@ -769,44 +785,44 @@ Cross-cutting PRDs:
 
 ### Resolved Items
 
-| Item | PRDs Involved | Resolution |
-|---|---|---|
-| **Prefixed entity IDs** | Data Sources, Custom Objects, all entity PRDs | Resolved by Custom Objects PRD Section 6.2–6.3. All entity types use `{prefix}_{ULID}` format. |
-| **Event sourcing read model** | Data Sources, Custom Objects, all entity PRDs | Resolved by Custom Objects PRD. Section 17 establishes dedicated typed tables. Section 19 establishes per-entity-type event tables. |
-| **Custom entity storage** | Data Sources, Custom Objects | Resolved by Custom Objects PRD. Dedicated typed tables with DDL-at-runtime (Section 17–18). |
-| **Virtual schema composition** | Data Sources, Custom Objects | Resolved by Custom Objects PRD. Virtual schema tables = object type slugs. Columns = field slugs. Trivial translation. |
-| **Communication decomposition** | Communications PRD, Conversations PRD | Resolved 2026-02-18. Monolithic `email-conversations-prd.md` decomposed into sibling Communications + Conversations PRDs with channel child PRDs under Communications. Updated 2026-02-19: Conversations PRD V3 eliminated Topic entity, extracted Projects PRD. |
-| **Notes vs. Communications boundary** | Communications PRD, Notes PRD | Resolved in Communications PRD Section 6.3. Communications are interaction records; Notes are supplementary commentary. Manual logged interactions are Communications. |
-| **Conversation participants** | Conversations PRD, Communications PRD | Resolved in Conversations PRD Section 5.5. Derived from Communication Participants (primarily derived, supplemented by explicit Conversation→Contact relation). |
+| Item                                  | PRDs Involved                                 | Resolution                                                                                                                                                                                                                                                       |
+| ------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Prefixed entity IDs**               | Data Sources, Custom Objects, all entity PRDs | Resolved by Custom Objects PRD Section 6.2–6.3. All entity types use `{prefix}_{ULID}` format.                                                                                                                                                                   |
+| **Event sourcing read model**         | Data Sources, Custom Objects, all entity PRDs | Resolved by Custom Objects PRD. Section 17 establishes dedicated typed tables. Section 19 establishes per-entity-type event tables.                                                                                                                              |
+| **Custom entity storage**             | Data Sources, Custom Objects                  | Resolved by Custom Objects PRD. Dedicated typed tables with DDL-at-runtime (Section 17–18).                                                                                                                                                                      |
+| **Virtual schema composition**        | Data Sources, Custom Objects                  | Resolved by Custom Objects PRD. Virtual schema tables = object type slugs. Columns = field slugs. Trivial translation.                                                                                                                                           |
+| **Communication decomposition**       | Communications PRD, Conversations PRD         | Resolved 2026-02-18. Monolithic `email-conversations-prd.md` decomposed into sibling Communications + Conversations PRDs with channel child PRDs under Communications. Updated 2026-02-19: Conversations PRD V3 eliminated Topic entity, extracted Projects PRD. |
+| **Notes vs. Communications boundary** | Communications PRD, Notes PRD                 | Resolved in Communications PRD Section 6.3. Communications are interaction records; Notes are supplementary commentary. Manual logged interactions are Communications.                                                                                           |
+| **Conversation participants**         | Conversations PRD, Communications PRD         | Resolved in Conversations PRD Section 5.5. Derived from Communication Participants (primarily derived, supplemented by explicit Conversation→Contact relation).                                                                                                  |
 
 ### Completed Reconciliation (PRD updates made)
 
-| Item | PRDs Updated | Completed | Notes |
-|---|---|---|---|
-| Contact Management `custom_fields` removal | Contact Management V3 | 2026-02-17 | Custom fields via unified field registry |
-| Contact entity ID migration to `con_` | Contact Management V2 | 2026-02-17 | Prefixed ULIDs adopted |
-| Employment history → Relation Type | Contact Management V3 | 2026-02-17 | Junction table with temporal metadata |
-| `contacts_current` → object type table | Contact Management V3 | 2026-02-17 | `contacts` read model managed by framework |
-| Events → system object type | Events V2 | 2026-02-17 | Full rewrite from PoC SQLite |
-| Notes → system object type | Notes V2 | 2026-02-17 | Universal Attachment Relation pattern |
-| Communication entities → system object types | Communications V1, Conversations V1 | 2026-02-18 | Full decomposition + Custom Objects reconciliation |
-| Task → system object type | Tasks V1 | 2026-02-18 | Universal Attachment pattern (reuses Notes), status categories, 7 behaviors |
-| Document -> system object type | Documents V1 | 2026-02-18 | Universal Attachment pattern, hash-based version control, folder model, 7 behaviors. Defines cross-PRD reconciliation for Communications (attachment migration) and Company Management (entity_assets migration). |
-| GUI terminology standardization | GUI V2, AGI V2, Views V5, Custom Objects V2, Contact Mgmt V5, all entity PRDs | 2026-02-21–22 | Full ecosystem alignment: Workspace Layout, Entity Bar, Detail Panel, Card-Based Architecture (Identity Card, Attribute Cards, Relation Cards, Activity Card), Content Tool Bar, Application Tool Bar. Master Glossary V3 cross-referenced from all PRD glossaries. Mojibake encoding corruption cleaned from all files. |
+| Item                                         | PRDs Updated                                                                  | Completed     | Notes                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------------------- | ----------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Contact Management `custom_fields` removal   | Contact Management V3                                                         | 2026-02-17    | Custom fields via unified field registry                                                                                                                                                                                                                                                                                 |
+| Contact entity ID migration to `con_`        | Contact Management V2                                                         | 2026-02-17    | Prefixed ULIDs adopted                                                                                                                                                                                                                                                                                                   |
+| Employment history → Relation Type           | Contact Management V3                                                         | 2026-02-17    | Junction table with temporal metadata                                                                                                                                                                                                                                                                                    |
+| `contacts_current` → object type table       | Contact Management V3                                                         | 2026-02-17    | `contacts` read model managed by framework                                                                                                                                                                                                                                                                               |
+| Events → system object type                  | Events V2                                                                     | 2026-02-17    | Full rewrite from PoC SQLite                                                                                                                                                                                                                                                                                             |
+| Notes → system object type                   | Notes V2                                                                      | 2026-02-17    | Universal Attachment Relation pattern                                                                                                                                                                                                                                                                                    |
+| Communication entities → system object types | Communications V1, Conversations V1                                           | 2026-02-18    | Full decomposition + Custom Objects reconciliation                                                                                                                                                                                                                                                                       |
+| Task → system object type                    | Tasks V1                                                                      | 2026-02-18    | Universal Attachment pattern (reuses Notes), status categories, 7 behaviors                                                                                                                                                                                                                                              |
+| Document -> system object type               | Documents V1                                                                  | 2026-02-18    | Universal Attachment pattern, hash-based version control, folder model, 7 behaviors. Defines cross-PRD reconciliation for Communications (attachment migration) and Company Management (entity_assets migration).                                                                                                        |
+| GUI terminology standardization              | GUI V2, AGI V2, Views V5, Custom Objects V2, Contact Mgmt V5, all entity PRDs | 2026-02-21–22 | Full ecosystem alignment: Workspace Layout, Entity Bar, Detail Panel, Card-Based Architecture (Identity Card, Attribute Cards, Relation Cards, Activity Card), Content Tool Bar, Application Tool Bar. Master Glossary V3 cross-referenced from all PRD glossaries. Mojibake encoding corruption cleaned from all files. |
 
 ### Queued Reconciliation (requires PRD updates)
 
-| Item | PRDs Involved | Status | Details |
-|---|---|---|---|
-| **Company Management decomposition** | Company Mgmt, Custom Objects | **Completed** | Company PRD decomposed into Entity Base PRD + 6 Sub-PRDs + TDD. Aligned with Custom Objects framework (prefixed ULIDs, field registry, relation types, event sourcing). V2 methodology applied. |
-| **Communications attachment migration** | Communications, Documents | **Queued** | Communications PRD Section 12 (`communication_attachments`) superseded by Documents PRD `communication_documents` relation. Needs Communications V3 update. Phase 3 of Documents roadmap. |
-| **Company Management entity_assets migration** | Company Mgmt, Documents | **Addressed** | Company Entity TDD documents content-addressable asset storage (Section 5). Documents PRD migration path deferred to Documents PRD roadmap Phase 3. |
-| **Custom Objects PRD Topic removal** | Custom Objects, Conversations V3 | **Queued** | Custom Objects PRD still references `top_` prefix for Topic system object type. Topic needs to be removed from the system object type registry and cross-PRD reconciliation notes. |
+| Item                                                 | PRDs Involved                    | Status     | Details                                                                                                                                                                                                                                  |
+| ---------------------------------------------------- | -------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Company Management Custom Objects reconciliation** | Company Mgmt, Custom Objects     | **Queued** | Company PRD needs V2 rewrite to align with Custom Objects (prefixed ULIDs, field registry, relation types, event sourcing). Similar scope to Events V2 rewrite. Terminology standardization complete; structural reconciliation remains. |
+| **Communications attachment migration**              | Communications, Documents        | **Queued** | Communications PRD Section 12 (`communication_attachments`) superseded by Documents PRD `communication_documents` relation. Needs Communications V3 update. Phase 3 of Documents roadmap.                                                |
+| **Company Management entity_assets migration**       | Company Mgmt, Documents          | **Queued** | Company Management PRD `entity_assets` table superseded by Documents PRD. Profile assets (logos, headshots, banners) become Document entities. Needs Company Mgmt V2 update. Phase 3 of Documents roadmap.                               |
+| **Custom Objects PRD Topic removal**                 | Custom Objects, Conversations V3 | **Queued** | Custom Objects PRD still references `top_` prefix for Topic system object type. Topic needs to be removed from the system object type registry and cross-PRD reconciliation notes.                                                       |
 
 ### Open Items
 
-| Item | PRDs Involved | Status | Notes |
-|---|---|---|---|
+| Item                       | PRDs Involved                      | Status                  | Notes                                                                                                                                                                                         |
+| -------------------------- | ---------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Alert system ownership** | Conversations, Views, Data Sources | **Needs clarification** | Conversations PRD defines alerts. Views PRD defines view-to-alert promotion. Data Sources PRD defines queries that alerts execute. The alert execution engine's home PRD should be clarified. |
 
 ---

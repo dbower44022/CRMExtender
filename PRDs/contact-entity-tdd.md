@@ -34,6 +34,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** The contact list view is the most frequently accessed screen in the application. Every row needs name, email, company, and title. Without denormalization, each row requires JOINs to `contact_identifiers`, `contacts__companies_employment`, and `companies`. At 515+ contacts, this is tolerable; at 10,000+, it degrades the list view.
 
 **Sync rules:**
+
 - `email_primary` — Synced from `contact_identifiers` where `type='email'`, `is_primary=true`. Fallback: earliest active email by `created_at ASC`.
 - `phone_primary` — Synced from `contact_identifiers` where `type='phone'`, `is_primary=true`. Fallback: earliest active phone.
 - `job_title` and `company_id` — Synced from the most recent `contacts__companies_employment` record where `is_current=true`.
@@ -48,6 +49,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** The PRD requires these fields to be sortable. Sorting by a correlated subquery evaluates the subquery for every row in the result set before sorting — with 515 contacts, that's 515 subquery executions per sort. The views engine's `_build_order_by()` puts the field's SQL expression directly in the ORDER BY clause, so the only way to make subquery-backed sorts performant is to denormalize the value into a direct column.
 
 **Implementation:**
+
 - `email_primary` — Already denormalized (see 2.2). The views engine registry should use this column directly rather than a correlated subquery for sort operations.
 - `engagement_score` — Stored as `REAL DEFAULT 0.0` on the contacts table. Updated by the daily engagement score computation job. Not updated on every event — the job processes communication events from the last 24 hours and recalculates affected contacts.
 - `intelligence_score` — Stored as `REAL DEFAULT 0.0` on the contacts table. Updated on enrichment completion, merge completion, and by a daily scheduled job.
@@ -67,6 +69,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Uniqueness constraint:** `UNIQUE(type, value)` — No two contacts can claim the same identifier value within the same type. If a conflict is detected during creation or import, the identity resolution pipeline is triggered.
 
 **Resolution query pattern:**
+
 ```sql
 SELECT contact_id, confidence, status
 FROM contact_identifiers
@@ -102,6 +105,7 @@ This single query works for email addresses, phone numbers, LinkedIn URLs, or an
 **Rationale:** The contact list view and detail page header need title and company without JOINing to the employment table every time. The employment table remains the source of truth; the denormalized fields are synced by event handlers.
 
 **Edge cases:**
+
 - If a contact has no current employment, `job_title`, `company_id`, and `company_name` are NULL.
 - If a contact has multiple current employments, the most recently started one populates the denormalized fields.
 - When an employment record is ended (no longer current), the denormalized fields re-derive from the remaining current records.
@@ -117,6 +121,7 @@ This single query works for email addresses, phone numbers, LinkedIn URLs, or an
 **Rationale:** Emails, phones, and addresses have identical structure regardless of which entity owns them. Separate tables per entity type (contact_emails, company_emails) would duplicate schema and query logic. The polymorphic approach allows a single set of CRUD operations and UI components.
 
 **Alternatives Rejected:**
+
 - Separate per-entity tables — Cleaner FKs but doubles the table count and maintenance burden for no functional benefit.
 - Storing directly on the entity — Doesn't support multi-valued fields (a contact has multiple emails).
 
@@ -143,6 +148,7 @@ This single query works for email addresses, phone numbers, LinkedIn URLs, or an
 **Decision:** Contact status transitions are enforced at the application level, not by database constraints. The valid transitions are defined in the Entity Base PRD (Section 3.2) and the application layer validates transitions before applying them.
 
 **Valid transitions:**
+
 - `incomplete` → `active` (enrichment or manual edit provides sufficient data)
 - `active` → `archived` (user archives)
 - `active` → `merged` (merge operation absorbs this contact)

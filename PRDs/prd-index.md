@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 13.0
+**Version:** 14.0
 **Last Updated:** 2026-02-23
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V14.0 (2026-02-23):** Decomposed Documents PRD (1,331 lines) into Document Entity Base PRD + 3 Action Sub-PRDs (Upload/Versioning/Storage, Content Processing Pipeline, Communication & Profile Asset Integration) + Document Entity TDD. Follows V2 methodology. Monolithic documents-prd.md retained as superseded reference.
 
 > **V13.0 (2026-02-23):** Decomposed Conversations PRD (1,171 lines) into Conversation Entity Base PRD + 3 Action Sub-PRDs (Formation & Stitching, AI Intelligence & Review, Views & Alerts) + Conversation Entity TDD. Follows V2 methodology. Monolithic conversations-prd.md retained as superseded reference.
 
@@ -65,7 +67,12 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | Event Management | 3.0 | `events-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Notes | 3.0 | `notes-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Tasks | 2.0 | `tasks-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Documents | 2.0 | `documents-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+| Documents | 2.0 | `documents-prd.md` | Superseded — decomposed into Entity Base + 3 Sub-PRDs + TDD | 2026-02-23 |
+| └ Document Entity Base | 1.0 | `document-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
+| &nbsp;&nbsp;└ Document Entity TDD | 1.0 | `document-entity-tdd.md` | Draft — Living document, 11 sections | 2026-02-23 |
+| └ Upload, Versioning & Storage | 1.0 | `document-upload-storage-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Content Processing Pipeline | 1.0 | `document-content-processing-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Communication & Asset Integration | 1.0 | `document-integration-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Projects | 3.0 | `projects-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Outbound Email | 2.0 | `outbound-email-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Views & Grid | 5.0 | `views-grid-prd.md` | Draft — Terminology standardized | 2026-02-22 |
@@ -90,7 +97,7 @@ Document version history is managed by Git. Previous versions of any document ca
 - 2026-02-19: Topic entity eliminated; Projects PRD extracted from Conversations PRD
 - 2026-02-21: GUI terminology standardization (V2); Adaptive Grid Intelligence terminology alignment
 - 2026-02-22: Full ecosystem terminology alignment across all PRDs; Custom Objects V2; mojibake cleanup
-- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
+- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
 
 ---
 
@@ -346,47 +353,20 @@ Document version history is managed by Git. Previous versions of any document ca
 
 ### 9. Documents
 
-**File:** `documents-prd.md`
+**File:** `documents-prd.md` (superseded — retained as historical reference)
 **Scope:** Document as a system object type for version-controlled file management with folder organization, metadata extraction, full-text search, and universal entity attachment. Unifies communication attachments, profile assets, and user-uploaded files into a single entity model.
 
-**Key sections:**
+> **Note:** The monolithic Documents PRD (1,331 lines) has been decomposed into an Entity Base PRD, Entity TDD, and three Action Sub-PRDs following the V2 methodology. The original file is retained for reference; all active development should use the decomposed documents.
 
-- Document as system object type (`doc_` prefix, full field registry with extracted metadata fields)
-- Universal Attachment Relation (reuses Notes pattern -- documents and folders attach to any entity type)
-- Folders as Document entities (`is_folder = true`, many-to-many folder membership, nested hierarchy)
-- Hash-based version control (SHA-256, automatic on re-upload with different hash, named versions)
-- Content-addressable storage (SHA-256 dedup, progressive hashing, reference counting, `document_blobs` table)
-- Duplicate detection (progressive hashing: quick hash on first+last 64KB, full hash only if candidates found)
-- Metadata extraction behavior (PDF, Office, images/EXIF, video, audio -- auto-populates fields)
-- Text extraction and full-text search (PostgreSQL `tsvector`/`tsquery`, three-tier weighting: name > description > content)
-- Thumbnail generation behavior (images, PDFs, video -- stored in system `_thumbnails` folder)
-- Document visibility model (private by default, folder visibility cascade)
-- Communication attachment integration (`communication_documents` relation with version tracking, replaces `communication_attachments`)
-- Profile asset integration (logos, headshots, banners as Document entities, replaces `entity_assets`)
-- Upload/download (chunked uploads for large files, no size/type restrictions except dangerous file blocklist)
-- Event sourcing (`documents_events`)
-- 4-phase roadmap (core -> folders/search/metadata -> integration/migration -> cloud/graph/advanced)
+**Decomposed documents:**
 
-**Key decisions made:**
-
-- **System object type** -- 7 registered behaviors require system entity status
-- **Folders as entities** -- `is_folder = true` flag on Document, not a separate table. Enables folders in Universal Attachment, Views, event sourcing
-- **Many-to-many folder membership** -- documents can exist in multiple folders simultaneously (links, not containment)
-- **Hash-based version control** -- automatic, deterministic, no user decision required. Same-hash upload is a no-op
-- **Content-addressable storage** -- SHA-256 hash as blob identity. Automatic deduplication across documents and tenants
-- **Progressive hashing** -- quick hash eliminates most non-duplicates; full hash only when candidates found
-- **Private by default** -- matches Notes visibility model. Folder cascade is a Documents-specific extension
-- **Folder visibility cascade** -- shared folder makes contents accessible regardless of individual document visibility
-- **No size/type restrictions** -- blocklist for dangerous executables only. Chunked uploads for large files
-- **Communication attachments become Documents** -- replaces `communication_attachments` with `communication_documents` (includes version_id for precise tracking)
-- **Profile assets become Documents** -- replaces `entity_assets` with Document entities. Adds version control to logos/headshots
-- **Note attachments unchanged** -- pasted images are part of note content, not standalone documents
-- **Thumbnails as Document entities** -- stored in system `_thumbnails` folder, reuses same storage infrastructure
-- **No OCR** -- text extraction from embedded text only. OCR deferred to future phase
-
-**Open questions:** 8 (folder membership event volume, file type changes between versions, max folder count per document, global search federation, email body indexing scope, storage quotas, download/view audit logging, thumbnail lifecycle)
-
-**Reconciliation status:** Fully reconciled with Custom Objects PRD as of V1. Defines cross-PRD reconciliation items for Communications PRD (Section 12 superseded) and Company Management PRD (`entity_assets` deprecated).
+| Document | File | Description |
+|---|---|---|
+| Document Entity Base PRD | `document-entity-base-prd.md` | Entity definition, field registry (with Editable/Sortable/Filterable metadata), Universal Attachment Relation, folder model (folders as entities, membership, nesting, system folders), visibility (private default, folder cascade), Key Processes, Action Catalog |
+| Document Entity TDD | `document-entity-tdd.md` | Read model DDL (with FTS tsvector), document_versions, document_blobs, document_entities junction, document_folder_members junction, communication_documents relation, event sourcing (15 event types), virtual schema, API design (7 groups) |
+| Upload, Versioning & Storage Sub-PRD | `document-upload-storage-prd.md` | Upload/download flow, hash-based version control, content-addressable storage (CAS layout, StorageBackend, reference counting), progressive hashing & duplicate detection, chunked uploads, dangerous file blocklist, preview |
+| Content Processing Pipeline Sub-PRD | `document-content-processing-prd.md` | Metadata extraction (PDF, Office, images, video, audio), text extraction for FTS, PostgreSQL tsvector with three-tier weighting, search with ranked results and snippets, thumbnail generation and serving |
+| Communication & Asset Integration Sub-PRD | `document-integration-prd.md` | Email attachment promotion to Documents during sync, communication_documents version tracking, profile asset migration from entity_assets, cross-PRD reconciliation |
 
 ---
 
@@ -855,7 +835,12 @@ PRDs/
 ├── events-prd.md
 ├── notes-prd.md
 ├── tasks-prd.md
-├── documents-prd.md
+├── documents-prd.md                          # Documents (monolithic, superseded)
+├── document-entity-base-prd.md               # Document entity definition
+├── document-entity-tdd.md                    # Document technical decisions
+├── document-upload-storage-prd.md            # Upload, versioning & storage sub-PRD
+├── document-content-processing-prd.md        # Content processing pipeline sub-PRD
+├── document-integration-prd.md               # Communication & asset integration sub-PRD
 ├── projects-prd.md
 ├── outbound-email-prd.md
 ├── views-grid-prd.md

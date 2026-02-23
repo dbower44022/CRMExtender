@@ -8,7 +8,7 @@
 **Parent Document:** [CRMExtender PRD v1.1](PRD.md)
 
 > **V1.2 (2026-02-20):**
-> Added cross-references to the new [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd_V2.md) in the Column System section (Section 8.3, 8.4), Field Type Registry (Section 9.1), and Dependencies (Section 21). Updated Open Question #5 (conditional formatting). No behavioral changes — this revision adds references only.
+> Added cross-references to the new [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd.md) in the Column System section (Section 8.3, 8.4), Field Type Registry (Section 9.1), and Dependencies (Section 21). Updated Open Question #5 (conditional formatting). No behavioral changes — this revision adds references only.
 > 
 > **V1.3 (2026-02-21):**
 > Terminology alignment with Master Glossary V3 and GUI Functional Requirements PRD V2. Capitalized "Detail Panel" throughout for consistency with GUI PRD terminology. Updated Section 13.2 (Row Expansion) to reference Card-Based Architecture and Activity Card. Updated AGI PRD links to V2. Replaced "four-zone layout" with "Workspace Layout" in Dependencies. Added cross-reference to Master Glossary V3 in Section 23. No behavioral changes.
@@ -157,7 +157,7 @@ CRMExtender's view system combines Attio's object-model flexibility with ClickUp
 
 #### Data Sources
 
-> Data Source user stories (US-DS1 through US-DS15) are defined in the [Data Sources PRD, Section 4](data-sources-prd_V1.md#4-user-personas--stories).
+> Data Source user stories (US-DS1 through US-DS15) are defined in the [Data Sources PRD, Section 4](data-sources-prd.md#4-user-personas--stories).
 
 #### Column Management
 
@@ -333,7 +333,7 @@ Views (rendering configurations, each referencing a Data Source)
 
 ## 6. Data Sources
 
-> **This section is a summary.** The complete Data Source specification — including the definition model, visual query builder, raw SQL environment, column registry, entity detection & preview system, inline editing trace-back, query engine, caching & invalidation, schema evolution, API design, permissions, and examples — is defined in the **[Data Sources PRD](data-sources-prd_V1.md)**.
+> **This section is a summary.** The complete Data Source specification — including the definition model, visual query builder, raw SQL environment, column registry, entity detection & preview system, inline editing trace-back, query engine, caching & invalidation, schema evolution, API design, permissions, and examples — is defined in the **[Data Sources PRD](data-sources-prd.md)**.
 
 ### 6.1 Summary
 
@@ -364,7 +364,7 @@ The relationship is **many-to-one**: multiple views can reference the same data 
 
 ### 6.3 User Stories
 
-Data Source user stories (US-DS1 through US-DS15) are defined in the [Data Sources PRD, Section 4](data-sources-prd_V1.md#4-user-personas--stories).
+Data Source user stories (US-DS1 through US-DS15) are defined in the [Data Sources PRD, Section 4](data-sources-prd.md#4-user-personas--stories).
 
 ---
 
@@ -541,7 +541,7 @@ Each column in a view has the following user-configurable properties:
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
 | **Field mapping**  | Which field (or relation→field) this column displays                                                                                                                                                                                                                                                                                                                                                         | Set at column creation                                        |
 | **Position**       | Left-to-right order in the grid                                                                                                                                                                                                                                                                                                                                                                              | Append to end                                                 |
-| **Width**          | Pixel width of the column. When the [Adaptive Grid Intelligence](adaptive-grid-intelligence-prd_V2.md) system is active (`column_auto_sizing = true`), this value is computed by the content analysis engine based on actual data in the result set. The static defaults below serve as fallbacks when auto-sizing is disabled. User manual resize creates a proportional override (see AGI PRD Section 17). | Auto-sized based on field type (see below) or computed by AGI |
+| **Width**          | Pixel width of the column. When the [Adaptive Grid Intelligence](adaptive-grid-intelligence-prd.md) system is active (`column_auto_sizing = true`), this value is computed by the content analysis engine based on actual data in the result set. The static defaults below serve as fallbacks when auto-sizing is disabled. User manual resize creates a proportional override (see AGI PRD Section 17). | Auto-sized based on field type (see below) or computed by AGI |
 | **Pinned**         | Whether the column is pinned to the left and stays visible during horizontal scroll                                                                                                                                                                                                                                                                                                                          | First column pinned by default                                |
 | **Visible**        | Whether the column is rendered (allows hiding without removing)                                                                                                                                                                                                                                                                                                                                              | True                                                          |
 | **Sort direction** | If this column is part of the active sort: ASC, DESC, or none                                                                                                                                                                                                                                                                                                                                                | None                                                          |
@@ -566,7 +566,7 @@ Each column in a view has the following user-configurable properties:
 | Phone           | 160                | Formatted phone number         |
 | URL             | 200                | Truncated with hover           |
 
-> **Adaptive Grid Intelligence:** When the AGI system is active (default), the static widths above are superseded by content-aware column allocation that analyzes actual data values to determine optimal widths. The AGI system also provides content-aware cell alignment, value diversity analysis (automatic demotion of uniform columns), and format adaptation for constrained widths. See the [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd_V2.md) for complete specification.
+> **Adaptive Grid Intelligence:** When the AGI system is active (default), the static widths above are superseded by content-aware column allocation that analyzes actual data values to determine optimal widths. The AGI system also provides content-aware cell alignment, value diversity analysis (automatic demotion of uniform columns), and format adaptation for constrained widths. See the [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd.md) for complete specification.
 
 ### 8.4 Column Operations
 
@@ -575,7 +575,7 @@ Each column in a view has the following user-configurable properties:
 | **Add column**    | Opens a field picker showing all available fields (direct + relation traversal). Adds the column to the rightmost position.                                                                                                                                                                                                           |
 | **Remove column** | Removes the column from the view. Does not delete the field from the entity.                                                                                                                                                                                                                                                          |
 | **Reorder**       | Drag-and-drop column headers to change position.                                                                                                                                                                                                                                                                                      |
-| **Resize**        | Drag the right edge of a column header to adjust width. Double-click to auto-fit content (when AGI is active, uses content analysis P90 width — see [AGI PRD Section 10](adaptive-grid-intelligence-prd_V2.md#10-intelligent-column-width-allocation)). Manual resize creates a proportional override for future auto-configurations. |
+| **Resize**        | Drag the right edge of a column header to adjust width. Double-click to auto-fit content (when AGI is active, uses content analysis P90 width — see [AGI PRD Section 10](adaptive-grid-intelligence-prd.md#10-intelligent-column-width-allocation)). Manual resize creates a proportional override for future auto-configurations. |
 | **Pin/Unpin**     | Toggle column pinning via column header context menu. Pinned columns move to the leftmost positions.                                                                                                                                                                                                                                  |
 | **Hide/Show**     | Toggle visibility without removing the column from the view configuration.                                                                                                                                                                                                                                                            |
 | **Sort**          | Click column header to toggle sort (none → ASC → DESC → none). Shift+click to add as secondary sort.                                                                                                                                                                                                                                  |
@@ -587,7 +587,7 @@ Each column in a view has the following user-configurable properties:
 
 The view system renders columns, filters, and editors based on field types. Each field type defines its display renderer, edit widget, and applicable filter operators. The field types themselves are defined by the Custom Objects PRD — this section specifies how the view system handles each type.
 
-> **Adaptive Grid Intelligence:** When the [AGI system](adaptive-grid-intelligence-prd_V2.md) is active, display renderers support **format adaptation** — producing compressed output when column width is constrained (e.g., dates as "2/15/26" instead of "Feb 15, 2026"). Cell alignment is also determined dynamically by content rather than statically by field type. See [AGI PRD Sections 10.5](adaptive-grid-intelligence-prd_V2.md#105-content-driven-format-adaptation) and [11](adaptive-grid-intelligence-prd_V2.md#11-content-aware-cell-alignment).
+> **Adaptive Grid Intelligence:** When the [AGI system](adaptive-grid-intelligence-prd.md) is active, display renderers support **format adaptation** — producing compressed output when column width is constrained (e.g., dates as "2/15/26" instead of "Feb 15, 2026"). Cell alignment is also determined dynamically by content rather than statically by field type. See [AGI PRD Sections 10.5](adaptive-grid-intelligence-prd.md#105-content-driven-format-adaptation) and [11](adaptive-grid-intelligence-prd.md#11-content-aware-cell-alignment).
 
 ### 9.1 Field Types and View Behavior
 
@@ -951,7 +951,7 @@ When a user needs to see more information than the grid columns show, they can e
 
 ### 13.3 Row Focus, Row Selection & Bulk Actions
 
-This section defines the grid-specific implementation of the **Focus vs. Selection two-layer model**. The [GUI Functional Requirements PRD](gui-functional-requirements-prd_V4.md) Section 7.3 defines the shell-level contracts (how the Detail Panel responds to focus changes, how the Content Tool Bar responds to selection count changes, and the four visual record states). This section defines how user interactions within the grid produce focus and selection changes.
+This section defines the grid-specific implementation of the **Focus vs. Selection two-layer model**. The [GUI Functional Requirements PRD](gui-functional-requirements-prd.md) Section 7.3 defines the shell-level contracts (how the Detail Panel responds to focus changes, how the Content Tool Bar responds to selection count changes, and the four visual record states). This section defines how user interactions within the grid produce focus and selection changes.
 
 #### Row Focus (Detail Panel follows focus)
 
@@ -1100,7 +1100,7 @@ Right-clicking a column header (or clicking a dropdown chevron on the header) di
 | *(separator)*             |                                                                                                                                                                                                     |
 | **Pin Column**            | Pin this column to the left edge of the grid (or Unpin if already pinned). Pinned columns remain visible during horizontal scrolling.                                                               |
 | **Hide Column**           | Hide this column from the grid. The column remains in the view configuration and can be restored via the Columns button in the Content Tool Bar.                                                    |
-| **Auto-Fit Width**        | Resize the column to fit its content (when AGI is active, uses content analysis P90 width — see [AGI PRD Section 10](adaptive-grid-intelligence-prd_V2.md#10-intelligent-column-width-allocation)). |
+| **Auto-Fit Width**        | Resize the column to fit its content (when AGI is active, uses content analysis P90 width — see [AGI PRD Section 10](adaptive-grid-intelligence-prd.md#10-intelligent-column-width-allocation)). |
 | *(separator)*             |                                                                                                                                                                                                     |
 | **Rename**                | Opens an inline text input on the column header to set a label override. The underlying field name is unchanged.                                                                                    |
 | **Data Alignment**        | Sub-menu: **Left**, **Center**, **Right**. Sets the horizontal alignment for all cells in this column. The current alignment is indicated with a checkmark.                                         |
@@ -1698,14 +1698,14 @@ Board views load records per Kanban column:
 | **Communication & Conversation Intelligence PRD**                          | Defines system entities (Conversations, Communications, Projects, Topics, Contacts) that are the primary entities queried by data sources. Also defines the alert system architecture that views feed into.                                                                                                                                               | **Bidirectional.** Data sources query Conversation entities; Conversations PRD's alert system consumes view filter definitions.                                                               |
 | **Contact Intelligence PRD**                                               | Defines the Contact entity and identity resolution system. Contact-related data sources and views depend on this. Cross-entity data sources frequently JOIN to the Contact entity.                                                                                                                                                                        | **View/Data Source system depends on Contact model** for Contact entity fields and relation resolution.                                                                                       |
 | **Permissions & Sharing PRD**                                              | Defines data access controls that determine which records a user can see in data source results. Row-level security in the query engine (Section 6.12) depends on this. Shared data source and view visibility is governed by these permissions.                                                                                                          | **View/Data Source system depends on Permissions** for row-level security, data filtering, and shared access control.                                                                         |
-| **[Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd_V2.md)** | Defines the intelligent layout engine that automatically optimizes column widths, cell alignment, panel proportions, and row density based on display characteristics, content analysis, and user preferences. Extends the column system (Section 8), field type registry (Section 9), view persistence (Section 17), and the GUI PRD's Workspace Layout. | **Bidirectional.** AGI extends the column and view system defined here; this PRD defines the column and view foundations that AGI optimizes.                                                  |
+| **[Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd.md)** | Defines the intelligent layout engine that automatically optimizes column widths, cell alignment, panel proportions, and row density based on display characteristics, content analysis, and user preferences. Extends the column system (Section 8), field type registry (Section 9), view persistence (Section 17), and the GUI PRD's Workspace Layout. | **Bidirectional.** AGI extends the column and view system defined here; this PRD defines the column and view foundations that AGI optimizes.                                                  |
 | **AI Learning & Classification PRD**                                       | AI-generated fields (AI Status, AI Summary, Action Items, Key Topics) are exposed as queryable fields in data sources and displayable columns in views. The AI system may also use view configurations as context for learning user preferences.                                                                                                          | **View system consumes AI fields** as queryable and displayable columns.                                                                                                                      |
 
 ---
 
 ## 22. Open Questions
 
-> **Note:** Open questions #2, #6, #10, #11, #13, #14, and #15 from the original version of this document have been migrated to the [Data Sources PRD, Section 26](data-sources-prd_V1.md#26-open-questions) as they pertain to data source functionality rather than view rendering.
+> **Note:** Open questions #2, #6, #10, #11, #13, #14, and #15 from the original version of this document have been migrated to the [Data Sources PRD, Section 26](data-sources-prd.md#26-open-questions) as they pertain to data source functionality rather than view rendering.
 
 1. **Multi-entity views vs. cross-entity data sources** — With Data Sources now supporting JOINs across entity types, the original "multi-entity view" question is partially addressed. A data source joining Conversations + Contacts + Companies produces a cross-entity result set. However, this is still a flattened/denormalized view. Should there also be a "unified activity feed" view type that displays heterogeneous entity types (a Conversation row, then a Communication row, then a Project row) in a single chronological stream? This would require a fundamentally different rendering model where each row can have a different column schema.
 
@@ -1715,7 +1715,7 @@ Board views load records per Kanban column:
 
 4. **Export formats** — Beyond CSV, should views support export to Excel (.xlsx), PDF, or direct integration with reporting tools? What about scheduled exports (e.g., "email me this view as a CSV every Monday")?
 
-5. **Conditional formatting** (partially addressed by [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd_V2.md)) — Should cells/rows support conditional formatting rules (e.g., "if AI Status = Open, highlight row in yellow", "if Days Since Last Activity > 30, make cell red")? This is powerful but adds significant UI complexity. **Note:** The [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd_V2.md) addresses content-aware column optimization (auto-sizing, alignment, value diversity demotion) but does not cover rule-based conditional formatting (user-defined color/style rules). Conditional formatting remains a future PRD that can build on the AGI content analysis engine.
+5. **Conditional formatting** (partially addressed by [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd.md)) — Should cells/rows support conditional formatting rules (e.g., "if AI Status = Open, highlight row in yellow", "if Days Since Last Activity > 30, make cell red")? This is powerful but adds significant UI complexity. **Note:** The [Adaptive Grid Intelligence PRD](adaptive-grid-intelligence-prd.md) addresses content-aware column optimization (auto-sizing, alignment, value diversity demotion) but does not cover rule-based conditional formatting (user-defined color/style rules). Conditional formatting remains a future PRD that can build on the AGI content analysis engine.
 
 6. **Column formulas vs. field formulas** — Should the view system support view-level computed columns (like spreadsheet formulas that exist only in the view) in addition to entity-level formula fields (which exist on the object and are available across all views)? With raw SQL data sources, users can already create computed columns via SQL expressions — is a UI-based formula builder additionally needed?
 
@@ -1741,7 +1741,7 @@ Board views load records per Kanban column:
 
 ## 23. Glossary
 
-General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architecture, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to the Views & Grid system:
+General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architecture, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to the Views & Grid system:
 
 | Term                                          | Definition                                                                                                                                                                                                                                         |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

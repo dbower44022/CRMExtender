@@ -1,8 +1,8 @@
 # CRMExtender — Master Glossary
 
-**Version:** 3.0
-**Date:** 2026-02-21
-**Status:** Draft — Updated with GUI terminology framework
+**Version:** 4.0
+**Date:** 2026-02-23
+**Status:** Draft — Methodology V2 terms added
 **Purpose:** Single authoritative glossary for all CRMExtender terminology. All PRDs reference this document for term definitions. Individual PRD glossary sections should cross-reference here rather than redefining terms.
 
 > **V1.0 (2026-02-21):**
@@ -10,6 +10,9 @@
 >
 > **V3.0 (2026-02-21):**
 > Major GUI terminology framework update. Renamed: Icon Rail → Entity Bar, Top Header Bar → Application Tool Bar, Content Area → Content Panel, Grid Toolbar → Content Tool Bar, Docked Panel → Docked Window, Full Takeover → Modal Full Overlay Window, Four-Zone Layout → Workspace Layout. Added Entity Selector, Administration Entity, Application Status Bar, Display Mode framework (Preview/View/Edit), Window Type taxonomy (Docked Window, Modal Full Overlay Window, Modal Partial Overlay Window, Floating Modal, Floating Unmodal, Undocked Window, Search Window), and Card Type system (Identity Card, Attribute Card, Relation Card, Content Card, Activity Card, Calendar Card, Timeline Card, List Card, Metric Card, Summary Card). Retired Context Zone and Identity Zone in favor of Card Layout Area and Identity Card. Fixed alphabetical sort order. Tightened Detail Panel definition per review feedback.
+>
+> **V4.0 (2026-02-23):**
+> Added PRD Methodology V2 terms: † Caching Convention, Editable (Field Metadata), Field Metadata, Filterable (Field Metadata), Key Process, Living Document (TDD), Sortable (Field Metadata), Technical Design Document (TDD), Write-Back (TDD).
 
 ---
 
@@ -25,6 +28,7 @@
 
 | Term | Definition | Source PRD(s) |
 |---|---|---|
+| **† Caching Convention** | A notation in Entity Base PRD field registries where a † symbol after "Yes" in the Sortable column indicates the field is backed by a correlated subquery (e.g., primary email resolved via JOIN on contact_identifiers). The PRD states the product intent ("users should sort by this"); the Entity TDD must define a caching or denormalization strategy to make it performant. Without this convention, subquery-backed fields are either expensive to sort or silently made non-sortable. | PRD Methodology Guide |
 | **Action Panel** | The collapsible panel between the Entity Bar and the Content Panel (~280px default) that provides view switching, view configuration, and folder navigation. Also called the "view control center." | GUI Functional Requirements |
 | **Activity Card** | A Card Type that displays a chronological stream of past interactions related to the entity. Filterable by channel, date range, and entity type. Represents *what happened* — contrast with Calendar Card which shows *what's scheduled*. | GUI Functional Requirements |
 | **Administration Entity** | A non-data Entity Selector on the Entity Bar: Home (top section), Settings, and Account (bottom section). Treated as Entity Selectors for navigation purposes, though their display behavior on click varies from data entity types. Help is not an Administration Entity — it lives on the Application Tool Bar. | GUI Functional Requirements |
@@ -93,6 +97,7 @@
 | **Dual-Track Pipeline** | The email parsing architecture: HTML-based structural removal with plain-text regex fallback. | Communications, Email Parsing |
 | **Edit Mode** | A Display Mode for modifying entity data. Can be scoped to a single section (Section-Based Editing), a single cell (inline grid edit), or a full creation form. The scope and interaction pattern varies by Window Type. | GUI Functional Requirements |
 | **Edit Trace-Back** | The mechanism by which an inline edit in a view traces back through the Column Registry to identify the source entity and field, then issues an update API call to the correct entity endpoint. | Data Sources |
+| **Editable (Field Metadata)** | A field metadata attribute in the Entity Base PRD describing how a field can be modified. Values: Direct (inline or form edit on the entity), Override (computed default that users can manually replace), Via sub-entity (edited through a related entity's editor, e.g., primary email is edited via contact_identifiers), Computed (derived from other data, never directly editable), System (set by the system, no edit affordance). | PRD Methodology Guide |
 | **Effective Visibility** | The computed accessibility of a Document: its own visibility setting combined with any folder-based cascade paths. A document is accessible if it is shared OR in any shared folder. | Documents |
 | **Email Template** | A reusable email composition blueprint with merge field placeholders, stored as a system object type (`etl_` prefix). | Outbound Email |
 | **Email-Safe HTML** | HTML that uses inline styles, table-based layout, and limited CSS to render consistently across email clients (Gmail, Outlook, Apple Mail, etc.). | Outbound Email |
@@ -107,7 +112,9 @@
 | **External Contact** | A person outside the tenant who has been granted access to specific records via share grants or link shares. Accesses data through a read-only portal or API. | Permissions & Sharing |
 | **Field** | A named, typed attribute on an object type. Maps to a physical column on the object type's database table. | Custom Objects |
 | **Field Group** | A logical grouping of fields that controls how they are displayed together in the record detail view. Defines the section structure for Section-Based Editing. | Custom Objects |
+| **Field Metadata** | The set of per-field attributes in an Entity Base PRD that describe how each field participates in the views engine and editing layer. Three attributes: Editable (how the field is modified), Sortable (whether users can sort by it), and Filterable (whether users can filter by it). Added to PRD methodology in V2. | PRD Methodology Guide |
 | **Field Provenance** | The source, confidence, and timestamp metadata attached to each enriched field value. Used for audit and conflict resolution in the enrichment pipeline. | Company Management |
+| **Filterable (Field Metadata)** | A field metadata attribute in the Entity Base PRD indicating whether users can filter a view by this field. Values: Yes or No. Fields that are not filterable are excluded from the filter builder's field picker. | PRD Methodology Guide |
 | **Floating Modal** | A Window Type that floats over the workspace as a dialog and blocks interaction with content behind it until dismissed. Used for confirmation dialogs, creation forms, and other focused interactions that require user response. | GUI Functional Requirements |
 | **Floating Unmodal** | A Window Type that floats over the workspace without blocking interaction with content behind it. Used for hover cards, entity preview popovers, and contextual information displays that supplement the current workflow. | GUI Functional Requirements |
 | **Folder** | A Document entity with `is_folder = true`. Contains other documents and folders via many-to-many membership. Participates in Universal Attachment like any document. | Documents |
@@ -119,11 +126,13 @@
 | **Identity Zone** | *Retired.* Formerly the top section of the record Detail Panel. Replaced by the Identity Card, which renders at the fixed top position of any Window. | GUI Functional Requirements |
 | **Impersonation** | A Sys Admin capability to act within another user's security context. All actions are logged with Dual Attribution. | Permissions & Sharing |
 | **Junction Table** | A database table that implements a many-to-many Relation Type by storing pairs of entity IDs and optional metadata columns. | Custom Objects |
+| **Key Process** | A named, multi-step workflow or pipeline defined in an Entity Base PRD or Action Sub-PRD. Key Processes describe significant system behaviors that span multiple components — e.g., "Identity Resolution Pipeline," "Merge Execution," "Enrichment Run." Each Key Process defines its trigger, steps, decision points, and outcomes. Added to PRD methodology in V2. | PRD Methodology Guide |
 | **Known-Contact Gate** | A triage filter requiring at least one recognized CRM Contact among Communication participants (excluding the account owner). | Communications |
 | **Layout Engine** | The top-level orchestrator that divides the viewport among the four zones based on display analysis, content analysis, and user preferences. Runs on view open and significant resize. | Adaptive Grid Intelligence |
 | **Link Share** | A URL-based access mechanism with expiration and revocation. Anyone with the link can view the record without authentication. | Permissions & Sharing |
 | **Linked Entities Column** | A column type in the Views system that displays entities linked to a Document through the Universal Attachment Relation, rendered as entity chips with mixed types. | Documents |
 | **List Card** | A Card Type that displays a tabular or compact list of child or attached records. Subtasks on a Task, Documents attached to a Contact, child Conversations in an Aggregate. Functions as a mini-grid within the card. | GUI Functional Requirements |
+| **Living Document (TDD)** | The approach where Technical Design Documents are continuously updated as decisions are made. The product owner records initial architectural decisions; Claude Code adds implementation decisions during development. Each decision includes rationale so future sessions understand the reasoning without re-deriving it. See also Write-Back (TDD). | PRD Methodology Guide |
 | **Merge (Company)** | The process of combining two duplicate company records into one, reassigning all associated entities to the surviving record. The absorbed company is soft-deleted. | Company Management |
 | **Merge Field** | A placeholder in an Email Template that is resolved to actual data at compose or generation time. Syntax: `{{entity.field}}`. | Outbound Email |
 | **Metric Card** | A Card Type that displays computed scores, statistics, or KPIs. Relationship Strength, engagement scores, communication frequency, completion percentage. Compact numerical displays, possibly with sparklines or trend indicators. | GUI Functional Requirements |
@@ -187,6 +196,7 @@
 | **Significant Resize** | A viewport dimension change exceeding 15% in width or height from the last auto-configuration, triggering the layout engine to recalculate. | Adaptive Grid Intelligence |
 | **Snapshot** | A periodically stored copy of a record's full state at a point in time, used to accelerate point-in-time reconstruction by avoiding full event replay. | Custom Objects |
 | **Soft Delete** | Archive: record marked with `archived_at` timestamp, excluded from default queries, recoverable. The standard deletion mechanism. Contrast with Hard Delete. | Permissions & Sharing |
+| **Sortable (Field Metadata)** | A field metadata attribute in the Entity Base PRD indicating whether users can sort a view by this field. Values: Yes (direct column sort), Yes † (sortable but backed by a correlated subquery — requires a caching strategy defined in the Entity TDD), or No. See † Caching Convention. | PRD Methodology Guide |
 | **Source (Communication)** | How a Communication entered the system: `synced` (auto-captured from provider), `manual` (user-entered), `imported` (bulk import), or `composed` (outbound email). | Communications, Outbound Email |
 | **Space Budget** | The total available horizontal pixels after subtracting fixed-width elements (Entity Bar, scrollbar, borders). Divided among flexible zones by the Layout Engine. | Adaptive Grid Intelligence |
 | **Splitter Bar** | A draggable divider between the Content Panel and Detail Panel that allows the user to allocate width between them. Position is persisted as a user preference per entity type. | GUI Functional Requirements |
@@ -206,6 +216,7 @@
 | **System Relation Type** | A platform-provided Relation Type that ships out of the box (e.g., Conversation↔Project, Communication→Contact participants, Event→Contact participation). Eliminates setup friction for common relationships. | Custom Objects, Conversations |
 | **System Status (Conversation)** | Time-based Conversation lifecycle state: `active`, `stale`, `closed`. Managed automatically based on `last_activity_at` and configurable thresholds. Distinct from AI Status. | Conversations |
 | **Task** | An actionable work item with status, priority, dates, assignees, and entity attachments. System object type with prefix `tsk_`. | Tasks |
+| **Technical Design Document (TDD)** | A document that captures technology and architecture decisions with rationale. Exists at three levels: Product TDD (global defaults), Entity TDD (entity-specific deviations), and Action TDD (action-specific decisions). Separates "how it's built" from "what it does" (PRDs). A living document where both the product owner and Claude Code record decisions. | PRD Methodology Guide |
 | **Temporary Overlay** | Session-only modifications to a View's filters, sort, or grouping that do not affect the saved View definition. Discarded when switching views or navigating away. | GUI Functional Requirements, Views & Grid |
 | **Tenant** | The top-level organizational unit. Equivalent to a workspace. One tenant = one team = one PostgreSQL schema. All access control operates within a single tenant. | Permissions & Sharing |
 | **Tenant-Level Integration** | An organization-owned connected account (e.g., shared inbox). Managed by Sys Admins. Communications default to public visibility. Contrast with Personal Integration. | Permissions & Sharing |
@@ -232,6 +243,7 @@
 | **Watcher (Task)** | A user with the `watcher` role on a Task, observing progress without responsibility for completing or reviewing the work. | Tasks |
 | **Window Type** | The category of UI container in which entity data renders. Window Types compose with Display Modes to describe any entity display context. Types: Docked Window, Modal Full Overlay Window, Modal Partial Overlay Window, Floating Modal, Floating Unmodal, Undocked Window, Search Window. | GUI Functional Requirements |
 | **Workspace Layout** | The application's primary layout pattern: four vertical zones (Entity Bar, Action Panel, Content Panel, Detail Panel) framed by two horizontal bars (Application Tool Bar at top, Application Status Bar at bottom). Replaces the former term "Four-Zone Layout." | GUI Functional Requirements |
+| **Write-Back (TDD)** | The process where Claude Code records implementation decisions back into the Technical Design Document during development. This ensures the TDD remains the authoritative record of both what was intended and what was actually built. Decisions follow the standard format: Decision, Rationale, Alternatives Rejected, Constraints/Tradeoffs. | PRD Methodology Guide |
 
 ---
 

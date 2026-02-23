@@ -15,21 +15,21 @@
 > - **Topic eliminated as a separate system object type.** Topic's role absorbed into Conversation via `is_aggregate` flag. The `top_` prefix is retired. Aggregate Conversations group child Conversations the same way Document Folders group Documents.
 > - **Conversation membership is many-to-many** via `conversation_members` junction table, mirroring the Documents `document_folder_members` pattern. A child Conversation can belong to multiple aggregate Conversations simultaneously. Aggregate Conversations can hold both direct Communications AND child Conversations.
 > - **Conversations attach to any entity via Relation Types** — no FK columns. `topic_id` and `project_id` removed from the Conversations table. System Relation Types (Conversation↔Project, Conversation↔Company, Conversation↔Contact, Conversation↔Event) ship out of the box. No inheritance — entity links are independent of parent aggregate links.
-> - **Project extracted to its own PRD.** Project definition, field registry, sub-project hierarchy, and all Project-specific content moved to the [Projects PRD](projects-prd_V3.md).
-> - **Conversation timeline references Published Summaries** from the [Communications PRD](communications-prd_V3.md) Section 7. The Conversation is a presentation container that assembles summary references — it does not copy or store Communication content.
+> - **Project extracted to its own PRD.** Project definition, field registry, sub-project hierarchy, and all Project-specific content moved to the [Projects PRD](projects-prd.md).
+> - **Conversation timeline references Published Summaries** from the [Communications PRD](communications-prd.md) Section 7. The Conversation is a presentation container that assembles summary references — it does not copy or store Communication content.
 > - **AI classification updated** to suggest aggregate Conversation placement (replacing Topic assignment).
 > - **Sub-Conversation nesting is unlimited** with application-level acyclic enforcement, same pattern as Document folder nesting.
 >
 > **V1.0 (2026-02-18):**
 > This document is one of two sibling PRDs extracted from the monolithic Communication & Conversation Intelligence PRD v2.0 (2026-02-07). That document has been decomposed into:
 > 
-> - **[Communications PRD](communications-prd_V1.md)** — The Communication entity, common schema, provider adapter framework, contact association, triage filtering, multi-account management, attachments, and storage. The foundation that channel-specific child PRDs build on.
+> - **[Communications PRD](communications-prd.md)** — The Communication entity, common schema, provider adapter framework, contact association, triage filtering, multi-account management, attachments, and storage. The foundation that channel-specific child PRDs build on.
 > - **This PRD (Conversations)** — The Conversation, Topic, and Project entity types, the organizational hierarchy, AI intelligence layer (classify & route, summarize, extract intelligence), conversation lifecycle, cross-channel stitching, communication segmentation, the review workflow, conversation views, and user-defined alerts.
 > 
-> All content has been reconciled with the [Custom Objects PRD](custom-objects-prd_v2.md) Unified Object Model:
+> All content has been reconciled with the [Custom Objects PRD](custom-objects-prd.md) Unified Object Model:
 > 
 > - Conversation is a **system object type** (`is_system = true`, prefix `cvr_`) with registered behaviors for AI status detection, summarization, action item extraction, and summary generation. Conversations with `is_aggregate = true` serve as organizational containers (replacing the former Topic entity).
-> - Project is defined in the [Projects PRD](projects-prd_V3.md) as a separate system object type (`prj_`). This PRD defines Conversation-side behaviors; the Projects PRD defines Project-specific content.
+> - Project is defined in the [Projects PRD](projects-prd.md) as a separate system object type (`prj_`). This PRD defines Conversation-side behaviors; the Projects PRD defines Project-specific content.
 > - Entity IDs use **prefixed ULIDs** per the platform-wide convention.
 > - Conversation→Communication membership is a **FK column** (`conversation_id`) on the `communications` table (defined in the Communications PRD).
 > - Conversation→Contact participation is derived from Communication Participants — no separate Conversation→Contact relation is needed.
@@ -95,15 +95,15 @@ The AI intelligence layer serves three roles: **classify & route** incoming Comm
 
 **Relationship to other PRDs:**
 
-- **[Custom Objects PRD](custom-objects-prd_v2.md)** — Conversation is a system object type. Table structure, field registry, event sourcing, and relation model are governed by the Custom Objects framework. This PRD defines the Conversation-specific behaviors registered with the framework.
-- **[Communications PRD](communications-prd_V3.md)** — Communications are the atomic records that Conversations group. The Communications PRD defines the Communication entity, common schema, provider adapters, triage, contact resolution, and the Published Summary system (Section 7). Communications reference their parent Conversation via `conversation_id`. The Conversation timeline renders Communication Published Summaries by reference.
-- **[Projects PRD](projects-prd_V3.md)** — Projects are defined as a separate system object type (`prj_`). Conversations associate with Projects via the Conversation↔Project system Relation Type. The Projects PRD defines Project-specific content (field registry, sub-project hierarchy, lifecycle).
-- **[Contact Management PRD](contact-management-prd_V5.md)** — Conversation participants are derived from Communication Participants. Communication frequency within conversations feeds relationship strength scoring.
-- **[Event Management PRD](events-prd_V3.md)** — Events link to Conversations through the Event→Conversation Relation Type (`event_conversations`). Meeting follow-up emails and pre-meeting coordination threads are correlated with their triggering events.
-- **[Notes PRD](notes-prd_V3.md)** — Notes attach to Conversations as supplementary commentary (meeting observations, strategic context). Notes use the Universal Attachment Relation pattern. Communication Published Summaries share the same rich text content architecture as Notes.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — Virtual schema tables for Conversation are derived from the field registry.
-- **[Views & Grid PRD](views-grid-prd_V5.md)** — Conversation views, filters, sorts, and inline editing operate on fields from the Conversation field registry.
-- **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** — Conversation record access follows the standard role-based access model.
+- **[Custom Objects PRD](custom-objects-prd.md)** — Conversation is a system object type. Table structure, field registry, event sourcing, and relation model are governed by the Custom Objects framework. This PRD defines the Conversation-specific behaviors registered with the framework.
+- **[Communications PRD](communications-prd.md)** — Communications are the atomic records that Conversations group. The Communications PRD defines the Communication entity, common schema, provider adapters, triage, contact resolution, and the Published Summary system (Section 7). Communications reference their parent Conversation via `conversation_id`. The Conversation timeline renders Communication Published Summaries by reference.
+- **[Projects PRD](projects-prd.md)** — Projects are defined as a separate system object type (`prj_`). Conversations associate with Projects via the Conversation↔Project system Relation Type. The Projects PRD defines Project-specific content (field registry, sub-project hierarchy, lifecycle).
+- **[Contact Management PRD](contact-management-prd.md)** — Conversation participants are derived from Communication Participants. Communication frequency within conversations feeds relationship strength scoring.
+- **[Event Management PRD](events-prd.md)** — Events link to Conversations through the Event→Conversation Relation Type (`event_conversations`). Meeting follow-up emails and pre-meeting coordination threads are correlated with their triggering events.
+- **[Notes PRD](notes-prd.md)** — Notes attach to Conversations as supplementary commentary (meeting observations, strategic context). Notes use the Universal Attachment Relation pattern. Communication Published Summaries share the same rich text content architecture as Notes.
+- **[Data Sources PRD](data-sources-prd.md)** — Virtual schema tables for Conversation are derived from the field registry.
+- **[Views & Grid PRD](views-grid-prd.md)** — Conversation views, filters, sorts, and inline editing operate on fields from the Conversation field registry.
+- **[Permissions & Sharing PRD](permissions-sharing-prd.md)** — Conversation record access follows the standard role-based access model.
 - **[AI Learning & Classification PRD](ai-learning-prd.md)** (future) — This PRD establishes that the system learns from corrections; the AI PRD defines how (classification algorithms, embedding/similarity approaches, model training, confidence scoring).
 
 ---
@@ -1148,7 +1148,7 @@ The self-referential Relation Type on Project naturally supports any depth. In p
 
 ## 27. Glossary
 
-General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to this subsystem:
+General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
 | Term                        | Definition                                                                                                                                                                                                           |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

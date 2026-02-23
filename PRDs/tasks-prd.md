@@ -13,7 +13,7 @@
 > **V1.0 (2026-02-18):**
 > This document defines the Task system object type for CRMExtender. Tasks represent actionable items — follow-ups, to-dos, assignments, and deliverables — that drive CRM workflows forward. The design draws on patterns from ClickUp, Wrike, Asana, and Monday.com, adapted for CRM relationship intelligence.
 >
-> All content is reconciled with the [Custom Objects PRD](custom-objects-prd_v2.md) Unified Object Model:
+> All content is reconciled with the [Custom Objects PRD](custom-objects-prd.md) Unified Object Model:
 > - Task is a **system object type** (`is_system = true`, prefix `tsk_`) in the unified framework. Core fields are protected from deletion; specialized behaviors (status category enforcement, subtask cascade, recurrence generation, AI action-item extraction, due date reminders, overdue detection) are registered per Custom Objects PRD Section 22.
 > - Entity IDs use **prefixed ULIDs** (`tsk_` prefix, e.g., `tsk_01HX8A...`) per the platform-wide convention (Data Sources PRD, Custom Objects PRD Section 6).
 > - Task-to-entity linking uses the **Universal Attachment Relation** pattern (`target = *`), enabling tasks to attach to any entity type — system or custom — without requiring individual relation type definitions per entity type. This reuses the pattern introduced by the Notes PRD.
@@ -79,16 +79,16 @@ Unlike standalone task managers, CRMExtender tasks are deeply embedded in the CR
 
 **Relationship to other PRDs:**
 
-- **[Custom Objects PRD](custom-objects-prd_v2.md)** — The Task entity type is a system object type in the unified framework. Its table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. The Universal Attachment Relation pattern (introduced by the Notes PRD) is reused for task-to-entity linking. This PRD defines the Task-specific behaviors registered with the object type framework.
-- **[Notes PRD](notes-prd_V3.md)** — Tasks reuse the Universal Attachment Relation pattern and the behavior-managed content architecture established by Notes. Notes can also attach to Tasks via Notes' own universal attachment, enabling commentary and context on task records.
-- **[Projects PRD](projects-prd_V3.md)** — Tasks link to Projects through the Universal Attachment pattern. A project's task list provides the action-oriented complement to its conversation, event, and note associations.
-- **[Contact Management PRD](contact-management-prd_V5.md)** — Tasks attach to Contacts for follow-up actions, outreach tracking, and relationship maintenance activities.
-- **[Company Management PRD](company-management-prd_V1.md)** — Tasks attach to Companies for account-level actions.
-- **[Conversations PRD](conversations-prd_V4.md)** — The AI action-item extraction behavior on Conversations can auto-create Tasks linked to the originating Conversation. Tasks also attach to Conversations manually for follow-up tracking.
-- **[Event Management PRD](events-prd_V3.md)** — Tasks attach to Events for pre-meeting preparation and post-meeting follow-ups.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — The Task virtual schema table is derived from the Task object type's field registry. The `tsk_` prefix enables automatic entity detection in data source queries.
-- **[Views & Grid PRD](views-grid-prd_V5.md)** — Task views support Grid, Board/Kanban (grouped by status), Calendar (by due date), and Timeline (start-to-due date bars). Inline editing, filtering, and sorting operate on fields from the Task field registry.
-- **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** — Task record access follows the standard workspace-visible role-based access model.
+- **[Custom Objects PRD](custom-objects-prd.md)** — The Task entity type is a system object type in the unified framework. Its table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. The Universal Attachment Relation pattern (introduced by the Notes PRD) is reused for task-to-entity linking. This PRD defines the Task-specific behaviors registered with the object type framework.
+- **[Notes PRD](notes-prd.md)** — Tasks reuse the Universal Attachment Relation pattern and the behavior-managed content architecture established by Notes. Notes can also attach to Tasks via Notes' own universal attachment, enabling commentary and context on task records.
+- **[Projects PRD](projects-prd.md)** — Tasks link to Projects through the Universal Attachment pattern. A project's task list provides the action-oriented complement to its conversation, event, and note associations.
+- **[Contact Management PRD](contact-management-prd.md)** — Tasks attach to Contacts for follow-up actions, outreach tracking, and relationship maintenance activities.
+- **[Company Management PRD](company-management-prd.md)** — Tasks attach to Companies for account-level actions.
+- **[Conversations PRD](conversations-prd.md)** — The AI action-item extraction behavior on Conversations can auto-create Tasks linked to the originating Conversation. Tasks also attach to Conversations manually for follow-up tracking.
+- **[Event Management PRD](events-prd.md)** — Tasks attach to Events for pre-meeting preparation and post-meeting follow-ups.
+- **[Data Sources PRD](data-sources-prd.md)** — The Task virtual schema table is derived from the Task object type's field registry. The `tsk_` prefix enables automatic entity detection in data source queries.
+- **[Views & Grid PRD](views-grid-prd.md)** — Task views support Grid, Board/Kanban (grouped by status), Calendar (by due date), and Timeline (start-to-due date bars). Inline editing, filtering, and sorting operate on fields from the Task field registry.
+- **[Permissions & Sharing PRD](permissions-sharing-prd.md)** — Task record access follows the standard workspace-visible role-based access model.
 
 ---
 
@@ -1012,17 +1012,17 @@ Unlike notes, which are contextual observations that need an entity anchor, task
 
 | PRD | Relationship | Dependency Direction |
 |---|---|---|
-| **[Custom Objects PRD](custom-objects-prd_v2.md)** | Task is a system object type. Table structure, field registry, event sourcing, Select option management, and relation model are governed by Custom Objects. This PRD defines Task-specific behaviors. | **Bidirectional.** Custom Objects provides the entity framework; this PRD defines behaviors. |
-| **[Notes PRD](notes-prd_V3.md)** | Tasks reuse the Universal Attachment Relation pattern and behavior-managed content architecture introduced by Notes. Notes can attach to Tasks via Notes' own universal attachment. | **Tasks depend on Notes** for the Universal Attachment pattern definition. |
-| **[Projects PRD](projects-prd_V3.md)** | Tasks attach to Projects through Universal Attachment. Projects gain a task-oriented action layer. | **Bidirectional.** Projects provide organizational context; Tasks provide action tracking. |
-| **[Contact Management PRD](contact-management-prd_V5.md)** | Tasks attach to Contacts for follow-up actions and relationship maintenance. | **Tasks depend on Contacts** as an attachment target entity type. |
-| **[Company Management PRD](company-management-prd_V1.md)** | Tasks attach to Companies for account-level actions. | **Tasks depend on Companies** as an attachment target entity type. |
-| **[Conversations PRD](conversations-prd_V4.md)** | AI action-item extraction creates Tasks linked to Conversations. Tasks also manually attach to Conversations. | **Bidirectional.** Conversations provide extraction triggers; Tasks provide action tracking. |
-| **[Event Management PRD](events-prd_V3.md)** | Tasks attach to Events for meeting prep and follow-up tracking. | **Tasks depend on Events** as an attachment target entity type. |
-| **[Communications PRD](communications-prd_V1.md)** | AI action-item extraction operates on individual Communications within Conversations. | **Tasks depend on Communications** indirectly via Conversations. |
-| **[Data Sources PRD](data-sources-prd_V1.md)** | Task virtual schema table is derived from the Task field registry. `tsk_` prefix enables entity detection. Relation traversal enables cross-entity queries. | **Data Sources depend on Tasks** for entity definitions. |
-| **[Views & Grid PRD](views-grid-prd_V5.md)** | Task views (Grid, Board, Calendar, Timeline) use fields from the Task field registry. Status category enables Kanban column mapping. | **Views depend on Tasks** for field definitions. |
-| **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** | Task record access follows workspace-visible role-based access model. | **Tasks depend on Permissions** for access control. |
+| **[Custom Objects PRD](custom-objects-prd.md)** | Task is a system object type. Table structure, field registry, event sourcing, Select option management, and relation model are governed by Custom Objects. This PRD defines Task-specific behaviors. | **Bidirectional.** Custom Objects provides the entity framework; this PRD defines behaviors. |
+| **[Notes PRD](notes-prd.md)** | Tasks reuse the Universal Attachment Relation pattern and behavior-managed content architecture introduced by Notes. Notes can attach to Tasks via Notes' own universal attachment. | **Tasks depend on Notes** for the Universal Attachment pattern definition. |
+| **[Projects PRD](projects-prd.md)** | Tasks attach to Projects through Universal Attachment. Projects gain a task-oriented action layer. | **Bidirectional.** Projects provide organizational context; Tasks provide action tracking. |
+| **[Contact Management PRD](contact-management-prd.md)** | Tasks attach to Contacts for follow-up actions and relationship maintenance. | **Tasks depend on Contacts** as an attachment target entity type. |
+| **[Company Management PRD](company-management-prd.md)** | Tasks attach to Companies for account-level actions. | **Tasks depend on Companies** as an attachment target entity type. |
+| **[Conversations PRD](conversations-prd.md)** | AI action-item extraction creates Tasks linked to Conversations. Tasks also manually attach to Conversations. | **Bidirectional.** Conversations provide extraction triggers; Tasks provide action tracking. |
+| **[Event Management PRD](events-prd.md)** | Tasks attach to Events for meeting prep and follow-up tracking. | **Tasks depend on Events** as an attachment target entity type. |
+| **[Communications PRD](communications-prd.md)** | AI action-item extraction operates on individual Communications within Conversations. | **Tasks depend on Communications** indirectly via Conversations. |
+| **[Data Sources PRD](data-sources-prd.md)** | Task virtual schema table is derived from the Task field registry. `tsk_` prefix enables entity detection. Relation traversal enables cross-entity queries. | **Data Sources depend on Tasks** for entity definitions. |
+| **[Views & Grid PRD](views-grid-prd.md)** | Task views (Grid, Board, Calendar, Timeline) use fields from the Task field registry. Status category enables Kanban column mapping. | **Views depend on Tasks** for field definitions. |
+| **[Permissions & Sharing PRD](permissions-sharing-prd.md)** | Task record access follows workspace-visible role-based access model. | **Tasks depend on Permissions** for access control. |
 
 ---
 
@@ -1060,7 +1060,7 @@ Unlike notes, which are contextual observations that need an entity anchor, task
 
 ## 23. Glossary
 
-General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to this subsystem:
+General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
 | Term | Definition |
 |---|---|

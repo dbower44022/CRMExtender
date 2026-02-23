@@ -18,7 +18,7 @@
 > 
 > This document defines the GUI functional requirements for the CRMExtender production application. It establishes the application shell, navigation architecture, layout patterns, Window Types, Display Modes, Card Types, editing paradigms, and interaction patterns that all entity-specific interfaces plug into. This PRD is the "container" specification — it defines how the application works as a cohesive product, while entity-specific PRDs (Contacts, Companies, Tasks, etc.) define what appears within these containers.
 > 
-> This PRD does not duplicate interaction specifications already defined in entity-specific PRDs. Grid interactions (inline editing, row expansion, bulk actions, keyboard navigation) are defined in the [Views & Grid PRD](views-grid-prd_V4.md). Field type rendering and data layer behavior are defined in the [Custom Objects PRD](custom-objects-prd_v1.md). Filter, sort, and group mechanics are defined in the [Views & Grid PRD](views-grid-prd_V4.md) and [Data Sources PRD](data-sources-prd_V1.md). Rich text editing is defined in the [Notes PRD](notes-prd_V3.md).
+> This PRD does not duplicate interaction specifications already defined in entity-specific PRDs. Grid interactions (inline editing, row expansion, bulk actions, keyboard navigation) are defined in the [Views & Grid PRD](views-grid-prd.md). Field type rendering and data layer behavior are defined in the [Custom Objects PRD](custom-objects-prd.md). Filter, sort, and group mechanics are defined in the [Views & Grid PRD](views-grid-prd.md) and [Data Sources PRD](data-sources-prd.md). Rich text editing is defined in the [Notes PRD](notes-prd.md).
 > 
 > **Tech stack context:** Flutter frontend (cross-platform: web, macOS, Windows, Linux), Python FastAPI backend, PostgreSQL with schema-per-tenant isolation. The web deployment runs as a PWA. Native desktop builds via Flutter's desktop embedding.
 
@@ -79,11 +79,11 @@ The application shell uses a **Workspace Layout**: an Entity Bar for entity navi
 
 **Relationship to other PRDs:**
 
-- **[Custom Objects PRD](custom-objects-prd_v1.md)** — Defines the entity type framework, field type system, field groups, and relation types that the GUI renders. Field Groups (Custom Objects Section 11) define the Attribute Card sections in the record detail layout. The field type system (Custom Objects Section 9) determines rendering and editing behavior.
-- **[Views & Grid PRD](views-grid-prd_V4.md)** — Defines all grid-level interactions: inline editing, row expansion, bulk actions, keyboard navigation within the grid, filter/sort/group mechanics, view persistence, and view sharing. This GUI PRD defines the *shell around* the grid; the Views PRD defines behavior *within* the grid.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — Defines the query abstraction layer that feeds views. The Action Panel's view configuration surfaces data source settings; this PRD defines the UI patterns, the Data Sources PRD defines the underlying query model.
-- **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** — Defines role-based access controls that determine which edit affordances appear (e.g., the pencil icon is hidden on Attribute Cards the user cannot edit), which action buttons are available, and which views are accessible.
-- **[Notes PRD](notes-prd_V3.md)** — Defines the rich text editing model used wherever content editing appears in the GUI (Content Cards, task descriptions, communication summaries).
+- **[Custom Objects PRD](custom-objects-prd.md)** — Defines the entity type framework, field type system, field groups, and relation types that the GUI renders. Field Groups (Custom Objects Section 11) define the Attribute Card sections in the record detail layout. The field type system (Custom Objects Section 9) determines rendering and editing behavior.
+- **[Views & Grid PRD](views-grid-prd.md)** — Defines all grid-level interactions: inline editing, row expansion, bulk actions, keyboard navigation within the grid, filter/sort/group mechanics, view persistence, and view sharing. This GUI PRD defines the *shell around* the grid; the Views PRD defines behavior *within* the grid.
+- **[Data Sources PRD](data-sources-prd.md)** — Defines the query abstraction layer that feeds views. The Action Panel's view configuration surfaces data source settings; this PRD defines the UI patterns, the Data Sources PRD defines the underlying query model.
+- **[Permissions & Sharing PRD](permissions-sharing-prd.md)** — Defines role-based access controls that determine which edit affordances appear (e.g., the pencil icon is hidden on Attribute Cards the user cannot edit), which action buttons are available, and which views are accessible.
+- **[Notes PRD](notes-prd.md)** — Defines the rich text editing model used wherever content editing appears in the GUI (Content Cards, task descriptions, communication summaries).
 - **All entity PRDs** (Contacts, Companies, Events, Tasks, Documents, Projects, Communications, Conversations) — Each entity PRD defines entity-specific behaviors, Card configurations, and field layouts. This GUI PRD defines the Card-Based Architecture those entities render into.
 
 ---
@@ -393,7 +393,7 @@ For entity types with folder hierarchies (e.g., Documents), the action panel dis
 
 ### 7.1 Purpose
 
-The Content Panel is the primary data display zone. In the standard entity workspace, it renders the active view as a data grid (List/Grid view), Board/Kanban, Calendar, or Timeline — as defined by the [Views & Grid PRD](views-grid-prd_V4.md).
+The Content Panel is the primary data display zone. In the standard entity workspace, it renders the active view as a data grid (List/Grid view), Board/Kanban, Calendar, or Timeline — as defined by the [Views & Grid PRD](views-grid-prd.md).
 
 ### 7.2 Layout
 
@@ -407,7 +407,7 @@ The Content Panel consists of:
 
 The Content Panel's view types use a **two-layer interaction model** that separates **Focus** (which record the user is browsing) from **Selection** (which records are marked for bulk operations). This separation ensures that browsing records never disturbs a carefully built selection set, and that building a selection set never forces the Detail Panel to jump between records.
 
-This section defines the **shell-level contracts** — how the application shell responds when a view type reports focus or selection changes. The specific mechanics of how each view type produces focus and selection changes (clicks, modifier keys, arrow keys, etc.) are defined in the respective view-type PRDs. For the List/Grid view, see [Views & Grid PRD](views-grid-prd_V7.md) Section 13.3.
+This section defines the **shell-level contracts** — how the application shell responds when a view type reports focus or selection changes. The specific mechanics of how each view type produces focus and selection changes (clicks, modifier keys, arrow keys, etc.) are defined in the respective view-type PRDs. For the List/Grid view, see [Views & Grid PRD](views-grid-prd.md) Section 13.3.
 
 #### Definitions
 
@@ -1602,19 +1602,19 @@ Mobile-first design produces UIs optimized for constrained viewports — large t
 
 | PRD                                                            | Relationship                                                                                                                                                                                                                               |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **[Custom Objects PRD](custom-objects-prd_v1.md)**             | Defines Field Groups (Attribute Card sections), field types (rendering behavior), Relation Types (clickable links), and entity type framework (Entity Bar items). The GUI PRD is the presentation layer for the Custom Objects data model. |
-| **[Views & Grid PRD](views-grid-prd_V4.md)**                   | Defines all grid-level interactions: inline editing, row expansion, bulk actions, keyboard navigation, filter/sort/group mechanics, view persistence, and view sharing. The GUI PRD wraps the grid in the application shell.               |
-| **[Data Sources PRD](data-sources-prd_V1.md)**                 | Defines the query abstraction that feeds views. The Action Panel surfaces data source configuration; the quick filter queries the data source result set.                                                                                  |
-| **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** | Determines which Attribute Card edit pencil icons appear, which action buttons are available, which views are accessible, and Edit View eligibility.                                                                                       |
-| **[Contact Management PRD](contact-management-prd_V5.md)**     | Defines Contact-specific Identity Card fields, Card configuration, action buttons, and Activity Card content sources.                                                                                                                      |
-| **[Company Management PRD](company-management-prd_V1.md)**     | Defines Company-specific Identity Card fields, hierarchy display, and action buttons.                                                                                                                                                      |
-| **[Communications PRD](communications-prd_V3.md)**             | Defines Communication records that populate the Activity Card in entity Windows.                                                                                                                                                           |
-| **[Conversations PRD](conversations-prd_V4.md)**               | Defines Conversation records that appear in the Activity Card.                                                                                                                                                                             |
-| **[Events PRD](events-prd_V3.md)**                             | Defines Event records for Activity Card display and calendar view integration.                                                                                                                                                             |
-| **[Notes PRD](notes-prd_V3.md)**                               | Defines Note records for Activity Card display and the rich text editing model used in Section-Based Editing.                                                                                                                              |
-| **[Tasks PRD](tasks-prd_V2.md)**                               | Defines Task records for Activity Card display and task-specific Content Tool Bar actions.                                                                                                                                                 |
-| **[Documents PRD](documents-prd_V2.md)**                       | Defines the folder navigation model that the Action Panel renders for Document entity workspaces.                                                                                                                                          |
-| **[Projects PRD](projects-prd_V3.md)**                         | Defines Project-specific Card layouts and action buttons.                                                                                                                                                                                  |
+| **[Custom Objects PRD](custom-objects-prd.md)**             | Defines Field Groups (Attribute Card sections), field types (rendering behavior), Relation Types (clickable links), and entity type framework (Entity Bar items). The GUI PRD is the presentation layer for the Custom Objects data model. |
+| **[Views & Grid PRD](views-grid-prd.md)**                   | Defines all grid-level interactions: inline editing, row expansion, bulk actions, keyboard navigation, filter/sort/group mechanics, view persistence, and view sharing. The GUI PRD wraps the grid in the application shell.               |
+| **[Data Sources PRD](data-sources-prd.md)**                 | Defines the query abstraction that feeds views. The Action Panel surfaces data source configuration; the quick filter queries the data source result set.                                                                                  |
+| **[Permissions & Sharing PRD](permissions-sharing-prd.md)** | Determines which Attribute Card edit pencil icons appear, which action buttons are available, which views are accessible, and Edit View eligibility.                                                                                       |
+| **[Contact Management PRD](contact-management-prd.md)**     | Defines Contact-specific Identity Card fields, Card configuration, action buttons, and Activity Card content sources.                                                                                                                      |
+| **[Company Management PRD](company-management-prd.md)**     | Defines Company-specific Identity Card fields, hierarchy display, and action buttons.                                                                                                                                                      |
+| **[Communications PRD](communications-prd.md)**             | Defines Communication records that populate the Activity Card in entity Windows.                                                                                                                                                           |
+| **[Conversations PRD](conversations-prd.md)**               | Defines Conversation records that appear in the Activity Card.                                                                                                                                                                             |
+| **[Events PRD](events-prd.md)**                             | Defines Event records for Activity Card display and calendar view integration.                                                                                                                                                             |
+| **[Notes PRD](notes-prd.md)**                               | Defines Note records for Activity Card display and the rich text editing model used in Section-Based Editing.                                                                                                                              |
+| **[Tasks PRD](tasks-prd.md)**                               | Defines Task records for Activity Card display and task-specific Content Tool Bar actions.                                                                                                                                                 |
+| **[Documents PRD](documents-prd.md)**                       | Defines the folder navigation model that the Action Panel renders for Document entity workspaces.                                                                                                                                          |
+| **[Projects PRD](projects-prd.md)**                         | Defines Project-specific Card layouts and action buttons.                                                                                                                                                                                  |
 
 ---
 
@@ -1684,7 +1684,7 @@ In the Docked Window, allowing Activity Card items to expand inline to show full
 
 ## 30. Glossary
 
-All terms used in this PRD are defined in the **[Master Glossary V3](glossary_V3.md)**. Key terms introduced or significantly modified in this PRD include:
+All terms used in this PRD are defined in the **[Master Glossary V3](glossary.md)**. Key terms introduced or significantly modified in this PRD include:
 
 **Layout & Navigation:** Application Shell, Workspace Layout, Entity Bar, Entity Selector, Administration Entity, Action Panel, Content Panel, Detail Panel, Splitter Bar, Application Tool Bar, Application Status Bar, Content Tool Bar
 

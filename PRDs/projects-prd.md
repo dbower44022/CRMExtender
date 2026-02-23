@@ -27,7 +27,7 @@
 > - **Explicit Contact and Company associations** — Project↔Contact and Project↔Company are first-class relations, not derived from communication participants.
 > - **System Relation Types** ship out of the box for all core entity connections, eliminating setup friction.
 >
-> All content is reconciled with the [Custom Objects PRD](custom-objects-prd_v2.md) Unified Object Model:
+> All content is reconciled with the [Custom Objects PRD](custom-objects-prd.md) Unified Object Model:
 > - Project is a **system object type** (`is_system = true`, prefix `prj_`) with registered behavior for entity aggregation.
 > - Entity IDs use **prefixed ULIDs** per the platform-wide convention.
 > - Sub-project hierarchy uses a **self-referential Relation Type** on Project (parent_project→child_project).
@@ -77,16 +77,16 @@ Projects are the highest-level user-created organizational container. They can c
 
 **Relationship to other PRDs:**
 
-- **[Custom Objects PRD](custom-objects-prd_v2.md)** — Project is a system object type. Table structure, field registry, event sourcing, and relation model are governed by the Custom Objects framework. This PRD defines the entity-specific behaviors and relations.
-- **[Conversations PRD](conversations-prd_V4.md)** — Conversations link to Projects via the Conversation↔Project system Relation Type (many-to-many). The Conversations PRD defines the Conversation entity (standard and aggregate); this PRD defines the Project side of those relationships. Aggregate Conversations replace the former Topic entity.
-- **[Communications PRD](communications-prd_V3.md)** — Communications belong to Conversations, which may belong to Projects. There is no direct Project→Communication relation.
-- **[Contact Management PRD](contact-management-prd_V5.md)** — Contacts link to Projects through an explicit system Relation Type. Project association is independent of communication participation.
-- **[Company Management PRD](company-management-prd_V1.md)** — Companies link to Projects through an explicit system Relation Type.
-- **[Event Management PRD](events-prd_V3.md)** — Events link to Projects through a system Relation Type.
-- **[Notes PRD](notes-prd_V3.md)** — Notes attach to Projects through the Universal Attachment Relation pattern.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — Virtual schema table for Projects is derived from the Project field registry.
-- **[Views & Grid PRD](views-grid-prd_V5.md)** — Project views, filters, sorts, dashboards, and inline editing operate on fields from the Project field registry.
-- **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** — Project record access follows the standard role-based access model.
+- **[Custom Objects PRD](custom-objects-prd.md)** — Project is a system object type. Table structure, field registry, event sourcing, and relation model are governed by the Custom Objects framework. This PRD defines the entity-specific behaviors and relations.
+- **[Conversations PRD](conversations-prd.md)** — Conversations link to Projects via the Conversation↔Project system Relation Type (many-to-many). The Conversations PRD defines the Conversation entity (standard and aggregate); this PRD defines the Project side of those relationships. Aggregate Conversations replace the former Topic entity.
+- **[Communications PRD](communications-prd.md)** — Communications belong to Conversations, which may belong to Projects. There is no direct Project→Communication relation.
+- **[Contact Management PRD](contact-management-prd.md)** — Contacts link to Projects through an explicit system Relation Type. Project association is independent of communication participation.
+- **[Company Management PRD](company-management-prd.md)** — Companies link to Projects through an explicit system Relation Type.
+- **[Event Management PRD](events-prd.md)** — Events link to Projects through a system Relation Type.
+- **[Notes PRD](notes-prd.md)** — Notes attach to Projects through the Universal Attachment Relation pattern.
+- **[Data Sources PRD](data-sources-prd.md)** — Virtual schema table for Projects is derived from the Project field registry.
+- **[Views & Grid PRD](views-grid-prd.md)** — Project views, filters, sorts, dashboards, and inline editing operate on fields from the Project field registry.
+- **[Permissions & Sharing PRD](permissions-sharing-prd.md)** — Project record access follows the standard role-based access model.
 
 ---
 
@@ -832,7 +832,7 @@ Users understand their workflow better than the platform does. Some businesses h
 
 ## 19. Glossary
 
-General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to this subsystem:
+General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
 | Term | Definition |
 |---|---|

@@ -4,7 +4,7 @@
 **Last Updated:** 2026-02-22
 **Status:** Draft
 **Product PRD:** [CRMExtender Product PRD]
-**Master Glossary:** [glossary_V3.md](glossary_V3.md)
+**Master Glossary:** [glossary.md](glossary.md)
 
 > **V9.0 (2026-02-22):** Added Editable attribute to Core Fields and Computed/Derived Fields tables, defining per-field edit behavior (Direct, Override, Via sub-entity, Computed, System) to prevent Claude Code from making non-editable fields editable.
 
@@ -492,9 +492,9 @@ All contact mutations are stored as immutable events. The system can reconstruct
 | [Contact Enrichment Sub-PRD] | Detailed enrichment pipeline and intelligence scoring requirements |
 | [Contact AI Intelligence Sub-PRD] | Detailed AI-powered intelligence feature requirements |
 | [Contact Relationship Intelligence Sub-PRD] | Detailed graph-based relationship intelligence requirements |
-| [Company Management Entity Base PRD](company-management-prd_V1.md) | Company entity — contact-to-company relationship details |
-| [Custom Objects PRD](custom-objects-prd_v2.md) | Unified object model, field registry, and relation framework |
-| [Communications PRD](communications-prd_V3.md) | Communication entity — participant resolution |
-| [Conversations PRD](conversations-prd_V4.md) | Conversation entity — cross-channel thread stitching |
+| [Company Management Entity Base PRD](company-management-prd.md) | Company entity — contact-to-company relationship details |
+| [Custom Objects PRD](custom-objects-prd.md) | Unified object model, field registry, and relation framework |
+| [Communications PRD](communications-prd.md) | Communication entity — participant resolution |
+| [Conversations PRD](conversations-prd.md) | Conversation entity — cross-channel thread stitching |
 | [GUI Standards] | UI component patterns and design conventions |
-| [Master Glossary](glossary_V3.md) | Term definitions |
+| [Master Glossary](glossary.md) | Term definitions |

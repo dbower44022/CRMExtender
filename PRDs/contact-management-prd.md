@@ -11,10 +11,10 @@
 > Terminology alignment pass. Updated PRD links: Custom Objects PRD V1 → V2, Views & Grid PRD V3 → V5. Added Card-Based Architecture reference in phasing table. Added Master Glossary V3 cross-reference in glossary. No behavioral changes.
 > 
 > **V4.0 Company PRD Extraction (2026-02-17):**
-> Section 6 (Company Data Model) has been replaced with a concise cross-reference to the new [Company Management & Intelligence PRD](company-management-prd_V1.md), which consolidates the Company Detection specification and Company Intelligence PRD into a single authoritative document for the Company entity type. The full Company data model, domain resolution flow, enrichment pipeline, hierarchy, merging, scoring, and social profile specifications now live in the Company PRD. This document retains a summary Section 6 covering only the Contact↔Company interaction points.
+> Section 6 (Company Data Model) has been replaced with a concise cross-reference to the new [Company Management & Intelligence PRD](company-management-prd.md), which consolidates the Company Detection specification and Company Intelligence PRD into a single authoritative document for the Company entity type. The full Company data model, domain resolution flow, enrichment pipeline, hierarchy, merging, scoring, and social profile specifications now live in the Company PRD. This document retains a summary Section 6 covering only the Contact↔Company interaction points.
 
 > **V3.0 Reconciliation Complete (2026-02-17):**
-> This version completes the reconciliation with the [Custom Objects PRD](custom-objects-prd_v2.md) that V2.0 began. V2.0 added reconciliation callout notes; V3.0 rewrites the body text to fully reflect the Unified Object Model. Changes across V2.0 and V3.0:
+> This version completes the reconciliation with the [Custom Objects PRD](custom-objects-prd.md) that V2.0 began. V2.0 added reconciliation callout notes; V3.0 rewrites the body text to fully reflect the Unified Object Model. Changes across V2.0 and V3.0:
 > 
 > - Contact and Company are **system object types** in the unified framework (`is_system = true`), with core fields protected from deletion and specialized behaviors registered per Custom Objects PRD Section 22.
 > - Entity IDs use **prefixed ULIDs** (`con_` for contacts, `cmp_` for companies) per the platform-wide convention (Data Sources PRD, Custom Objects PRD Section 6).
@@ -73,11 +73,11 @@ Unlike traditional CRMs that treat contacts as static address book entries, CRME
 
 **Relationship to other PRDs:**
 
-- **[Custom Objects PRD](custom-objects-prd_v2.md)** — The Contact and Company entity types are **system object types** in the unified framework. Their table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. This PRD defines the Contact-specific behaviors (identity resolution, enrichment, intelligence scoring, relationship intelligence) that are registered with the object type framework. Custom fields on Contacts and Companies are managed through the unified field registry, not a JSONB column.
+- **[Custom Objects PRD](custom-objects-prd.md)** — The Contact and Company entity types are **system object types** in the unified framework. Their table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. This PRD defines the Contact-specific behaviors (identity resolution, enrichment, intelligence scoring, relationship intelligence) that are registered with the object type framework. Custom fields on Contacts and Companies are managed through the unified field registry, not a JSONB column.
 - **[Communication & Conversation Intelligence PRD](email-conversations-prd.md)** — Every communication participant resolves to a contact. The conversations subsystem depends on the contact model for participant resolution, but owns its own `conversation_participants` and `communication_participants` tables.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — The Contact and Company virtual schema tables are derived from their object type field registries. The prefixed entity ID convention (`con_`, `cmp_`) enables automatic entity detection in data source queries.
+- **[Data Sources PRD](data-sources-prd.md)** — The Contact and Company virtual schema tables are derived from their object type field registries. The prefixed entity ID convention (`con_`, `cmp_`) enables automatic entity detection in data source queries.
 - **[Data Layer Architecture PRD](data-layer-prd.md)** — Defines the `contacts` and `contact_identifiers` tables used by the conversations subsystem. This PRD extends the contact model with the full event-sourced schema, intelligence tables, and graph model.
-- **[Company Management & Intelligence PRD](company-management-prd_V1.md)** — The Company entity type is fully specified in its own PRD. This document’s Section 6 is a summary cross-reference; the Company PRD is authoritative for the Company data model, domain resolution, enrichment, hierarchy, merging, scoring, and all company-specific behaviors.
+- **[Company Management & Intelligence PRD](company-management-prd.md)** — The Company entity type is fully specified in its own PRD. This document’s Section 6 is a summary cross-reference; the Company PRD is authoritative for the Company data model, domain resolution, enrichment, hierarchy, merging, scoring, and all company-specific behaviors.
 
 ---
 
@@ -462,23 +462,23 @@ Temporal employment records linking contacts to companies. Enables career trajec
 
 ## 6. Company Data Model
 
-> **Authoritative source:** The Company entity type — its data model, domain resolution, enrichment pipeline, duplicate detection & merging, hierarchy, relationship scoring, social media profiles, and intelligence — is fully specified in the **[Company Management & Intelligence PRD](company-management-prd_V1.md)**.
+> **Authoritative source:** The Company entity type — its data model, domain resolution, enrichment pipeline, duplicate detection & merging, hierarchy, relationship scoring, social media profiles, and intelligence — is fully specified in the **[Company Management & Intelligence PRD](company-management-prd.md)**.
 > 
 > This section provides only the summary necessary for understanding Contact↔Company interactions. For the complete Company data model, field registry, API design, and all company-specific behaviors, see the Company PRD.
 
 ### 6.1 Company as System Object Type
 
-Company is a **system object type** (`is_system = true`, prefix `cmp_`). The `companies` table is its dedicated read model table within the tenant schema. Key fields include `name`, `domain` (primary web domain, used for email domain matching), `industry`, `size_range`, `location`, `website`, `founded_year`, `revenue_range`, `funding_stage`, and `linkedin_url`. See [Company PRD Section 4](company-management-prd_V1.md#4-company-data-model) for the complete field registry.
+Company is a **system object type** (`is_system = true`, prefix `cmp_`). The `companies` table is its dedicated read model table within the tenant schema. Key fields include `name`, `domain` (primary web domain, used for email domain matching), `industry`, `size_range`, `location`, `website`, `founded_year`, `revenue_range`, `funding_stage`, and `linkedin_url`. See [Company PRD Section 4](company-management-prd.md#4-company-data-model) for the complete field registry.
 
 ### 6.2 Company Domain Resolution (Summary)
 
-Companies are discovered and linked via email domain. The domain resolution flow: extract domain from email → skip public domains (gmail.com, yahoo.com, etc.) → normalize to root domain → look up `company_identifiers` → auto-create company if not found (with name = domain as placeholder) → trigger enrichment to discover real name. The Google Contacts organization name field is ignored entirely — the email domain is the sole source of truth for company identity. See [Company PRD Section 5](company-management-prd_V1.md#5-company-identifiers--domain-resolution) for the complete resolution flow, normalization rules, and public domain exclusion list.
+Companies are discovered and linked via email domain. The domain resolution flow: extract domain from email → skip public domains (gmail.com, yahoo.com, etc.) → normalize to root domain → look up `company_identifiers` → auto-create company if not found (with name = domain as placeholder) → trigger enrichment to discover real name. The Google Contacts organization name field is ignored entirely — the email domain is the sole source of truth for company identity. See [Company PRD Section 5](company-management-prd.md#5-company-identifiers--domain-resolution) for the complete resolution flow, normalization rules, and public domain exclusion list.
 
 When a company is resolved from a domain, the contact is linked via the Contact→Company employment Relation Type (Section 5.5 of this document).
 
 ### 6.3 Company-to-Company Relationships (Neo4j)
 
-Company hierarchy (subsidiary, division, acquisition, spinoff) and business relationships (partner, competitor, vendor, client) are modeled as Relation Types and synced to Neo4j. See [Company PRD Section 7](company-management-prd_V1.md#7-company-hierarchy) for hierarchy and [Company PRD Section 13](company-management-prd_V1.md#13-company-to-company-relationships-neo4j) for Neo4j graph edges.
+Company hierarchy (subsidiary, division, acquisition, spinoff) and business relationships (partner, competitor, vendor, client) are modeled as Relation Types and synced to Neo4j. See [Company PRD Section 7](company-management-prd.md#7-company-hierarchy) for hierarchy and [Company PRD Section 13](company-management-prd.md#13-company-to-company-relationships-neo4j) for Neo4j graph edges.
 
 ---
 
@@ -1787,7 +1787,7 @@ Queued writes are displayed with a "pending" indicator. On reconnect, the queue 
 
 ## 24. Glossary
 
-General UI terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to Contact Management:
+General UI terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to Contact Management:
 
 | Term                               | Definition                                                                                                                                                                                                |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1817,9 +1817,9 @@ General UI terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute C
 | Document                                                                    | Relationship                                                                                                                                                                                                                                   |
 | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [CRMExtender PRD v1.1](PRD.md)                                              | Parent document defining system architecture, phasing, and all feature areas                                                                                                                                                                   |
-| [Custom Objects PRD](custom-objects-prd_v2.md)                              | Defines the unified object model, field registry, and relation framework that Contact and Company are system instances of. Governs storage architecture, DDL management, event sourcing patterns, and the Employment Relation Type definition. |
+| [Custom Objects PRD](custom-objects-prd.md)                              | Defines the unified object model, field registry, and relation framework that Contact and Company are system instances of. Governs storage architecture, DDL management, event sourcing patterns, and the Employment Relation Type definition. |
 | [Communication & Conversation Intelligence PRD](email-conversations-prd.md) | Sibling subsystem that resolves communication participants to contacts                                                                                                                                                                         |
-| [Data Sources PRD](data-sources-prd_V1.md)                                  | Query abstraction layer. Contact and Company virtual schema derived from object type field registries. Prefixed entity ID convention.                                                                                                          |
-| [Views & Grid PRD](views-grid-prd_V5.md)                                    | Renders Contact and Company data through entity-agnostic views using field type registry.                                                                                                                                                      |
+| [Data Sources PRD](data-sources-prd.md)                                  | Query abstraction layer. Contact and Company virtual schema derived from object type field registries. Prefixed entity ID convention.                                                                                                          |
+| [Views & Grid PRD](views-grid-prd.md)                                    | Renders Contact and Company data through entity-agnostic views using field type registry.                                                                                                                                                      |
 | [Data Layer Architecture PRD](data-layer-prd.md)                            | Defines the database schema for contacts and identifiers used by the conversations subsystem                                                                                                                                                   |
-| [Company Management & Intelligence PRD](company-management-prd_V1.md)       | Authoritative source for Company entity type: data model, domain resolution, enrichment, hierarchy, merging, scoring. Contact PRD Section 6 cross-references this document.                                                                    |
+| [Company Management & Intelligence PRD](company-management-prd.md)       | Authoritative source for Company entity type: data model, domain resolution, enrichment, hierarchy, merging, scoring. Contact PRD Section 6 cross-references this document.                                                                    |

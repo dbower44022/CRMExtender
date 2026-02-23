@@ -23,9 +23,9 @@
 > This document is one of two sibling PRDs extracted from the monolithic Communication & Conversation Intelligence PRD v2.0 (2026-02-07). That document has been decomposed into:
 > 
 > - **This PRD (Communications)** — The Communication entity as a system object type, the common schema all channels normalize to, the provider adapter framework, contact association, triage filtering, multi-account management, attachments, storage, and the general processing pipeline. This is the foundation that channel-specific child PRDs build on.
-> - **[Conversations PRD](conversations-prd_V2.md)** — The Conversation, Topic, and Project entity types, the organizational hierarchy, AI intelligence layer (classify & route, summarize, extract intelligence), conversation lifecycle, cross-channel stitching, segmentation, and the review workflow.
+> - **[Conversations PRD](conversations-prd.md)** — The Conversation, Topic, and Project entity types, the organizational hierarchy, AI intelligence layer (classify & route, summarize, extract intelligence), conversation lifecycle, cross-channel stitching, segmentation, and the review workflow.
 > 
-> All content has been reconciled with the [Custom Objects PRD](custom-objects-prd_v2.md) Unified Object Model:
+> All content has been reconciled with the [Custom Objects PRD](custom-objects-prd.md) Unified Object Model:
 > 
 > - Communication is a **system object type** (`is_system = true`, prefix `com_`) in the unified framework. Core fields are protected from deletion; specialized behaviors (channel-specific parsing, triage classification, content extraction) are registered per Custom Objects PRD Section 22.
 > - Entity IDs use **prefixed ULIDs** (`com_` prefix, e.g., `com_01HX8A...`) per the platform-wide convention (Data Sources PRD, Custom Objects PRD Section 6).
@@ -91,21 +91,21 @@ This PRD defines the Communication entity, the common schema that all channels n
 
 **Relationship to other PRDs:**
 
-- **[Custom Objects PRD](custom-objects-prd_v2.md)** — The Communication entity type is a **system object type** in the unified framework. Its table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. This PRD defines the Communication-specific behaviors (parsing, triage, content extraction) that are registered with the object type framework.
-- **[Conversations PRD](conversations-prd_V2.md)** — Conversations group Communications into coherent threads. The Conversations PRD defines the organizational hierarchy (Projects → Topics → Conversations), AI intelligence layer, conversation lifecycle, and cross-channel stitching. Communications reference their parent Conversation via an FK column.
-- **[Contact Management PRD](contact-management-prd_V5.md)** — Communication participants are resolved to Contact records via `contact_identifiers`. Email addresses, phone numbers, and platform handles are matched to unified contact records. Communication frequency feeds relationship strength scoring.
-- **[Company Management PRD](company-management-prd_V1.md)** — Email domain extraction during sync triggers company auto-creation. Communications link to companies indirectly through contact participants. Communication patterns feed company relationship scoring.
-- **[Event Management PRD](events-prd_V3.md)** — Calendar events link to conversations (which contain communications) through the Event→Conversation Relation Type. Meeting follow-up emails and pre-meeting coordination threads are correlated with their triggering events.
-- **[Notes PRD](notes-prd_V3.md)** — Notes are a distinct system object type for free-form knowledge capture. Manually logged phone calls and in-person meetings where the user is the content source create Communication records (channel = `phone_manual` or `in_person`), not Note records. Notes attach *to* entities (including Communications and Conversations) as supplementary commentary; Communications *are* the interaction records.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — The Communication virtual schema table is derived from the Communication object type's field registry. The prefixed entity ID convention (`com_`) enables automatic entity detection in data source queries.
-- **[Views & Grid PRD](views-grid-prd_V5.md)** — Communication views, filters, sorts, and inline editing operate on fields defined in the Communication field registry.
-- **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** — Communication record access, provider account management permissions, and integration data visibility follow the standard role-based access model.
+- **[Custom Objects PRD](custom-objects-prd.md)** — The Communication entity type is a **system object type** in the unified framework. Its table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. This PRD defines the Communication-specific behaviors (parsing, triage, content extraction) that are registered with the object type framework.
+- **[Conversations PRD](conversations-prd.md)** — Conversations group Communications into coherent threads. The Conversations PRD defines the organizational hierarchy (Projects → Topics → Conversations), AI intelligence layer, conversation lifecycle, and cross-channel stitching. Communications reference their parent Conversation via an FK column.
+- **[Contact Management PRD](contact-management-prd.md)** — Communication participants are resolved to Contact records via `contact_identifiers`. Email addresses, phone numbers, and platform handles are matched to unified contact records. Communication frequency feeds relationship strength scoring.
+- **[Company Management PRD](company-management-prd.md)** — Email domain extraction during sync triggers company auto-creation. Communications link to companies indirectly through contact participants. Communication patterns feed company relationship scoring.
+- **[Event Management PRD](events-prd.md)** — Calendar events link to conversations (which contain communications) through the Event→Conversation Relation Type. Meeting follow-up emails and pre-meeting coordination threads are correlated with their triggering events.
+- **[Notes PRD](notes-prd.md)** — Notes are a distinct system object type for free-form knowledge capture. Manually logged phone calls and in-person meetings where the user is the content source create Communication records (channel = `phone_manual` or `in_person`), not Note records. Notes attach *to* entities (including Communications and Conversations) as supplementary commentary; Communications *are* the interaction records.
+- **[Data Sources PRD](data-sources-prd.md)** — The Communication virtual schema table is derived from the Communication object type's field registry. The prefixed entity ID convention (`com_`) enables automatic entity detection in data source queries.
+- **[Views & Grid PRD](views-grid-prd.md)** — Communication views, filters, sorts, and inline editing operate on fields defined in the Communication field registry.
+- **[Permissions & Sharing PRD](permissions-sharing-prd.md)** — Communication record access, provider account management permissions, and integration data visibility follow the standard role-based access model.
 
 **Channel-specific child PRDs:**
 
 | Child PRD                                                    | Scope                                                                                                                                                                                                       |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[Email Provider Sync PRD](email-provider-sync-prd_V1.md)** | Gmail, Outlook, and IMAP provider adapters; OAuth flows; email sync pipeline; email parsing & content extraction (dual-track pipeline); email-specific triage patterns; email threading models per provider |
+| **[Email Provider Sync PRD](email-provider-sync-prd.md)** | Gmail, Outlook, and IMAP provider adapters; OAuth flows; email sync pipeline; email parsing & content extraction (dual-track pipeline); email-specific triage patterns; email threading models per provider |
 | **SMS/MMS PRD** (future)                                     | SMS provider adapters (Twilio, OpenPhone); message sync; phone number resolution; MMS media handling                                                                                                        |
 | **Voice/VoIP PRD** (future)                                  | Call recording integration; transcription pipeline; call metadata capture; provider adapters                                                                                                                |
 | **Video Meetings PRD** (future)                              | Zoom/Teams/Meet integration; transcript capture; calendar event correlation; recording management                                                                                                           |
@@ -620,7 +620,7 @@ The system creates a Communication record with `source = 'manual'` and `provider
 
 ### 9.1 Provider Account Data Model
 
-Provider accounts represent connected external services. The data model is shared across all integration types (email, SMS, calendar, etc.) and is defined in the [Permissions & Sharing PRD](permissions-sharing-prd_V2.md) Section 11.3.
+Provider accounts represent connected external services. The data model is shared across all integration types (email, SMS, calendar, etc.) and is defined in the [Permissions & Sharing PRD](permissions-sharing-prd.md) Section 11.3.
 
 | Attribute               | Type        | Description                                                                           |
 | ----------------------- | ----------- | ------------------------------------------------------------------------------------- |
@@ -1347,7 +1347,7 @@ Communication summaries often have natural structure: key points, decisions made
 
 ## 26. Glossary
 
-General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to this subsystem:
+General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
 | Term                       | Definition                                                                                                                                                                                                 |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1381,7 +1381,7 @@ The following details describe the proof-of-concept implementation that preceded
 | Database           | SQLite with flat table structure                                |
 | Email provider     | Gmail API only                                                  |
 | Sync               | `history.list` incremental + `threads.list` initial             |
-| Parsing            | `strip_quotes()` dual-track pipeline (see `email_stripping_V1.md`) |
+| Parsing            | `strip_quotes()` dual-track pipeline (see `email-stripping.md`) |
 | Triage             | Heuristic junk detection + known-contact gate                   |
 | AI                 | Claude-powered summarization                                    |
 | Contact resolution | Google Contacts sync → email address lookup                     |
@@ -1403,7 +1403,7 @@ The following details describe the proof-of-concept implementation that preceded
 - `tests/test_email_parser.py` — 60 tests covering plain-text pipeline and shared cleanup functions
 - `tests/test_html_email_parser.py` — 35 tests covering HTML-aware pipeline
 
-See [Email Parsing & Content Extraction](email_stripping_V1.md) for detailed test categories.
+See [Email Parsing & Content Extraction](email-stripping.md) for detailed test categories.
 
 ### A.4 PoC Metrics
 

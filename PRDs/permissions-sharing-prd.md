@@ -58,10 +58,10 @@ This PRD defines **who can do what, on which data, and how data moves between us
 
 **Relationship to other PRDs:**
 
-- **[Custom Objects PRD](custom-objects-prd_v2.md)** — Provides the Object Creator permission as a discrete grantable capability. Field-level permissions (Phase 4) and record-level access control are defined here. Schema-per-tenant architecture is the multi-tenant isolation foundation.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — Row-level security filters are injected by the query engine based on the visibility and sharing rules defined here. Shared data source permissions follow the same model.
-- **[Views & Grid PRD](views-grid-prd_V5.md)** — Shared view behavior, fork-on-write for personal overrides, and view-as-alert permissions reference this PRD.
-- **[Contact Management PRD](contact-management-prd_V2.md)** — Contact ownership, visibility, and the contact ownership model question (Open Question #1 in that PRD) are resolved here.
+- **[Custom Objects PRD](custom-objects-prd.md)** — Provides the Object Creator permission as a discrete grantable capability. Field-level permissions (Phase 4) and record-level access control are defined here. Schema-per-tenant architecture is the multi-tenant isolation foundation.
+- **[Data Sources PRD](data-sources-prd.md)** — Row-level security filters are injected by the query engine based on the visibility and sharing rules defined here. Shared data source permissions follow the same model.
+- **[Views & Grid PRD](views-grid-prd.md)** — Shared view behavior, fork-on-write for personal overrides, and view-as-alert permissions reference this PRD.
+- **[Contact Management PRD](contact-management-prd.md)** — Contact ownership, visibility, and the contact ownership model question (Open Question #1 in that PRD) are resolved here.
 - **[Communication PRD](email-conversations-prd.md)** — Conversation access, shared inbox permissions, and communication visibility depend on this PRD.
 
 ---
@@ -1313,7 +1313,7 @@ All phases ship before the first release. Phases represent development order, no
 
 ## 24. Glossary
 
-General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to this subsystem:
+General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
 | Term | Definition |
 |---|---|

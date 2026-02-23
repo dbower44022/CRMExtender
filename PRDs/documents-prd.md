@@ -13,7 +13,7 @@
 > **V1.0 (2026-02-18):**
 > This document defines the Document system object type for CRMExtender. Documents represent files — proposals, contracts, brochures, photos, recordings, and any other binary content — managed as first-class entities with version control, folder organization, and universal entity attachment. The design enables full relationship intelligence over files: "which version of the brochure was sent to Contact X in response to email Y."
 >
-> All content is reconciled with the [Custom Objects PRD](custom-objects-prd_v2.md) Unified Object Model:
+> All content is reconciled with the [Custom Objects PRD](custom-objects-prd.md) Unified Object Model:
 > - Document is a **system object type** (`is_system = true`, prefix `doc_`) in the unified framework. Metadata fields (name, description, category, dimensions, etc.) are registered in the field registry. Specialized behaviors (thumbnail generation, metadata extraction, text extraction, duplicate detection, FTS sync, visibility cascade, orphan cleanup) are registered per Custom Objects PRD Section 22.
 > - Entity IDs use **prefixed ULIDs** (`doc_` prefix, e.g., `doc_01HX8A...`) per the platform-wide convention (Data Sources PRD, Custom Objects PRD Section 6).
 > - Document-to-entity linking uses the **Universal Attachment Relation** pattern (`target = *`), reusing the pattern introduced by the Notes PRD and adopted by Tasks. Documents and folders attach to any entity type — system or custom — without requiring individual relation type definitions.
@@ -78,18 +78,18 @@ The system unifies three previously separate file storage concerns: communicatio
 
 **Relationship to other PRDs:**
 
-- **[Custom Objects PRD](custom-objects-prd_v2.md)** — The Document entity type is a system object type in the unified framework. Its table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. The Universal Attachment Relation pattern (introduced by the Notes PRD) is reused for document-to-entity linking. This PRD defines the Document-specific behaviors registered with the object type framework.
-- **[Notes PRD](notes-prd_V3.md)** — Documents reuse the Universal Attachment Relation pattern and the `StorageBackend` protocol established by Notes. Note inline attachments (images pasted into the editor) remain tightly coupled to Notes and are NOT Document entities. Notes can attach to Documents via Notes' own universal attachment, enabling commentary on document records.
-- **[Tasks PRD](tasks-prd_V2.md)** — Tasks can attach to Documents for file-related action items ("review and approve contract", "update brochure pricing"). Documents can attach to Tasks for deliverable tracking.
-- **[Communications PRD](communications-prd_V1.md)** — Email attachments are automatically promoted to Document entities during sync. The Communications PRD's standalone `communication_attachments` table is replaced by Communication→Document relations. This enables "which version of this file was sent in that email" tracking.
-- **[Company Management PRD](company-management-prd_V1.md)** — Company logos, banners, and contact headshots are stored as Document entities, replacing the `entity_assets` table. This brings version control to profile assets and eliminates a separate storage system.
-- **[Projects PRD](projects-prd_V3.md)** — Documents attach to Projects for project-level file organization. Project folders provide a natural grouping for deliverables, references, and working files.
-- **[Contact Management PRD](contact-management-prd_V5.md)** — Documents attach to Contacts for relationship-specific files (proposals sent, contracts signed, photos).
-- **[Event Management PRD](events-prd_V3.md)** — Documents attach to Events for meeting materials, presentation decks, and post-meeting deliverables.
-- **[Conversations PRD](conversations-prd_V4.md)** — Documents attach to Conversations for file context within communication threads.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — The Document virtual schema table is derived from the Document object type's field registry. The `doc_` prefix enables automatic entity detection in data source queries.
-- **[Views & Grid PRD](views-grid-prd_V5.md)** — Document views support Grid (metadata columns), Gallery (thumbnail grid), and list views. Inline editing, filtering, and sorting operate on fields from the Document field registry.
-- **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** — Document visibility follows the Notes-style private-by-default model with folder-level cascade sharing.
+- **[Custom Objects PRD](custom-objects-prd.md)** — The Document entity type is a system object type in the unified framework. Its table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. The Universal Attachment Relation pattern (introduced by the Notes PRD) is reused for document-to-entity linking. This PRD defines the Document-specific behaviors registered with the object type framework.
+- **[Notes PRD](notes-prd.md)** — Documents reuse the Universal Attachment Relation pattern and the `StorageBackend` protocol established by Notes. Note inline attachments (images pasted into the editor) remain tightly coupled to Notes and are NOT Document entities. Notes can attach to Documents via Notes' own universal attachment, enabling commentary on document records.
+- **[Tasks PRD](tasks-prd.md)** — Tasks can attach to Documents for file-related action items ("review and approve contract", "update brochure pricing"). Documents can attach to Tasks for deliverable tracking.
+- **[Communications PRD](communications-prd.md)** — Email attachments are automatically promoted to Document entities during sync. The Communications PRD's standalone `communication_attachments` table is replaced by Communication→Document relations. This enables "which version of this file was sent in that email" tracking.
+- **[Company Management PRD](company-management-prd.md)** — Company logos, banners, and contact headshots are stored as Document entities, replacing the `entity_assets` table. This brings version control to profile assets and eliminates a separate storage system.
+- **[Projects PRD](projects-prd.md)** — Documents attach to Projects for project-level file organization. Project folders provide a natural grouping for deliverables, references, and working files.
+- **[Contact Management PRD](contact-management-prd.md)** — Documents attach to Contacts for relationship-specific files (proposals sent, contracts signed, photos).
+- **[Event Management PRD](events-prd.md)** — Documents attach to Events for meeting materials, presentation decks, and post-meeting deliverables.
+- **[Conversations PRD](conversations-prd.md)** — Documents attach to Conversations for file context within communication threads.
+- **[Data Sources PRD](data-sources-prd.md)** — The Document virtual schema table is derived from the Document object type's field registry. The `doc_` prefix enables automatic entity detection in data source queries.
+- **[Views & Grid PRD](views-grid-prd.md)** — Document views support Grid (metadata columns), Gallery (thumbnail grid), and list views. Inline editing, filtering, and sorting operate on fields from the Document field registry.
+- **[Permissions & Sharing PRD](permissions-sharing-prd.md)** — Document visibility follows the Notes-style private-by-default model with folder-level cascade sharing.
 
 ---
 
@@ -387,7 +387,7 @@ Folders cannot be placed inside themselves (direct or indirect circular referenc
 
 ### 6.1 Pattern
 
-Documents reuse the Universal Attachment Relation pattern introduced by the [Notes PRD](notes-prd_V3.md) Section 6. The pattern enables a source entity type to link to records of any type (`target = *`) through a polymorphic junction table.
+Documents reuse the Universal Attachment Relation pattern introduced by the [Notes PRD](notes-prd.md) Section 6. The pattern enables a source entity type to link to records of any type (`target = *`) through a polymorphic junction table.
 
 The Document entity type registers its own universal attachment relation type:
 
@@ -1242,18 +1242,18 @@ List endpoints use cursor-based pagination with `updated_at` as the cursor field
 
 | Dependency | Nature | Details |
 |---|---|---|
-| **[Custom Objects PRD](custom-objects-prd_v2.md)** | **Structural** | Provides the object type framework, field registry, event sourcing, and tenant schema provisioning that Documents uses. The Universal Attachment Relation extends the relation type model. |
-| **[Notes PRD](notes-prd_V3.md)** | **Pattern** | Introduced the Universal Attachment Relation pattern and `StorageBackend` protocol reused by Documents. Note inline attachments remain independent of the Documents system. |
-| **[Tasks PRD](tasks-prd_V2.md)** | **Consumer** | Tasks can attach to Documents for file-related action items. Documents can attach to Tasks for deliverable tracking. |
-| **[Communications PRD](communications-prd_V1.md)** | **Integration** | Communication attachments migrate to Document entities (Phase 3). The `communication_attachments` table is replaced by `communication_documents`. |
-| **[Company Management PRD](company-management-prd_V1.md)** | **Integration** | Profile assets (logos, headshots, banners) migrate to Document entities (Phase 3). The `entity_assets` table is deprecated. |
-| **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** | **Behavioral** | Defines the entity-level visibility rules that shared documents inherit. The folder cascade model extends the Notes visibility pattern. |
-| **[Data Sources PRD](data-sources-prd_V1.md)** | **Integration** | The Document virtual schema table (Phase 4) follows the Data Sources convention. The `doc_` prefix enables automatic entity detection. |
-| **[Views & Grid PRD](views-grid-prd_V5.md)** | **Integration** | Document views (Phase 4) use Grid and Gallery view types. The Linked Entities column type is shared with Notes and Tasks. |
-| **[Contact Management PRD](contact-management-prd_V5.md)** | **Consumer** | Contact detail pages display linked documents. |
-| **[Event Management PRD](events-prd_V3.md)** | **Consumer** | Event detail pages display linked documents. |
-| **[Projects PRD](projects-prd_V3.md)** | **Consumer** | Project detail pages display linked documents and folders. |
-| **[Conversations PRD](conversations-prd_V4.md)** | **Consumer** | Conversation detail pages display linked documents. |
+| **[Custom Objects PRD](custom-objects-prd.md)** | **Structural** | Provides the object type framework, field registry, event sourcing, and tenant schema provisioning that Documents uses. The Universal Attachment Relation extends the relation type model. |
+| **[Notes PRD](notes-prd.md)** | **Pattern** | Introduced the Universal Attachment Relation pattern and `StorageBackend` protocol reused by Documents. Note inline attachments remain independent of the Documents system. |
+| **[Tasks PRD](tasks-prd.md)** | **Consumer** | Tasks can attach to Documents for file-related action items. Documents can attach to Tasks for deliverable tracking. |
+| **[Communications PRD](communications-prd.md)** | **Integration** | Communication attachments migrate to Document entities (Phase 3). The `communication_attachments` table is replaced by `communication_documents`. |
+| **[Company Management PRD](company-management-prd.md)** | **Integration** | Profile assets (logos, headshots, banners) migrate to Document entities (Phase 3). The `entity_assets` table is deprecated. |
+| **[Permissions & Sharing PRD](permissions-sharing-prd.md)** | **Behavioral** | Defines the entity-level visibility rules that shared documents inherit. The folder cascade model extends the Notes visibility pattern. |
+| **[Data Sources PRD](data-sources-prd.md)** | **Integration** | The Document virtual schema table (Phase 4) follows the Data Sources convention. The `doc_` prefix enables automatic entity detection. |
+| **[Views & Grid PRD](views-grid-prd.md)** | **Integration** | Document views (Phase 4) use Grid and Gallery view types. The Linked Entities column type is shared with Notes and Tasks. |
+| **[Contact Management PRD](contact-management-prd.md)** | **Consumer** | Contact detail pages display linked documents. |
+| **[Event Management PRD](events-prd.md)** | **Consumer** | Event detail pages display linked documents. |
+| **[Projects PRD](projects-prd.md)** | **Consumer** | Project detail pages display linked documents and folders. |
+| **[Conversations PRD](conversations-prd.md)** | **Consumer** | Conversation detail pages display linked documents. |
 
 ---
 
@@ -1310,7 +1310,7 @@ AI-powered document analysis: automatic summarization, entity extraction (find c
 
 ## 26. Glossary
 
-General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to this subsystem:
+General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
 | Term | Definition |
 |---|---|

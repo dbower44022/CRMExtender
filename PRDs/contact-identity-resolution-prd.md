@@ -3,9 +3,9 @@
 **Version:** 2.0
 **Last Updated:** 2026-02-22
 **Status:** Draft
-**Entity Base PRD:** [contact-entity-base-prd_V6.md]
-**Referenced Entity PRDs:** [Company Management Entity Base PRD](company-management-prd_V1.md)
-**Referenced Action Sub-PRDs:** [Contact Merge & Split Sub-PRD](contact-merge-split-prd_V1.md)
+**Entity Base PRD:** [contact-entity-base-prd.md]
+**Referenced Entity PRDs:** [Company Management Entity Base PRD](company-management-prd.md)
+**Referenced Action Sub-PRDs:** [Contact Merge & Split Sub-PRD](contact-merge-split-prd.md)
 
 > **V2.0 (2026-02-22):** Added Key Processes section defining end-to-end user experiences for all resolution scenarios. Restructured functional sections with process linkage. Enhanced UI specifications for inline warnings, review queue, and flagged merge indicators.
 

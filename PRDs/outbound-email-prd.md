@@ -5,7 +5,7 @@
 **Version:** 2.0
 **Date:** 2026-02-20
 **Status:** Draft — Fully reconciled with Communications PRD, Documents PRD, Custom Objects PRD
-**Parent Document:** [Communications PRD](communications-prd_V3.md)
+**Parent Document:** [Communications PRD](communications-prd.md)
 
 > **V2.0 (2026-02-22):**
 > Terminology standardization pass: Cross-PRD links updated to current versions (Views & Grid V5, GUI PRD V2, Contact Management V5). Master Glossary V3 cross-reference added to glossary section.
@@ -79,15 +79,15 @@ Beyond individual email composition, the system supports **email templates** wit
 
 **Relationship to other PRDs:**
 
-- **[Communications PRD](communications-prd_V3.md)** — Outbound emails are Communication records (`com_` prefix) in the unified schema. The Communications PRD defines the entity structure, field registry, provider account framework, participant model, and event sourcing that outbound emails inherit. This PRD adds the compose experience, send pipeline, and outbound-specific behaviors (templates, automation, click tracking) as extensions.
-- **[Email Provider Sync PRD](email-provider-sync-prd_V1.md)** (planned) — The sync PRD covers the mechanics of provider API interaction: OAuth flows, message fetching, incremental sync cursors. This PRD uses the provider adapter's send capability but defines the user-facing compose experience and business logic independently.
-- **[Documents PRD](documents-prd_V2.md)** — Every outbound email attachment creates a Document entity. Templates can have default Document attachments. The Documents PRD's Universal Attachment Relation and version control provide full traceability.
-- **[Conversations PRD](conversations-prd_V4.md)** — Replies inherit conversation assignment from the parent Communication. New compositions use the standard conversation formation logic after provider sync, keeping compose-time assignment simple.
-- **[Contact Management PRD](contact-management-prd_V5.md)** — Recipient resolution uses Contact identifiers. CC/BCC recipients who are not existing Contacts are auto-created. Merge fields pull from Contact field values. Bounce handling updates Contact email validity.
-- **[Views & Grid PRD](views-grid-prd_V5.md)** — Automation rules scope recipients to saved Views. The "Awaiting Approval" list is a system View. Template usage and click tracking data are filterable through standard View mechanisms.
-- **[Notes PRD](notes-prd_V3.md)** — Outbound email composition uses the same rich text editor and content architecture (JSON source of truth, HTML rendering) as Notes and Communication Published Summaries.
-- **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** — Template visibility (personal vs. shared), automation rule management, and BCC participant visibility follow role-based access controls.
-- **[GUI Functional Requirements PRD](gui-functional-requirements-prd_V2.md)** — The compose experience uses a panel-based composer within the existing layout system, with undockable window support for multi-monitor workflows.
+- **[Communications PRD](communications-prd.md)** — Outbound emails are Communication records (`com_` prefix) in the unified schema. The Communications PRD defines the entity structure, field registry, provider account framework, participant model, and event sourcing that outbound emails inherit. This PRD adds the compose experience, send pipeline, and outbound-specific behaviors (templates, automation, click tracking) as extensions.
+- **[Email Provider Sync PRD](email-provider-sync-prd.md)** (planned) — The sync PRD covers the mechanics of provider API interaction: OAuth flows, message fetching, incremental sync cursors. This PRD uses the provider adapter's send capability but defines the user-facing compose experience and business logic independently.
+- **[Documents PRD](documents-prd.md)** — Every outbound email attachment creates a Document entity. Templates can have default Document attachments. The Documents PRD's Universal Attachment Relation and version control provide full traceability.
+- **[Conversations PRD](conversations-prd.md)** — Replies inherit conversation assignment from the parent Communication. New compositions use the standard conversation formation logic after provider sync, keeping compose-time assignment simple.
+- **[Contact Management PRD](contact-management-prd.md)** — Recipient resolution uses Contact identifiers. CC/BCC recipients who are not existing Contacts are auto-created. Merge fields pull from Contact field values. Bounce handling updates Contact email validity.
+- **[Views & Grid PRD](views-grid-prd.md)** — Automation rules scope recipients to saved Views. The "Awaiting Approval" list is a system View. Template usage and click tracking data are filterable through standard View mechanisms.
+- **[Notes PRD](notes-prd.md)** — Outbound email composition uses the same rich text editor and content architecture (JSON source of truth, HTML rendering) as Notes and Communication Published Summaries.
+- **[Permissions & Sharing PRD](permissions-sharing-prd.md)** — Template visibility (personal vs. shared), automation rule management, and BCC participant visibility follow role-based access controls.
+- **[GUI Functional Requirements PRD](gui-functional-requirements-prd.md)** — The compose experience uses a panel-based composer within the existing layout system, with undockable window support for multi-monitor workflows.
 
 ---
 
@@ -1529,7 +1529,7 @@ CRMExtender's target users are relationship-focused professionals, not high-volu
 
 ## 34. Glossary
 
-General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to this subsystem:
+General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
 | Term | Definition |
 |---|---|

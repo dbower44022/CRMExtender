@@ -3,9 +3,9 @@
 **Version:** 2.0
 **Last Updated:** 2026-02-22
 **Status:** Draft
-**Entity Base PRD:** [contact-entity-base-prd_V7.md]
-**Referenced Entity PRDs:** [Company Management Entity Base PRD](company-management-prd_V1.md), [Communications PRD](communications-prd_V3.md), [Conversations PRD](conversations-prd_V4.md)
-**Referenced Action Sub-PRDs:** [Contact Identity Resolution Sub-PRD](contact-identity-resolution-prd_V2.md)
+**Entity Base PRD:** [contact-entity-base-prd.md]
+**Referenced Entity PRDs:** [Company Management Entity Base PRD](company-management-prd.md), [Communications PRD](communications-prd.md), [Conversations PRD](conversations-prd.md)
+**Referenced Action Sub-PRDs:** [Contact Identity Resolution Sub-PRD](contact-identity-resolution-prd.md)
 
 > **V2.0 (2026-02-22):** Added Key Processes section defining end-to-end user experiences for all merge and split scenarios. Restructured functional sections with process linkage.
 

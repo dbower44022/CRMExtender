@@ -3,8 +3,8 @@
 **Version:** 2.0
 **Last Updated:** 2026-02-22
 **Status:** Draft
-**Entity Base PRD:** [contact-entity-base-prd_V7.md]
-**Referenced Entity PRDs:** [Communications PRD](communications-prd_V3.md), [Conversations PRD](conversations-prd_V4.md)
+**Entity Base PRD:** [contact-entity-base-prd.md]
+**Referenced Entity PRDs:** [Communications PRD](communications-prd.md), [Conversations PRD](conversations-prd.md)
 
 > **V2.0 (2026-02-22):** Added Key Processes section defining end-to-end user experiences for all AI intelligence scenarios. Restructured functional sections with process linkage.
 

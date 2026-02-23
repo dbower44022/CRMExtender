@@ -66,9 +66,9 @@ This PRD establishes a **Unified Object Model** where system entities and user-c
 
 **Relationship to other PRDs:**
 
-- **[Views & Grid PRD](views-grid-prd_V5.md)** — Consumes the field registry and field type system. The Views PRD's field type rendering, filter operators, sort behavior, and column system are defined against field types that this PRD specifies. The Views PRD is entity-agnostic because this PRD provides a uniform entity model.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — Consumes the entity type definitions and relation model. The virtual schema that SQL data sources query against is derived from the object types and their field registries defined here. The prefixed entity ID convention (established in the Data Sources PRD) is adopted as the platform-wide standard and detailed in this PRD.
-- **[Contact Management PRD](contact-management-prd_V5.md)** — The Contact entity type and Company entity type defined in that PRD become pre-installed object types in the unified framework. Custom fields on Contacts are managed through this PRD's field registry, replacing the previous `custom_fields` JSONB column. See Section 26 for reconciliation details.
+- **[Views & Grid PRD](views-grid-prd.md)** — Consumes the field registry and field type system. The Views PRD's field type rendering, filter operators, sort behavior, and column system are defined against field types that this PRD specifies. The Views PRD is entity-agnostic because this PRD provides a uniform entity model.
+- **[Data Sources PRD](data-sources-prd.md)** — Consumes the entity type definitions and relation model. The virtual schema that SQL data sources query against is derived from the object types and their field registries defined here. The prefixed entity ID convention (established in the Data Sources PRD) is adopted as the platform-wide standard and detailed in this PRD.
+- **[Contact Management PRD](contact-management-prd.md)** — The Contact entity type and Company entity type defined in that PRD become pre-installed object types in the unified framework. Custom fields on Contacts are managed through this PRD's field registry, replacing the previous `custom_fields` JSONB column. See Section 26 for reconciliation details.
 - **[Communication & Conversation Intelligence PRD](email-conversations-prd.md)** — Conversation, Communication, Project, and Topic entity types become pre-installed object types. Their specialized AI behaviors (status detection, summarization) are registered as system behaviors per Section 22.
 
 ---
@@ -423,7 +423,7 @@ Each object type can have a maximum of **200 user-defined fields** (universal fi
 
 ## 9. Field Type System
 
-Each field type defines the physical PostgreSQL column type, the validation behavior, the serialization format for events, and the configuration options. The **rendering behavior** (display renderer, inline editor, filter operators, sort behavior, group-by support) is defined in the [Views & Grid PRD, Section 9](views-grid-prd_V5.md#9-field-type-registry) — this PRD defines the data layer.
+Each field type defines the physical PostgreSQL column type, the validation behavior, the serialization format for events, and the configuration options. The **rendering behavior** (display renderer, inline editor, filter operators, sort behavior, group-by support) is defined in the [Views & Grid PRD, Section 9](views-grid-prd.md#9-field-type-registry) — this PRD defines the data layer.
 
 ### 9.1 Phase 1 Field Types
 
@@ -547,7 +547,7 @@ Users can convert a field's type through limited safe conversions. Safe conversi
 
 ## 11. Field Groups
 
-Field groups organize fields into logical sections for record detail rendering. They are purely presentational — they do not affect physical storage, query behavior, or field ordering in views. Each Field Group renders as an **Attribute Card** in the Detail Panel's Card Layout Area (see [GUI Functional Requirements PRD, Section 15.7](gui-functional-requirements-prd_V2.md#157-attribute-cards--field-groups)).
+Field groups organize fields into logical sections for record detail rendering. They are purely presentational — they do not affect physical storage, query behavior, or field ordering in views. Each Field Group renders as an **Attribute Card** in the Detail Panel's Card Layout Area (see [GUI Functional Requirements PRD, Section 15.7](gui-functional-requirements-prd.md#157-attribute-cards--field-groups)).
 
 ### 11.1 Field Group Definition
 
@@ -1490,7 +1490,7 @@ This PRD establishes the entity model foundation that several existing PRDs refe
 
 ## 29. Glossary
 
-General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to the Custom Objects framework:
+General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to the Custom Objects framework:
 
 | Term | Definition |
 |---|---|
@@ -1531,11 +1531,11 @@ General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architectu
 | Document | Relationship |
 |---|---|
 | [CRMExtender PRD v1.1](PRD.md) | Parent document defining system architecture, phasing, and all feature areas |
-| [Views & Grid PRD](views-grid-prd_V5.md) | Consumes entity type definitions and field registry for view rendering |
-| [Data Sources PRD](data-sources-prd_V1.md) | Consumes entity type definitions for virtual schema and query engine |
-| [Contact Management PRD](contact-management-prd_V5.md) | Contact and Company are system object types managed by this framework |
+| [Views & Grid PRD](views-grid-prd.md) | Consumes entity type definitions and field registry for view rendering |
+| [Data Sources PRD](data-sources-prd.md) | Consumes entity type definitions for virtual schema and query engine |
+| [Contact Management PRD](contact-management-prd.md) | Contact and Company are system object types managed by this framework |
 | [Communication & Conversation Intelligence PRD](email-conversations-prd.md) | Conversation, Communication, Project, Topic are system object types |
-| [Email Parsing & Content Extraction](email_stripping_V1.md) | Technical spec for Communication entity's parsing behavior |
+| [Email Parsing & Content Extraction](email-stripping.md) | Technical spec for Communication entity's parsing behavior |
 
 ---
 

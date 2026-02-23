@@ -58,7 +58,7 @@ This separation is the architectural cornerstone that enables CRMExtender's poly
 - **Entity-agnostic** — The data source system doesn't privilege system entities over custom entities. A data source querying a user-created "Jobs" entity works identically to one querying Contacts or Conversations.
 - **Security by design** — Data sources are query *definitions*, not query *results*. The same shared data source returns different results for different users based on their tenant, permissions, and row-level access controls. Sharing a data source is always safe.
 
-**Relationship to other subsystems:** This PRD defines the data retrieval and query abstraction layer. It is consumed by the [Views & Grid PRD](views-grid-prd_V5.md) (which defines how data source results are rendered and interacted with), depends on the Custom Objects PRD (which defines what entity types and fields exist to query), and is referenced by the Communication & Conversation Intelligence PRD (whose alert system uses data source queries as triggers).
+**Relationship to other subsystems:** This PRD defines the data retrieval and query abstraction layer. It is consumed by the [Views & Grid PRD](views-grid-prd.md) (which defines how data source results are rendered and interacted with), depends on the Custom Objects PRD (which defines what entity types and fields exist to query), and is referenced by the Communication & Conversation Intelligence PRD (whose alert system uses data source queries as triggers).
 
 ---
 
@@ -1465,7 +1465,7 @@ ORDER BY communication_count DESC
 
 ## 27. Glossary
 
-General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to this subsystem:
+General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
 | Term | Definition |
 |---|---|

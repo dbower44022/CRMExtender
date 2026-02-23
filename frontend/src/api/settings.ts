@@ -39,12 +39,19 @@ interface ProviderAccount {
   email_address: string
   display_name: string | null
   is_active: number
+  initial_sync_done: number
+  last_synced_at: string | null
   created_at: string
   updated_at: string
 }
 
+export interface CalendarEntry {
+  id: string
+  summary: string
+}
+
 interface CalendarAccount extends ProviderAccount {
-  selected_calendars: string[]
+  selected_calendars: CalendarEntry[]
 }
 
 interface ReferenceData {
@@ -238,12 +245,12 @@ export function useSaveCalendars() {
   return useMutation({
     mutationFn: ({
       accountId,
-      calendar_ids,
+      calendar_entries,
     }: {
       accountId: string
-      calendar_ids: string[]
+      calendar_entries: CalendarEntry[]
     }) =>
-      put<{ ok: boolean }>(`/settings/calendars/${accountId}`, { calendar_ids }),
+      put<{ ok: boolean }>(`/settings/calendars/${accountId}`, { calendar_entries }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'calendars'] })
     },

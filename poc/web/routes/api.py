@@ -2041,18 +2041,30 @@ def settings_calendars(request: Request):
             (uid,),
         ).fetchall()
 
-    accounts = []
-    for row in rows:
+    def _normalize_calendars(raw):
+        """Normalize stored calendar entries to [{id, summary}] format."""
+        result = []
+        for entry in raw:
+            if isinstance(entry, dict):
+                result.append({"id": entry["id"], "summary": entry.get("summary", entry["id"])})
+            else:
+                result.append({"id": entry, "summary": entry})
+        return result
+
+    def _build_account(row):
         account = dict(row)
         cal_key = f"cal_sync_calendars_{account['id']}"
         cal_json = get_setting(cid, cal_key, user_id=uid)
         try:
-            account["selected_calendars"] = json.loads(cal_json) if cal_json else []
+            raw = json.loads(cal_json) if cal_json else []
         except (json.JSONDecodeError, TypeError):
-            account["selected_calendars"] = []
+            raw = []
+        account["selected_calendars"] = _normalize_calendars(raw)
         account.pop("auth_token_path", None)
         account.pop("refresh_token", None)
-        accounts.append(account)
+        return account
+
+    accounts = [_build_account(row) for row in rows]
 
     if not accounts:
         with get_connection() as conn:
@@ -2060,17 +2072,7 @@ def settings_calendars(request: Request):
                 "SELECT * FROM provider_accounts WHERE customer_id = ? AND provider = 'gmail' AND is_active = 1 ORDER BY created_at",
                 (cid,),
             ).fetchall()
-        for row in rows:
-            account = dict(row)
-            cal_key = f"cal_sync_calendars_{account['id']}"
-            cal_json = get_setting(cid, cal_key, user_id=uid)
-            try:
-                account["selected_calendars"] = json.loads(cal_json) if cal_json else []
-            except (json.JSONDecodeError, TypeError):
-                account["selected_calendars"] = []
-            account.pop("auth_token_path", None)
-            account.pop("refresh_token", None)
-            accounts.append(account)
+        accounts = [_build_account(row) for row in rows]
 
     return accounts
 
@@ -2116,9 +2118,15 @@ async def settings_calendars_save(request: Request, account_id: str):
     except Exception:
         return JSONResponse({"error": "Invalid JSON"}, status_code=400)
 
-    calendar_ids = body.get("calendar_ids", [])
+    # Accept rich format (list of {id, summary} dicts) or legacy (list of strings)
+    calendar_entries = body.get("calendar_entries")
+    if calendar_entries is not None:
+        value = calendar_entries
+    else:
+        value = body.get("calendar_ids", [])
+
     cal_key = f"cal_sync_calendars_{account_id}"
-    set_setting(cid, cal_key, json.dumps(calendar_ids), scope="user", user_id=uid)
+    set_setting(cid, cal_key, json.dumps(value), scope="user", user_id=uid)
 
     return {"ok": True}
 

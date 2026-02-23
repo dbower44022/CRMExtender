@@ -130,12 +130,18 @@ def sync_all_calendars(
         return {"error": "No calendars selected"}
 
     try:
-        calendar_ids = json.loads(cal_json)
+        raw = json.loads(cal_json)
     except (json.JSONDecodeError, TypeError):
         return {"error": "Invalid calendar selection"}
 
-    if not calendar_ids:
+    if not raw:
         return {"error": "No calendars selected"}
+
+    # Support both old (list-of-strings) and new (list-of-dicts) format
+    calendar_ids = [
+        entry["id"] if isinstance(entry, dict) else entry
+        for entry in raw
+    ]
 
     totals = {
         "events_created": 0,

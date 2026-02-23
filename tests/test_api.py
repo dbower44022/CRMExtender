@@ -1249,27 +1249,84 @@ class TestSettingsAccounts:
 # ---------------------------------------------------------------------------
 
 class TestSettingsCalendars:
-    def test_list_calendars_empty(self, client):
-        resp = client.get("/api/v1/settings/calendars")
-        assert resp.status_code == 200
-        assert isinstance(resp.json(), list)
-
-    def test_save_calendars(self, client):
-        # Seed an account
+    def _seed_account(self):
+        """Insert a gmail provider_account + user_provider_accounts row."""
         with get_connection() as conn:
             conn.execute(
-                "INSERT INTO provider_accounts "
+                "INSERT OR IGNORE INTO provider_accounts "
                 "(id, customer_id, provider, email_address, "
                 "auth_token_path, is_active, created_at, updated_at) "
                 "VALUES (?, ?, 'gmail', 'cal@test.com', '/tmp/token', 1, ?, ?)",
                 ("cal-acct-1", CUST_ID, _NOW, _NOW),
             )
+            conn.execute(
+                "INSERT OR IGNORE INTO user_provider_accounts "
+                "(user_id, account_id) VALUES (?, ?)",
+                (USER_ID, "cal-acct-1"),
+            )
 
+    def test_list_calendars_empty(self, client):
+        resp = client.get("/api/v1/settings/calendars")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)
+
+    def test_save_calendars_rich_format(self, client):
+        self._seed_account()
+        entries = [
+            {"id": "cal-1", "summary": "Work Calendar"},
+            {"id": "cal-2", "summary": "Personal"},
+        ]
         resp = client.put("/api/v1/settings/calendars/cal-acct-1", json={
-            "calendar_ids": ["cal-1", "cal-2"],
+            "calendar_entries": entries,
         })
         assert resp.status_code == 200
         assert resp.json()["ok"] is True
+
+        # Verify list returns normalized {id, summary} entries
+        resp = client.get("/api/v1/settings/calendars")
+        assert resp.status_code == 200
+        accounts = resp.json()
+        acct = [a for a in accounts if a["id"] == "cal-acct-1"][0]
+        assert len(acct["selected_calendars"]) == 2
+        assert acct["selected_calendars"][0] == {"id": "cal-1", "summary": "Work Calendar"}
+        assert acct["selected_calendars"][1] == {"id": "cal-2", "summary": "Personal"}
+
+    def test_save_calendars_legacy_format_normalizes(self, client):
+        """Old format (list of strings) is normalized to {id, summary} on read."""
+        self._seed_account()
+        resp = client.put("/api/v1/settings/calendars/cal-acct-1", json={
+            "calendar_ids": ["cal-A", "cal-B"],
+        })
+        assert resp.status_code == 200
+
+        resp = client.get("/api/v1/settings/calendars")
+        acct = [a for a in resp.json() if a["id"] == "cal-acct-1"][0]
+        # Legacy strings should get ID as fallback summary
+        assert acct["selected_calendars"][0] == {"id": "cal-A", "summary": "cal-A"}
+        assert acct["selected_calendars"][1] == {"id": "cal-B", "summary": "cal-B"}
+
+    def test_remove_calendar(self, client):
+        """Saving a subset of entries effectively removes calendars."""
+        self._seed_account()
+        # Save two calendars
+        entries = [
+            {"id": "cal-1", "summary": "Work"},
+            {"id": "cal-2", "summary": "Personal"},
+        ]
+        client.put("/api/v1/settings/calendars/cal-acct-1", json={
+            "calendar_entries": entries,
+        })
+
+        # Remove one by saving only the other
+        resp = client.put("/api/v1/settings/calendars/cal-acct-1", json={
+            "calendar_entries": [{"id": "cal-2", "summary": "Personal"}],
+        })
+        assert resp.status_code == 200
+
+        resp = client.get("/api/v1/settings/calendars")
+        acct = [a for a in resp.json() if a["id"] == "cal-acct-1"][0]
+        assert len(acct["selected_calendars"]) == 1
+        assert acct["selected_calendars"][0]["id"] == "cal-2"
 
 
 # ---------------------------------------------------------------------------

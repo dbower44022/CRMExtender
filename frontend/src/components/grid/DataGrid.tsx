@@ -39,7 +39,6 @@ export function DataGrid() {
   const searchFilters = useNavigationStore((s) => s.searchFilters)
   const selectedRowId = useNavigationStore((s) => s.selectedRowId)
   const selectedRowIds = useNavigationStore((s) => s.selectedRowIds)
-  const selectedRowIndex = useNavigationStore((s) => s.selectedRowIndex)
   const focusedColumn = useNavigationStore((s) => s.focusedColumn)
   const focusAnchorIndex = useNavigationStore((s) => s.focusAnchorIndex)
   const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)

@@ -64,18 +64,6 @@ function tokenize(input: string): string[] {
   return tokens
 }
 
-// Relative date expressions → [start ISO, end ISO]
-const RELATIVE_DATE_KEYWORDS = [
-  'today',
-  'tomorrow',
-  'yesterday',
-  'this week',
-  'last week',
-  'next week',
-  'this month',
-  'last month',
-  'next month',
-]
 
 function resolveRelativeDate(expr: string, now: Date): [string, string] | null {
   const lower = expr.toLowerCase().trim()

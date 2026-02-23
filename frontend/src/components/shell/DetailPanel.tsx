@@ -10,8 +10,6 @@ export function DetailPanel() {
   const selectedRowId = useNavigationStore((s) => s.selectedRowId)
   const selectedRowIndex = useNavigationStore((s) => s.selectedRowIndex)
   const loadedRowCount = useNavigationStore((s) => s.loadedRowCount)
-  const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
-
   const canGoPrev = selectedRowIndex > 0
   const canGoNext = selectedRowIndex >= 0 && selectedRowIndex < loadedRowCount - 1
 

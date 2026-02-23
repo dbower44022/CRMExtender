@@ -3,7 +3,6 @@ import { RotateCcw } from 'lucide-react'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import {
   useGridDisplayStore,
-  DENSITY_ROW_HEIGHT,
   type Density,
   type FontSize,
   type Gridlines,

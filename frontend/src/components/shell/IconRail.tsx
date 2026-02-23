@@ -14,6 +14,7 @@ export function IconRail() {
   const setActiveEntityType = useNavigationStore((s) => s.setActiveEntityType)
   const settingsMode = useNavigationStore((s) => s.settingsMode)
   const openSettings = useNavigationStore((s) => s.openSettings)
+  const actionPanelVisible = useLayoutStore((s) => s.actionPanelVisible)
   const toggleActionPanel = useLayoutStore((s) => s.toggleActionPanel)
 
   const handleClick = (key: string) => {
@@ -29,6 +30,7 @@ export function IconRail() {
       toggleActionPanel()
     } else {
       openSettings()
+      if (!actionPanelVisible) toggleActionPanel()
     }
   }
 

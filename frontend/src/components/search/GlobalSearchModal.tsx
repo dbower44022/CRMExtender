@@ -256,7 +256,6 @@ export function GlobalSearchModal() {
               {debouncedQuery && !isLoading && displayData && displayData.groups.length > 0 && (
                 <GroupedResults
                   groups={displayData.groups}
-                  flatItems={flatItems}
                   focusedIndex={focusedIndex}
                   onHover={setFocusedIndex}
                   onSelect={(entityType, item) => openDetail(entityType, item.id, item.name)}
@@ -301,7 +300,6 @@ export function GlobalSearchModal() {
 
 function GroupedResults({
   groups,
-  flatItems,
   focusedIndex,
   onHover,
   onSelect,
@@ -309,7 +307,6 @@ function GroupedResults({
   onShowAll,
 }: {
   groups: SearchGroup[]
-  flatItems: FlatItem[]
   focusedIndex: number
   onHover: (index: number) => void
   onSelect: (entityType: string, item: SearchResultItem) => void

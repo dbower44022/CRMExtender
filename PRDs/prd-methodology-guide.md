@@ -2,8 +2,10 @@
 
 ## Using Claude.ai and Claude Code for Large Project Development
 
-**Version:** 2.0
+**Version:** 3.0
 **Purpose:** This guide defines the standard methodology for developing large software projects using Claude.ai for product requirements and design, and Claude Code for implementation. It establishes document types, templates, workflows, and rationale for each decision.
+
+> **V3.0 (2026-02-23):** Added Functional Area PRD as a new document type (Section 2.5, 3.10) for cross-cutting functionality that doesn't center on a data entity.
 
 > **V2.0 (2026-02-23):** Added Key Processes as a PRD component (Section 3.5, 3.8). Added field-level metadata requirements — Editable, Sortable, Filterable — for Entity Base PRDs (Section 5.6). Expanded TDD methodology to describe the living document approach where Claude Code writes implementation decisions back into TDDs (Sections 3.2, 3.7, 4.4). Added the † caching convention for subquery-backed sortable fields.
 
@@ -70,11 +72,21 @@ These documents describe a single complex action or group of related actions on 
 | Action Sub-PRD | Detailed requirements for a complex action | Overview, extracted context, key processes, requirements, UI specs, task lists, test plans |
 | Action TDD | Action-specific technical decisions (only if needed) | Decisions with rationale that apply only to this action. Same living document approach — you write initial decisions, Claude Code adds implementation decisions. |
 
-### 2.4 Cross-Entity Workflows
+### 2.4 Functional Area Level
+
+These documents describe a cross-cutting functional area that doesn't center on a single data entity. Examples: System Administration, Notifications, Audit Logging, Search Infrastructure.
+
+| Document | Purpose | Contains |
+|---|---|---|
+| Functional Area PRD | Complete description of a cross-cutting capability | Scope, actors, capabilities, configuration, key processes, action catalog, cross-cutting concerns, task lists, test plans |
+| Action Sub-PRD | Detailed requirements for a complex action within the area | Same template as entity action sub-PRDs |
+| Functional Area TDD | Area-specific technical decisions (only if needed) | Same living document approach as entity TDDs |
+
+### 2.5 Cross-Entity Workflows
 
 If a workflow genuinely spans multiple entities without a natural owner, it follows the same pattern as an entity — base PRD, sub-PRDs, UI PRD, and TDD as needed. In practice, most workflows have a natural owning entity, and the action sub-PRD simply references other entity base PRDs.
 
-### 2.5 Inheritance
+### 2.6 Inheritance
 
 Each level inherits from above. An Action Sub-PRD inherits the product principles, the entity's data model and lifecycle, and any technical decisions from the Product TDD and Entity TDD. The self-containment principle means relevant inherited context is extracted into the document rather than requiring Claude Code to load parent documents.
 
@@ -199,6 +211,30 @@ Action TDDs are optional. They capture technical decisions specific to an action
 **When to create:** Only when the action requires technology or deployment decisions not covered by the Product TDD or Entity TDD. For example, an Email Import action requiring AWS Lambda would have its own TDD. Simple actions that follow standard patterns typically don't need a TDD. Complex actions with non-obvious algorithm design, transaction semantics, or external service integration benefit from one.
 
 **TDD hierarchy:** When Claude Code works on an action, it reads the Product TDD (platform defaults), the Entity TDD (entity-specific decisions), and the Action TDD (action-specific decisions), in that order. Each level overrides the one above for its specific scope.
+
+### 3.10 Functional Area PRD
+
+**Template file:** `template-functional-area-prd.md`
+
+The Functional Area PRD describes a cross-cutting capability that doesn't center on a single data entity. It governs system-level functionality like administration, notifications, audit logging, or search infrastructure — areas where the requirements span multiple entities or involve configuration and operations rather than entity CRUD.
+
+**When to create:** When a capability needs structured requirements but doesn't fit the Entity Base PRD pattern. The distinguishing characteristic is that the functional area operates *on* entities and system resources rather than *being* an entity itself. For example, System Administration manages users, provider accounts, and settings — but "admin" is not a data entity with its own fields and lifecycle.
+
+**Key principle:** The Functional Area PRD borrows the proven patterns from Entity Base PRDs — Key Processes, action catalog (simple vs. complex), task lists, test plans — but replaces the entity definition and field tables with a scope/capabilities definition and a configuration table. This ensures Claude Code gets the same structured, implementable requirements regardless of whether the work is entity-centric or cross-cutting.
+
+**Structure comparison:**
+
+| Entity Base PRD | Functional Area PRD |
+|---|---|
+| Entity Definition (fields, metadata) | Scope & Boundaries (purpose, actors, boundaries) |
+| Relationships | Related Documents |
+| Lifecycle | Capabilities (what the area provides) |
+| Key Processes | Key Processes (same pattern) |
+| Action Catalog | Action Catalog (same pattern) |
+| Cross-Cutting Concerns | Cross-Cutting Concerns (same pattern) |
+| — | Configuration (settings, parameters, defaults) |
+
+**Sub-PRDs and TDDs:** Functional areas use the same Action Sub-PRD and TDD templates as entities. A complex admin action (like GDPR data purge) gets its own Sub-PRD following the standard template. A functional area TDD follows the same living document approach as an entity TDD.
 
 ---
 

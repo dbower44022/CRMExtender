@@ -48,6 +48,7 @@ export function DataGrid() {
   const deselectAllRows = useNavigationStore((s) => s.deselectAllRows)
   const selectRange = useNavigationStore((s) => s.selectRange)
   const setLoadedRowCount = useNavigationStore((s) => s.setLoadedRowCount)
+  const setFocusedColumn = useNavigationStore((s) => s.setFocusedColumn)
   const setSort = useNavigationStore((s) => s.setSort)
   const clearSort = useNavigationStore((s) => s.clearSort)
   const showDetailPanel = useLayoutStore((s) => s.showDetailPanel)
@@ -409,13 +410,18 @@ export function DataGrid() {
         if (last.timer) clearTimeout(last.timer)
         lastClickRef.current = { rowId: '', time: 0, timer: null }
 
-        // If the click target is inside an editable cell, let the cell's
-        // onDoubleClick handle it instead of opening the record modal
+        // If the click target is inside an editable cell, open inline editor directly
         const target = e.target as HTMLElement
-        if (target.closest('[data-edit-cell]')) {
-          setSelectedRow(id, index)
-          showDetailPanel()
-          return
+        const editCell = target.closest('[data-field-key]')
+        if (editCell) {
+          const fieldKey = editCell.getAttribute('data-field-key')
+          const fd = entityDef?.fields[fieldKey ?? '']
+          if (fieldKey && fd?.editable) {
+            setSelectedRow(id, index)
+            showDetailPanel()
+            setEditingCell({ rowId: id, fieldKey })
+            return
+          }
         }
 
         setRecordModal({ entityType: activeEntityType, entityId: id })
@@ -784,6 +790,7 @@ export function DataGrid() {
                     return (
                       <div
                         key={cell.id}
+                        data-field-key={fieldKey}
                         data-edit-cell={
                           isEditable
                             ? `${row.original.id}-${fieldKey}`
@@ -798,6 +805,7 @@ export function DataGrid() {
                           width: cell.column.getSize(),
                           textAlign: align,
                         }}
+                        onClick={() => setFocusedColumn(dataColIndex)}
                         onDoubleClick={
                           isEditable
                             ? (e) => {

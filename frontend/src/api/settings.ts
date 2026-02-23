@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { get, put, post } from './client.ts'
+import { get, put, post, del } from './client.ts'
 
 // --- Types ---
 
@@ -253,6 +253,70 @@ export function useSaveCalendars() {
       put<{ ok: boolean }>(`/settings/calendars/${accountId}`, { calendar_entries }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'calendars'] })
+    },
+  })
+}
+
+// --- Roles ---
+
+export interface Role {
+  id: string
+  customer_id: string
+  name: string
+  sort_order: number
+  is_system: number
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export function useRoles() {
+  return useQuery({
+    queryKey: ['settings', 'roles'],
+    queryFn: () => get<Role[]>('/settings/roles'),
+    staleTime: 30 * 1000,
+  })
+}
+
+export function useCreateRole() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; sort_order?: number }) =>
+      post<Role>('/settings/roles', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'roles'] })
+      qc.invalidateQueries({ queryKey: ['settings', 'reference-data'] })
+    },
+  })
+}
+
+export function useUpdateRole() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      roleId,
+      ...data
+    }: {
+      roleId: string
+      name?: string
+      sort_order?: number
+    }) => put<Role>(`/settings/roles/${roleId}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'roles'] })
+      qc.invalidateQueries({ queryKey: ['settings', 'reference-data'] })
+    },
+  })
+}
+
+export function useDeleteRole() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (roleId: string) =>
+      del<{ ok: boolean }>(`/settings/roles/${roleId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'roles'] })
+      qc.invalidateQueries({ queryKey: ['settings', 'reference-data'] })
     },
   })
 }

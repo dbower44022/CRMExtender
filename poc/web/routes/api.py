@@ -2132,6 +2132,96 @@ async def settings_calendars_save(request: Request, account_id: str):
 
 
 # ------------------------------------------------------------------
+# Settings: Roles
+# ------------------------------------------------------------------
+
+@router.get("/settings/roles")
+def settings_roles_list(request: Request):
+    """List all contact-company roles for the customer."""
+    from ...contact_company_roles import list_roles
+    cid = request.state.customer_id
+    return list_roles(customer_id=cid)
+
+
+@router.post("/settings/roles")
+async def settings_roles_create(request: Request):
+    """Create a new custom role."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    from ...contact_company_roles import create_role
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    name = (body.get("name") or "").strip()
+    if not name:
+        return JSONResponse({"error": "Name is required"}, status_code=400)
+
+    sort_order = body.get("sort_order", 0)
+    cid = request.state.customer_id
+    uid = request.state.user["id"]
+
+    try:
+        role = create_role(name, customer_id=cid, sort_order=sort_order, created_by=uid)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=409)
+
+    return role
+
+
+@router.put("/settings/roles/{role_id}")
+async def settings_roles_update(request: Request, role_id: str):
+    """Update a custom role's name or sort_order."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    from ...contact_company_roles import update_role
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    name = body.get("name")
+    if name is not None:
+        name = name.strip()
+        if not name:
+            return JSONResponse({"error": "Name cannot be empty"}, status_code=400)
+
+    sort_order = body.get("sort_order")
+    uid = request.state.user["id"]
+
+    try:
+        role = update_role(role_id, name=name, sort_order=sort_order, updated_by=uid)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    if role is None:
+        return JSONResponse({"error": "Role not found"}, status_code=404)
+
+    return role
+
+
+@router.delete("/settings/roles/{role_id}")
+def settings_roles_delete(request: Request, role_id: str):
+    """Delete a custom role."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    from ...contact_company_roles import delete_role
+
+    try:
+        delete_role(role_id)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------
 # Settings: Reference Data
 # ------------------------------------------------------------------
 

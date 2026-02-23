@@ -6,6 +6,7 @@ import {
   useDefaultLayout,
   usePanelRef,
 } from 'react-resizable-panels'
+import { toast } from 'sonner'
 import { useLayoutStore } from '../../stores/layout.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { useViewConfig } from '../../api/views.ts'
@@ -35,6 +36,21 @@ export function AppShell() {
   const { data: viewConfig } = useViewConfig(activeViewId)
 
   useDefaultView()
+
+  // If redirected back from OAuth connect, open Settings > Accounts
+  const openSettings = useNavigationStore((s) => s.openSettings)
+  const setSettingsTab = useNavigationStore((s) => s.setSettingsTab)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('connected') === '1') {
+      openSettings()
+      setSettingsTab('accounts')
+      toast.success('Google account connected successfully')
+      const url = new URL(window.location.href)
+      url.searchParams.delete('connected')
+      window.history.replaceState({}, '', url.pathname + url.hash)
+    }
+  }, [openSettings, setSettingsTab])
 
   const actionRef = usePanelRef()
   const detailRef = usePanelRef()

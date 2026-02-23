@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { useAccounts, useUpdateAccount, useToggleAccount, useReferenceData } from '../../api/settings.ts'
 
@@ -10,17 +10,6 @@ export function AccountsSettings() {
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
-
-  // Show success toast if redirected back from OAuth
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('connected') === '1') {
-      toast.success('Google account connected successfully')
-      const url = new URL(window.location.href)
-      url.searchParams.delete('connected')
-      window.history.replaceState({}, '', url.pathname + url.hash)
-    }
-  }, [])
 
   if (isLoading) {
     return <div className="text-sm text-surface-500">Loading...</div>

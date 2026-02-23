@@ -1330,6 +1330,102 @@ class TestSettingsCalendars:
 
 
 # ---------------------------------------------------------------------------
+# Settings: Roles
+# ---------------------------------------------------------------------------
+
+class TestSettingsRoles:
+    def _seed_system_role(self):
+        """Insert a system role for tests that need one."""
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO contact_company_roles "
+                "(id, customer_id, name, sort_order, is_system, "
+                "created_by, updated_by, created_at, updated_at) "
+                "VALUES (?, ?, 'Employee', 0, 1, NULL, NULL, ?, ?)",
+                ("sys-role-employee", CUST_ID, _NOW, _NOW),
+            )
+
+    def test_list_roles(self, client):
+        resp = client.get("/api/v1/settings/roles")
+        assert resp.status_code == 200
+        roles = resp.json()
+        assert isinstance(roles, list)
+
+    def test_create_role(self, client):
+        resp = client.post("/api/v1/settings/roles", json={
+            "name": "Consultant",
+            "sort_order": 10,
+        })
+        assert resp.status_code == 200
+        role = resp.json()
+        assert role["name"] == "Consultant"
+        assert role["sort_order"] == 10
+        assert role["is_system"] == 0
+
+        # Verify it shows in list
+        resp = client.get("/api/v1/settings/roles")
+        names = [r["name"] for r in resp.json()]
+        assert "Consultant" in names
+
+    def test_create_role_empty_name(self, client):
+        resp = client.post("/api/v1/settings/roles", json={"name": "  "})
+        assert resp.status_code == 400
+        assert "required" in resp.json()["error"].lower()
+
+    def test_create_role_duplicate(self, client):
+        client.post("/api/v1/settings/roles", json={"name": "Temp Role"})
+        resp = client.post("/api/v1/settings/roles", json={"name": "Temp Role"})
+        assert resp.status_code == 409
+        assert "already exists" in resp.json()["error"]
+
+    def test_update_role(self, client):
+        resp = client.post("/api/v1/settings/roles", json={
+            "name": "OldName", "sort_order": 5,
+        })
+        role_id = resp.json()["id"]
+
+        resp = client.put(f"/api/v1/settings/roles/{role_id}", json={
+            "name": "NewName", "sort_order": 99,
+        })
+        assert resp.status_code == 200
+        assert resp.json()["name"] == "NewName"
+        assert resp.json()["sort_order"] == 99
+
+    def test_update_system_role_rejected(self, client):
+        self._seed_system_role()
+        resp = client.put("/api/v1/settings/roles/sys-role-employee", json={
+            "name": "Hacked",
+        })
+        assert resp.status_code == 400
+        assert "system role" in resp.json()["error"].lower()
+
+    def test_update_nonexistent_role(self, client):
+        resp = client.put("/api/v1/settings/roles/no-such-id", json={
+            "name": "X",
+        })
+        assert resp.status_code == 404
+
+    def test_delete_role(self, client):
+        resp = client.post("/api/v1/settings/roles", json={"name": "Deletable"})
+        role_id = resp.json()["id"]
+
+        resp = client.delete(f"/api/v1/settings/roles/{role_id}")
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+        # Verify it's gone
+        resp = client.get("/api/v1/settings/roles")
+        ids = [r["id"] for r in resp.json()]
+        assert role_id not in ids
+
+    def test_delete_system_role_rejected(self, client):
+        self._seed_system_role()
+        resp = client.delete("/api/v1/settings/roles/sys-role-employee")
+        assert resp.status_code == 400
+        assert "system role" in resp.json()["error"].lower()
+
+
+# ---------------------------------------------------------------------------
 # Settings: Reference Data
 # ---------------------------------------------------------------------------
 

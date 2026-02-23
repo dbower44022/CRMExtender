@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 11.0
+**Version:** 12.0
 **Last Updated:** 2026-02-23
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V12.0 (2026-02-23):** Decomposed Communications PRD (1,420 lines) into Communication Entity Base PRD + 4 Action Sub-PRDs (Published Summary, Provider & Sync Framework, Participant Resolution, Triage & Filtering) + Communication Entity TDD. Follows V2 methodology: field metadata, Key Processes, embedded task/test plans. Monolithic communications-prd.md retained as superseded reference.
 
 > **V11.0 (2026-02-23):** Decomposed Company Management PRD (1,380 lines) into Company Entity Base PRD + 6 Action Sub-PRDs (Domain Resolution, Merge, Hierarchy, Enrichment, Intelligence & Scoring, Social Profiles) + Company Entity TDD. Follows same V2 methodology pattern as Contact entity decomposition: field metadata, Key Processes, embedded task/test plans. Monolithic company-management-prd.md retained as superseded reference.
 
@@ -27,7 +29,13 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | Product TDD | 1.0 | `product-tdd.md` | Draft — 13 sections, living document | 2026-02-23 |
 | GUI Functional Requirements | 2.0 | `gui-functional-requirements-prd.md` | Draft — Terminology standardized | 2026-02-21 |
 | Custom Objects | 2.0 | `custom-objects-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Communications | 3.0 | `communications-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+| Communications | 3.0 | `communications-prd.md` | Superseded — decomposed into Entity Base + 4 Sub-PRDs + TDD | 2026-02-23 |
+| └ Communication Entity Base | 1.0 | `communication-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
+| &nbsp;&nbsp;└ Communication Entity TDD | 1.0 | `communication-entity-tdd.md` | Draft — Living document, 10 sections | 2026-02-23 |
+| └ Published Summary | 1.0 | `communication-published-summary-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Provider & Sync Framework | 1.0 | `communication-provider-sync-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Participant Resolution | 1.0 | `communication-participant-resolution-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Triage & Intelligent Filtering | 1.0 | `communication-triage-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Conversations | 4.0 | `conversations-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Contact Management | 5.0 | `contact-management-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | └ Contact Entity Base | 9.0 | `contact-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
@@ -75,7 +83,7 @@ Document version history is managed by Git. Previous versions of any document ca
 - 2026-02-19: Topic entity eliminated; Projects PRD extracted from Conversations PRD
 - 2026-02-21: GUI terminology standardization (V2); Adaptive Grid Intelligence terminology alignment
 - 2026-02-22: Full ecosystem terminology alignment across all PRDs; Custom Objects V2; mojibake cleanup
-- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
+- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
 
 ---
 
@@ -126,43 +134,23 @@ Document version history is managed by Git. Previous versions of any document ca
 
 ### 2. Communications
 
-**File:** `communications-prd.md`
-**Scope:** The atomic interaction record. Defines Communication as a system object type, the common schema all channels normalize to, the provider adapter framework, contact association, triage filtering, multi-account management, attachments, and storage. Foundation for channel-specific child PRDs. V2 adds Published Summary architecture (Section 7).
+**File:** `communications-prd.md` (superseded — retained as historical reference)
+**Scope:** The atomic interaction record. Defines Communication as a system object type, the common schema all channels normalize to, the provider adapter framework, contact association, triage filtering, Published Summary architecture, multi-account management, attachments, and storage.
 
-> **Extracted from:** Communication & Conversation Intelligence PRD v2.0 (the Communications half of the decomposition).
+> **Note:** The monolithic Communications PRD (1,420 lines) has been decomposed into an Entity Base PRD, Entity TDD, and four Action Sub-PRDs following the V2 methodology. The original file is retained for reference; all active development should use the decomposed documents.
 
-**Key sections:**
+**Decomposed documents:** The Communication entity is fully decomposed per methodology V2:
 
-- Communication as system object type (`com_` prefix, full field registry)
-- Channel types: `email`, `sms`, `mms`, `phone_recorded`, `phone_manual`, `video_recorded`, `video_manual`, `in_person`, `note`
-- Communication entry points (auto-synced vs. manual)
-- Provider account framework (personal and shared accounts, shared inbox attribution)
-- Provider adapter architecture (interface, sync modes, reliability, audit trail)
-- Communication Participants Relation Type (Communication→Contact, many-to-many with role/address metadata)
-- Contact resolution integration with Contact Intelligence system
-- Triage & intelligent filtering (heuristic layers, known-contact gate, transparency)
-- Attachments model (storage strategy, recording-transcript relationship)
-- Multi-account management (unified feed, cross-account considerations)
-- Event sourcing (`communications_events`)
-- Virtual schema & Data Sources integration
-- Full-text search (PostgreSQL `tsvector`/`tsquery`)
-- Storage & data retention estimates
-- Privacy, security & compliance (GDPR, SOC 2, CCPA)
-- API design (CRUD, participants, attachments, sync, triage)
+| Document | File | Description |
+|---|---|---|
+| Communication Entity Base PRD | `communication-entity-base-prd.md` | Entity definition, field registry (with Editable/Sortable/Filterable metadata), channel types, relationships, lifecycle, Key Processes, Action Catalog |
+| Communication Entity TDD | `communication-entity-tdd.md` | Read model table DDL, summary revisions table, event sourcing, attachment model, sync audit trail, virtual schema, FTS implementation, storage estimates |
+| Published Summary Sub-PRD | `communication-published-summary-prd.md` | Three-stage content pipeline, per-channel generation rules, rich text storage contract, AI summary structure, revision history, generation triggers, error handling |
+| Provider & Sync Framework Sub-PRD | `communication-provider-sync-prd.md` | Provider account model, adapter interface, sync modes (initial/incremental/manual), sync reliability, personal vs. shared accounts, shared inbox attribution, sync API & audit trail |
+| Participant Resolution Sub-PRD | `communication-participant-resolution-prd.md` | Participant Relation Type, contact resolution integration, pending identification, identifier types by channel, cross-channel unification, participant API |
+| Triage & Filtering Sub-PRD | `communication-triage-prd.md` | Multi-layer pipeline, channel-specific heuristic framework, known-contact gate, triage transparency, override mechanism, triage API |
 
-**Key decisions made:**
-
-- Direct provider API integration (no Nylas/third-party aggregation)
-- Communication Participants as a system Relation Type (replacing flat `from_address`/`to_addresses` columns)
-- `conversation_id` as FK column (not Relation Type) — simpler for strict many:1
-- Three-tier content model: `content_raw`, `content_html`, `content_clean`
-- Published Summary architecture (V2): rich text summaries per channel type, revision history, Conversation timeline renders by reference
-- Channel-specific parsing delegated to child PRDs
-- `note` channel type is distinct from Notes system object type (interactions vs. commentary)
-- Manual logged interactions (unrecorded calls, in-person meetings) are Communications, not Notes
-- Provider account framework shared across all integration types
-
-**Channel child PRDs:**
+**Channel child PRDs** (build on the Provider & Sync Framework):
 
 | Child PRD | Scope | Status |
 |---|---|---|
@@ -170,8 +158,6 @@ Document version history is managed by Git. Previous versions of any document ca
 | SMS/MMS PRD | Twilio/OpenPhone adapters; message sync; phone number resolution; MMS media | Planned |
 | Voice/VoIP PRD | Call recording integration; transcription pipeline; provider adapters | Planned |
 | Video Meetings PRD | Zoom/Teams/Meet integration; transcript capture; recording management | Planned |
-
-**Open questions:** 9 (attachment storage, real-time sync infra, email sending, shared mailbox, merge/split, opt-out granularity, SMS provider, speech-to-text, Slack/Teams model)
 
 ---
 
@@ -868,7 +854,13 @@ PRDs/
 ├── company-enrichment-prd.md                 # Enrichment pipeline sub-PRD
 ├── company-intelligence-prd.md               # Intelligence & scoring sub-PRD
 ├── company-social-profiles-prd.md            # Social media profiles sub-PRD
-├── communications-prd.md
+├── communications-prd.md                     # Communications (monolithic, superseded)
+├── communication-entity-base-prd.md          # Communication entity definition
+├── communication-entity-tdd.md               # Communication technical decisions
+├── communication-published-summary-prd.md    # Published summary sub-PRD
+├── communication-provider-sync-prd.md        # Provider & sync framework sub-PRD
+├── communication-participant-resolution-prd.md # Participant resolution sub-PRD
+├── communication-triage-prd.md               # Triage & filtering sub-PRD
 ├── conversations-prd.md
 ├── events-prd.md
 ├── notes-prd.md

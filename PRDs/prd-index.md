@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 15.0
+**Version:** 16.0
 **Last Updated:** 2026-02-23
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V16.0 (2026-02-23):** Decomposed Notes PRD (1,200 lines) into Note Entity Base PRD + 2 Action Sub-PRDs (Content/Revisions/Sanitization, Attachments/Mentions/Search) + Note Entity TDD. Follows V2 methodology. Monolithic notes-prd.md retained as superseded reference (includes PoC Appendix).
 
 > **V15.0 (2026-02-23):** Decomposed Events PRD (1,236 lines) into Event Entity Base PRD + 2 Action Sub-PRDs (Participants & Attendance Intelligence, Calendar Sync Pipeline) + Event Entity TDD. Follows V2 methodology. Monolithic events-prd.md retained as superseded reference (includes PoC Appendix).
 
@@ -71,7 +73,11 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | &nbsp;&nbsp;└ Event Entity TDD | 1.0 | `event-entity-tdd.md` | Draft — Living document, 10 sections | 2026-02-23 |
 | └ Participants & Attendance | 1.0 | `event-participants-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Calendar Sync Pipeline | 1.0 | `event-calendar-sync-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| Notes | 3.0 | `notes-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+| Notes | 3.0 | `notes-prd.md` | Superseded — decomposed into Entity Base + 2 Sub-PRDs + TDD | 2026-02-23 |
+| └ Note Entity Base | 1.0 | `note-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
+| &nbsp;&nbsp;└ Note Entity TDD | 1.0 | `note-entity-tdd.md` | Draft — Living document, 10 sections | 2026-02-23 |
+| └ Content, Revisions & Sanitization | 1.0 | `note-content-revisions-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Attachments, Mentions & Search | 1.0 | `note-attachments-mentions-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Tasks | 2.0 | `tasks-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Documents | 2.0 | `documents-prd.md` | Superseded — decomposed into Entity Base + 3 Sub-PRDs + TDD | 2026-02-23 |
 | └ Document Entity Base | 1.0 | `document-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
@@ -103,7 +109,7 @@ Document version history is managed by Git. Previous versions of any document ca
 - 2026-02-19: Topic entity eliminated; Projects PRD extracted from Conversations PRD
 - 2026-02-21: GUI terminology standardization (V2); Adaptive Grid Intelligence terminology alignment
 - 2026-02-22: Full ecosystem terminology alignment across all PRDs; Custom Objects V2; mojibake cleanup
-- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Event entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
+- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Event entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Note entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
 
 ---
 
@@ -308,21 +314,19 @@ Document version history is managed by Git. Previous versions of any document ca
 
 ### 7. Notes
 
-**File:** `notes-prd.md`
+**File:** `notes-prd.md` (superseded — retained as historical reference, includes PoC Appendix)
 **Scope:** Note as a system object type for free-form knowledge capture with rich text, revisions, and universal entity attachment.
 
-**Key sections:**
+> **Note:** The monolithic Notes PRD (1,200 lines) has been decomposed into an Entity Base PRD, Entity TDD, and two Action Sub-PRDs following the V2 methodology. The original file is retained for reference (includes PoC Appendix A); all active development should use the decomposed documents.
 
-- Note as system object type (`not_` prefix)
-- Universal Attachment Relation pattern (notes attach to any entity type)
-- Behavior-managed rich text content (JSONB + HTML, revision history)
-- Content architecture (editor-agnostic storage contract)
-- Revision history coexisting with event sourcing
-- Full-text search (PostgreSQL `tsvector`/`tsquery`)
-- File attachments, @mentions, pinning
-- Note visibility model (private by default, shared inherits entity permissions)
+**Decomposed documents:**
 
-**Reconciliation status:** Fully reconciled with Custom Objects PRD as of V2.
+| Document | File | Description |
+|---|---|---|
+| Note Entity Base PRD | `note-entity-base-prd.md` | Entity definition, field registry, Universal Attachment Relation pattern (target = *, framework impact), visibility model (private/shared, permission rules, multi-entity union), pinning (per-entity-link), Key Processes, Action Catalog |
+| Note Entity TDD | `note-entity-tdd.md` | Read model DDL (with FTS tsvector generated column), note_entities universal attachment junction, note_revisions table, note_attachments table (orphan pattern), note_mentions table, event sourcing (10 event types, content_revised pattern), virtual schema, API design (7 groups) |
+| Content, Revisions & Sanitization Sub-PRD | `note-content-revisions-prd.md` | Behavior-managed content architecture (JSON + HTML + text triple), editor requirements and mention node contract, full-snapshot revision history, content events vs. metadata events, HTML sanitization allowlists |
+| Attachments, Mentions & Search Sub-PRD | `note-attachments-mentions-prd.md` | File upload with orphan pattern, StorageBackend protocol, storage layout, orphan cleanup, allowed MIME types, @mention types and autocomplete, mention extraction/sync, FTS with tsvector two-tier weighting and ranked results |
 
 ---
 
@@ -853,7 +857,11 @@ PRDs/
 ├── event-entity-tdd.md                       # Event technical decisions
 ├── event-participants-prd.md                  # Participants & attendance sub-PRD
 ├── event-calendar-sync-prd.md                # Calendar sync pipeline sub-PRD
-├── notes-prd.md
+├── notes-prd.md                              # Notes (monolithic, superseded)
+├── note-entity-base-prd.md                   # Note entity definition
+├── note-entity-tdd.md                        # Note technical decisions
+├── note-content-revisions-prd.md             # Content, revisions & sanitization sub-PRD
+├── note-attachments-mentions-prd.md          # Attachments, mentions & search sub-PRD
 ├── tasks-prd.md
 ├── documents-prd.md                          # Documents (monolithic, superseded)
 ├── document-entity-base-prd.md               # Document entity definition

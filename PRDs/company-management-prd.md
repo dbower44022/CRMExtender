@@ -8,7 +8,7 @@
 **Parent Document:** [CRMExtender PRD v1.1](PRD.md)
 
 > **V1.0 Consolidation (2026-02-17):**
-> This document consolidates the Company Detection specification and the Company Intelligence PRD (v1.0, 2026-02-09) into a single authoritative PRD for the Company entity type. All content has been reconciled with the [Custom Objects PRD](custom-objects-prd_v2.md) Unified Object Model:
+> This document consolidates the Company Detection specification and the Company Intelligence PRD (v1.0, 2026-02-09) into a single authoritative PRD for the Company entity type. All content has been reconciled with the [Custom Objects PRD](custom-objects-prd.md) Unified Object Model:
 > - Company is a **system object type** (`is_system = true`, prefix `cmp_`) in the unified framework. Core fields are protected from deletion; specialized behaviors (domain resolution, firmographic enrichment) are registered per Custom Objects PRD Section 22.
 > - Entity IDs use **prefixed ULIDs** (`cmp_` prefix, e.g., `cmp_01HX8A...`) per the platform-wide convention (Data Sources PRD, Custom Objects PRD Section 6).
 > - The `custom_fields` JSONB column has been **removed**. Custom fields are managed through the **unified field registry** (Custom Objects PRD Section 8).
@@ -16,7 +16,7 @@
 > - The event store uses a **per-entity-type event table** (`companies_events`) per Custom Objects PRD Section 19.
 > - `companies` is the dedicated **read model table** within the tenant schema, managed through the object type framework.
 > - All SQL uses **PostgreSQL** syntax with `TIMESTAMPTZ` timestamps, replacing the PoC-era SQLite schemas.
-> - The `Company Data Model` section in the [Contact Management PRD](contact-management-prd_V5.md) (formerly Section 6) has been replaced with a cross-reference to this document.
+> - The `Company Data Model` section in the [Contact Management PRD](contact-management-prd.md) (formerly Section 6) has been replaced with a cross-reference to this document.
 
 ---
 
@@ -66,11 +66,11 @@ Unlike traditional CRMs where company records are static address book entries ma
 
 **Relationship to other PRDs:**
 
-- **[Custom Objects PRD](custom-objects-prd_v2.md)** — The Company entity type is a **system object type** in the unified framework. Its table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. This PRD defines the Company-specific behaviors (domain resolution, firmographic enrichment, hierarchy management, relationship scoring) that are registered with the object type framework. Custom fields on Companies are managed through the unified field registry, not a JSONB column.
-- **[Contact Management PRD](contact-management-prd_V5.md)** — Contacts link to companies through the Contact→Company employment Relation Type (defined in the Contact Management PRD Section 5.5). The Contact PRD's Section 6 is a brief cross-reference to this document for the Company data model, domain resolution, and company-to-company relationships.
+- **[Custom Objects PRD](custom-objects-prd.md)** — The Company entity type is a **system object type** in the unified framework. Its table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. This PRD defines the Company-specific behaviors (domain resolution, firmographic enrichment, hierarchy management, relationship scoring) that are registered with the object type framework. Custom fields on Companies are managed through the unified field registry, not a JSONB column.
+- **[Contact Management PRD](contact-management-prd.md)** — Contacts link to companies through the Contact→Company employment Relation Type (defined in the Contact Management PRD Section 5.5). The Contact PRD's Section 6 is a brief cross-reference to this document for the Company data model, domain resolution, and company-to-company relationships.
 - **[Communication & Conversation Intelligence PRD](email-conversations-prd.md)** — Communications are linked to companies indirectly through contact participants. Email domain extraction during sync triggers company auto-creation. The Communication PRD owns conversation and communication entities; this PRD consumes them for relationship scoring.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — The Company virtual schema table is derived from the Company object type's field registry. The prefixed entity ID convention (`cmp_`) enables automatic entity detection in data source queries.
-- **[Views & Grid PRD](views-grid-prd_V5.md)** — Company views, filters, sorts, and inline editing operate on fields defined in the Company field registry. Precomputed scores enable instant sort-by-relationship-strength on company list views.
+- **[Data Sources PRD](data-sources-prd.md)** — The Company virtual schema table is derived from the Company object type's field registry. The prefixed entity ID convention (`cmp_`) enables automatic entity detection in data source queries.
+- **[Views & Grid PRD](views-grid-prd.md)** — Company views, filters, sorts, and inline editing operate on fields defined in the Company field registry. Precomputed scores enable instant sort-by-relationship-strength on company list views.
 
 ---
 
@@ -114,7 +114,7 @@ Traditional CRM company records are hollow shells. They exist because a user typ
 - **Real-time social media monitoring** — Social profile scanning follows a configurable cadence (weekly/monthly/quarterly), not real-time streaming.
 - **Paid API cost controls** — Budget limits, approval workflows, and per-lookup caps for paid enrichment providers are deferred.
 - **Trend calculations** — Period-over-period analysis and trend detection formulas are deferred to a future iteration.
-- **Contact identity resolution** — The [Contact Management PRD](contact-management-prd_V5.md) covers probabilistic entity matching for contacts. This PRD focuses on company-level deduplication and intelligence.
+- **Contact identity resolution** — The [Contact Management PRD](contact-management-prd.md) covers probabilistic entity matching for contacts. This PRD focuses on company-level deduplication and intelligence.
 
 ### Success Metrics
 
@@ -269,7 +269,7 @@ This list is maintained as a system configuration and can be extended by adminis
 
 ### 5.5 Contact Linking
 
-When a company is resolved from a domain, contacts with email addresses matching that domain are linked via the Contact→Company employment Relation Type (defined in [Contact Management PRD](contact-management-prd_V5.md) Section 5.5):
+When a company is resolved from a domain, contacts with email addresses matching that domain are linked via the Contact→Company employment Relation Type (defined in [Contact Management PRD](contact-management-prd.md) Section 5.5):
 
 - Create a `contacts__companies_employment` junction row with `is_current = true` and `source = 'email_domain'`.
 - Only link contacts that do not already have a current employment record at a different company — do not override existing manual assignments.
@@ -619,7 +619,7 @@ Company-level intelligence derives insights from existing communication data and
 
 ### 9.2 Relationship Strength Scoring
 
-A composite score per company computed from communication patterns. The same scoring model applies to contacts (see [Contact Management PRD](contact-management-prd_V5.md) Section 10.2) with company-specific adjustments for the **breadth** factor (number of distinct contacts at the company in active conversations).
+A composite score per company computed from communication patterns. The same scoring model applies to contacts (see [Contact Management PRD](contact-management-prd.md) Section 10.2) with company-specific adjustments for the **breadth** factor (number of distinct contacts at the company in active conversations).
 
 **Factors (in priority order):**
 
@@ -731,7 +731,7 @@ Example views:
 - "Companies — no communication in 90+ days"
 - "Key contacts at risk — communication dropped significantly"
 
-Views are stored using the existing views system ([Views & Grid PRD](views-grid-prd_V5.md)). Users can create custom views with their own filter and sort criteria tied to precomputed scores.
+Views are stored using the existing views system ([Views & Grid PRD](views-grid-prd.md)). Users can create custom views with their own filter and sort criteria tied to precomputed scores.
 
 ---
 
@@ -739,7 +739,7 @@ Views are stored using the existing views system ([Views & Grid PRD](views-grid-
 
 ### 10.1 Overview
 
-Social media profiles are tracked in a dedicated table for companies. Contact social profiles are defined in the [Contact Management PRD](contact-management-prd_V5.md). The tables are separate because company profiles carry organizational metrics (follower count, posting frequency, verified status) while contact profiles carry professional data (job title, connections, endorsements).
+Social media profiles are tracked in a dedicated table for companies. Contact social profiles are defined in the [Contact Management PRD](contact-management-prd.md). The tables are separate because company profiles carry organizational metrics (follower count, posting frequency, verified status) while contact profiles carry professional data (job title, connections, endorsements).
 
 ### 10.2 Company Social Profiles Table
 
@@ -1272,12 +1272,12 @@ Both values are displayed on nearly every company list and detail view. Joining 
 
 | PRD | Relationship | Dependency Direction |
 |---|---|---|
-| **[Custom Objects PRD](custom-objects-prd_v2.md)** | Company is a system object type. Table structure, field registry, event sourcing, and relation model are governed by Custom Objects. This PRD defines Company-specific behaviors. | **Bidirectional.** Custom Objects provides the entity framework; this PRD defines behaviors. |
-| **[Contact Management PRD](contact-management-prd_V5.md)** | Contact→Company employment Relation Type is defined in the Contact PRD. Company data model (Contact PRD Section 6) is a cross-reference to this document. | **Bidirectional.** Contact PRD defines employment; this PRD defines the Company entity. |
+| **[Custom Objects PRD](custom-objects-prd.md)** | Company is a system object type. Table structure, field registry, event sourcing, and relation model are governed by Custom Objects. This PRD defines Company-specific behaviors. | **Bidirectional.** Custom Objects provides the entity framework; this PRD defines behaviors. |
+| **[Contact Management PRD](contact-management-prd.md)** | Contact→Company employment Relation Type is defined in the Contact PRD. Company data model (Contact PRD Section 6) is a cross-reference to this document. | **Bidirectional.** Contact PRD defines employment; this PRD defines the Company entity. |
 | **[Communication & Conversation Intelligence PRD](email-conversations-prd.md)** | Communications are linked to companies through contact participants. Email domain extraction triggers company auto-creation. | **Company depends on Communication** for scoring data. **Communication depends on Company** for domain resolution. |
-| **[Data Sources PRD](data-sources-prd_V1.md)** | Company virtual schema table is derived from the Company field registry. `cmp_` prefix enables entity detection. | **Data Sources depend on Company** for entity definitions. |
-| **[Views & Grid PRD](views-grid-prd_V5.md)** | Company views, filters, sorts use fields from the Company field registry. Precomputed scores enable sort-by-strength. | **Views depend on Company** for field definitions and scores. |
-| **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** | Company record access, merge permissions, hierarchy management permissions. | **Company depends on Permissions** for access control. |
+| **[Data Sources PRD](data-sources-prd.md)** | Company virtual schema table is derived from the Company field registry. `cmp_` prefix enables entity detection. | **Data Sources depend on Company** for entity definitions. |
+| **[Views & Grid PRD](views-grid-prd.md)** | Company views, filters, sorts use fields from the Company field registry. Precomputed scores enable sort-by-strength. | **Views depend on Company** for field definitions and scores. |
+| **[Permissions & Sharing PRD](permissions-sharing-prd.md)** | Company record access, merge permissions, hierarchy management permissions. | **Company depends on Permissions** for access control. |
 | **[Events PRD](events-prd.md)** | Company participates in calendar events via `event_participants`. | **Events depend on Company** as a participant entity type. |
 
 ---
@@ -1338,7 +1338,7 @@ Batch processing of all existing communications to extract domains and auto-crea
 
 ## 22. Glossary
 
-General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to this subsystem:
+General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
 | Term | Definition |
 |---|---|
@@ -1366,14 +1366,14 @@ General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attri
 | Document | Relationship |
 |---|---|
 | [CRMExtender PRD v1.1](PRD.md) | Parent document defining system architecture, phasing, and all feature areas. |
-| [Custom Objects PRD](custom-objects-prd_v2.md) | Company is a system object type managed by this framework. |
-| [Contact Management PRD](contact-management-prd_V5.md) | Contact→Company employment relation; Company section cross-references this document. |
+| [Custom Objects PRD](custom-objects-prd.md) | Company is a system object type managed by this framework. |
+| [Contact Management PRD](contact-management-prd.md) | Contact→Company employment relation; Company section cross-references this document. |
 | [Communication & Conversation Intelligence PRD](email-conversations-prd.md) | Communications provide the data for company relationship scoring. |
-| [Data Sources PRD](data-sources-prd_V1.md) | Company virtual schema for query engine. |
-| [Views & Grid PRD](views-grid-prd_V5.md) | Company views consume field registry and precomputed scores. |
-| [Permissions & Sharing PRD](permissions-sharing-prd_V2.md) | Access control for company records. |
+| [Data Sources PRD](data-sources-prd.md) | Company virtual schema for query engine. |
+| [Views & Grid PRD](views-grid-prd.md) | Company views consume field registry and precomputed scores. |
+| [Permissions & Sharing PRD](permissions-sharing-prd.md) | Access control for company records. |
 | [Events PRD](events-prd.md) | Companies participate in calendar events. |
-| [Email Parsing & Content Extraction](email_stripping_V1.md) | Email signature parsing provides company enrichment data. |
+| [Email Parsing & Content Extraction](email-stripping.md) | Email signature parsing provides company enrichment data. |
 
 ---
 

@@ -11,7 +11,7 @@
 > Terminology standardization pass: Mojibake encoding cleanup. Cross-PRD links updated to current versions (Custom Objects V2, Views & Grid V5, Contact Management V5). Field groups description updated to reference Attribute Cards and Detail Panel (GUI PRD Section 15.7, Custom Objects PRD Section 11). Master Glossary V3 cross-reference added to glossary section.
 >
 > **V2.0 Rewrite (2026-02-17):**
-> This document is a full rewrite of the Events PRD v1.0 (2026-02-09), which documented the PoC-era SQLite implementation. All content has been reconciled with the [Custom Objects PRD](custom-objects-prd_v2.md) Unified Object Model:
+> This document is a full rewrite of the Events PRD v1.0 (2026-02-09), which documented the PoC-era SQLite implementation. All content has been reconciled with the [Custom Objects PRD](custom-objects-prd.md) Unified Object Model:
 > - Event is a **system object type** (`is_system = true`, prefix `evt_`) in the unified framework. Core fields are protected from deletion; specialized behaviors (attendee resolution, birthday auto-generation, recurrence defaulting) are registered per Custom Objects PRD Section 22.
 > - Entity IDs use **prefixed ULIDs** (`evt_` prefix, e.g., `evt_01HX8A...`) per the platform-wide convention (Data Sources PRD, Custom Objects PRD Section 6).
 > - Event participants are modeled as **two system Relation Types**: Event→Contact (`event_contact_participation`) and Event→Company (`event_company_participation`), with metadata fields for role and RSVP status. This replaces the PoC-era polymorphic `event_participants` table.
@@ -68,13 +68,13 @@ Unlike traditional CRMs where calendar events are siloed in external tools or tr
 
 **Relationship to other PRDs:**
 
-- **[Custom Objects PRD](custom-objects-prd_v2.md)** — The Event entity type is a **system object type** in the unified framework. Its table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. This PRD defines the Event-specific behaviors (attendee resolution, birthday auto-generation, recurrence defaulting) that are registered with the object type framework.
-- **[Contact Management PRD](contact-management-prd_V5.md)** — Contacts participate in events through the Event→Contact Relation Type. Calendar sync resolves attendee emails to contact records via `contact_identifiers`. Event co-attendance feeds relationship strength scoring alongside email co-occurrence.
-- **[Company Management PRD](company-management-prd_V1.md)** — Companies participate in events through the Event→Company Relation Type (conference hosts, sponsors). The Company PRD's dependency table already references Events as a participant entity type.
+- **[Custom Objects PRD](custom-objects-prd.md)** — The Event entity type is a **system object type** in the unified framework. Its table structure, field registry, event sourcing, and relation model are governed by the Custom Objects PRD. This PRD defines the Event-specific behaviors (attendee resolution, birthday auto-generation, recurrence defaulting) that are registered with the object type framework.
+- **[Contact Management PRD](contact-management-prd.md)** — Contacts participate in events through the Event→Contact Relation Type. Calendar sync resolves attendee emails to contact records via `contact_identifiers`. Event co-attendance feeds relationship strength scoring alongside email co-occurrence.
+- **[Company Management PRD](company-management-prd.md)** — Companies participate in events through the Event→Company Relation Type (conference hosts, sponsors). The Company PRD's dependency table already references Events as a participant entity type.
 - **[Communication & Conversation Intelligence PRD](email-conversations-prd.md)** — Events link to conversations through the Event→Conversation Relation Type. Meeting follow-up emails, pre-meeting coordination threads, and conference debrief discussions are correlated with their triggering events.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — The Event virtual schema table is derived from the Event object type's field registry. The prefixed entity ID convention (`evt_`) enables automatic entity detection in data source queries.
-- **[Views & Grid PRD](views-grid-prd_V5.md)** — Event views, filters, sorts, and inline editing operate on fields defined in the Event field registry. Calendar View and Timeline View types are natural fits for event data.
-- **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** — Event record access, sync permissions, and calendar integration management follow the standard role-based access model.
+- **[Data Sources PRD](data-sources-prd.md)** — The Event virtual schema table is derived from the Event object type's field registry. The prefixed entity ID convention (`evt_`) enables automatic entity detection in data source queries.
+- **[Views & Grid PRD](views-grid-prd.md)** — Event views, filters, sorts, and inline editing operate on fields defined in the Event field registry. Calendar View and Timeline View types are natural fits for event data.
+- **[Permissions & Sharing PRD](permissions-sharing-prd.md)** — Event record access, sync permissions, and calendar integration management follow the standard role-based access model.
 
 ---
 
@@ -1073,13 +1073,13 @@ Balances having useful historical context against the API quota cost of fetching
 
 | PRD | Relationship | Dependency Direction |
 |---|---|---|
-| **[Custom Objects PRD](custom-objects-prd_v2.md)** | Event is a system object type. Table structure, field registry, event sourcing, Select option management, and relation model are governed by Custom Objects. This PRD defines Event-specific behaviors. | **Bidirectional.** Custom Objects provides the entity framework; this PRD defines behaviors. |
-| **[Contact Management PRD](contact-management-prd_V5.md)** | Event→Contact participation Relation Type. Attendee resolution uses `contact_identifiers`. Co-attendance feeds engagement scoring. Birthday field on contacts triggers birthday event auto-generation. | **Bidirectional.** Contact PRD provides contact records; this PRD creates participation relations and event records. |
-| **[Company Management PRD](company-management-prd_V1.md)** | Event→Company participation Relation Type. Company PRD already lists Events as a dependency in its Section 19. | **Events depend on Company** as a participant entity type. |
+| **[Custom Objects PRD](custom-objects-prd.md)** | Event is a system object type. Table structure, field registry, event sourcing, Select option management, and relation model are governed by Custom Objects. This PRD defines Event-specific behaviors. | **Bidirectional.** Custom Objects provides the entity framework; this PRD defines behaviors. |
+| **[Contact Management PRD](contact-management-prd.md)** | Event→Contact participation Relation Type. Attendee resolution uses `contact_identifiers`. Co-attendance feeds engagement scoring. Birthday field on contacts triggers birthday event auto-generation. | **Bidirectional.** Contact PRD provides contact records; this PRD creates participation relations and event records. |
+| **[Company Management PRD](company-management-prd.md)** | Event→Company participation Relation Type. Company PRD already lists Events as a dependency in its Section 19. | **Events depend on Company** as a participant entity type. |
 | **[Communication & Conversation Intelligence PRD](email-conversations-prd.md)** | Event→Conversation linking Relation Type. Meetings correlate with follow-up emails. | **Bidirectional.** Communication PRD provides conversations; this PRD links events to them. |
-| **[Data Sources PRD](data-sources-prd_V1.md)** | Event virtual schema table is derived from the Event field registry. `evt_` prefix enables entity detection. Relation traversal enables cross-entity queries. | **Data Sources depend on Events** for entity definitions. |
-| **[Views & Grid PRD](views-grid-prd_V5.md)** | Event views, filters, sorts use fields from the Event field registry. Calendar View and Timeline View are natural fits. | **Views depend on Events** for field definitions. |
-| **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** | Event record access, calendar sync permissions, integration management. | **Events depend on Permissions** for access control. |
+| **[Data Sources PRD](data-sources-prd.md)** | Event virtual schema table is derived from the Event field registry. `evt_` prefix enables entity detection. Relation traversal enables cross-entity queries. | **Data Sources depend on Events** for entity definitions. |
+| **[Views & Grid PRD](views-grid-prd.md)** | Event views, filters, sorts use fields from the Event field registry. Calendar View and Timeline View are natural fits. | **Views depend on Events** for field definitions. |
+| **[Permissions & Sharing PRD](permissions-sharing-prd.md)** | Event record access, calendar sync permissions, integration management. | **Events depend on Permissions** for access control. |
 
 ---
 
@@ -1127,7 +1127,7 @@ Dashboards showing meeting time allocation, most-met contacts, busiest days, mee
 
 ## 19. Glossary
 
-General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to this subsystem:
+General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
 | Term | Definition |
 |---|---|

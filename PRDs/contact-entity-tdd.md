@@ -4,7 +4,7 @@
 **Last Updated:** 2026-02-23
 **Status:** Draft
 **Scope:** Entity
-**Parent Document:** [contact-entity-base-prd_V9.md]
+**Parent Document:** [contact-entity-base-prd.md]
 **Product TDD:** [product-tdd.md]
 
 ---

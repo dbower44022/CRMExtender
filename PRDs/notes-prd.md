@@ -11,7 +11,7 @@
 > Terminology standardization pass: Mojibake encoding cleanup. Cross-PRD links updated to current versions (Custom Objects V2, Views & Grid V5, Contact Management V5). Master Glossary V3 cross-reference added to glossary section.
 >
 > **V2.0 Rewrite (2026-02-17):**
-> This document is a full rewrite of the Notes PRD v1.0 (2026-02-14), which documented the PoC-era SQLite implementation (Phases 17–18). All content has been reconciled with the [Custom Objects PRD](custom-objects-prd_v2.md) Unified Object Model:
+> This document is a full rewrite of the Notes PRD v1.0 (2026-02-14), which documented the PoC-era SQLite implementation (Phases 17–18). All content has been reconciled with the [Custom Objects PRD](custom-objects-prd.md) Unified Object Model:
 > - Note is a **system object type** (`is_system = true`, prefix `not_`) in the unified framework. Metadata fields are registered in the field registry; specialized behaviors (revision management, FTS sync, mention extraction, orphan attachment cleanup) are registered per Custom Objects PRD Section 22.
 > - Entity IDs use **prefixed ULIDs** (`not_` prefix, e.g., `not_01HX8A...`) per the platform-wide convention (Data Sources PRD, Custom Objects PRD Section 6).
 > - Note-to-entity linking uses a new **Universal Attachment Relation** pattern (`target = *`), enabling notes to attach to any entity type — system or custom — without requiring individual relation type definitions per entity type. This replaces the PoC-era hardcoded `entity_type` CHECK constraint.
@@ -72,13 +72,13 @@ Unlike CRMs where notes are simple text blobs buried in activity timelines, CRME
 
 **Relationship to other PRDs:**
 
-- **[Custom Objects PRD](custom-objects-prd_v2.md)** — The Note entity type is a system object type in the unified framework. Its table structure, field registry, and event sourcing are governed by the Custom Objects PRD. The Universal Attachment Relation pattern introduced by this PRD extends the Custom Objects relation type model with a new polymorphic target capability. This PRD defines the Note-specific behaviors registered with the object type framework.
-- **[Contact Management PRD](contact-management-prd_V5.md)** — Notes attach to contacts as contextual observations. Contact detail views display notes with visibility filtering. The @mention system enables referencing contacts within note content.
-- **[Company Management PRD](company-management-prd_V1.md)** — Notes attach to companies for research observations, relationship strategy, and competitive intelligence. Companies are mentionable within note content.
+- **[Custom Objects PRD](custom-objects-prd.md)** — The Note entity type is a system object type in the unified framework. Its table structure, field registry, and event sourcing are governed by the Custom Objects PRD. The Universal Attachment Relation pattern introduced by this PRD extends the Custom Objects relation type model with a new polymorphic target capability. This PRD defines the Note-specific behaviors registered with the object type framework.
+- **[Contact Management PRD](contact-management-prd.md)** — Notes attach to contacts as contextual observations. Contact detail views display notes with visibility filtering. The @mention system enables referencing contacts within note content.
+- **[Company Management PRD](company-management-prd.md)** — Notes attach to companies for research observations, relationship strategy, and competitive intelligence. Companies are mentionable within note content.
 - **[Communication & Conversation Intelligence PRD](email-conversations-prd.md)** — Notes attach to conversations for internal commentary, meeting summaries, and follow-up action items that supplement the automated conversation intelligence.
-- **[Event Management PRD](events-prd_V3.md)** — Notes attach to events for meeting preparation, post-meeting observations, and action items.
-- **[Data Sources PRD](data-sources-prd_V1.md)** — The Note virtual schema table is derived from the Note object type's field registry (metadata fields only; content is not queryable through standard Data Source filters — use the dedicated FTS search endpoint).
-- **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** — Notes integrate with the permissions model through the visibility field. Shared notes inherit visibility from linked entities; private notes are visible only to their creator regardless of entity-level permissions.
+- **[Event Management PRD](events-prd.md)** — Notes attach to events for meeting preparation, post-meeting observations, and action items.
+- **[Data Sources PRD](data-sources-prd.md)** — The Note virtual schema table is derived from the Note object type's field registry (metadata fields only; content is not queryable through standard Data Source filters — use the dedicated FTS search endpoint).
+- **[Permissions & Sharing PRD](permissions-sharing-prd.md)** — Notes integrate with the permissions model through the visibility field. Shared notes inherit visibility from linked entities; private notes are visible only to their creator regardless of entity-level permissions.
 
 ---
 
@@ -969,14 +969,14 @@ The Data Source query builder surfaces this as: "Notes → linked Contacts" in t
 
 | Dependency | Nature | Details |
 |---|---|---|
-| **[Custom Objects PRD](custom-objects-prd_v2.md)** | **Structural** | Provides the object type framework, field registry, event sourcing, and tenant schema provisioning that Notes uses. The Universal Attachment Relation extends the relation type model. |
-| **[Permissions & Sharing PRD](permissions-sharing-prd_V2.md)** | **Behavioral** | Defines the entity-level visibility rules that shared notes inherit. The Notes visibility model (Section 14) integrates with but does not replace entity permissions. |
-| **[Data Sources PRD](data-sources-prd_V1.md)** | **Integration** | The Note virtual schema table (Phase 3) follows the Data Sources convention. The prefixed ULID convention (`not_`) enables automatic entity detection. |
-| **[Views & Grid PRD](views-grid-prd_V5.md)** | **Integration** | The Linked Entities column type (Phase 3) is a new column type in the Views system, introduced by the universal attachment pattern. |
-| **[Contact Management PRD](contact-management-prd_V5.md)** | **Consumer** | Contact detail pages display notes. Contacts are mentionable. |
-| **[Company Management PRD](company-management-prd_V1.md)** | **Consumer** | Company detail pages display notes. Companies are mentionable. |
+| **[Custom Objects PRD](custom-objects-prd.md)** | **Structural** | Provides the object type framework, field registry, event sourcing, and tenant schema provisioning that Notes uses. The Universal Attachment Relation extends the relation type model. |
+| **[Permissions & Sharing PRD](permissions-sharing-prd.md)** | **Behavioral** | Defines the entity-level visibility rules that shared notes inherit. The Notes visibility model (Section 14) integrates with but does not replace entity permissions. |
+| **[Data Sources PRD](data-sources-prd.md)** | **Integration** | The Note virtual schema table (Phase 3) follows the Data Sources convention. The prefixed ULID convention (`not_`) enables automatic entity detection. |
+| **[Views & Grid PRD](views-grid-prd.md)** | **Integration** | The Linked Entities column type (Phase 3) is a new column type in the Views system, introduced by the universal attachment pattern. |
+| **[Contact Management PRD](contact-management-prd.md)** | **Consumer** | Contact detail pages display notes. Contacts are mentionable. |
+| **[Company Management PRD](company-management-prd.md)** | **Consumer** | Company detail pages display notes. Companies are mentionable. |
 | **[Communication PRD](email-conversations-prd.md)** | **Consumer** | Conversation detail pages display notes. |
-| **[Event Management PRD](events-prd_V3.md)** | **Consumer** | Event detail pages display notes. |
+| **[Event Management PRD](events-prd.md)** | **Consumer** | Event detail pages display notes. |
 
 ---
 
@@ -1025,7 +1025,7 @@ Export a note (or set of notes for an entity) as PDF, Word, or Markdown for exte
 
 ## 23. Glossary
 
-General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary_V3.md)**. The following terms are specific to this subsystem:
+General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
 | Term | Definition |
 |---|---|

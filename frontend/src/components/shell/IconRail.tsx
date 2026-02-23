@@ -12,13 +12,23 @@ const NAV_ITEMS = Object.entries(ENTITY_ICONS).map(([key, icon]) => ({
 export function IconRail() {
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)
   const setActiveEntityType = useNavigationStore((s) => s.setActiveEntityType)
+  const settingsMode = useNavigationStore((s) => s.settingsMode)
+  const openSettings = useNavigationStore((s) => s.openSettings)
   const toggleActionPanel = useLayoutStore((s) => s.toggleActionPanel)
 
   const handleClick = (key: string) => {
-    if (key === activeEntityType) {
+    if (key === activeEntityType && !settingsMode) {
       toggleActionPanel()
     } else {
       setActiveEntityType(key)
+    }
+  }
+
+  const handleSettingsClick = () => {
+    if (settingsMode) {
+      toggleActionPanel()
+    } else {
+      openSettings()
     }
   }
 
@@ -42,24 +52,28 @@ export function IconRail() {
               onClick={() => handleClick(item.key)}
               title={item.label}
               className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
-                isActive
+                isActive && !settingsMode
                   ? 'bg-primary-100 text-primary-700'
                   : 'text-surface-500 hover:bg-surface-100 hover:text-surface-700'
               }`}
             >
-              <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} />
+              <Icon size={20} strokeWidth={isActive && !settingsMode ? 2.2 : 1.8} />
             </button>
           )
         })}
       </div>
       <div className="mt-auto pb-2">
-        <a
-          href="/settings"
+        <button
+          onClick={handleSettingsClick}
           title="Settings"
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-surface-400 transition-colors hover:bg-surface-100 hover:text-surface-600"
+          className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+            settingsMode
+              ? 'bg-primary-100 text-primary-700'
+              : 'text-surface-400 hover:bg-surface-100 hover:text-surface-600'
+          }`}
         >
-          <Settings size={20} strokeWidth={1.8} />
-        </a>
+          <Settings size={20} strokeWidth={settingsMode ? 2.2 : 1.8} />
+        </button>
       </div>
     </div>
   )

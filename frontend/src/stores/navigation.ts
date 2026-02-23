@@ -16,6 +16,8 @@ interface NavigationState {
   quickFilters: QuickFilter[]
   searchFilters: QuickFilter[]
   pendingNavigation: { entityType: string; entityId: string } | null
+  settingsMode: boolean
+  settingsTab: string
 
   setActiveEntityType: (entityType: string) => void
   setActiveViewId: (viewId: string | null) => void
@@ -32,6 +34,9 @@ interface NavigationState {
   toggleQuickFilter: (filter: QuickFilter) => void
   setSearchFilters: (filters: QuickFilter[]) => void
   setPendingNavigation: (nav: { entityType: string; entityId: string } | null) => void
+  openSettings: () => void
+  closeSettings: () => void
+  setSettingsTab: (tab: string) => void
   reset: () => void
 }
 
@@ -50,6 +55,8 @@ const DEFAULTS = {
   quickFilters: [] as QuickFilter[],
   searchFilters: [] as QuickFilter[],
   pendingNavigation: null as { entityType: string; entityId: string } | null,
+  settingsMode: false,
+  settingsTab: 'profile',
 }
 
 export const useNavigationStore = create<NavigationState>()((set) => ({
@@ -69,6 +76,7 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
       search: '',
       quickFilters: [],
       searchFilters: [],
+      settingsMode: false,
     }),
 
   setActiveViewId: (viewId) =>
@@ -165,6 +173,15 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
     set({ searchFilters: filters, selectedRowId: null, selectedRowIndex: -1 }),
 
   setPendingNavigation: (nav) => set({ pendingNavigation: nav }),
+
+  openSettings: () =>
+    set({ settingsMode: true }),
+
+  closeSettings: () =>
+    set({ settingsMode: false }),
+
+  setSettingsTab: (tab) =>
+    set({ settingsTab: tab }),
 
   reset: () => set(DEFAULTS),
 }))

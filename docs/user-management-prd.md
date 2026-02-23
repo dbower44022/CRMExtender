@@ -268,6 +268,7 @@ CREATE TABLE users (
 ```
 
 Key changes from v7:
+
 - **`customer_id`** (NOT NULL FK) — every user belongs to exactly one
   customer.
 - **`email` uniqueness** scoped to customer instead of global.
@@ -280,15 +281,15 @@ Key changes from v7:
 Seven tables gain a `customer_id TEXT` column referencing
 `customers(id)`:
 
-| Table | Notes |
-|-------|-------|
-| `provider_accounts` | Nullable during migration, backfilled to `cust-default`. |
-| `contacts` | Same. |
-| `companies` | Same. |
-| `conversations` | Same. |
-| `projects` | Same. |
-| `tags` | Same. |
-| `relationship_types` | Nullable — system seed types keep NULL customer_id. |
+| Table                | Notes                                                    |
+| -------------------- | -------------------------------------------------------- |
+| `provider_accounts`  | Nullable during migration, backfilled to `cust-default`. |
+| `contacts`           | Same.                                                    |
+| `companies`          | Same.                                                    |
+| `conversations`      | Same.                                                    |
+| `projects`           | Same.                                                    |
+| `tags`               | Same.                                                    |
+| `relationship_types` | Nullable — system seed types keep NULL customer_id.      |
 
 Child tables (`contact_identifiers`, `communications`,
 `conversation_participants`, `communication_participants`, etc.) do
@@ -329,6 +330,7 @@ WHERE c.customer_id = :customer_id
 ### 5.3 Conversations — provider account participation + explicit shares
 
 A user sees a conversation if:
+
 1. They have access to a `provider_account` that produced a
    communication in the conversation (via `user_provider_accounts`), OR
 2. The conversation was explicitly shared via `conversation_shares`.
@@ -390,6 +392,7 @@ User B syncs or adds an email that matches User A's private contact:
 Implementation: `poc/web/middleware.py`
 
 **Auth enabled mode** (`CRM_AUTH_ENABLED=true`, default):
+
 - Static files (`/static/*`) pass through without auth.
 - For all other paths, resolves session from `crm_session` cookie.
 - `/login` passes through even without a valid session (but still
@@ -400,6 +403,7 @@ Implementation: `poc/web/middleware.py`
   role, and customer_id.
 
 **Bypass mode** (`CRM_AUTH_ENABLED=false`):
+
 - Injects the first active user from the database as
   `request.state.user`.
 - Falls back to a synthetic admin user if no users exist (empty DB).
@@ -441,20 +445,20 @@ For use as `Depends()` in admin-only routes (Phase 3+).
 
 ### 6.7 Configuration
 
-| Setting | Env variable | Default | Description |
-|---------|-------------|---------|-------------|
-| Auth enabled | `CRM_AUTH_ENABLED` | `true` | Set to `false` to bypass authentication during development. |
-| Session secret | `SESSION_SECRET_KEY` | `change-me-in-production` | Secret key for signing session cookies. |
-| Session TTL | `SESSION_TTL_HOURS` | `720` (30 days) | Session expiration in hours. |
+| Setting        | Env variable         | Default                   | Description                                                 |
+| -------------- | -------------------- | ------------------------- | ----------------------------------------------------------- |
+| Auth enabled   | `CRM_AUTH_ENABLED`   | `true`                    | Set to `false` to bypass authentication during development. |
+| Session secret | `SESSION_SECRET_KEY` | `change-me-in-production` | Secret key for signing session cookies.                     |
+| Session TTL    | `SESSION_TTL_HOURS`  | `720` (30 days)           | Session expiration in hours.                                |
 
 ---
 
 ## 7. Roles & Authorization
 
-| Role | Capabilities |
-|------|-------------|
+| Role    | Capabilities                                                                                                           |
+| ------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `admin` | All user capabilities + edit System Settings + manage users (create/deactivate/change roles) + share provider accounts |
-| `user` | View/edit own contacts/companies/conversations, manage own settings, sync own provider accounts |
+| `user`  | View/edit own contacts/companies/conversations, manage own settings, sync own provider accounts                        |
 
 Role enforcement is via a `require_admin()` dependency (Phase 2) that
 returns HTTP 403 for non-admin users on protected endpoints.
@@ -478,22 +482,22 @@ setting to be explicitly set per-user.
 
 ### 8.2 Default system settings
 
-| `setting_name` | `setting_default` | Description |
-|---|---|---|
-| `default_timezone` | `UTC` | Default timezone for new users. |
-| `company_name` | *(customer name)* | Organization display name. |
-| `sync_enabled` | `true` | Enable/disable automatic sync. |
-| `default_phone_country` | `US` | Default country for phone number normalization (ISO 3166-1 alpha-2). |
+| `setting_name`          | `setting_default` | Description                                                          |
+| ----------------------- | ----------------- | -------------------------------------------------------------------- |
+| `default_timezone`      | `UTC`             | Default timezone for new users.                                      |
+| `company_name`          | *(customer name)* | Organization display name.                                           |
+| `sync_enabled`          | `true`            | Enable/disable automatic sync.                                       |
+| `default_phone_country` | `US`              | Default country for phone number normalization (ISO 3166-1 alpha-2). |
 
 ### 8.3 Default user settings
 
-| `setting_name` | `setting_default` | Description |
-|---|---|---|
-| `timezone` | *(inherit system)* | Preferred timezone (IANA). |
-| `start_of_week` | `monday` | First day of week. |
-| `date_format` | `ISO` | Date display: US, ISO, or EU. |
-| `profile_photo` | *(none)* | Profile photo path or URL. |
-| `contact_id` | *(none)* | Link to user's own contact record. |
+| `setting_name`  | `setting_default`  | Description                        |
+| --------------- | ------------------ | ---------------------------------- |
+| `timezone`      | *(inherit system)* | Preferred timezone (IANA).         |
+| `start_of_week` | `monday`           | First day of week.                 |
+| `date_format`   | `ISO`              | Date display: US, ISO, or EU.      |
+| `profile_photo` | *(none)*           | Profile photo path or URL.         |
+| `contact_id`    | *(none)*           | Link to user's own contact record. |
 
 ### 8.4 CRM_TIMEZONE transition
 
@@ -509,35 +513,35 @@ value instead of the global.
 
 ### 9.1 New modules
 
-| File | Role |
-|------|------|
-| `poc/session.py` | Session CRUD: `create_session`, `get_session`, `delete_session`, `delete_user_sessions`, `cleanup_expired_sessions` |
-| `poc/settings.py` | Settings CRUD: `get_setting` (cascade resolution), `set_setting` (upsert), `list_settings`, `seed_default_settings` |
-| `poc/access.py` | Tenant-scoped query helpers: `visible_contacts_query`, `my_contacts_query`, `visible_companies_query`, `my_companies_query`, `visible_conversations_query`, plus `get_visible_*`/`get_my_*` convenience functions |
-| `poc/migrate_to_v8.py` | Schema migration v7 -> v8 (17 steps, backup, validation, `--dry-run`) |
+| File                   | Role                                                                                                                                                                                                              |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `poc/session.py`       | Session CRUD: `create_session`, `get_session`, `delete_session`, `delete_user_sessions`, `cleanup_expired_sessions`                                                                                               |
+| `poc/settings.py`      | Settings CRUD: `get_setting` (cascade resolution), `set_setting` (upsert), `list_settings`, `seed_default_settings`                                                                                               |
+| `poc/access.py`        | Tenant-scoped query helpers: `visible_contacts_query`, `my_contacts_query`, `visible_companies_query`, `my_companies_query`, `visible_conversations_query`, plus `get_visible_*`/`get_my_*` convenience functions |
+| `poc/migrate_to_v8.py` | Schema migration v7 -> v8 (17 steps, backup, validation, `--dry-run`)                                                                                                                                             |
 
 ### 9.2 Phase 2 modules (authentication)
 
-| File | Role |
-|------|------|
-| `poc/passwords.py` | Password hashing (`hash_password`) and verification (`verify_password`) using bcrypt |
-| `poc/web/middleware.py` | `AuthMiddleware` — session cookie validation, bypass mode, user context injection |
-| `poc/web/routes/auth_routes.py` | Login/logout routes: `GET/POST /login`, `POST /logout` |
-| `poc/web/dependencies.py` | FastAPI dependencies: `get_current_user` (401), `require_admin` (403) |
+| File                            | Role                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------ |
+| `poc/passwords.py`              | Password hashing (`hash_password`) and verification (`verify_password`) using bcrypt |
+| `poc/web/middleware.py`         | `AuthMiddleware` — session cookie validation, bypass mode, user context injection    |
+| `poc/web/routes/auth_routes.py` | Login/logout routes: `GET/POST /login`, `POST /logout`                               |
+| `poc/web/dependencies.py`       | FastAPI dependencies: `get_current_user` (401), `require_admin` (403)                |
 
 ### 9.3 Modified modules
 
-| File | Changes |
-|------|---------|
-| `poc/database.py` | Added `customers` table, updated `users` schema, added `customer_id` to 7 tables, added 6 new table CREATE statements, added indexes, added `_SETTINGS_INDEX_SQL` for partial unique indexes |
-| `poc/models.py` | Updated `User` dataclass (added `customer_id`, `password_hash`, `google_sub`, changed default role to `'user'`).  Added `Customer`, `Session`, `Setting` dataclasses with `to_row()`/`from_row()` |
-| `poc/hierarchy.py` | Updated `bootstrap_user(password=)` to auto-create default customer, set `role='admin'`, and optionally hash a password.  Added `get_user_by_email()`, `set_user_password()`, `_ensure_default_customer()`.  Added `DEFAULT_CUSTOMER_ID = "cust-default"` constant |
-| `poc/config.py` | Added `CRM_AUTH_ENABLED`, `SESSION_SECRET_KEY`, `SESSION_TTL_HOURS` |
-| `poc/__main__.py` | Added `migrate-to-v8`, `set-password` CLI subcommands; added `--password`/`--set-password` to `bootstrap-user` |
-| `poc/web/app.py` | Added `AuthTemplates` subclass (auto-injects user into templates), registered `AuthMiddleware`, included auth router |
-| `poc/web/templates/base.html` | Added user name + logout button to nav bar |
-| `poc/web/templates/login.html` | New standalone login page |
-| `pyproject.toml` | Added `bcrypt>=4.0.0`, `itsdangerous>=2.1.0` dependencies |
+| File                           | Changes                                                                                                                                                                                                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `poc/database.py`              | Added `customers` table, updated `users` schema, added `customer_id` to 7 tables, added 6 new table CREATE statements, added indexes, added `_SETTINGS_INDEX_SQL` for partial unique indexes                                                                       |
+| `poc/models.py`                | Updated `User` dataclass (added `customer_id`, `password_hash`, `google_sub`, changed default role to `'user'`).  Added `Customer`, `Session`, `Setting` dataclasses with `to_row()`/`from_row()`                                                                  |
+| `poc/hierarchy.py`             | Updated `bootstrap_user(password=)` to auto-create default customer, set `role='admin'`, and optionally hash a password.  Added `get_user_by_email()`, `set_user_password()`, `_ensure_default_customer()`.  Added `DEFAULT_CUSTOMER_ID = "cust-default"` constant |
+| `poc/config.py`                | Added `CRM_AUTH_ENABLED`, `SESSION_SECRET_KEY`, `SESSION_TTL_HOURS`                                                                                                                                                                                                |
+| `poc/__main__.py`              | Added `migrate-to-v8`, `set-password` CLI subcommands; added `--password`/`--set-password` to `bootstrap-user`                                                                                                                                                     |
+| `poc/web/app.py`               | Added `AuthTemplates` subclass (auto-injects user into templates), registered `AuthMiddleware`, included auth router                                                                                                                                               |
+| `poc/web/templates/base.html`  | Added user name + logout button to nav bar                                                                                                                                                                                                                         |
+| `poc/web/templates/login.html` | New standalone login page                                                                                                                                                                                                                                          |
+| `pyproject.toml`               | Added `bcrypt>=4.0.0`, `itsdangerous>=2.1.0` dependencies                                                                                                                                                                                                          |
 
 ### 9.4 Dataclasses
 
@@ -567,6 +571,7 @@ from poc.session import (
 ```
 
 `get_session()` performs three validations:
+
 1. Session exists in DB.
 2. Session has not expired (auto-deletes if expired).
 3. Associated user is active (`is_active = 1`).
@@ -612,20 +617,20 @@ full query and return lists of dicts.
 The migration follows the established pattern: backup, sequential
 steps, validation, `--dry-run` support, `--db PATH` override.
 
-| Step | Action |
-|------|--------|
-| 1 | Create `customers` table |
-| 2 | Bootstrap default customer (`cust-default`, "Default Organization") |
-| 3 | Recreate `users` table with new schema (PRAGMA foreign_keys=OFF, rename old, create new, copy data with `customer_id='cust-default'` and `role='admin'`, drop old) |
-| 4 | Add `customer_id` column to `provider_accounts`, `contacts`, `companies`, `conversations`, `projects`, `tags`, `relationship_types` |
-| 5 | Backfill all existing rows with `customer_id = 'cust-default'` |
-| 6–11 | Create new tables: `sessions`, `user_contacts`, `user_companies`, `user_provider_accounts`, `conversation_shares`, `settings` |
-| 12 | Seed `user_provider_accounts` — link existing user to all provider_accounts as `'owner'` |
-| 13 | Seed `user_contacts` — link existing user to all contacts as `'public'` + `is_owner=1` |
-| 14 | Seed `user_companies` — link existing user to all companies as `'public'` + `is_owner=1` |
-| 15 | Seed default settings (system + user) |
-| 16 | Create all new indexes |
-| 17 | Validate — table existence, column presence, row count integrity, no NULL customer_ids |
+| Step | Action                                                                                                                                                             |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | Create `customers` table                                                                                                                                           |
+| 2    | Bootstrap default customer (`cust-default`, "Default Organization")                                                                                                |
+| 3    | Recreate `users` table with new schema (PRAGMA foreign_keys=OFF, rename old, create new, copy data with `customer_id='cust-default'` and `role='admin'`, drop old) |
+| 4    | Add `customer_id` column to `provider_accounts`, `contacts`, `companies`, `conversations`, `projects`, `tags`, `relationship_types`                                |
+| 5    | Backfill all existing rows with `customer_id = 'cust-default'`                                                                                                     |
+| 6–11 | Create new tables: `sessions`, `user_contacts`, `user_companies`, `user_provider_accounts`, `conversation_shares`, `settings`                                      |
+| 12   | Seed `user_provider_accounts` — link existing user to all provider_accounts as `'owner'`                                                                           |
+| 13   | Seed `user_contacts` — link existing user to all contacts as `'public'` + `is_owner=1`                                                                             |
+| 14   | Seed `user_companies` — link existing user to all companies as `'public'` + `is_owner=1`                                                                           |
+| 15   | Seed default settings (system + user)                                                                                                                              |
+| 16   | Create all new indexes                                                                                                                                             |
+| 17   | Validate — table existence, column presence, row count integrity, no NULL customer_ids                                                                             |
 
 Idempotency: `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ADD COLUMN`
 skips if exists, `INSERT OR IGNORE` for seed data, `UPDATE ... WHERE
@@ -633,12 +638,12 @@ customer_id IS NULL` for backfill.
 
 ### v8 → v9: Phone normalization (`poc/migrate_to_v9.py`)
 
-| Step | Action |
-|------|--------|
-| 1 | Normalize all phone numbers to E.164 format (resolve country from entity address, parse via `phonenumbers` library, `is_possible_number()` check). Numbers that cannot be parsed are left as-is with a warning. |
-| 2 | Deduplicate phone numbers — after normalization, `(entity_type, entity_id, number)` groups with duplicates are reduced to the earliest row (by `created_at`), using `ROW_NUMBER() OVER (PARTITION BY ...)`. |
-| 3 | Seed `default_phone_country` system setting (`"US"`) for all existing customers. |
-| 4 | Update schema_version to 9. |
+| Step | Action                                                                                                                                                                                                          |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Normalize all phone numbers to E.164 format (resolve country from entity address, parse via `phonenumbers` library, `is_possible_number()` check). Numbers that cannot be parsed are left as-is with a warning. |
+| 2    | Deduplicate phone numbers — after normalization, `(entity_type, entity_id, number)` groups with duplicates are reduced to the earliest row (by `created_at`), using `ROW_NUMBER() OVER (PARTITION BY ...)`.     |
+| 3    | Seed `default_phone_country` system setting (`"US"`) for all existing customers.                                                                                                                                |
+| 4    | Update schema_version to 9.                                                                                                                                                                                     |
 
 Production results (2026-02-11): 9 numbers normalized, 1 duplicate
 removed, 8 phones remaining.
@@ -697,42 +702,42 @@ Sets or updates the login password for an existing user.
 
 ### Phase 1 tests (57 new)
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `tests/test_migration_v8.py` | 16 | All migration steps: table creation, user preservation, customer_id backfill, seeding, dry run, idempotency, empty DB, indexes |
-| `tests/test_sessions.py` | 12 | Session create, get (valid/expired/inactive user/nonexistent), delete, delete all user sessions, cleanup expired |
-| `tests/test_settings.py` | 16 | Set/get system and user settings, upsert, cascade resolution (4 levels), cross-user isolation, null value fallthrough, list/seed |
-| `tests/test_access.py` | 13 | Visible vs my contacts/companies, public/private visibility, conversation visibility via provider accounts and explicit shares |
+| File                         | Tests | Coverage                                                                                                                         |
+| ---------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/test_migration_v8.py` | 16    | All migration steps: table creation, user preservation, customer_id backfill, seeding, dry run, idempotency, empty DB, indexes   |
+| `tests/test_sessions.py`     | 12    | Session create, get (valid/expired/inactive user/nonexistent), delete, delete all user sessions, cleanup expired                 |
+| `tests/test_settings.py`     | 16    | Set/get system and user settings, upsert, cascade resolution (4 levels), cross-user isolation, null value fallthrough, list/seed |
+| `tests/test_access.py`       | 13    | Visible vs my contacts/companies, public/private visibility, conversation visibility via provider accounts and explicit shares   |
 
 ### Phase 2 tests (18 new)
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `tests/test_auth.py` | 18 | Passwords (hash/verify, salts), login (success, wrong password, unknown email, no password hash, redirect if authed), logout (clears session), middleware (redirect, static public, valid session, invalid cookie, user in nav), bypass mode (access without login, user context), admin dependency (401/403) |
+| File                 | Tests | Coverage                                                                                                                                                                                                                                                                                                      |
+| -------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/test_auth.py` | 18    | Passwords (hash/verify, salts), login (success, wrong password, unknown email, no password hash, redirect if authed), logout (clears session), middleware (redirect, static public, valid session, invalid cookie, user in nav), bypass mode (access without login, user context), admin dependency (401/403) |
 
 ### Phase 3 tests (24 new)
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `tests/test_scoping.py` | 24 | Contact scoping (all/mine, public/private visibility, cross-customer 404), company scoping (all/mine, cross-customer 404), conversation scoping (via account access, via share, cross-customer invisible), dashboard scoping (counts, recent conversations), detail access checks (cross-customer 404), sync scoping (user_contacts/user_companies creation), project scoping (customer_id on create/list) |
+| File                    | Tests | Coverage                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/test_scoping.py` | 24    | Contact scoping (all/mine, public/private visibility, cross-customer 404), company scoping (all/mine, cross-customer 404), conversation scoping (via account access, via share, cross-customer invisible), dashboard scoping (counts, recent conversations), detail access checks (cross-customer 404), sync scoping (user_contacts/user_companies creation), project scoping (customer_id on create/list) |
 
 ### Phase 4 tests (31 new)
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `tests/test_settings_ui.py` | 31 | Data layer (list/get/create/update users), profile page (render, save name/timezone/start_of_week/date_format, password change success/mismatch/too short), system settings (render for admin, 403 for non-admin, save company_name/default_timezone/sync_enabled), user management (list, 403 for non-admin, create/duplicate/edit/save/set password/toggle active/cannot deactivate self), per-user timezone (default meta tag, user override, system cascade) |
+| File                        | Tests | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/test_settings_ui.py` | 31    | Data layer (list/get/create/update users), profile page (render, save name/timezone/start_of_week/date_format, password change success/mismatch/too short), system settings (render for admin, 403 for non-admin, save company_name/default_timezone/sync_enabled), user management (list, 403 for non-admin, create/duplicate/edit/save/set password/toggle active/cannot deactivate self), per-user timezone (default meta tag, user override, system cascade) |
 
 ### Phase 5 tests (20 new)
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `tests/test_google_oauth.py` | 20 | Config loading (with/without client_secret.json), data layer (get/set google_sub), OAuth initiate (redirect URL, state cookie, no config redirect), callback (state mismatch, success, google_sub linking, google_sub match, no matching user), login page (button visibility with/without config, error display) |
+| File                         | Tests | Coverage                                                                                                                                                                                                                                                                                                          |
+| ---------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/test_google_oauth.py` | 20    | Config loading (with/without client_secret.json), data layer (get/set google_sub), OAuth initiate (redirect URL, state cookie, no config redirect), callback (state mismatch, success, google_sub linking, google_sub match, no matching user), login page (button visibility with/without config, error display) |
 
 ### Phase 6 tests (37 new)
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `tests/test_phone_normalization.py` | 37 | `normalize_phone` (US formats, UK, E.164, toll-free, invalid/empty), `format_phone` (national/international/unparseable fallback), `validate_phone` (valid/invalid/empty), `resolve_country_code` (from address, from setting, US fallback, primary preferred), `add_phone_number` integration (E.164 normalization, dedup same/different formats, invalid returns None, address country), web routes (add valid/invalid company/contact phones, display formatting), settings UI (country dropdown render/save), migration (normalize+dedup, invalid preserved, seeds setting) |
+| File                                | Tests | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/test_phone_normalization.py` | 37    | `normalize_phone` (US formats, UK, E.164, toll-free, invalid/empty), `format_phone` (national/international/unparseable fallback), `validate_phone` (valid/invalid/empty), `resolve_country_code` (from address, from setting, US fallback, primary preferred), `add_phone_number` integration (E.164 normalization, dedup same/different formats, invalid returns None, address country), web routes (add valid/invalid company/contact phones, display formatting), settings UI (country dropdown render/save), migration (normalize+dedup, invalid preserved, seeds setting) |
 
 Total test suite: **782 tests** (595 pre-existing + 57 Phase 1 + 18
 Phase 2 + 24 Phase 3 + 31 Phase 4 + 20 Phase 5 + 37 Phase 6), all
@@ -875,6 +880,7 @@ cleanly.
 
 Rather than a single `visibility` column on `contacts` directly,
 visibility is stored per-user in `user_contacts`.  This allows:
+
 - Different users to have different visibility for the same contact.
 - A contact to be private to one user and public to another.
 - The concept of "my contacts" (rows in `user_contacts` for this user).

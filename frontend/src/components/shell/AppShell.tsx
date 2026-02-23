@@ -31,6 +31,7 @@ export function AppShell() {
   const searchModalOpen = useLayoutStore((s) => s.searchModalOpen)
   const openSearchModal = useLayoutStore((s) => s.openSearchModal)
   const activeViewId = useNavigationStore((s) => s.activeViewId)
+  const settingsMode = useNavigationStore((s) => s.settingsMode)
   const { data: viewConfig } = useViewConfig(activeViewId)
 
   useDefaultView()
@@ -57,14 +58,16 @@ export function AppShell() {
   useEffect(() => {
     const panel = detailRef.current
     if (!panel) return
-    if (detailPanelVisible) {
+    if (settingsMode) {
+      panel.resize('0%')
+    } else if (detailPanelVisible) {
       const previewSize = viewConfig?.preview_panel_size ?? 'medium'
       const size = PREVIEW_PANEL_SIZE_MAP[previewSize] ?? '30%'
       panel.resize(size)
     } else {
       panel.resize('0%')
     }
-  }, [detailPanelVisible, detailRef, viewConfig?.preview_panel_size])
+  }, [detailPanelVisible, detailRef, viewConfig?.preview_panel_size, settingsMode])
 
   // Ctrl+K / Cmd+K to open search modal
   useEffect(() => {

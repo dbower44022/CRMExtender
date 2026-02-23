@@ -4,9 +4,20 @@ import { useLayoutStore } from '../../stores/layout.ts'
 import { useEntityRegistry } from '../../api/registry.ts'
 import { useViewConfig } from '../../api/views.ts'
 
+const SETTINGS_TAB_LABELS: Record<string, string> = {
+  profile: 'Profile',
+  accounts: 'Accounts',
+  calendars: 'Calendars',
+  system: 'System',
+  roles: 'Roles',
+  users: 'Users',
+}
+
 export function TopHeaderBar() {
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)
   const activeViewId = useNavigationStore((s) => s.activeViewId)
+  const settingsMode = useNavigationStore((s) => s.settingsMode)
+  const settingsTab = useNavigationStore((s) => s.settingsTab)
   const openSearchModal = useLayoutStore((s) => s.openSearchModal)
   const { data: registry } = useEntityRegistry()
   const { data: viewConfig } = useViewConfig(activeViewId)
@@ -17,11 +28,23 @@ export function TopHeaderBar() {
   return (
     <header className="flex h-[48px] items-center border-b border-surface-200 bg-surface-0 px-4">
       <nav className="flex items-center gap-1.5 text-sm">
-        <span className="font-medium text-surface-700">{entityLabel}</span>
-        {viewName && (
+        {settingsMode ? (
           <>
+            <span className="font-medium text-surface-700">Settings</span>
             <span className="text-surface-400">/</span>
-            <span className="text-surface-500">{viewName}</span>
+            <span className="text-surface-500">
+              {SETTINGS_TAB_LABELS[settingsTab] ?? settingsTab}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="font-medium text-surface-700">{entityLabel}</span>
+            {viewName && (
+              <>
+                <span className="text-surface-400">/</span>
+                <span className="text-surface-500">{viewName}</span>
+              </>
+            )}
           </>
         )}
       </nav>

@@ -34,11 +34,11 @@ Current solutions force users to manually piece this together across LinkedIn, e
 
 ## 3. Target Users
 
-| Persona | Description | Key Needs |
-|---|---|---|
-| **Networker / Consultant** | Independent professionals managing referral networks and advisory relationships | Relationship strength tracking, warm intro paths, meeting prep briefs |
-| **Sales Professional** | Account executives and SDRs managing pipelines | Deal intelligence, stakeholder mapping, engagement scoring, timing signals |
-| **General Business User** | Anyone managing professional contacts beyond a simple address book | Organized contacts, interaction history, company intelligence |
+| Persona                    | Description                                                                     | Key Needs                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Networker / Consultant** | Independent professionals managing referral networks and advisory relationships | Relationship strength tracking, warm intro paths, meeting prep briefs      |
+| **Sales Professional**     | Account executives and SDRs managing pipelines                                  | Deal intelligence, stakeholder mapping, engagement scoring, timing signals |
+| **General Business User**  | Anyone managing professional contacts beyond a simple address book              | Organized contacts, interaction history, company intelligence              |
 
 **Initial scale:** Small teams of 2-10 users with shared contact pools and collaborative intelligence.
 
@@ -104,23 +104,23 @@ Browser Extension (Chrome/Firefox — Plasmo)
 
 ### 4.2 Technology Stack
 
-| Layer | Technology | Rationale |
-|---|---|---|
-| **Backend** | Python 3.12+ / FastAPI | Async-first, strong typing, excellent for API-first design |
-| **Client** | Flutter / Dart | Single codebase for web, iOS, Android, macOS, Windows, Linux |
-| **State Management** | Riverpod | Compile-safe, testable, well-suited for offline-aware state |
-| **Primary DB** | PostgreSQL 16+ | Event sourcing, temporal queries, JSONB, schema-per-tenant isolation |
-| **Graph DB** | Neo4j | Relationship traversal, shortest-path queries, influence network mapping |
-| **Search** | Meilisearch | Typo-tolerant full-text search, lightweight operations, fast indexing |
-| **Cache** | Redis | Session management, API response caching, real-time pub/sub |
-| **Task Queue** | Celery + Redis | Background OSINT enrichment, AI processing, data sync jobs |
-| **Offline DB** | SQLite / Isar (on-device) | Local read cache and write queue for offline operation |
-| **Object Storage** | S3-compatible (MinIO) | Contact photos, file attachments, exported reports |
-| **AI/LLM** | Anthropic Claude API | Contact insights, summarization, natural language queries |
-| **Browser Extension** | TypeScript / Plasmo | Chrome/Firefox extension for LinkedIn/Twitter intelligence capture |
-| **Email (Gmail)** | Gmail API (direct) | Free API access, native threading, webhook push for new mail |
-| **Email (Microsoft)** | Microsoft Graph API | Free API access, native conversationId, webhook subscriptions |
-| **Email (Other)** | IMAP/SMTP | Fallback for non-Gmail/Outlook providers (Yahoo, corporate Exchange, etc.) |
+| Layer                 | Technology                | Rationale                                                                  |
+| --------------------- | ------------------------- | -------------------------------------------------------------------------- |
+| **Backend**           | Python 3.12+ / FastAPI    | Async-first, strong typing, excellent for API-first design                 |
+| **Client**            | Flutter / Dart            | Single codebase for web, iOS, Android, macOS, Windows, Linux               |
+| **State Management**  | Riverpod                  | Compile-safe, testable, well-suited for offline-aware state                |
+| **Primary DB**        | PostgreSQL 16+            | Event sourcing, temporal queries, JSONB, schema-per-tenant isolation       |
+| **Graph DB**          | Neo4j                     | Relationship traversal, shortest-path queries, influence network mapping   |
+| **Search**            | Meilisearch               | Typo-tolerant full-text search, lightweight operations, fast indexing      |
+| **Cache**             | Redis                     | Session management, API response caching, real-time pub/sub                |
+| **Task Queue**        | Celery + Redis            | Background OSINT enrichment, AI processing, data sync jobs                 |
+| **Offline DB**        | SQLite / Isar (on-device) | Local read cache and write queue for offline operation                     |
+| **Object Storage**    | S3-compatible (MinIO)     | Contact photos, file attachments, exported reports                         |
+| **AI/LLM**            | Anthropic Claude API      | Contact insights, summarization, natural language queries                  |
+| **Browser Extension** | TypeScript / Plasmo       | Chrome/Firefox extension for LinkedIn/Twitter intelligence capture         |
+| **Email (Gmail)**     | Gmail API (direct)        | Free API access, native threading, webhook push for new mail               |
+| **Email (Microsoft)** | Microsoft Graph API       | Free API access, native conversationId, webhook subscriptions              |
+| **Email (Other)**     | IMAP/SMTP                 | Fallback for non-Gmail/Outlook providers (Yahoo, corporate Exchange, etc.) |
 
 ### 4.3 Hybrid Event Sourcing Architecture
 
@@ -131,6 +131,7 @@ The system uses a hybrid data architecture: **event sourcing for contacts and in
 **Conventional entities:** Tenants, Users, Pipelines, Tags, Custom Field Definitions, Sync Log.
 
 **Core principles:**
+
 - Events are immutable and append-only — no updates or deletes on the event store.
 - Current state is derived by replaying events and maintained as materialized views for fast reads.
 - Temporal queries answer questions like "What did we know about John on March 15th?"
@@ -161,12 +162,14 @@ The platform implements **schema-per-tenant isolation** in PostgreSQL:
 All clients (web, mobile, desktop) support **offline read access** with a **queued write** model:
 
 **Read path (offline-capable):**
+
 1. Each client maintains a **local SQLite/Isar database** synchronized from the server, storing materialized views of contacts, companies, relationships, and recent intelligence relevant to that user.
 2. **Background sync** pulls delta updates when connectivity is available (configurable interval, default: 30 seconds).
 3. **Delta compression** minimizes bandwidth for large contact databases.
 4. Sync metadata tracks last-sync timestamps per entity type.
 
 **Write path (queued offline writes):**
+
 1. When online, writes go directly to the API and the local cache is updated on confirmation.
 2. When offline, write operations are stored in a **local pending queue** with a "pending" status indicator in the UI.
 3. The local cache **does not optimistically apply** queued changes — it continues to reflect the last-known server state.
@@ -175,6 +178,7 @@ All clients (web, mobile, desktop) support **offline read access** with a **queu
 6. Successfully replayed writes update the local cache via the normal sync path.
 
 **Benefits of this approach:**
+
 - No bidirectional sync engine or conflict resolution logic needed.
 - The server remains the single source of truth at all times.
 - Event sourcing on the backend handles concurrent writes naturally.
@@ -189,11 +193,13 @@ All clients (web, mobile, desktop) support **offline read access** with a **queu
 Standard CRM contact management with intelligence extensions and temporal history tracking.
 
 **Entities:**
+
 - **Contact** — An individual person with profile data, communication preferences, and intelligence metadata. Event-sourced: all changes tracked as immutable events.
 - **Company** — An organization with firmographic data. Tracks: name/rebrand history, headquarters changes, industry classification, employee count over time, funding rounds, acquisitions.
 - **Group** — User-defined collections of contacts (e.g., "Conference Leads Q1", "Advisory Board").
 
 **Fields per Contact:**
+
 - Identity: name, email(s), phone(s), photo, job title, company, social profiles
 - Classification: tags, categories, lead source, lead status
 - Custom fields: tenant-configurable typed fields (text, number, date, dropdown, multi-select)
@@ -201,6 +207,7 @@ Standard CRM contact management with intelligence extensions and temporal histor
 - Relationship data: linked via Neo4j (see Section 5.3)
 
 **Temporal History Tracking:**
+
 - **Employment timeline** — Full history of positions: title changes, department changes, company moves, with temporal bounds (start/end dates).
 - **Contact detail history** — Email, phone, and address changes over time, not just current values.
 - **Social profile evolution** — Track when social profiles are added, changed, or removed.
@@ -208,6 +215,7 @@ Standard CRM contact management with intelligence extensions and temporal histor
 - **Point-in-time queries** — Reconstruct a contact's full profile as it appeared at any historical date.
 
 **Capabilities:**
+
 - Bulk import/export (CSV, vCard, LinkedIn export)
 - Contact merging with field-level conflict resolution
 - Activity timeline: unified chronological view of all interactions, intel updates, and notes
@@ -221,15 +229,16 @@ When intelligence arrives from different channels (enrichment APIs, browser exte
 
 **Matching Strategy (probabilistic, tiered by confidence):**
 
-| Confidence | Signal | Action |
-|---|---|---|
-| **High** | Email address exact match | Auto-merge |
-| **High** | LinkedIn profile URL match | Auto-merge |
-| **Medium** | Name + Company + Title fuzzy match | Auto-merge with flag |
-| **Medium** | Phone number match | Auto-merge with flag |
-| **Low** | Name + Location fuzzy match | Queue for human review |
+| Confidence | Signal                             | Action                 |
+| ---------- | ---------------------------------- | ---------------------- |
+| **High**   | Email address exact match          | Auto-merge             |
+| **High**   | LinkedIn profile URL match         | Auto-merge             |
+| **Medium** | Name + Company + Title fuzzy match | Auto-merge with flag   |
+| **Medium** | Phone number match                 | Auto-merge with flag   |
+| **Low**    | Name + Location fuzzy match        | Queue for human review |
 
 **Capabilities:**
+
 - **Probabilistic scoring** — Each potential match receives a confidence score based on weighted signal combinations.
 - **Human review queue** — Low-confidence matches are surfaced to users for manual resolution.
 - **Source preservation** — Merged records maintain links to all source records, preserving the ability to split incorrectly merged entities.
@@ -242,13 +251,13 @@ The differentiating layer — powered by Neo4j.
 
 **Relationship Taxonomy:**
 
-| Category | Relationship Types |
-|---|---|
-| **Hierarchical** | REPORTS_TO, MANAGES, DOTTED_LINE_TO |
-| **Professional** | WORKS_WITH, ADVISES, BOARD_MEMBER_OF, INVESTOR_IN |
-| **Social** | KNOWS, INTRODUCED_BY, REFERRED_BY, MENTOR_OF |
-| **Company-to-Company** | SUBSIDIARY_OF, ACQUIRED_BY, PARTNER_OF, COMPETES_WITH |
-| **Deal/Project** | PARTICIPATES_IN, DECISION_MAKER_FOR, INFLUENCER_ON, CHAMPION_OF |
+| Category               | Relationship Types                                              |
+| ---------------------- | --------------------------------------------------------------- |
+| **Hierarchical**       | REPORTS_TO, MANAGES, DOTTED_LINE_TO                             |
+| **Professional**       | WORKS_WITH, ADVISES, BOARD_MEMBER_OF, INVESTOR_IN               |
+| **Social**             | KNOWS, INTRODUCED_BY, REFERRED_BY, MENTOR_OF                    |
+| **Company-to-Company** | SUBSIDIARY_OF, ACQUIRED_BY, PARTNER_OF, COMPETES_WITH           |
+| **Deal/Project**       | PARTICIPATES_IN, DECISION_MAKER_FOR, INFLUENCER_ON, CHAMPION_OF |
 
 **Graph Model:**
 
@@ -287,12 +296,14 @@ The differentiating layer — powered by Neo4j.
 ```
 
 **Example Graph Queries:**
+
 - "Who do we know at Company X through existing contacts?" (2-degree path finding)
 - "Show me the full reporting chain from this person to the CEO"
 - "Which contacts have moved between these 3 companies?"
 - "Who introduced me to my best clients?"
 
 **Capabilities:**
+
 - **Relationship strength scoring** — Computed from interaction frequency, recency, reciprocity, and depth. Decays over time without reinforcement.
 - **Warm introduction paths** — Find the shortest/strongest path between the current user and a target contact through mutual connections.
 - **Influence mapping** — Identify key connectors, gatekeepers, and influencers within a network segment.
@@ -305,12 +316,14 @@ The differentiating layer — powered by Neo4j.
 Track and analyze how contacts engage over time.
 
 **Signal Sources:**
+
 - Email (send/receive frequency, response time, sentiment)
 - Calendar (meeting frequency, cancellation rate, meeting duration trends)
 - In-app activity (notes added, profile views, deal stage changes)
 - External integrations (form fills, website visits via tracking pixel — opt-in)
 
 **Computed Metrics:**
+
 - **Engagement score** — Weighted composite of interaction frequency and recency.
 - **Responsiveness index** — Average response time and response rate.
 - **Sentiment trend** — AI-analyzed sentiment across communications over a rolling window.
@@ -322,27 +335,32 @@ Track and analyze how contacts engage over time.
 Automated and on-demand public data aggregation from three primary channels.
 
 **Channel 1 — Data Enrichment APIs:**
+
 - Pluggable adapters for third-party enrichment services (Apollo, Clearbit, People Data Labs, ZoomInfo).
 - Each adapter normalizes data to a common schema and tags the source for attribution.
 - New adapters can be added without modifying core logic.
 
 **Channel 2 — Browser Extension (Phase 2):**
+
 - Chrome and Firefox extension built with Plasmo framework.
 - Captures profile data, posts, and activity from LinkedIn, Twitter/X, and other sources while the user browses.
 - Data is pushed to the API with full provenance tracking (source URL, capture timestamp, capturing user).
 - Runs through the entity resolution pipeline to match captured data to existing records.
 
 **Channel 3 — Manual Entry:**
+
 - Direct user input through the application interface.
 - All manual entries tracked with the same audit trail as automated sources.
 
 **Additional Data Sources:**
+
 - News mentions (company and individual name monitoring)
 - SEC filings / Companies House (for applicable entities)
 - Domain/website changes (technology stack changes, hiring pages)
 - Patent and publication databases
 
 **Capabilities:**
+
 - **Auto-enrichment on contact creation** — Background job enriches new contacts within minutes.
 - **Continuous monitoring** — Configurable alerts when monitored contacts have notable public events (job change, funding round, news mention).
 - **Enrichment confidence scoring** — Each enriched data point carries a confidence score and source attribution.
@@ -354,6 +372,7 @@ Automated and on-demand public data aggregation from three primary channels.
 AI is a core feature, not an add-on.
 
 **Capabilities:**
+
 - **Contact summarization** — One-paragraph briefing on any contact synthesizing all available data (profile, interactions, intel, news).
 - **Meeting prep briefs** — Auto-generated briefing documents before scheduled meetings, including recent activity, relationship context, talking points, and potential opportunities.
 - **Natural language search** — Query contacts and intelligence using plain language (e.g., "Who do I know at fintech companies in Boston that I haven't spoken to in 3 months?").
@@ -367,10 +386,12 @@ AI is a core feature, not an add-on.
 Lightweight but functional sales pipeline.
 
 **Entities:**
+
 - **Pipeline** — A configurable sequence of stages (e.g., Lead > Qualified > Proposal > Negotiation > Closed).
 - **Deal** — An opportunity tied to one or more contacts and a company, with value, probability, and expected close date.
 
 **Capabilities:**
+
 - Multiple pipelines per tenant (sales, partnerships, fundraising, etc.)
 - Kanban board view with drag-and-drop stage progression
 - Deal activity logging (notes, emails, meetings linked to deals)
@@ -392,6 +413,7 @@ The system uses a cost-optimized hybrid approach — no per-mailbox fees from th
 Each provider adapter normalizes email data to a common internal schema, so the rest of the system is provider-agnostic.
 
 **Sync Behavior:**
+
 - **Direction:** Bi-directional — both inbound and outbound emails are synced.
 - **Initial sync:** On account connection, performs a historical backfill (configurable depth, default: 90 days).
 - **Ongoing sync:** Real-time via provider webhooks/push (Gmail, Outlook) or polling (IMAP, configurable interval).
@@ -412,6 +434,7 @@ A Conversation represents a threaded email exchange, mapped from provider-native
 - **Deal linking** — Conversations can be associated with deals, providing email context on the deal timeline.
 
 **Capabilities:**
+
 - Unified inbox showing all synced email across connected accounts
 - Conversation list with filtering by status (active/stale/closed), contact, company, or deal
 - Auto-association of emails to contacts via participant email matching
@@ -424,11 +447,13 @@ A Conversation represents a threaded email exchange, mapped from provider-native
 ### 5.9 Calendar & Other Communication
 
 **Calendar Integration:**
+
 - Google Calendar and Outlook Calendar via OAuth 2.0
 - Meeting sync with contact association
 - Meeting prep brief triggers (auto-generate before scheduled meetings with known contacts)
 
 **Other Channels:**
+
 - Phone/SMS logging (manual + integration with VoIP providers)
 - Video conferencing (Zoom, Teams — meeting metadata, post-MVP)
 
@@ -557,12 +582,12 @@ ws://  /ws/v1/sync             # Live sync for online clients
 - **API keys:** For programmatic access, third-party integrations, and browser extension auth
 - **RBAC roles:**
 
-| Role | Permissions |
-|---|---|
-| **Owner** | Full tenant administration, billing, user management |
-| **Admin** | User management, pipeline configuration, integration setup |
-| **Member** | Full read/write on contacts, deals, and intelligence |
-| **Viewer** | Read-only access to contacts and intelligence |
+| Role       | Permissions                                                |
+| ---------- | ---------------------------------------------------------- |
+| **Owner**  | Full tenant administration, billing, user management       |
+| **Admin**  | User management, pipeline configuration, integration setup |
+| **Member** | Full read/write on contacts, deals, and intelligence       |
+| **Viewer** | Read-only access to contacts and intelligence              |
 
 ---
 
@@ -756,15 +781,15 @@ write_queue_log (id, user_id, device_id, operation,
 
 ### 8.1 Performance
 
-| Metric | Target |
-|---|---|
-| API response time (p95) | < 200ms for reads, < 500ms for writes |
-| Graph traversal queries | < 500ms for 3-hop paths |
-| Search response time (Meilisearch) | < 50ms |
-| Offline-to-online queue replay | < 5 seconds for typical batch |
-| Client cold start (desktop) | < 2 seconds to interactive (cached data) |
-| AI briefing generation | < 10 seconds |
-| Event replay (point-in-time query) | < 1 second with snapshots |
+| Metric                             | Target                                   |
+| ---------------------------------- | ---------------------------------------- |
+| API response time (p95)            | < 200ms for reads, < 500ms for writes    |
+| Graph traversal queries            | < 500ms for 3-hop paths                  |
+| Search response time (Meilisearch) | < 50ms                                   |
+| Offline-to-online queue replay     | < 5 seconds for typical batch            |
+| Client cold start (desktop)        | < 2 seconds to interactive (cached data) |
+| AI briefing generation             | < 10 seconds                             |
+| Event replay (point-in-time query) | < 1 second with snapshots                |
 
 ### 8.2 Scalability
 
@@ -808,26 +833,26 @@ write_queue_log (id, user_id, device_id, operation,
 
 ### 9.1 First-Party Integrations (MVP)
 
-| Integration | Type | Purpose |
-|---|---|---|
-| Gmail | Gmail API (direct, OAuth 2.0) | Bi-directional email sync, conversation threading, contact enrichment |
-| Outlook/Exchange | Microsoft Graph API (OAuth 2.0) | Bi-directional email sync, conversation threading, calendar sync |
-| IMAP/SMTP (fallback) | IMAP IDLE + OAuth/password | Email sync for non-Gmail/Outlook providers |
-| Google Calendar | OAuth 2.0 | Meeting sync, availability |
-| Outlook Calendar | Microsoft Graph API | Meeting sync, availability |
-| LinkedIn (manual) | CSV import | Bulk contact import from export |
+| Integration          | Type                            | Purpose                                                               |
+| -------------------- | ------------------------------- | --------------------------------------------------------------------- |
+| Gmail                | Gmail API (direct, OAuth 2.0)   | Bi-directional email sync, conversation threading, contact enrichment |
+| Outlook/Exchange     | Microsoft Graph API (OAuth 2.0) | Bi-directional email sync, conversation threading, calendar sync      |
+| IMAP/SMTP (fallback) | IMAP IDLE + OAuth/password      | Email sync for non-Gmail/Outlook providers                            |
+| Google Calendar      | OAuth 2.0                       | Meeting sync, availability                                            |
+| Outlook Calendar     | Microsoft Graph API             | Meeting sync, availability                                            |
+| LinkedIn (manual)    | CSV import                      | Bulk contact import from export                                       |
 
 ### 9.2 Planned Integrations (Post-MVP)
 
-| Integration | Type | Purpose |
-|---|---|---|
-| Browser Extension | Plasmo (Chrome/Firefox) | LinkedIn/Twitter intelligence capture (Phase 2) |
-| Apollo / Clearbit / PDL | API adapters | Commercial enrichment data (Phase 2) |
-| Zoom | OAuth 2.0 | Meeting metadata, recording transcripts |
-| Slack | OAuth 2.0 | Notifications, contact lookup slash command |
-| Zapier / Make | Webhook | User-configurable automations |
-| Twilio | API | SMS/call logging |
-| LinkedIn API | OAuth 2.0 | Real-time profile updates (requires partnership) |
+| Integration             | Type                    | Purpose                                          |
+| ----------------------- | ----------------------- | ------------------------------------------------ |
+| Browser Extension       | Plasmo (Chrome/Firefox) | LinkedIn/Twitter intelligence capture (Phase 2)  |
+| Apollo / Clearbit / PDL | API adapters            | Commercial enrichment data (Phase 2)             |
+| Zoom                    | OAuth 2.0               | Meeting metadata, recording transcripts          |
+| Slack                   | OAuth 2.0               | Notifications, contact lookup slash command      |
+| Zapier / Make           | Webhook                 | User-configurable automations                    |
+| Twilio                  | API                     | SMS/call logging                                 |
+| LinkedIn API            | OAuth 2.0               | Real-time profile updates (requires partnership) |
 
 ### 9.3 Webhook System
 
@@ -909,15 +934,15 @@ write_queue_log (id, user_id, device_id, operation,
 
 ## 11. Success Metrics
 
-| Metric | Target (6 months post-launch) |
-|---|---|
-| Monthly active users per tenant | > 80% of seats |
-| Contacts with intelligence data | > 60% auto-enriched |
-| AI feature adoption | > 50% of users use AI search or briefings weekly |
-| Offline queue replay success rate | > 99.5% |
-| Entity resolution auto-merge accuracy | > 95% for high-confidence matches |
-| NPS score | > 40 |
-| Data freshness (OSINT) | < 24 hours for monitored contacts |
+| Metric                                | Target (6 months post-launch)                    |
+| ------------------------------------- | ------------------------------------------------ |
+| Monthly active users per tenant       | > 80% of seats                                   |
+| Contacts with intelligence data       | > 60% auto-enriched                              |
+| AI feature adoption                   | > 50% of users use AI search or briefings weekly |
+| Offline queue replay success rate     | > 99.5%                                          |
+| Entity resolution auto-merge accuracy | > 95% for high-confidence matches                |
+| NPS score                             | > 40                                             |
+| Data freshness (OSINT)                | < 24 hours for monitored contacts                |
 
 ---
 
@@ -938,47 +963,52 @@ write_queue_log (id, user_id, device_id, operation,
 
 ## 13. Glossary
 
-| Term | Definition |
-|---|---|
-| **CIM** | Customer Intelligence Management — the system category |
-| **Event sourcing** | Data architecture where state changes are stored as immutable events rather than mutable rows |
-| **Materialized view** | A precomputed table derived from event replay, used for fast read access |
-| **Entity resolution** | The process of determining when records from different sources refer to the same real-world entity |
-| **Intel item** | A discrete piece of intelligence about a contact or company |
-| **Engagement score** | Numeric score reflecting interaction frequency and recency |
-| **Intelligence score** | Composite score reflecting data completeness and relationship value |
-| **OSINT** | Open-Source Intelligence — publicly available data |
-| **Warm intro path** | A chain of mutual connections between the user and a target contact |
-| **Enrichment** | The process of augmenting a contact record with external data |
-| **Sync delta** | The set of changes between local and server state since last sync |
-| **Write queue** | Local buffer storing offline write operations for replay on reconnect |
-| **Schema-per-tenant** | Multi-tenancy model where each tenant gets a dedicated database schema |
-| **Conversation** | A threaded email exchange grouped by provider thread ID or message headers |
-| **Hybrid email integration** | Using direct provider APIs (Gmail, Microsoft Graph) with IMAP fallback for other providers |
+| Term                         | Definition                                                                                         |
+| ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| **CIM**                      | Customer Intelligence Management — the system category                                             |
+| **Event sourcing**           | Data architecture where state changes are stored as immutable events rather than mutable rows      |
+| **Materialized view**        | A precomputed table derived from event replay, used for fast read access                           |
+| **Entity resolution**        | The process of determining when records from different sources refer to the same real-world entity |
+| **Intel item**               | A discrete piece of intelligence about a contact or company                                        |
+| **Engagement score**         | Numeric score reflecting interaction frequency and recency                                         |
+| **Intelligence score**       | Composite score reflecting data completeness and relationship value                                |
+| **OSINT**                    | Open-Source Intelligence — publicly available data                                                 |
+| **Warm intro path**          | A chain of mutual connections between the user and a target contact                                |
+| **Enrichment**               | The process of augmenting a contact record with external data                                      |
+| **Sync delta**               | The set of changes between local and server state since last sync                                  |
+| **Write queue**              | Local buffer storing offline write operations for replay on reconnect                              |
+| **Schema-per-tenant**        | Multi-tenancy model where each tenant gets a dedicated database schema                             |
+| **Conversation**             | A threaded email exchange grouped by provider thread ID or message headers                         |
+| **Hybrid email integration** | Using direct provider APIs (Gmail, Microsoft Graph) with IMAP fallback for other providers         |
 
 ---
 
 ## 14. Appendix: Technology References
 
 **Backend:**
+
 - FastAPI: https://fastapi.tiangolo.com
 - SQLAlchemy (async): https://docs.sqlalchemy.org
 - Celery: https://docs.celeryq.dev
 
 **Frontend:**
+
 - Flutter: https://flutter.dev
 - Riverpod (state management): https://riverpod.dev
 - Isar (local DB): https://isar.dev
 
 **Databases:**
+
 - PostgreSQL: https://postgresql.org
 - Neo4j: https://neo4j.com
 - Meilisearch: https://meilisearch.com
 
 **Browser Extension:**
+
 - Plasmo: https://plasmo.com
 
 **Enrichment APIs:**
+
 - Apollo: https://apollo.io
 - Clearbit: https://clearbit.com
 - People Data Labs: https://peopledatalabs.com

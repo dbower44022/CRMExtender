@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
@@ -1647,6 +1648,501 @@ def search_entities(
             grand_total += total
 
     return {"groups": groups, "total": grand_total}
+
+
+# ------------------------------------------------------------------
+# Settings: Profile
+# ------------------------------------------------------------------
+
+@router.get("/settings/profile")
+def settings_profile(request: Request):
+    """Return current user's profile and preferences."""
+    from ...hierarchy import get_user_by_id
+    from ...settings import get_setting
+
+    user = request.state.user
+    cid = user["customer_id"]
+    uid = user["id"]
+
+    # Read fresh from DB so updates are reflected immediately
+    fresh = get_user_by_id(uid) or user
+
+    return {
+        "id": uid,
+        "name": fresh.get("name", ""),
+        "email": fresh.get("email", ""),
+        "role": fresh.get("role", "user"),
+        "timezone": get_setting(cid, "timezone", user_id=uid) or "UTC",
+        "start_of_week": get_setting(cid, "start_of_week", user_id=uid) or "monday",
+        "date_format": get_setting(cid, "date_format", user_id=uid) or "ISO",
+    }
+
+
+@router.put("/settings/profile")
+async def settings_profile_update(request: Request):
+    """Update current user's profile and preferences."""
+    from ...hierarchy import update_user
+    from ...settings import set_setting
+
+    user = request.state.user
+    cid = user["customer_id"]
+    uid = user["id"]
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    name = body.get("name", "").strip()
+    if name:
+        update_user(uid, name=name)
+
+    tz = body.get("timezone")
+    if tz is not None:
+        set_setting(cid, "timezone", tz, scope="user", user_id=uid)
+
+    sow = body.get("start_of_week")
+    if sow is not None:
+        set_setting(cid, "start_of_week", sow, scope="user", user_id=uid)
+
+    df = body.get("date_format")
+    if df is not None:
+        set_setting(cid, "date_format", df, scope="user", user_id=uid)
+
+    return {"ok": True}
+
+
+@router.put("/settings/password")
+async def settings_password(request: Request):
+    """Change the current user's password."""
+    from ...hierarchy import set_user_password
+    from ...passwords import verify_password
+
+    user = request.state.user
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    current_pw = body.get("current_password", "")
+    new_pw = body.get("new_password", "")
+    confirm_pw = body.get("confirm_password", "")
+
+    if new_pw != confirm_pw:
+        return JSONResponse({"error": "Passwords do not match"}, status_code=400)
+    if len(new_pw) < 8:
+        return JSONResponse(
+            {"error": "Password must be at least 8 characters"}, status_code=400,
+        )
+
+    if user.get("password_hash"):
+        if not verify_password(current_pw, user["password_hash"]):
+            return JSONResponse(
+                {"error": "Current password is incorrect"}, status_code=400,
+            )
+
+    set_user_password(user["id"], new_pw)
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Settings: System (admin only)
+# ------------------------------------------------------------------
+
+@router.get("/settings/system")
+def settings_system(request: Request):
+    """Return system settings (admin only)."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    from ...settings import get_setting
+
+    cid = request.state.customer_id
+
+    return {
+        "company_name": get_setting(cid, "company_name") or "",
+        "default_timezone": get_setting(cid, "default_timezone") or "UTC",
+        "sync_enabled": get_setting(cid, "sync_enabled") or "true",
+        "default_phone_country": get_setting(cid, "default_phone_country") or "US",
+        "allow_self_registration": get_setting(cid, "allow_self_registration") or "false",
+        "email_history_window": get_setting(cid, "email_history_window") or "90d",
+    }
+
+
+@router.put("/settings/system")
+async def settings_system_update(request: Request):
+    """Update system settings (admin only)."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    from ...settings import set_setting
+
+    cid = request.state.customer_id
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    _SYSTEM_KEYS = [
+        "company_name", "default_timezone", "sync_enabled",
+        "default_phone_country", "allow_self_registration", "email_history_window",
+    ]
+    for key in _SYSTEM_KEYS:
+        val = body.get(key)
+        if val is not None:
+            set_setting(cid, key, str(val), scope="system")
+
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Settings: Users (admin only)
+# ------------------------------------------------------------------
+
+@router.get("/settings/users")
+def settings_users(request: Request):
+    """List all users (admin only)."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    from ...hierarchy import list_users
+
+    cid = request.state.customer_id
+    users = list_users(cid)
+    # Strip password hashes from output
+    for u in users:
+        u.pop("password_hash", None)
+        u.pop("google_sub", None)
+    return users
+
+
+@router.post("/settings/users")
+async def settings_user_create(request: Request):
+    """Create a new user (admin only)."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    from ...hierarchy import create_user
+
+    cid = request.state.customer_id
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    email = (body.get("email") or "").strip()
+    name = (body.get("name") or "").strip()
+    role = body.get("role", "user")
+    password = body.get("password", "")
+
+    if not email:
+        return JSONResponse({"error": "Email is required"}, status_code=400)
+    if password and len(password) < 8:
+        return JSONResponse(
+            {"error": "Password must be at least 8 characters"}, status_code=400,
+        )
+
+    try:
+        user_row = create_user(cid, email, name, role, password=password or None)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    user_row.pop("password_hash", None)
+    user_row.pop("google_sub", None)
+    return user_row
+
+
+@router.put("/settings/users/{user_id}")
+async def settings_user_update(request: Request, user_id: str):
+    """Update a user (admin only)."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    from ...hierarchy import update_user
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    kwargs = {}
+    if "name" in body:
+        kwargs["name"] = body["name"]
+    if "role" in body:
+        kwargs["role"] = body["role"]
+
+    result = update_user(user_id, **kwargs)
+    if not result:
+        return JSONResponse({"error": "User not found or no changes"}, status_code=404)
+
+    result.pop("password_hash", None)
+    result.pop("google_sub", None)
+    return result
+
+
+@router.put("/settings/users/{user_id}/password")
+async def settings_user_password(request: Request, user_id: str):
+    """Set a user's password (admin only)."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    from ...hierarchy import set_user_password
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    new_pw = body.get("new_password", "")
+    if len(new_pw) < 8:
+        return JSONResponse(
+            {"error": "Password must be at least 8 characters"}, status_code=400,
+        )
+
+    set_user_password(user_id, new_pw)
+    return {"ok": True}
+
+
+@router.post("/settings/users/{user_id}/toggle-active")
+def settings_user_toggle_active(request: Request, user_id: str):
+    """Toggle a user's active status (admin only)."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    from ...hierarchy import get_user_by_id, update_user
+    from ...session import delete_user_sessions
+
+    current_user = request.state.user
+    if user_id == current_user["id"]:
+        return JSONResponse(
+            {"error": "Cannot deactivate yourself"}, status_code=400,
+        )
+
+    target = get_user_by_id(user_id)
+    if not target:
+        return JSONResponse({"error": "User not found"}, status_code=404)
+
+    new_active = 0 if target["is_active"] else 1
+    update_user(user_id, is_active=new_active)
+
+    if not new_active:
+        delete_user_sessions(user_id)
+
+    return {"ok": True, "is_active": new_active}
+
+
+# ------------------------------------------------------------------
+# Settings: Provider Accounts
+# ------------------------------------------------------------------
+
+@router.get("/settings/accounts")
+def settings_accounts(request: Request):
+    """List provider accounts for the current user."""
+    uid = request.state.user["id"]
+    cid = request.state.customer_id
+
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT pa.* FROM provider_accounts pa
+               JOIN user_provider_accounts upa ON upa.account_id = pa.id
+               WHERE upa.user_id = ?
+               ORDER BY pa.created_at""",
+            (uid,),
+        ).fetchall()
+        accounts = [dict(r) for r in rows]
+
+    if not accounts:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM provider_accounts WHERE customer_id = ? ORDER BY created_at",
+                (cid,),
+            ).fetchall()
+            accounts = [dict(r) for r in rows]
+
+    # Strip sensitive fields
+    for a in accounts:
+        a.pop("auth_token_path", None)
+        a.pop("refresh_token", None)
+
+    return accounts
+
+
+@router.put("/settings/accounts/{account_id}")
+async def settings_account_update(request: Request, account_id: str):
+    """Update a provider account's display name."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    display_name = (body.get("display_name") or "").strip()
+    now = datetime.now(timezone.utc).isoformat()
+
+    with get_connection() as conn:
+        account = conn.execute(
+            "SELECT id FROM provider_accounts WHERE id = ?",
+            (account_id,),
+        ).fetchone()
+        if not account:
+            return JSONResponse({"error": "Account not found"}, status_code=404)
+
+        conn.execute(
+            "UPDATE provider_accounts SET display_name = ?, updated_at = ? WHERE id = ?",
+            (display_name or None, now, account_id),
+        )
+
+    return {"ok": True}
+
+
+@router.post("/settings/accounts/{account_id}/toggle-active")
+def settings_account_toggle(request: Request, account_id: str):
+    """Toggle a provider account's active status."""
+    now = datetime.now(timezone.utc).isoformat()
+
+    with get_connection() as conn:
+        account = conn.execute(
+            "SELECT * FROM provider_accounts WHERE id = ?",
+            (account_id,),
+        ).fetchone()
+        if not account:
+            return JSONResponse({"error": "Account not found"}, status_code=404)
+
+        new_active = 0 if account["is_active"] else 1
+        conn.execute(
+            "UPDATE provider_accounts SET is_active = ?, updated_at = ? WHERE id = ?",
+            (new_active, now, account_id),
+        )
+
+    return {"ok": True, "is_active": new_active}
+
+
+# ------------------------------------------------------------------
+# Settings: Calendars
+# ------------------------------------------------------------------
+
+@router.get("/settings/calendars")
+def settings_calendars(request: Request):
+    """List calendar accounts with selected calendars."""
+    uid = request.state.user["id"]
+    cid = request.state.customer_id
+
+    from ...settings import get_setting
+
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT pa.* FROM provider_accounts pa
+               JOIN user_provider_accounts upa ON upa.account_id = pa.id
+               WHERE upa.user_id = ? AND pa.provider = 'gmail' AND pa.is_active = 1
+               ORDER BY pa.created_at""",
+            (uid,),
+        ).fetchall()
+
+    accounts = []
+    for row in rows:
+        account = dict(row)
+        cal_key = f"cal_sync_calendars_{account['id']}"
+        cal_json = get_setting(cid, cal_key, user_id=uid)
+        try:
+            account["selected_calendars"] = json.loads(cal_json) if cal_json else []
+        except (json.JSONDecodeError, TypeError):
+            account["selected_calendars"] = []
+        account.pop("auth_token_path", None)
+        account.pop("refresh_token", None)
+        accounts.append(account)
+
+    if not accounts:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM provider_accounts WHERE customer_id = ? AND provider = 'gmail' AND is_active = 1 ORDER BY created_at",
+                (cid,),
+            ).fetchall()
+        for row in rows:
+            account = dict(row)
+            cal_key = f"cal_sync_calendars_{account['id']}"
+            cal_json = get_setting(cid, cal_key, user_id=uid)
+            try:
+                account["selected_calendars"] = json.loads(cal_json) if cal_json else []
+            except (json.JSONDecodeError, TypeError):
+                account["selected_calendars"] = []
+            account.pop("auth_token_path", None)
+            account.pop("refresh_token", None)
+            accounts.append(account)
+
+    return accounts
+
+
+@router.post("/settings/calendars/{account_id}/fetch")
+def settings_calendars_fetch(request: Request, account_id: str):
+    """Fetch available calendars for an account (requires Google credentials)."""
+    with get_connection() as conn:
+        account = conn.execute(
+            "SELECT * FROM provider_accounts WHERE id = ?",
+            (account_id,),
+        ).fetchone()
+
+    if not account:
+        return JSONResponse({"error": "Account not found"}, status_code=404)
+
+    try:
+        from ...auth import get_credentials_for_account
+        from ...calendar_client import list_calendars
+        from pathlib import Path
+
+        token_path = Path(account["auth_token_path"])
+        creds = get_credentials_for_account(token_path)
+        calendars = list_calendars(creds)
+    except Exception as exc:
+        return JSONResponse(
+            {"error": f"Failed to load calendars: {exc}"}, status_code=500,
+        )
+
+    return {"calendars": [dict(c) if hasattr(c, "__getitem__") else c for c in calendars]}
+
+
+@router.put("/settings/calendars/{account_id}")
+async def settings_calendars_save(request: Request, account_id: str):
+    """Save selected calendar IDs for an account."""
+    from ...settings import set_setting
+
+    uid = request.state.user["id"]
+    cid = request.state.customer_id
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    calendar_ids = body.get("calendar_ids", [])
+    cal_key = f"cal_sync_calendars_{account_id}"
+    set_setting(cid, cal_key, json.dumps(calendar_ids), scope="user", user_id=uid)
+
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Settings: Reference Data
+# ------------------------------------------------------------------
+
+@router.get("/settings/reference-data")
+def settings_reference_data(request: Request):
+    """Return shared reference data for settings forms."""
+    from ..routes.settings_routes import COMMON_COUNTRIES, COMMON_TIMEZONES
+    from ...sync import EMAIL_HISTORY_OPTIONS
+
+    with get_connection() as conn:
+        roles = conn.execute(
+            "SELECT * FROM contact_company_roles ORDER BY name COLLATE NOCASE",
+        ).fetchall()
+
+    return {
+        "timezones": COMMON_TIMEZONES,
+        "countries": [{"code": c, "name": n} for c, n in COMMON_COUNTRIES],
+        "email_history_options": [{"value": v, "label": l} for v, l in EMAIL_HISTORY_OPTIONS],
+        "roles": [dict(r) for r in roles],
+    }
 
 
 # ------------------------------------------------------------------

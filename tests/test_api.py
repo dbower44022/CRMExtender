@@ -989,3 +989,303 @@ class TestCreateCompany:
         resp = client.post("/api/v1/companies", json={"name": "DupeCorp"})
         assert resp.status_code == 400
         assert "already exists" in resp.json()["error"]
+
+
+# ---------------------------------------------------------------------------
+# Settings: Profile
+# ---------------------------------------------------------------------------
+
+class TestSettingsProfile:
+    def test_get_profile(self, client):
+        resp = client.get("/api/v1/settings/profile")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == USER_ID
+        assert data["email"] == "admin@test.com"
+        assert data["role"] == "admin"
+        assert "timezone" in data
+
+    def test_update_profile(self, client):
+        resp = client.put("/api/v1/settings/profile", json={
+            "name": "New Name",
+            "timezone": "US/Pacific",
+            "start_of_week": "sunday",
+            "date_format": "US",
+        })
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+        # Verify the change
+        resp2 = client.get("/api/v1/settings/profile")
+        assert resp2.json()["name"] == "New Name"
+        assert resp2.json()["timezone"] == "US/Pacific"
+        assert resp2.json()["start_of_week"] == "sunday"
+        assert resp2.json()["date_format"] == "US"
+
+    def test_change_password_too_short(self, client):
+        resp = client.put("/api/v1/settings/password", json={
+            "current_password": "",
+            "new_password": "short",
+            "confirm_password": "short",
+        })
+        assert resp.status_code == 400
+        assert "8 characters" in resp.json()["error"]
+
+    def test_change_password_mismatch(self, client):
+        resp = client.put("/api/v1/settings/password", json={
+            "current_password": "",
+            "new_password": "longenough",
+            "confirm_password": "different1",
+        })
+        assert resp.status_code == 400
+        assert "match" in resp.json()["error"].lower()
+
+    def test_change_password_success(self, client):
+        resp = client.put("/api/v1/settings/password", json={
+            "current_password": "",
+            "new_password": "newpassword1",
+            "confirm_password": "newpassword1",
+        })
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+
+# ---------------------------------------------------------------------------
+# Settings: System
+# ---------------------------------------------------------------------------
+
+class TestSettingsSystem:
+    def test_get_system(self, client):
+        resp = client.get("/api/v1/settings/system")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "company_name" in data
+        assert "sync_enabled" in data
+
+    def test_update_system(self, client):
+        resp = client.put("/api/v1/settings/system", json={
+            "company_name": "Test Corp",
+            "sync_enabled": "false",
+        })
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+        resp2 = client.get("/api/v1/settings/system")
+        assert resp2.json()["company_name"] == "Test Corp"
+        assert resp2.json()["sync_enabled"] == "false"
+
+    def test_system_admin_only(self, tmp_db, monkeypatch):
+        """Non-admin users get 403 for system settings."""
+        user_id = "user-nonadmin"
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO users "
+                "(id, customer_id, email, name, role, is_active, created_at, updated_at) "
+                "VALUES (?, ?, 'user@test.com', 'User', 'user', 1, ?, ?)",
+                (user_id, CUST_ID, _NOW, _NOW),
+            )
+        monkeypatch.setattr(
+            "poc.hierarchy.get_current_user",
+            lambda: {"id": user_id, "email": "user@test.com", "name": "User",
+                     "role": "user", "customer_id": CUST_ID},
+        )
+        from poc.web.app import create_app
+        app = create_app()
+        nonadmin = TestClient(app, raise_server_exceptions=False)
+
+        assert nonadmin.get("/api/v1/settings/system").status_code == 403
+        assert nonadmin.put("/api/v1/settings/system", json={}).status_code == 403
+        assert nonadmin.get("/api/v1/settings/users").status_code == 403
+        assert nonadmin.post("/api/v1/settings/users", json={}).status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Settings: Users
+# ---------------------------------------------------------------------------
+
+class TestSettingsUsers:
+    def test_list_users(self, client):
+        resp = client.get("/api/v1/settings/users")
+        assert resp.status_code == 200
+        users = resp.json()
+        assert isinstance(users, list)
+        assert len(users) >= 1
+        # Ensure password_hash is stripped
+        for u in users:
+            assert "password_hash" not in u
+
+    def test_create_user(self, client):
+        resp = client.post("/api/v1/settings/users", json={
+            "email": "new@test.com",
+            "name": "New User",
+            "role": "user",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["email"] == "new@test.com"
+        assert data["name"] == "New User"
+        assert "password_hash" not in data
+
+    def test_create_user_duplicate(self, client):
+        client.post("/api/v1/settings/users", json={
+            "email": "dup@test.com", "name": "Dup", "role": "user",
+        })
+        resp = client.post("/api/v1/settings/users", json={
+            "email": "dup@test.com", "name": "Dup 2", "role": "user",
+        })
+        assert resp.status_code == 400
+        assert "already exists" in resp.json()["error"]
+
+    def test_create_user_missing_email(self, client):
+        resp = client.post("/api/v1/settings/users", json={
+            "name": "No Email", "role": "user",
+        })
+        assert resp.status_code == 400
+
+    def test_update_user(self, client):
+        # Create a user first
+        create_resp = client.post("/api/v1/settings/users", json={
+            "email": "edit@test.com", "name": "Before", "role": "user",
+        })
+        user_id = create_resp.json()["id"]
+
+        resp = client.put(f"/api/v1/settings/users/{user_id}", json={
+            "name": "After", "role": "admin",
+        })
+        assert resp.status_code == 200
+        assert resp.json()["name"] == "After"
+        assert resp.json()["role"] == "admin"
+
+    def test_toggle_user_active(self, client):
+        create_resp = client.post("/api/v1/settings/users", json={
+            "email": "toggle@test.com", "name": "Toggle", "role": "user",
+        })
+        user_id = create_resp.json()["id"]
+
+        resp = client.post(f"/api/v1/settings/users/{user_id}/toggle-active")
+        assert resp.status_code == 200
+        assert resp.json()["is_active"] == 0
+
+    def test_toggle_self_rejected(self, client):
+        resp = client.post(f"/api/v1/settings/users/{USER_ID}/toggle-active")
+        assert resp.status_code == 400
+        assert "yourself" in resp.json()["error"].lower()
+
+    def test_set_user_password(self, client):
+        create_resp = client.post("/api/v1/settings/users", json={
+            "email": "pwset@test.com", "name": "PW", "role": "user",
+        })
+        user_id = create_resp.json()["id"]
+
+        resp = client.put(
+            f"/api/v1/settings/users/{user_id}/password",
+            json={"new_password": "longenough"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+    def test_set_user_password_too_short(self, client):
+        resp = client.put(
+            f"/api/v1/settings/users/{USER_ID}/password",
+            json={"new_password": "short"},
+        )
+        assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Settings: Accounts
+# ---------------------------------------------------------------------------
+
+class TestSettingsAccounts:
+    def _seed_account(self):
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO provider_accounts "
+                "(id, customer_id, provider, email_address, display_name, "
+                "auth_token_path, is_active, created_at, updated_at) "
+                "VALUES (?, ?, 'gmail', 'acct@test.com', NULL, '/tmp/token', 1, ?, ?)",
+                ("acct-1", CUST_ID, _NOW, _NOW),
+            )
+
+    def test_list_accounts(self, client):
+        self._seed_account()
+        resp = client.get("/api/v1/settings/accounts")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, list)
+        assert len(data) >= 1
+        # Ensure sensitive fields stripped
+        for a in data:
+            assert "auth_token_path" not in a
+            assert "refresh_token" not in a
+
+    def test_update_account(self, client):
+        self._seed_account()
+        resp = client.put("/api/v1/settings/accounts/acct-1", json={
+            "display_name": "My Account",
+        })
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+    def test_toggle_account(self, client):
+        self._seed_account()
+        resp = client.post("/api/v1/settings/accounts/acct-1/toggle-active")
+        assert resp.status_code == 200
+        assert resp.json()["is_active"] == 0
+
+        # Toggle back
+        resp2 = client.post("/api/v1/settings/accounts/acct-1/toggle-active")
+        assert resp2.json()["is_active"] == 1
+
+    def test_update_nonexistent(self, client):
+        resp = client.put("/api/v1/settings/accounts/fake-id", json={
+            "display_name": "X",
+        })
+        assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Settings: Calendars
+# ---------------------------------------------------------------------------
+
+class TestSettingsCalendars:
+    def test_list_calendars_empty(self, client):
+        resp = client.get("/api/v1/settings/calendars")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)
+
+    def test_save_calendars(self, client):
+        # Seed an account
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO provider_accounts "
+                "(id, customer_id, provider, email_address, "
+                "auth_token_path, is_active, created_at, updated_at) "
+                "VALUES (?, ?, 'gmail', 'cal@test.com', '/tmp/token', 1, ?, ?)",
+                ("cal-acct-1", CUST_ID, _NOW, _NOW),
+            )
+
+        resp = client.put("/api/v1/settings/calendars/cal-acct-1", json={
+            "calendar_ids": ["cal-1", "cal-2"],
+        })
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+
+# ---------------------------------------------------------------------------
+# Settings: Reference Data
+# ---------------------------------------------------------------------------
+
+class TestSettingsReferenceData:
+    def test_get_reference_data(self, client):
+        resp = client.get("/api/v1/settings/reference-data")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "timezones" in data
+        assert isinstance(data["timezones"], list)
+        assert len(data["timezones"]) > 0
+        assert "countries" in data
+        assert isinstance(data["countries"], list)
+        assert data["countries"][0]["code"] == "US"
+        assert "email_history_options" in data
+        assert "roles" in data

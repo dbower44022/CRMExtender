@@ -28,6 +28,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** The 4-level cascade enables per-user customization (timezone, date format) with system-wide defaults (company name, phone country) while guaranteeing that every setting always returns a value. The `setting_default` column on the settings table allows administrators to declare defaults without code changes, while the hardcoded dictionary ensures the system functions even with an empty database.
 
 **Alternatives Rejected:**
+
 - Single-level key-value store — No per-user overrides, forcing all users to share the same configuration.
 - JSON configuration file — No runtime editability, no per-user scope, requires server restart.
 - Separate tables for system vs. user settings — Duplicates schema and CRUD logic for the same conceptual data.
@@ -41,6 +42,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** A single table with a scope discriminator provides one CRUD layer for both system and user settings. System settings have `user_id = NULL` and `scope = 'system'`. User settings have a non-null `user_id` and `scope = 'user'`. This means the same `set_setting()` function handles both scopes with a scope parameter.
 
 **Alternatives Rejected:**
+
 - Typed columns per setting (one column per setting on a user/customer table) — Schema changes for every new setting, cannot add settings at runtime.
 - EAV with type coercion — Over-engineering for ~10 settings. All values stored as TEXT is sufficient; callers handle type interpretation.
 
@@ -53,6 +55,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Manual upsert was chosen over SQL `ON CONFLICT` because the unique key for system vs. user settings differs (system keys by customer_id + scope + name; user keys add user_id). A single `ON CONFLICT` clause cannot express both uniqueness models cleanly in SQLite.
 
 **Alternatives Rejected:**
+
 - `INSERT OR REPLACE` — Deletes and re-inserts, losing the original `created_at` timestamp and triggering FK cascade actions.
 - `ON CONFLICT DO UPDATE` — Would require a composite unique index that handles the NULL user_id case, which SQLite treats as always-distinct (see SQLite pitfall in MEMORY.md).
 
@@ -77,6 +80,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Password auth provides a standalone login path for environments without Google Workspace. Google OAuth enables SSO and is required because the same OAuth flow is used to authorize Gmail/Calendar/Contacts API access. Supporting both means users can log in via password even if their Google token expires.
 
 **Alternatives Rejected:**
+
 - OAuth-only — Locks out users without Google accounts and prevents standalone deployments.
 - Password-only — Requires a separate OAuth flow just for provider account connection, duplicating the Google consent screen experience.
 
@@ -89,6 +93,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Server-side sessions enable server-controlled revocation (deactivate user → delete their sessions). HTTP-only cookies prevent XSS-based session theft. The 30-day TTL balances security with user convenience for a CRM that users access daily.
 
 **Alternatives Rejected:**
+
 - JWT tokens — Cannot be revoked server-side without a blocklist, which reintroduces server-side state. JWTs also leak user data in the payload.
 - Redis-backed sessions — Adds an infrastructure dependency for a single-tenant SQLite deployment.
 
@@ -101,6 +106,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Lazy cleanup on read means no background scheduler is needed. When a session is accessed after expiry, it's deleted immediately. The batch cleanup function exists for administrative housekeeping but is not required for correctness.
 
 **Alternatives Rejected:**
+
 - Background cron job for session cleanup — Adds operational complexity. Lazy cleanup handles the common case (user returns after expiry).
 - Session renewal on access (sliding window) — Would extend sessions indefinitely for active users, which is a security concern if a session cookie is compromised.
 
@@ -113,6 +119,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Bypass mode eliminates login friction during development and enables the test suite to run without authentication setup. The synthetic admin fallback ensures the middleware never produces a null user in bypass mode, which would crash downstream route handlers.
 
 **Alternatives Rejected:**
+
 - Test-only middleware replacement — Would diverge the test and production code paths, potentially missing auth bugs.
 - Environment-based auto-login with a specific test user — More complex and requires the test user to exist in the database.
 
@@ -125,6 +132,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** The React SPA at `/app/` fetches data via `/api/v1/*` endpoints using React Query. A 302 redirect to an HTML login page would break JSON parsing in the SPA. The 401 JSON response allows the SPA to detect the auth failure and redirect to the login page client-side (or show a re-login prompt). HTMX pages at `/` paths expect browser-native redirect behavior.
 
 **Alternatives Rejected:**
+
 - Unified 401 for all paths — Would break the HTMX UI, which relies on browser following the redirect.
 - Separate middleware for API vs. HTML — Unnecessary complexity when a single path check in one middleware handles both.
 
@@ -137,6 +145,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Prevents accidental exposure of credentials or tokens in API responses. Inline stripping at each endpoint ensures the developer must consciously decide which fields to include rather than relying on a global filter that might not catch new sensitive fields.
 
 **Alternatives Rejected:**
+
 - Pydantic response models with field exclusion — Would add type-safe serialization but requires maintaining parallel model classes for every response shape. Over-engineering for the current endpoint count.
 - Database-level column exclusion (SELECT only safe columns) — Brittle when JOIN shapes change. Easier to SELECT * and strip in Python.
 
@@ -161,6 +170,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Two roles are sufficient for the current single-tenant deployment. A full RBAC system with permission matrices would be premature. Inline admin checks are explicit and easy to audit — searching for `"role"] != "admin"` finds every admin-gated endpoint.
 
 **Alternatives Rejected:**
+
 - Role-based access control with permissions table — Over-engineering for 2 roles. Would add JOINs to every request for permission checks.
 - Decorator-based auth (`@require_admin`) — Cleaner but hides the auth logic. Inline checks are more visible during code review.
 
@@ -181,6 +191,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Deactivated users should lose access immediately, not at their next session expiry (up to 30 days later). Deleting sessions ensures the next request from any of their devices fails authentication.
 
 **Alternatives Rejected:**
+
 - Rely on `get_session()` active check — `get_session()` already checks `user.is_active`, but this still allows the session row to exist in the table. Explicit deletion is cleaner and provides an immediate signal.
 
 **Constraints/Tradeoffs:** No notification is sent to the deactivated user's active sessions. Their next request simply fails with a login redirect or 401.
@@ -204,6 +215,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** The OAuth flow involves a redirect to Google and back, which loses all in-memory state. Cookies survive the redirect round-trip and are scoped to the same domain. Using three single-purpose cookies is simpler than encoding a JSON payload into one cookie.
 
 **Alternatives Rejected:**
+
 - Server-side state in sessions table — Would require the user to already be authenticated, which doesn't work for the login flow.
 - State parameter encoding (pack purpose + return URL into the OAuth state param) — State param is validated as an exact match against the cookie; packing additional data into it complicates validation.
 
@@ -224,6 +236,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Hard-deleting a provider account would orphan all conversations, communications, and events sourced from it. Soft-delete preserves the data lineage while stopping new sync. Tokens are preserved so the account can be reactivated without re-authorization.
 
 **Alternatives Rejected:**
+
 - Separate `status` enum (active/paused/disconnected/revoked) — Over-engineering for the current needs. A boolean toggle covers pause/resume; disconnection (token deletion) is a separate operation not yet implemented.
 
 **Constraints/Tradeoffs:** Inactive accounts still count in storage metrics and appear in admin views (with an inactive indicator). This is intentional — admins need visibility into paused accounts.
@@ -235,6 +248,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** The junction table enables future multi-user account sharing (e.g., a shared mailbox) by adding rows with different roles. The fallback ensures backward compatibility with accounts created before the junction table existed (pre-Phase 3).
 
 **Alternatives Rejected:**
+
 - Direct `user_id` FK on provider_accounts — Would limit each account to one user, preventing shared mailbox scenarios.
 
 **Constraints/Tradeoffs:** The fallback logic means a user with no junction rows sees all customer accounts, which is permissive. This is acceptable for single-user deployment and will be tightened when multi-user is actively used.
@@ -250,6 +264,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** The HTMX routes were built first during PoC development and remain the primary admin UI. The JSON API endpoints were added for the React SPA settings tab. Both must coexist during the transition period because the React SPA does not yet have feature parity with the HTMX UI (e.g., the React SPA cannot initiate the OAuth connect flow directly — it redirects to the HTMX route).
 
 **Alternatives Rejected:**
+
 - API-first with HTMX consuming JSON — Would require HTMX to parse JSON and render client-side, losing the server-rendered simplicity that makes HTMX effective.
 - React-only settings — The OAuth connect flow requires server-side redirects that the SPA cannot handle natively. A hybrid approach is necessary.
 
@@ -259,15 +274,15 @@ This is a living document. Decisions are recorded as they are made — both by t
 
 **Decision:** The JSON API provides 21 endpoints across 6 domains:
 
-| Domain | Endpoints | Admin-Only |
-|--------|-----------|------------|
-| Profile | GET/PUT `/settings/profile`, PUT `/settings/password` | No |
-| System | GET/PUT `/settings/system` | Yes |
-| Users | GET/POST `/settings/users`, PUT `/settings/users/{id}`, PUT `/settings/users/{id}/password`, POST `/settings/users/{id}/toggle-active` | Yes |
-| Accounts | GET `/settings/accounts`, PUT `/settings/accounts/{id}`, POST `/settings/accounts/{id}/toggle-active` | No |
-| Calendars | GET `/settings/calendars`, POST `/settings/calendars/{id}/fetch`, PUT `/settings/calendars/{id}` | No |
-| Roles | GET/POST `/settings/roles`, PUT/DELETE `/settings/roles/{id}` | Create/Update/Delete: Yes; List: No |
-| Reference Data | GET `/settings/reference-data` | No |
+| Domain         | Endpoints                                                                                                                              | Admin-Only                          |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Profile        | GET/PUT `/settings/profile`, PUT `/settings/password`                                                                                  | No                                  |
+| System         | GET/PUT `/settings/system`                                                                                                             | Yes                                 |
+| Users          | GET/POST `/settings/users`, PUT `/settings/users/{id}`, PUT `/settings/users/{id}/password`, POST `/settings/users/{id}/toggle-active` | Yes                                 |
+| Accounts       | GET `/settings/accounts`, PUT `/settings/accounts/{id}`, POST `/settings/accounts/{id}/toggle-active`                                  | No                                  |
+| Calendars      | GET `/settings/calendars`, POST `/settings/calendars/{id}/fetch`, PUT `/settings/calendars/{id}`                                       | No                                  |
+| Roles          | GET/POST `/settings/roles`, PUT/DELETE `/settings/roles/{id}`                                                                          | Create/Update/Delete: Yes; List: No |
+| Reference Data | GET `/settings/reference-data`                                                                                                         | No                                  |
 
 **Rationale:** Grouping by domain rather than by HTTP method makes the API discoverable and aligns with the React settings tab structure (one tab per domain). The toggle-active pattern uses POST (not DELETE or PATCH) because it's a state transition, not a deletion or partial update.
 
@@ -280,6 +295,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Inline guards are explicit, grep-able, and require no framework support. Every admin-only endpoint visibly declares its access requirement in the first 2 lines.
 
 **Alternatives Rejected:**
+
 - FastAPI dependency injection (`Depends(require_admin)`) — Would be cleaner but requires defining a dependency function and doesn't work with the plain function handlers used in this file.
 - Decorator pattern (`@admin_required`) — Hides the auth check from the function body. Inline is more visible during code review.
 
@@ -296,6 +312,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** The rich format preserves the human-readable calendar name alongside the ID, so the UI can display calendar names without re-fetching from Google. Backward compatibility with the plain array format prevents data loss for settings saved before the rich format was introduced.
 
 **Alternatives Rejected:**
+
 - Dedicated `calendar_selections` table — Over-engineering for ~5 calendar selections per account. The settings table with JSON values is sufficient.
 - Store only IDs, fetch names from Google on every page load — Would fail when Google credentials are expired, showing raw IDs instead of names.
 
@@ -328,6 +345,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** System roles provide a consistent baseline vocabulary (Employee, Contractor, Volunteer, Advisor, Board Member, Investor, Founder, Intern) that all tenants share. Custom roles allow tenants to extend this vocabulary for their domain. The `is_system` guard prevents accidental corruption of the baseline roles.
 
 **Alternatives Rejected:**
+
 - Enum-based roles (no table, hardcoded in application) — Cannot be extended by admins at runtime.
 - Separate tables for system and custom roles — Complicates the foreign key from `contact_companies.role_id` which needs to reference both.
 
@@ -348,6 +366,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Two customers should be able to independently define a role named "Consultant" without conflict. Within a single customer, duplicate role names would confuse the affiliation UI dropdown.
 
 **Alternatives Rejected:**
+
 - Database-level UNIQUE constraint on `(customer_id, name)` — Would work but produces a less user-friendly error (SQLite IntegrityError vs. a descriptive ValueError).
 
 **Constraints/Tradeoffs:** The check-before-insert pattern has a TOCTOU race condition. A database-level unique index should be added as a backstop. Currently the single-user concurrency model makes this a theoretical rather than practical concern.
@@ -363,6 +382,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Settings mode is orthogonal to the entity/view navigation state. A simple boolean toggle is sufficient because the user is either viewing entity data or managing settings — never both simultaneously. Auto-exiting settings when switching entities prevents the confusing state of having settings open while the icon rail indicates a different entity.
 
 **Alternatives Rejected:**
+
 - URL-based routing (`/app/settings/profile`) — Would require a full router (react-router), which the SPA currently avoids in favor of Zustand state.
 - Modal/drawer overlay — Settings UI is complex enough (6 tabs, forms, tables) that a modal would feel cramped. A full content area replacement is appropriate.
 
@@ -375,6 +395,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** A static component map is simpler than a router and provides compile-time verification that all tab keys map to real components. The fallback to ProfileSettings ensures the UI never renders an empty content area for an invalid tab key.
 
 **Alternatives Rejected:**
+
 - Switch statement — Works but is less maintainable as tabs are added.
 - Dynamic import (`React.lazy`) — Over-engineering for 6 small components that are already bundled.
 
@@ -387,6 +408,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Client-side filtering provides immediate UI feedback (non-admin users never see admin tabs). Server-side enforcement via the 403 admin check (Section 6.3) prevents privilege escalation even if a user manipulates the client state.
 
 **Alternatives Rejected:**
+
 - Fetch tabs from server — Unnecessary round-trip for a static list of 6 items.
 - Single flat list without grouping — Loses the visual distinction between personal and admin settings.
 
@@ -399,12 +421,14 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** One hook per endpoint follows the React Query convention and provides granular cache management. Each mutation hook invalidates only the relevant query keys on success, preventing unnecessary refetches.
 
 **Key cache invalidation patterns:**
+
 - User mutations invalidate `['settings', 'users']`
 - Account toggle invalidates both `['settings', 'accounts']` and `['settings', 'calendars']` (account status affects calendar availability)
 - Role mutations invalidate both `['settings', 'roles']` and `['settings', 'reference-data']` (reference data includes the roles list)
 - Profile update invalidates `['settings', 'profile']`
 
 **Alternatives Rejected:**
+
 - Generic CRUD hook factory — Would reduce boilerplate but obscure the per-endpoint invalidation logic, which varies by domain.
 - Global cache invalidation on any settings mutation — Would cause unnecessary refetches across all settings tabs.
 
@@ -417,6 +441,7 @@ This is a living document. Decisions are recorded as they are made — both by t
 **Rationale:** Settings forms need dropdown options (timezone, country, email history) that rarely change. Aggregating them into one endpoint eliminates 4+ separate requests on settings page load. The 5-minute stale time means the data is fetched once and shared across all settings tabs within a session.
 
 **Alternatives Rejected:**
+
 - Inline hardcoded options in React — Would duplicate the timezone/country lists between server and client, and prevent runtime additions.
 - Separate endpoint per reference type — More round-trips for data that's always needed together.
 

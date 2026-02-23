@@ -410,13 +410,13 @@ export function DataGrid() {
         if (last.timer) clearTimeout(last.timer)
         lastClickRef.current = { rowId: '', time: 0, timer: null }
 
-        // If the click target is inside an editable cell, open inline editor directly
+        // If the click target is inside an editable cell, open inline editor directly.
+        // Use data-edit-cell (only rendered on editable cells) to avoid stale entityDef closure.
         const target = e.target as HTMLElement
-        const editCell = target.closest('[data-field-key]')
+        const editCell = target.closest('[data-edit-cell]')
         if (editCell) {
           const fieldKey = editCell.getAttribute('data-field-key')
-          const fd = entityDef?.fields[fieldKey ?? '']
-          if (fieldKey && fd?.editable) {
+          if (fieldKey) {
             setSelectedRow(id, index)
             showDetailPanel()
             setEditingCell({ rowId: id, fieldKey })

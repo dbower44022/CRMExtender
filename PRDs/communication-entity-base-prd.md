@@ -53,10 +53,11 @@ Fields are described conceptually. Data types and storage details are specified 
 | Direction           | Whether the user sent, received, or mutually participated.                                                                                              | Yes                     | System (set on creation)              | Yes      | Yes        | `inbound`, `outbound`, `mutual`                                                                                |
 | Timestamp           | When the communication occurred. Universal sequencing key for all timeline views. For synced: provider's send/receive time. For manual: user-specified. | Yes                     | Direct (manual entries only)          | Yes      | Yes        | Timestamp                                                                                                      |
 | Subject             | Email subject line, meeting title, or user-provided subject. Display name field. NULL for SMS, most calls.                                              | No                      | Direct                                | Yes      | Yes        | Free text                                                                                                      |
-| Body Preview        | First 200 characters of cleaned content. Used in list views and search results.                                                                         | No                      | Computed                              | No       | No         | Auto-generated from content_clean                                                                              |
-| Content Raw         | Original content as received from provider or entered by user. Not displayed directly.                                                                  | No                      | System                                | No       | No         | Preserved for re-processing                                                                                    |
-| Content HTML        | Original HTML content (email only). Used by content extraction pipeline.                                                                                | No                      | System                                | No       | No         | Email channel only                                                                                             |
-| Content Clean       | Processed content with channel-specific noise removed. What users see and AI processes.                                                                 | No                      | Computed                              | No       | No         | Output of content extraction pipeline                                                                          |
+| Body Preview        | First 200 characters of cleaned content. Used in list views and search results.                                                                         | No                      | Computed                              | No       | No         | Auto-generated from search_text                                                                              |
+| Original Text   | Original plain text content as received from provider or entered by user. Includes quoted replies, signatures, boilerplate. Preserved for re-processing. Not displayed directly. | No | System | No | No | Preserved for re-processing |
+| Original HTML   | Original HTML content as received from provider. Email channel only. Includes all formatting, quoted replies, signatures, boilerplate. Preserved for re-processing. | No | System | No | No | Email channel only |
+| Cleaned HTML    | HTML content with channel-specific noise removed (quoted replies, signatures, boilerplate stripped) but formatting preserved (bold, italic, links, lists). What users see when reading the communication. | No | Computed | No | No | Output of content extraction pipeline |
+| Search Text     | Plain text content with channel-specific noise removed. No formatting. What AI processes and full-text search indexes. | No | Computed | No | No | Derived from cleaned_html (tags stripped) |
 | Source              | How the communication entered the system.                                                                                                               | Yes                     | System                                | Yes      | Yes        | `synced`, `manual`, `imported`                                                                                 |
 | Provider Account ID | The provider account that captured this communication.                                                                                                  | No                      | System                                | No       | Yes        | FK to provider_accounts. NULL for manual entries.                                                              |
 | Provider Message ID | Provider's unique message identifier. Used for deduplication.                                                                                           | No                      | System                                | No       | No         | UNIQUE per provider account                                                                                    |
@@ -89,8 +90,9 @@ These fields are stored on the communications table but **not registered in the 
 
 | Field            | Description                             | Editable | Derivation Logic                                                                                    |
 | ---------------- | --------------------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
-| Body Preview     | First 200 characters of cleaned content | Computed | Auto-truncated from content_clean on save.                                                          |
-| Content Clean    | Noise-removed content                   | Computed | Output of channel-specific content extraction behavior. Re-derivable from content_raw/content_html. |
+| Body Preview     | First 200 characters of cleaned content | Computed | Auto-truncated from search_text on save.                                                          |
+| Cleaned HTML | Noise-removed HTML content with formatting preserved | Computed | Output of channel-specific content extraction behavior. Re-derivable from original_text/original_html. |
+| Search Text  | Noise-removed plain text for AI and search | Computed | Derived from cleaned_html by stripping all HTML tags. |
 | Has Attachments  | Whether attachments exist               | Computed | Denormalized from attachment count > 0.                                                             |
 | Attachment Count | Number of attachments                   | Computed | Count of attachment records for this communication.                                                 |
 
@@ -100,8 +102,8 @@ Per Custom Objects PRD, the Communication system object type registers these spe
 
 | Behavior                            | Trigger                                        | Description                                                                                                                     |
 | ----------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Channel-specific content extraction | On sync, on creation                           | Dispatches to the appropriate channel parser to produce content_clean from raw content. Defined in channel-specific child PRDs. |
-| Summary generation                  | On creation, on content update, on manual edit | Produces the Published Summary from content_clean. Creates a new summary revision. See Published Summary Sub-PRD.               |
+| Channel-specific content extraction | On sync, on creation                           | Dispatches to the appropriate channel parser to produce cleaned_html (noise removed, formatting preserved) and search_text (plain text for AI and search) from original content. Defined in channel-specific child PRDs. |
+| Summary generation                  | On creation, on content update, on manual edit | Produces the Published Summary from search_text. Creates a new summary revision. See Published Summary Sub-PRD.               |
 | Triage classification               | On sync, on creation                           | Runs the multi-layer triage pipeline to classify communications as real interactions vs. automated noise. See Triage Sub-PRD.   |
 | Participant resolution              | On sync, on creation                           | Extracts participant identifiers and triggers Contact Intelligence for resolution. See Participant Resolution Sub-PRD.          |
 | Segmentation                        | On user action                                 | User selects a content portion and assigns it to a different conversation. Defined in the Conversations PRD.                    |
@@ -126,7 +128,7 @@ Per Custom Objects PRD, the Communication system object type registers these spe
 
 **Nature:** One-to-many, behavior-managed
 **Ownership:** Communication entity
-**Description:** A communication can have zero or more attached files. Attachments are behavior-managed records (not a separate object type) with filename, MIME type, size, and storage reference. Storage strategy varies by source: on-demand download from provider (Phase 1), object storage (Phase 2+). Call/video recordings are attachments; their transcripts become content_clean.
+**Description:** A communication can have zero or more attached files. Attachments are behavior-managed records (not a separate object type) with filename, MIME type, size, and storage reference. Storage strategy varies by source: on-demand download from provider (Phase 1), object storage (Phase 2+). Call/video recordings are attachments; their transcripts become cleaned_html and search_text.
 
 ### 2.4 Events
 
@@ -210,11 +212,11 @@ Manually logged interactions (unrecorded phone calls, in-person meetings) create
 
 **Trigger:** Incremental sync detects a new communication at the provider (email, SMS, etc.).
 
-**Step 1 — Fetch & normalize:** Provider adapter fetches the raw communication and normalizes it to the common schema (timestamp, channel, direction, content_raw, content_html, provider_message_id, provider_thread_id).
+**Step 1 — Fetch & normalize:** Provider adapter fetches the raw communication and normalizes it to the common schema (timestamp, channel, direction, original_text, original_html, provider_message_id, provider_thread_id).
 
 **Step 2 — Deduplication:** System checks provider_account_id + provider_message_id. If duplicate, skip. If new, create Communication record with `source = 'synced'`.
 
-**Step 3 — Content extraction:** Channel-specific content extraction behavior fires, producing content_clean from content_raw/content_html. Body_preview auto-generated.
+**Step 3 — Content extraction:** Channel-specific content extraction behavior fires, producing cleaned_html and search_text from original_text/original_html. Body_preview auto-generated.
 
 **Step 4 — Participant resolution:** Participant identifiers are extracted and submitted to Contact Intelligence for resolution. Participant relation instances created (may reference placeholder contacts until resolution completes).
 
@@ -244,7 +246,7 @@ Manually logged interactions (unrecorded phone calls, in-person meetings) create
 
 **Step 2 — Filtering:** User applies filters (channel, direction, triage status, date range, contact, conversation, account). Filters apply immediately.
 
-**Step 3 — Searching:** Full-text search across subject and content_clean. Subject weighted higher for relevance.
+**Step 3 — Searching:** Full-text search across subject and search_text. Subject weighted higher for relevance.
 
 **Step 4 — Selection:** User clicks a communication row. Detail Panel opens showing full content, participants, attachments, and summary.
 
@@ -254,7 +256,7 @@ Manually logged interactions (unrecorded phone calls, in-person meetings) create
 
 **Step 1 — Identity Card loads:** Channel icon, timestamp, direction, subject, and participant summary.
 
-**Step 2 — Content display:** content_clean displayed as the primary content. "View Original" expander shows content_raw for debugging.
+**Step 2 — Content display:** cleaned_html displayed as the primary content with formatting preserved. "View Original" expander shows original_text for debugging.
 
 **Step 3 — Published Summary:** Summary card shows the current summary with source badge (AI-generated, user-authored, pass-through). Edit and re-generate actions available.
 
@@ -314,11 +316,11 @@ Manually logged interactions (unrecorded phone calls, in-person meetings) create
 **Trigger:** Synced with communication, or user uploads on manual entry.
 **Inputs:** File data, metadata (filename, MIME type, size).
 **Outcome:** Attachment record created. Storage reference set per storage strategy (on-demand or object storage).
-**Business Rules:** Recordings and transcripts are related — transcript becomes content_clean, recording becomes attachment.
+**Business Rules:** Recordings and transcripts are related — transcript becomes cleaned_html and search_text, recording becomes attachment.
 
 ### 6.6 Published Summary
 
-**Summary:** Every Communication produces a rich text summary published to its parent Conversation's timeline. AI-generated for synced long-form content (emails, transcripts), user-authored for manual entries, pass-through for short messages. Full revision history enables audit trail reconstruction. Three-stage content pipeline: content_raw → content_clean → Published Summary.
+**Summary:** Every Communication produces a rich text summary published to its parent Conversation's timeline. AI-generated for synced long-form content (emails, transcripts), user-authored for manual entries, pass-through for short messages. Full revision history enables audit trail reconstruction. Four-stage content pipeline: original_text/original_html → cleaned_html → search_text → Published Summary.
 **Sub-PRD:** [communication-published-summary-prd.md]
 
 ### 6.7 Provider & Sync Framework
@@ -355,7 +357,7 @@ All communications across all channels are sequenced by `timestamp`. This enable
 - **Credential isolation** — OAuth tokens and API keys stored encrypted, never in logs.
 - **Tenant isolation** — Schema-per-tenant in PostgreSQL per Custom Objects PRD.
 - **GDPR** — Full export via API; cascade deletion (communication + events + attachments); standard export formats.
-- **AI data handling** — Only content_clean is sent to AI, not raw HTML, attachments, or full threads. AI responses stored in CRM, not retained by AI provider.
+- **AI data handling** — Only search_text is sent to AI, not raw HTML, attachments, or full threads. AI responses stored in CRM, not retained by AI provider.
 
 ### 7.4 Data Retention
 
@@ -396,9 +398,9 @@ Flat address columns cannot answer "show all communications involving Bob" witho
 
 The Communication→Conversation link is strictly many:1, carries no metadata, and is not navigable from the Conversation side in the same way as Event→Contact. An FK column is proportional to the complexity.
 
-### Why separate content_raw, content_html, and content_clean?
+### Why separate original_text, original_html, cleaned_html, and search_text?
 
-Three content fields serve different purposes: content_raw preserves the original for re-processing; content_html preserves email HTML for the dual-track parser; content_clean is the processed output for display and AI. If parsing improves, all communications can be re-processed from originals.
+Four content fields serve distinct purposes: original_text and original_html preserve the originals for re-processing if the extraction pipeline improves. cleaned_html is the noise-removed HTML with formatting preserved — bold, italic, links, lists all intact — for native reading in the UI. search_text is the plain text extraction of cleaned_html (all tags stripped) for AI processing and full-text search indexing. The cleaning pipeline produces cleaned_html first, then derives search_text from it by stripping tags.
 
 ### Why channel-specific child PRDs instead of one monolithic document?
 

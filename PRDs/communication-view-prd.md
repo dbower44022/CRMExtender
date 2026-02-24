@@ -21,7 +21,7 @@ This document implements KP-4 (Viewing a Communication's Full Record) from the E
 ### 1.2 Preconditions
 
 - Communication record exists and is accessible to the current user (per Permissions & Sharing PRD).
-- Content extraction has completed (content_clean is populated, or user-authored content exists for manual entries).
+- Content extraction has completed (cleaned_html is populated, or user-authored content exists for manual entries).
 - Participant resolution has run (participant relation instances exist, though some may reference placeholder contacts if resolution is pending).
 
 ---
@@ -36,10 +36,11 @@ This document implements KP-4 (Viewing a Communication's Full Record) from the E
 | Direction                                  | Shown in header area. Drives directional language ("From" / "To" vs. "Participants").                                           |
 | Timestamp                                  | Displayed prominently in header. Universal sequencing key.                                                                      |
 | Subject                                    | Email subject line or meeting title. Primary heading for email and meeting channels. NULL for SMS, most calls.                  |
-| Body Preview                               | First 200 characters of content_clean. Used only if content_clean is unavailable or for extremely constrained preview contexts. |
-| Content Clean                              | The processed, noise-removed content. Primary reading content in both Preview and full View.                                    |
-| Content Raw                                | Original unprocessed content. Available via "View Original" expander in full View.                                              |
-| Content HTML                               | Original email HTML. Not rendered directly to user — used only by content extraction pipeline.                                  |
+| Body Preview                               | First 200 characters of cleaned_html. Used only if cleaned_html is unavailable or for extremely constrained preview contexts. |
+| Cleaned HTML                               | HTML content with noise removed but formatting preserved (bold, italic, links, lists). Primary reading content in the Content Card and Preview Card for email. |
+| Search Text                                | Plain text with noise removed. No formatting. Used by AI processing and full-text search. Drives word count for layout decisions. |
+| Original Text                              | Original unprocessed plain text content. Available via "View Original" expander in full View.                                   |
+| Original HTML                              | Original email HTML as received from provider. Not rendered directly to user — used only by content extraction pipeline.        |
 | Summary JSON / Summary HTML / Summary Text | Published Summary fields. Rendered in the Summary Card in full View.                                                            |
 | Summary Source                             | `ai_generated`, `user_authored`, `pass_through`. Drives badge display on Summary Card.                                          |
 | Summary Revision Count                     | Displayed on Summary Card if > 1.                                                                                               |
@@ -88,7 +89,7 @@ This document implements KP-4 (Viewing a Communication's Full Record) from the E
 
 **Step 1 — Layout determined:** The system evaluates the available window width and the communication's content volume to determine single-column or two-column layout (see Section 5).
 
-**Step 2 — Native content renders:** The primary content area presents the communication as a native reading experience — full header (sender, recipients, timestamp, subject), complete content_clean body, and attachment list with download actions. This is the Content Card.
+**Step 2 — Native content renders:** The primary content area presents the communication as a native reading experience — full header (sender, recipients, timestamp, subject), complete cleaned_html body, and attachment list with download actions. This is the Content Card.
 
 **Step 3 — CRM layer renders:** Below the Content Card (single-column) or beside it (two-column), the CRM intelligence cards render: Participants Card, Summary Card, Conversation Card, and conditionally the Triage Card, Notes Card, and Metadata Card. Cards with no data are suppressed entirely.
 
@@ -150,7 +151,7 @@ Each channel renders its Preview Card differently to match the native reading ex
 
 **Content area:**
 
-- content_clean rendered as plain text, flowing naturally below the subject divider
+- cleaned_html rendered as plain text, flowing naturally below the subject divider
 - Content fills all available space — no artificial truncation. If the email is long and the panel is short, the card scrolls.
 
 **Attachment indicator:**
@@ -177,7 +178,7 @@ Each channel renders its Preview Card differently to match the native reading ex
 
 **Content area:**
 
-- content_clean rendered as plain text. SMS messages are short enough that the full content typically fits without scrolling.
+- cleaned_html rendered as plain text. SMS messages are short enough that the full content typically fits without scrolling.
 
 **No subject line, no attachment indicator** (unless MMS with media — in which case a media indicator renders similarly to the email attachment indicator).
 
@@ -202,7 +203,7 @@ Each channel renders its Preview Card differently to match the native reading ex
 
 **Content area:**
 
-- content_clean (the processed transcript) rendered as plain text, filling available space.
+- cleaned_html (the processed transcript) rendered as plain text, filling available space.
 
 #### 4.2.4 Phone Call (Manual) / Video Meeting (Manual) / In-Person Meeting Preview
 
@@ -231,7 +232,7 @@ Each channel renders its Preview Card differently to match the native reading ex
 
 **Content area:**
 
-- content_clean (the user's notes) rendered as plain text.
+- cleaned_html (the user's notes) rendered as plain text.
 
 #### 4.2.5 Video Meeting (Recorded) Preview
 
@@ -324,7 +325,7 @@ The Communication full View uses a **content-aware responsive layout** that dete
 | Input           | How Measured                                                                                            |
 | --------------- | ------------------------------------------------------------------------------------------------------- |
 | Available width | The rendering width of the Window (Modal Full Overlay, Undocked Window, or Docked Window in View Mode). |
-| Content volume  | Word count of content_clean.                                                                            |
+| Content volume  | Word count of cleaned_html.                                                                            |
 
 **Decision rules:**
 
@@ -356,7 +357,7 @@ These are guideline values, not specifications. The goal is that the user percei
 │  │  Header (sender, recipients, timestamp)          ││
 │  │  Subject                                         ││
 │  │  ────────────────────────────────────────────    ││
-│  │  Body (content_clean)                            ││
+│  │  Body (cleaned_html)                            ││
 │  │  Attachments (with download actions)             ││
 │  └──────────────────────────────────────────────────┘│
 ├──────────────────────────────────────────────────────┤
@@ -388,7 +389,7 @@ These are guideline values, not specifications. The goal is that the user percei
 │  │  Subject               ││  └───────────────────────────────────┘│
 │  │  ──────────────────    ││  Summary Card                         │
 │  │  Body                  ││  ┌───────────────────────────────────┐│
-│  │  (content_clean)       ││  │  (published summary)              ││
+│  │  (cleaned_html)       ││  │  (published summary)              ││
 │  │                        ││  └───────────────────────────────────┘│
 │  │                        ││  Conversation Card                    │
 │  │                        ││  ┌───────────────────────────────────┐│
@@ -521,8 +522,8 @@ The Content Card is the primary reading surface in the full View. It presents th
 
 **Body:**
 
-- content_clean rendered as formatted text. The original paragraph structure is preserved.
-- If the email contained HTML formatting (bold, italic, links, lists), content_clean should preserve this structure where the extraction pipeline retains it. Simple formatting renders natively; complex HTML layouts are flattened to readable text.
+- cleaned_html rendered as formatted text. The original paragraph structure is preserved.
+- If the email contained HTML formatting (bold, italic, links, lists), cleaned_html should preserve this structure where the extraction pipeline retains it. Simple formatting renders natively; complex HTML layouts are flattened to readable text.
 
 **Attachment area:**
 
@@ -533,7 +534,7 @@ The Content Card is the primary reading surface in the full View. It presents th
 **View Original expander:**
 
 - A collapsible section at the bottom of the Content Card. Collapsed by default.
-- When expanded, shows content_raw — the original, unprocessed content including quoted replies, signatures, and boilerplate that the content extraction pipeline removed.
+- When expanded, shows original_text — the original, unprocessed content including quoted replies, signatures, and boilerplate that the content extraction pipeline removed.
 - Purpose: debugging and verification. Users can confirm that content extraction didn't remove important content.
 
 ### 7.2 SMS / MMS Content Card
@@ -546,7 +547,7 @@ The Content Card is the primary reading surface in the full View. It presents th
 └──────────────────────────────────────────────────────┘
 ```
 
-Minimal header: participant name + phone number, direction. Body is content_clean. No subject line. No "View Original" expander (content_clean = content_raw for SMS). MMS with media attachments shows the attachment area.
+Minimal header: participant name + phone number, direction. Body is cleaned_html. No subject line. No "View Original" expander (cleaned_html = original_text for SMS). MMS with media attachments shows the attachment area.
 
 ### 7.3 Phone Call (Recorded) Content Card
 
@@ -570,7 +571,7 @@ Minimal header: participant name + phone number, direction. Body is content_clea
 └──────────────────────────────────────────────────────┘
 ```
 
-Header: "Call with [participants]", direction, duration. Body: content_clean (processed transcript) with speaker labels if available. Recording: if an audio recording attachment exists, a playback control renders at the bottom.
+Header: "Call with [participants]", direction, duration. Body: cleaned_html (processed transcript) with speaker labels if available. Recording: if an audio recording attachment exists, a playback control renders at the bottom.
 
 ### 7.4 Phone Call (Manual) / Video Meeting (Manual) / In-Person Meeting Content Card
 
@@ -593,7 +594,7 @@ Header: "Call with [participants]", direction, duration. Body: content_clean (pr
 └──────────────────────────────────────────────────────┘
 ```
 
-Header: "[Channel type] with [participants]", direction (usually "↔ Meeting"), duration if provided. Subject if provided. Body: content_clean (the user's notes). Attachments if any.
+Header: "[Channel type] with [participants]", direction (usually "↔ Meeting"), duration if provided. Subject if provided. Body: cleaned_html (the user's notes). Attachments if any.
 
 ### 7.5 Video Meeting (Recorded) Content Card
 
@@ -605,7 +606,7 @@ Same structure as Phone Call (Recorded) with video icon and video playback contr
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Participant links**     | Resolved contacts are clickable links navigating to the Contact record. Unresolved participants render as plain text with a subtle indicator.                                                                                  |
 | **Fills available space** | No artificial truncation. Content flows to its natural length. Card scrolls if content exceeds available space (in single-column layout, the whole view scrolls; in two-column layout, the left column scrolls independently). |
-| **View Original**         | Available only for channels where content_clean differs from content_raw (primarily email). Collapsed by default.                                                                                                              |
+| **View Original**         | Available only for channels where cleaned_html differs from original_text (primarily email). Collapsed by default.                                                                                                              |
 | **Attachment actions**    | Download button on each attachment. Playback controls for audio/video recordings. These are the only interactive elements in the Content Card.                                                                                 |
 
 **Tasks:**
@@ -625,7 +626,7 @@ Same structure as Phone Call (Recorded) with video icon and video playback contr
 - [ ] CVCC-T01: Email Content Card renders full header with sender, To, CC, BCC
 - [ ] CVCC-T02: Resolved participant names render as clickable links
 - [ ] CVCC-T03: Unresolved participant names render as plain text with indicator
-- [ ] CVCC-T04: View Original expander shows content_raw when expanded
+- [ ] CVCC-T04: View Original expander shows original_text when expanded
 - [ ] CVCC-T05: View Original expander is collapsed by default
 - [ ] CVCC-T06: Attachment download action initiates file download
 - [ ] CVCC-T07: Audio recording shows playback controls
@@ -723,7 +724,7 @@ The Summary Card displays the Communication's Published Summary — the distille
 | Card header       | "Summary"                                         | Standard card header                                                                                                                                            |
 | Source badge      | summary_source                                    | "🤖 AI Generated", "✍ User Authored", or "📋 Pass-through" — right of header                                                                                    |
 | Edit action       | —                                                 | Pencil icon (✏). Opens the summary in the rich text editor for user editing. Creates a new summary revision on save.                                            |
-| Regenerate action | —                                                 | Refresh icon (↻). Available only for AI-generated and pass-through summaries. Re-runs AI summary generation from content_clean. Creates a new summary revision. |
+| Regenerate action | —                                                 | Refresh icon (↻). Available only for AI-generated and pass-through summaries. Re-runs AI summary generation from cleaned_html. Creates a new summary revision. |
 | Summary content   | summary_html                                      | Rendered as rich text (headings, lists, bold). The HTML as produced by the AI or the user's editor.                                                             |
 | Revision info     | summary_revision_count, current revision metadata | "Rev N of N · Last updated [date] by [AI or username]". Clicking opens revision history (future: revision comparison view).                                     |
 

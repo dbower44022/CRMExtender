@@ -18,7 +18,7 @@ The Communication **owns** its Published Summary. The Conversation references su
 
 ### 1.2 Preconditions
 
-- Communication record exists with content_clean populated (or user-authored content for manual entries).
+- Communication record exists with search_text populated (or user-authored content for manual entries).
 - For AI-generated summaries: AI API is accessible.
 - Rich text editor is available for user-authored summaries.
 
@@ -30,7 +30,8 @@ The Communication **owns** its Published Summary. The Conversation references su
 
 | Field                       | Role in This Action                                                                |
 | --------------------------- | ---------------------------------------------------------------------------------- |
-| Content Clean               | Input to AI summary generation. Displayed when user expands to view full original. |
+| Search Text                 | Input to AI summary generation. Plain text, no formatting — optimized for AI consumption. |
+| Cleaned HTML                | Displayed when user expands to view full original content with formatting preserved. |
 | Summary JSON                | Editor-native rich text document format. Source of truth for re-editing.           |
 | Summary HTML                | Pre-rendered HTML rendered in the Conversation timeline.                           |
 | Summary Text                | Plain text for FTS indexing and Conversation-level AI input.                       |
@@ -55,11 +56,11 @@ The Communication **owns** its Published Summary. The Conversation references su
 
 ### KP-1: AI-Generated Summary for Synced Content
 
-**Trigger:** Communication created via provider sync with content_clean ≥ 50 words (email, recorded call/video transcript).
+**Trigger:** Communication created via provider sync with search_text ≥ 50 words (email, recorded call/video transcript).
 
-**Step 1 — Content extraction complete:** Content extraction behavior has produced content_clean from content_raw/content_html.
+**Step 1 — Content extraction complete:** Content extraction behavior has produced cleaned_html and search_text from original_text/original_html.
 
-**Step 2 — AI processing:** AI processes content_clean to produce structured rich text: key points, decisions, requests, and action items.
+**Step 2 — AI processing:** AI processes search_text to produce structured rich text: key points, decisions, requests, and action items.
 
 **Step 3 — Output storage:** AI-produced HTML stored in summary_html. Corresponding summary_json generated for the editor. summary_text extracted (tags stripped). summary_source set to `ai_generated`.
 
@@ -69,9 +70,9 @@ The Communication **owns** its Published Summary. The Conversation references su
 
 ### KP-2: Pass-Through Summary for Short Content
 
-**Trigger:** Communication created with content_clean < 50 words (SMS, short emails).
+**Trigger:** Communication created with search_text < 50 words (SMS, short emails).
 
-**Step 1 — Pass-through:** content_clean is wrapped in minimal HTML tags and stored across all three summary fields. summary_source set to `pass_through`.
+**Step 1 — Pass-through:** cleaned_html is stored directly as summary_html. summary_json generated from the HTML. summary_text derived by stripping tags. summary_source set to `pass_through`.
 
 **Step 2 — Revision created:** Same as KP-1 step 4.
 
@@ -97,9 +98,9 @@ The Communication **owns** its Published Summary. The Conversation references su
 
 ### KP-5: AI Re-Generation
 
-**Trigger:** User explicitly requests AI to re-generate the summary, or content_clean is updated (e.g., improved parsing logic).
+**Trigger:** User explicitly requests AI to re-generate the summary, or search_text is updated (e.g., improved parsing logic).
 
-**Step 1 — AI processing:** Same as KP-1 step 2, using current content_clean.
+**Step 1 — AI processing:** Same as KP-1 step 2, using current search_text.
 
 **Step 2 — New revision:** New revision created. Previous revisions (including user edits) are preserved. summary_source set to `ai_generated`.
 
@@ -111,24 +112,26 @@ The Communication **owns** its Published Summary. The Conversation references su
 
 ### 4.1 Requirements
 
-The Published Summary sits at the end of a three-stage content pipeline:
+The Published Summary sits at the end of a four-stage content pipeline:
 
-**Stage 1: content_raw** — Original content as received or entered. Preserved for reference and re-processing. Never displayed directly.
+**Stage 1: original_text / original_html** — Original content as received or entered. Preserved for reference and re-processing. Never displayed directly.
 
-**Stage 2: content_clean** — Channel-specific noise removal (quoted replies, signatures, boilerplate for email; filler words for transcripts; minimal for SMS; none for manual). What users see when expanding to full original. What AI uses as input.
+**Stage 2: cleaned_html** — Channel-specific noise removal (quoted replies, signatures, boilerplate for email; filler words for transcripts; minimal for SMS; none for manual) with formatting preserved. What users see when reading the communication or expanding to full original.
 
-**Stage 3: Published Summary** — Distilled representation for Conversation timeline display. AI-generated (structured rich text), user-authored (rich text from editor), or pass-through (content_clean as-is for short content).
+**Stage 3: search_text** — Plain text derived from cleaned_html (all tags stripped). What AI uses as input for summary generation. What full-text search indexes.
+
+**Stage 4: Published Summary** — Distilled representation for Conversation timeline display. AI-generated (structured rich text from search_text), user-authored (rich text from editor), or pass-through (cleaned_html used directly for short content).
 
 **Tasks:**
 
-- [ ] CSUM-01: Implement three-stage content pipeline coordination
+- [ ] CSUM-01: Implement four-stage content pipeline coordination
 - [ ] CSUM-02: Implement pass-through summary for short content (< 50 words)
 
 **Tests:**
 
-- [ ] CSUM-T01: Test pipeline produces summary from content_clean for long content
+- [ ] CSUM-T01: Test pipeline produces summary from search_text for long content
 - [ ] CSUM-T02: Test pass-through for content under 50 words
-- [ ] CSUM-T03: Test pipeline handles empty content_clean gracefully
+- [ ] CSUM-T03: Test pipeline handles empty search_text gracefully
 
 ---
 
@@ -140,7 +143,7 @@ The Published Summary sits at the end of a three-stage content pipeline:
 
 | Channel                      | Summary Source  | Generation Logic                                                                                 |
 | ---------------------------- | --------------- | ------------------------------------------------------------------------------------------------ |
-| `email` (< 50 words cleaned) | `pass_through`  | content_clean copied directly to summary fields as rich text.                                    |
+| `email` (< 50 words cleaned) | `pass_through`  | cleaned_html copied directly to summary_html. summary_json and summary_text derived.                                    |
 | `email` (≥ 50 words cleaned) | `ai_generated`  | AI produces structured rich text: key points, decisions, requests, action items.                 |
 | `sms` / `mms`                | `pass_through`  | Message body is inherently short. Copy directly.                                                 |
 | `phone_recorded`             | `ai_generated`  | AI processes transcript to produce: key discussion points, decisions, action items, commitments. |
@@ -183,7 +186,7 @@ The summary storage model mirrors the Notes content architecture (Notes PRD Sect
 
 **For user-authored summaries:** Client sends summary_json and summary_html from the rich text editor. Server extracts summary_text.
 
-**For pass-through summaries:** content_clean wrapped in minimal HTML tags and stored across all three fields.
+**For pass-through summaries:** cleaned_html stored directly as summary_html. summary_json generated from the HTML. summary_text derived by stripping tags.
 
 **Tasks:**
 
@@ -195,7 +198,7 @@ The summary storage model mirrors the Notes content architecture (Notes PRD Sect
 
 - [ ] CSUM-T07: Test AI-generated summaries populate all three fields
 - [ ] CSUM-T08: Test user-authored summaries from editor populate all three fields
-- [ ] CSUM-T09: Test pass-through summaries wrap content_clean correctly
+- [ ] CSUM-T09: Test pass-through summaries store cleaned_html as summary_html correctly
 - [ ] CSUM-T10: Test HTML sanitization strips dangerous tags
 
 ---
@@ -276,7 +279,7 @@ Every summary change creates a new revision in `communication_summary_revisions`
 | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Communication created (auto-synced)        | Summary generation fires after content extraction completes. AI or pass-through per channel rules.                                  |
 | Communication created (manual entry)       | User writes summary during creation (user-authored channels). Transcript channels fire AI generation after transcript is available. |
-| content_clean updated                      | Re-processing of content extraction. Summary re-generated. Previous revisions preserved.                                            |
+| search_text updated                      | Re-processing of content extraction. Summary re-generated. Previous revisions preserved.                                            |
 | User edits summary                         | User modifies via rich text editor. New revision. source → user_authored.                                                           |
 | User requests AI re-generation             | Explicit request. New revision. source → ai_generated.                                                                              |
 | Communication passes triage after override | If previously filtered, summary generation fires for the first time.                                                                |
@@ -289,7 +292,7 @@ Every summary change creates a new revision in `communication_summary_revisions`
 | AI API rate limit           | Queue and retry after cooldown.                                                           |
 | AI returns malformed output | Log raw response. Fall back to pass-through. Flag for review.                             |
 | AI API unavailable          | Pass-through mode until API returns. Queue for AI processing when available.              |
-| Empty content_clean         | Skip summary generation. "[No content]" in timeline.                                      |
+| Empty search_text         | Skip summary generation. "[No content]" in timeline.                                      |
 
 **Tasks:**
 
@@ -302,7 +305,7 @@ Every summary change creates a new revision in `communication_summary_revisions`
 **Tests:**
 
 - [ ] CSUM-T19: Test trigger fires on communication creation
-- [ ] CSUM-T20: Test trigger fires on content_clean update
+- [ ] CSUM-T20: Test trigger fires on search_text update
 - [ ] CSUM-T21: Test AI timeout triggers retry and shows placeholder
 - [ ] CSUM-T22: Test malformed AI output falls back to pass-through
 - [ ] CSUM-T23: Test triage override triggers summary generation

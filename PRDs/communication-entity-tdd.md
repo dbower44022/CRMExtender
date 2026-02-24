@@ -41,9 +41,10 @@ CREATE TABLE communications (
     timestamp       TIMESTAMPTZ NOT NULL,
     subject         TEXT,
     body_preview    TEXT,
-    content_raw     TEXT,
-    content_html    TEXT,
-    content_clean   TEXT,
+    original_text  TEXT,                    -- Original plain text as received from provider
+    original_html   TEXT,                    -- Original HTML as received (email only)
+    cleaned_html    TEXT,                    -- Noise-removed HTML with formatting preserved
+    search_text     TEXT,                    -- Plain text for AI processing and FTS
     source          TEXT NOT NULL,
     provider_account_id TEXT,
     provider_message_id TEXT,
@@ -190,13 +191,13 @@ Sync operations are logged separately from entity events for operational monitor
 | Email attachments     | On-demand download from provider         | Object storage (S3/MinIO) |
 | Call/video recordings | Object storage                           | Object storage            |
 | User-uploaded files   | Object storage                           | Object storage            |
-| Transcripts           | Stored as content_clean on Communication | Same                      |
+| Transcripts           | Stored as search_text on Communication | Same                      |
 
 **Rationale:** On-demand download for email attachments reduces initial sync time and storage cost. Provider access is retained through OAuth tokens. Migration to object storage planned for Phase 2+ when provider-independent access is needed.
 
 ### 5.3 Recording-Transcript Relationship
 
-For recorded calls and video meetings, the transcript becomes the `content_clean` (for AI and search), while the original recording is an attachment (for playback and verification).
+For recorded calls and video meetings, the transcript becomes the `search_text` (for AI and search), while the original recording is an attachment (for playback and verification).
 
 ---
 
@@ -236,7 +237,7 @@ For recorded calls and video meetings, the transcript becomes the `content_clean
 ```sql
 SELECT
     c.id, c.channel, c.direction, c.timestamp, c.subject,
-    c.body_preview, c.content_clean, c.source, c.conversation_id,
+    c.body_preview, c.search_text, c.source, c.conversation_id,
     c.triage_result, c.duration_seconds, c.has_attachments,
     c.created_at, c.updated_at
 FROM communications c
@@ -271,13 +272,13 @@ The `com_` prefix enables automatic entity type detection in Data Source queries
 ALTER TABLE communications ADD COLUMN search_vector tsvector
     GENERATED ALWAYS AS (
         setweight(to_tsvector('english', COALESCE(subject, '')), 'A') ||
-        setweight(to_tsvector('english', COALESCE(content_clean, '')), 'B')
+        setweight(to_tsvector('english', COALESCE(search_text, '')), 'B')
     ) STORED;
 
 CREATE INDEX idx_comm_search ON communications USING GIN (search_vector);
 ```
 
-**Rationale:** Subject text weighted higher ('A') than body content ('B') for relevance ranking. Generated column means indexing is automatic and synchronous — no async lag. Communications are re-indexed automatically when content_clean is regenerated.
+**Rationale:** Subject text weighted higher ('A') than body content ('B') for relevance ranking. Generated column means indexing is automatic and synchronous — no async lag. Communications are re-indexed automatically when search_text is regenerated.
 
 ---
 
@@ -286,8 +287,10 @@ CREATE INDEX idx_comm_search ON communications USING GIN (search_vector);
 | Data Type                    | Per Communication | 10,000 Communications |
 | ---------------------------- | ----------------- | --------------------- |
 | Record fields + metadata     | ~1 KB avg         | ~10 MB                |
-| content_clean (text)         | ~2 KB avg         | ~20 MB                |
-| content_html (email only)    | ~8 KB avg         | ~80 MB                |
+| search_text (text)         | ~2 KB avg         | ~20 MB                |
+| search_text (text)           | ~2 KB avg         | ~20 MB                |
+| cleaned_html (email)         | ~4 KB avg         | ~40 MB                |
+| original_html (email only)   | ~8 KB avg         | ~80 MB                |
 | Event history                | ~0.5 KB per event | ~5 MB (10K events)    |
 | Audio recordings (if stored) | ~1 MB/min         | Highly variable       |
 
@@ -299,7 +302,7 @@ The following areas will require technical decisions during implementation:
 
 - **body_preview generation:** Truncation strategy for the 200-character preview (word boundary vs. hard cut, HTML entity handling).
 - **has_attachments / attachment_count sync:** Application trigger vs. database trigger for keeping denormalized counts in sync.
-- **Summary FTS vs. content FTS:** Whether to create a combined FTS index across summary_text and content_clean, or keep them separate for scoped search.
+- **Summary FTS vs. content FTS:** Whether to create a combined FTS index across summary_text and search_text, or keep them separate for scoped search.
 - **Provider thread ID normalization:** Whether different providers' thread IDs need normalization for cross-provider conversation matching.
 - **Archive cascade to conversation:** When archiving a communication, whether and how conversation metadata (message count, last activity) is recomputed.
 - **Migration from PoC:** How existing SQLite data (UUID v4 IDs, no event sourcing, no prefixed ULIDs) migrates to the target schema.

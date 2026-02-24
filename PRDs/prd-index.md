@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 18.0
+**Version:** 19.0
 **Last Updated:** 2026-02-23
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V19.0 (2026-02-23):** Decomposed Custom Objects PRD (1,542 lines) into Framework PRD + 2 Sub-PRDs (Field System, Relation System) + TDD. First framework-level (non-entity) decomposition — subsystem-based rather than entity/action-based.
 
 > **V18.0 (2026-02-23):** Decomposed Projects PRD (850 lines) into Project Entity Base PRD + 1 Action Sub-PRD (Entity Relations & Aggregation) + Project Entity TDD. Follows V2 methodology. Monolithic projects-prd.md retained as superseded reference. **All 9 entity PRDs now decomposed.**
 
@@ -40,7 +42,11 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | PRD Methodology Guide | 2.0 | `prd-methodology-guide.md` | Updated — Key Processes, field metadata, † convention | 2026-02-23 |
 | Product TDD | 1.0 | `product-tdd.md` | Draft — 13 sections, living document | 2026-02-23 |
 | GUI Functional Requirements | 2.0 | `gui-functional-requirements-prd.md` | Draft — Terminology standardized | 2026-02-21 |
-| Custom Objects | 2.0 | `custom-objects-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+| Custom Objects | 2.0 | `custom-objects-prd.md` | Superseded — decomposed into Framework PRD + 2 Sub-PRDs + TDD | 2026-02-23 |
+| └ Custom Objects Framework | 1.0 | `custom-objects-framework-prd.md` | Draft — V2 methodology (Key Processes) | 2026-02-23 |
+| &nbsp;&nbsp;└ Custom Objects TDD | 1.0 | `custom-objects-tdd.md` | Draft — Living document, 7 sections | 2026-02-23 |
+| └ Field System | 1.0 | `custom-objects-field-system-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Relation System | 1.0 | `custom-objects-relation-system-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Communications | 3.0 | `communications-prd.md` | Superseded — decomposed into Entity Base + 4 Sub-PRDs + TDD | 2026-02-23 |
 | └ Communication Entity Base | 1.0 | `communication-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
 | &nbsp;&nbsp;└ Communication Entity TDD | 1.0 | `communication-entity-tdd.md` | Draft — Living document, 10 sections | 2026-02-23 |
@@ -120,7 +126,7 @@ Document version history is managed by Git. Previous versions of any document ca
 - 2026-02-19: Topic entity eliminated; Projects PRD extracted from Conversations PRD
 - 2026-02-21: GUI terminology standardization (V2); Adaptive Grid Intelligence terminology alignment
 - 2026-02-22: Full ecosystem terminology alignment across all PRDs; Custom Objects V2; mojibake cleanup
-- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Event entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Note entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Task entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Project entity decomposed into Entity Base PRD + 1 Action Sub-PRD + TDD; migrated from versioned filenames to Git-based versioning. **All 9 entity PRDs decomposed.**
+- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Event entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Note entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Task entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Project entity decomposed into Entity Base PRD + 1 Action Sub-PRD + TDD; Custom Objects framework decomposed into Framework PRD + 2 Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning. **All 9 entity PRDs + Custom Objects framework decomposed.**
 
 ---
 
@@ -128,44 +134,19 @@ Document version history is managed by Git. Previous versions of any document ca
 
 ### 1. Custom Objects
 
-**File:** `custom-objects-prd.md`
-**Scope:** The entity model foundation. Defines the Unified Object Model where system entities (Contact, Conversation, Company, etc.) and user-created entities are instances of the same framework. Covers object type definition, field registry, field type system, relation model, physical storage architecture, DDL management, and event sourcing. V2 adds Card-Based Architecture terminology alignment (Field Groups → Attribute Cards).
+**File:** `custom-objects-prd.md` (superseded — retained as historical reference)
+**Scope:** The entity model foundation. Defines the Unified Object Model where system entities and user-created entities are instances of the same framework. Covers object type definition, field registry, field type system, relation model, physical storage, DDL management, and event sourcing.
 
-**Key sections:**
+> **Note:** The monolithic Custom Objects PRD (1,542 lines) has been decomposed into a Framework PRD, TDD, and two Sub-PRDs. The original file is retained for reference; all active development should use the decomposed documents.
 
-- Unified Object Model (system and custom entities as instances of the same ObjectType framework)
-- Object type definition model (identity, slug, type prefix, schema version, lifecycle)
-- Universal fields (id, tenant_id, created_at/by, updated_at/by, archived_at)
-- Field registry (field definitions, slugs as column names, ordering, limits)
-- Field type system (15 Phase 1 types, 2 Phase 2: Formula, Rollup)
-- Field type conversion matrix (safe conversions only, with preview wizard)
-- Field groups (rendered as Attribute Cards in the Detail Panel, GUI PRD Section 15.7)
-- Field validation (type-specific constraints, required fields, unique constraints)
-- Select & multi-select option management
-- Relation Types (all three cardinalities, bidirectional/unidirectional, cascade behavior, metadata attributes, self-referential, Neo4j sync flag)
-- Physical storage architecture (dedicated typed tables per entity type, DDL management system)
-- Event sourcing (per-entity-type event tables, immutable events, point-in-time reconstruction)
-- Schema-per-tenant architecture
-- System entity specialization (behaviors, protected core fields, extensibility)
-- Uniform Record CRUD API and Relation Instance API
-- Cross-PRD reconciliation (Contact Management, Data Sources, Views, Communication)
-- 4-phase roadmap
+**Decomposed documents:**
 
-**Key decisions made:**
-
-- **Unified Object Model** — system entities are pre-installed object types with `is_system` flag, protected core fields, and registered behaviors. Custom entities are equal citizens at the storage, query, and rendering layers.
-- **Dedicated typed tables per entity type** — every entity type gets its own PostgreSQL table with native typed columns. Fields map to columns. DDL at runtime via ALTER TABLE.
-- **Schema-per-tenant** — each tenant gets its own PostgreSQL schema with entity tables, event tables, and junction tables.
-- **Full event sourcing for all entity types** — per-entity-type event tables. Same audit trail and point-in-time reconstruction for custom and system entities.
-- **First-class Relation Types** — all three cardinalities (1:1, 1:many, many:many) from Phase 1. Bidirectional or unidirectional. Self-referential supported. Configurable cascade (nullify default, restrict, cascade archive).
-- **Relation metadata** — additional attributes on relationship instances (role, strength, start date, notes).
-- **Neo4j graph sync** — optional flag per relation type.
-- **Permission-gated entity type creation** — Object Creator permission (not admin-only).
-- **50 custom entity types per tenant** limit. **200 fields per entity type** limit.
-
-**Gutter business test cases:** Jobs, Properties, Service Areas, Estimates.
-
-**Open questions:** 12 (DDL timing, reserved words, record limits, field templates, import/export, relation limits, event retention, multi-line storage, offline sync, computed defaults, relation modification, Neo4j selective fields)
+| Document | File | Description |
+|---|---|---|
+| Custom Objects Framework PRD | `custom-objects-framework-prd.md` | Unified Object Model principles, Object Type Definition Model (attributes, prefix generation, prefix registry, permissions, limits), Universal Fields & Display Name Field, System Entity Specialization (behaviors registry across all 8 system entities, protected core fields, extensibility), Object Type Lifecycle (creation, modification, archiving), Key Processes, Action Catalog |
+| Custom Objects TDD | `custom-objects-tdd.md` | Physical storage architecture (dedicated typed tables, index strategy, virtual schema mapping), DDL Management System (operations catalog, execution model, advisory locking, rollback), Event Sourcing generic pattern (event table structure, base event types, write path, point-in-time reconstruction, snapshots, audit trail UI), Schema-Per-Tenant (isolation model, provisioning, search_path), API design (5 groups) |
+| Field System Sub-PRD | `custom-objects-field-system-prd.md` | Field registry (definition model, slug-to-column mapping, ordering, limits), Field Type System (13 Phase 1 + 5 Phase 2 types with config examples), Field Type Conversion Matrix (safe conversions, preview workflow), Field Groups (Attribute Card rendering), Field Validation (rules by type, unique constraints, required behavior), Select/Multi-Select Options (lifecycle), Field Lifecycle (creation, modification, archiving — no deletion) |
+| Relation System Sub-PRD | `custom-objects-relation-system-prd.md` | Relation Type definitions (cardinality, directionality, cascade), physical implementation (FK vs. junction by cardinality), self-referential relations, cascade behavior (nullify/restrict/cascade_archive), Relation Metadata (supported types, storage for M:M vs. 1:M, views integration, event sourcing), Neo4j Graph Sync (sync model, graph-enabled queries, phasing) |
 
 ---
 
@@ -792,7 +773,11 @@ PRDs/
 ├── prd-methodology-guide.md                  # How to write PRDs and TDDs
 ├── glossary.md                               # Master glossary
 ├── product-tdd.md                            # Global technology decisions
-├── custom-objects-prd.md                     # Entity model foundation
+├── custom-objects-prd.md                     # Custom Objects (monolithic, superseded)
+├── custom-objects-framework-prd.md           # Custom Objects framework definition
+├── custom-objects-tdd.md                     # Custom Objects technical decisions
+├── custom-objects-field-system-prd.md        # Field system sub-PRD
+├── custom-objects-relation-system-prd.md     # Relation system sub-PRD
 ├── gui-functional-requirements-prd.md        # Application shell & navigation
 ├── contact-management-prd.md                 # Contact Management (monolithic)
 ├── contact-entity-base-prd.md                # Contact entity definition

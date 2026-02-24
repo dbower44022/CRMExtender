@@ -103,7 +103,7 @@ This is a living document. Decisions are recorded as they are made.
 
 ### 4.2 Sanitization Rules
 
-**Decision:** Four client-side regex sanitization passes before DOM injection:
+**Decision:** Six client-side regex sanitization passes before DOM injection:
 
 | Rule | Regex | Purpose |
 |---|---|---|
@@ -111,8 +111,10 @@ This is a living document. Decisions are recorded as they are made.
 | Strip event handlers | `/\s+on\w+\s*=\s*(?:"[^"]*"\|'[^']*'\|[^\s>]*)/gi` | Removes onclick, onerror, onload, etc. |
 | Neutralize javascript: URLs | `/href\s*=\s*"javascript:[^"]*"/gi` → `href="#"` | Prevents navigation to javascript: protocol |
 | Strip @font-face blocks | `/@font-face\s*\{[^}]*\}/gi` | Prevents CORS errors from external font loads |
+| Strip 1x1 tracking pixels | `/<img\b[^>]*\b(?:width\|height)\s*=\s*["']?1(?:px)?["']?[^>]*\/?>/gi` | Removes tracking pixel images (1x1 dimensions) |
+| Strip hidden images | `/<img\b[^>]*style\s*=\s*["'][^"']*(?:display\s*:\s*none\|visibility\s*:\s*hidden)[^"']*["'][^>]*\/?>/gi` | Removes invisible tracking images |
 
-**Rationale:** These four rules address the specific threats observed in production email HTML: inline scripts (marketing analytics), event handlers (tracking pixels with `onerror` fallbacks), javascript: links (rare but present in phishing emails), and `@font-face` declarations (present in virtually all marketing emails, causing CORS errors in the sandboxed/null-origin context even after removing the iframe).
+**Rationale:** These six rules address the specific threats and noise observed in production email HTML: inline scripts (marketing analytics), event handlers (tracking pixels with `onerror` fallbacks), javascript: links (rare but present in phishing emails), `@font-face` declarations (present in virtually all marketing emails, causing CORS errors even after removing the iframe), and tracking pixel images. Marketing emails routinely embed 1x1 invisible tracking images from services like GoDaddy, Postmark, SendGrid, and engagement analytics platforms. When ad blockers intercept these requests, they generate `ERR_BLOCKED_BY_CLIENT` console errors. Stripping them from the HTML before rendering prevents the browser from attempting the load at all.
 
 ### 4.3 CSS Injection Strategy
 

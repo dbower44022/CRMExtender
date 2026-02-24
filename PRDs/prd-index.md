@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 17.0
+**Version:** 18.0
 **Last Updated:** 2026-02-23
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V18.0 (2026-02-23):** Decomposed Projects PRD (850 lines) into Project Entity Base PRD + 1 Action Sub-PRD (Entity Relations & Aggregation) + Project Entity TDD. Follows V2 methodology. Monolithic projects-prd.md retained as superseded reference. **All 9 entity PRDs now decomposed.**
 
 > **V17.0 (2026-02-23):** Decomposed Tasks PRD (1,080 lines) into Task Entity Base PRD + 2 Action Sub-PRDs (Hierarchy/Dependencies/Recurrence, Assignees/Behaviors/AI Intelligence) + Task Entity TDD. Follows V2 methodology. Monolithic tasks-prd.md retained as superseded reference.
 
@@ -91,7 +93,10 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | └ Upload, Versioning & Storage | 1.0 | `document-upload-storage-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Content Processing Pipeline | 1.0 | `document-content-processing-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Communication & Asset Integration | 1.0 | `document-integration-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| Projects | 3.0 | `projects-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+| Projects | 3.0 | `projects-prd.md` | Superseded — decomposed into Entity Base + 1 Sub-PRD + TDD | 2026-02-23 |
+| └ Project Entity Base | 1.0 | `project-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
+| &nbsp;&nbsp;└ Project Entity TDD | 1.0 | `project-entity-tdd.md` | Draft — Living document, 7 sections | 2026-02-23 |
+| └ Entity Relations & Aggregation | 1.0 | `project-relations-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Outbound Email | 2.0 | `outbound-email-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Views & Grid | 5.0 | `views-grid-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Data Sources | 1.0 | `data-sources-prd.md` | Draft — Terminology standardized | 2026-02-22 |
@@ -115,7 +120,7 @@ Document version history is managed by Git. Previous versions of any document ca
 - 2026-02-19: Topic entity eliminated; Projects PRD extracted from Conversations PRD
 - 2026-02-21: GUI terminology standardization (V2); Adaptive Grid Intelligence terminology alignment
 - 2026-02-22: Full ecosystem terminology alignment across all PRDs; Custom Objects V2; mojibake cleanup
-- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Event entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Note entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Task entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
+- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Event entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Note entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Task entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Project entity decomposed into Entity Base PRD + 1 Action Sub-PRD + TDD; migrated from versioned filenames to Git-based versioning. **All 9 entity PRDs decomposed.**
 
 ---
 
@@ -375,33 +380,18 @@ Document version history is managed by Git. Previous versions of any document ca
 
 ### 10. Projects
 
-**File:** `projects-prd.md`
-**Scope:** The central organizational hub. Defines Project as a system object type — the highest-level user-created container that connects Conversations, Events, Notes, Contacts, and Companies into a coherent picture of a business initiative. Covers sub-project hierarchy, user-defined status workflow, system Relation Types, and explicit entity associations.
+**File:** `projects-prd.md` (superseded — retained as historical reference)
+**Scope:** The central organizational hub. Defines Project as a system object type — the highest-level user-created container that connects Conversations, Events, Notes, Contacts, and Companies into a coherent picture of a business initiative.
 
-> **Extracted from:** Conversations PRD v1.0 (Project was originally co-resident with Topic and Conversation). Reconciled with Conversations PRD V3 (Topic elimination, Relation Type attachment model).
+> **Note:** The monolithic Projects PRD (850 lines) has been decomposed into an Entity Base PRD, Entity TDD, and one Action Sub-PRD following the V2 methodology. The original file is retained for reference; all active development should use the decomposed documents.
 
-**Key sections:**
+**Decomposed documents:**
 
-- Project as system object type (`prj_` prefix, field registry with user-defined status)
-- Sub-project hierarchy (self-referential Relation Type, unlimited nesting, cascade archiving)
-- Flexible hierarchy model (Conversations link via Relation Types, aggregate Conversations for grouping)
-- System Relation Types (Project↔Conversation, Project↔Contact, Project↔Company, Project↔Event, Project↔Note)
-- User-defined status workflow (no system-imposed states, user-configurable Select field)
-- Project creation model (proactive vs. reactive vs. AI-suggested)
-- Event sourcing (`projects_events`)
-- API design (CRUD, relation management, sub-project operations)
-
-**Key decisions made:**
-
-- Central hub, not conversation container — Projects organize all work entities, not just communications
-- User-defined workflow — no system-imposed status states or transitions
-- Project↔Conversation is many-to-many via Relation Type (no FK columns on Conversations table)
-- Aggregate Conversations exist independently of Projects (standalone grouping tool)
-- Explicit Contact/Company associations independent of communication participation
-- Sub-project depth unlimited with cascade archiving
-- System Relation Types ship out of the box for all core entity connections
-
-**Open questions:** 7 (sub-project depth warning, archive cascade, project templates, bulk entity linking, derived participant display, project merge/split, cross-tenant sharing)
+| Document | File | Description |
+|---|---|---|
+| Project Entity Base PRD | `project-entity-base-prd.md` | Entity definition, field registry with denormalized counts (6), user-defined status workflow (configuration model, transition enforcement, status vs. archiving independence), sub-project hierarchy (unlimited depth, cascade archive), flexible hierarchy model (relaxed graph, no inheritance), project creation model, Key Processes, Action Catalog |
+| Project Entity TDD | `project-entity-tdd.md` | Read model DDL with 6 indexes, 4 junction tables (conversations, contacts with role/notes, companies with role/notes, events), Notes/Tasks via Universal Attachment, event sourcing (17 event types), virtual schema with cross-entity queries, API design (4 groups) |
+| Entity Relations & Aggregation Sub-PRD | `project-relations-prd.md` | 5 system Relation Types (Conversation, Contact with role/notes, Company with role/notes, Event, Note via Universal Attachment), entity aggregation behavior (6 denormalized counts, last_activity_at computation), Custom Object Type relation guidance, derived participant display (explicit vs. derived, promote action) |
 
 ---
 
@@ -856,7 +846,10 @@ PRDs/
 ├── document-upload-storage-prd.md            # Upload, versioning & storage sub-PRD
 ├── document-content-processing-prd.md        # Content processing pipeline sub-PRD
 ├── document-integration-prd.md               # Communication & asset integration sub-PRD
-├── projects-prd.md
+├── projects-prd.md                           # Projects (monolithic, superseded)
+├── project-entity-base-prd.md                # Project entity definition
+├── project-entity-tdd.md                     # Project technical decisions
+├── project-relations-prd.md                  # Entity relations & aggregation sub-PRD
 ├── outbound-email-prd.md
 ├── views-grid-prd.md
 ├── data-sources-prd.md

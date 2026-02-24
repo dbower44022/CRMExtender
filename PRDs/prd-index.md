@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 16.0
+**Version:** 17.0
 **Last Updated:** 2026-02-23
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V17.0 (2026-02-23):** Decomposed Tasks PRD (1,080 lines) into Task Entity Base PRD + 2 Action Sub-PRDs (Hierarchy/Dependencies/Recurrence, Assignees/Behaviors/AI Intelligence) + Task Entity TDD. Follows V2 methodology. Monolithic tasks-prd.md retained as superseded reference.
 
 > **V16.0 (2026-02-23):** Decomposed Notes PRD (1,200 lines) into Note Entity Base PRD + 2 Action Sub-PRDs (Content/Revisions/Sanitization, Attachments/Mentions/Search) + Note Entity TDD. Follows V2 methodology. Monolithic notes-prd.md retained as superseded reference (includes PoC Appendix).
 
@@ -78,7 +80,11 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | &nbsp;&nbsp;└ Note Entity TDD | 1.0 | `note-entity-tdd.md` | Draft — Living document, 10 sections | 2026-02-23 |
 | └ Content, Revisions & Sanitization | 1.0 | `note-content-revisions-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Attachments, Mentions & Search | 1.0 | `note-attachments-mentions-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| Tasks | 2.0 | `tasks-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+| Tasks | 2.0 | `tasks-prd.md` | Superseded — decomposed into Entity Base + 2 Sub-PRDs + TDD | 2026-02-23 |
+| └ Task Entity Base | 1.0 | `task-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
+| &nbsp;&nbsp;└ Task Entity TDD | 1.0 | `task-entity-tdd.md` | Draft — Living document, 9 sections | 2026-02-23 |
+| └ Hierarchy, Dependencies & Recurrence | 1.0 | `task-hierarchy-dependencies-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ Assignees, Behaviors & AI Intelligence | 1.0 | `task-assignees-ai-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Documents | 2.0 | `documents-prd.md` | Superseded — decomposed into Entity Base + 3 Sub-PRDs + TDD | 2026-02-23 |
 | └ Document Entity Base | 1.0 | `document-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
 | &nbsp;&nbsp;└ Document Entity TDD | 1.0 | `document-entity-tdd.md` | Draft — Living document, 11 sections | 2026-02-23 |
@@ -109,7 +115,7 @@ Document version history is managed by Git. Previous versions of any document ca
 - 2026-02-19: Topic entity eliminated; Projects PRD extracted from Conversations PRD
 - 2026-02-21: GUI terminology standardization (V2); Adaptive Grid Intelligence terminology alignment
 - 2026-02-22: Full ecosystem terminology alignment across all PRDs; Custom Objects V2; mojibake cleanup
-- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Event entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Note entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
+- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Event entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Note entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Task entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
 
 ---
 
@@ -332,42 +338,19 @@ Document version history is managed by Git. Previous versions of any document ca
 
 ### 8. Tasks
 
-**File:** `tasks-prd.md`
+**File:** `tasks-prd.md` (superseded — retained as historical reference)
 **Scope:** Task as a system object type for actionable work items with status workflow, priority, assignees, dependencies, subtask hierarchy, recurrence, and AI action-item extraction.
 
-**Key sections:**
+> **Note:** The monolithic Tasks PRD (1,080 lines) has been decomposed into an Entity Base PRD, Entity TDD, and two Action Sub-PRDs following the V2 methodology. The original file is retained for reference; all active development should use the decomposed documents.
 
-- Task as system object type (`tsk_` prefix, full field registry)
-- Status model with user-extensible statuses mapped to four system categories (`not_started`, `active`, `done`, `cancelled`)
-- Fixed priority model (urgent, high, medium, low, none) with sort weights
-- Unlimited subtask hierarchy via self-referential `parent_task_id` FK
-- Universal Attachment Relation (reuses Notes pattern — tasks attach to any entity type)
-- Task→User Relation Type (`task_user_participation`) with role metadata (assignee, reviewer, watcher)
-- Task dependencies via self-referential many:many Relation Type (`task_dependencies`) with `blocked_by` semantics
-- Rich text descriptions (behavior-managed content, Notes-aligned architecture, no revision tracking)
-- Events-aligned recurrence model (completion-triggered instance generation, RRULE support)
-- AI action-item extraction behavior (auto-create tasks from Conversation intelligence)
-- Due date reminders and overdue detection behaviors
-- Event sourcing (`tasks_events`)
-- Full-text search (PostgreSQL `tsvector`/`tsquery`)
-- 4-phase roadmap (core → full features → AI integration → advanced)
+**Decomposed documents:**
 
-**Key decisions made:**
-
-- **System object type** — 7 registered behaviors require system entity status (custom objects can't have behaviors)
-- **Status categories** — user-extensible status labels mapped to immutable system categories that drive behavioral logic
-- **Fixed priority** — not user-extensible; consistency and sort ordering matter more than customization
-- **Multiple assignees** — Task→User relation type with roles, not single FK
-- **Universal Attachment** — reuses Notes pattern; standalone tasks allowed (no required entity link, unlike Notes)
-- **Warn-but-allow subtask cascade** — warns on parent completion with open children, does not block or auto-complete
-- **Completion-triggered recurrence** — next instance generated when current is completed (not time-triggered like Events)
-- **No description revision tracking** — event sourcing captures changes; full revision model deferred unless needed
-- **Workspace-visible** — all tasks visible to all members (subject to role-based permissions), unlike Notes' private-by-default model
-- **Simple blocking dependencies** — `blocked_by`/`blocks` only; full dependency types (FS/SS/FF/SF) deferred
-
-**Open questions:** 6 (notification subsystem dependency, AI confidence thresholds, recursive rollup scope, due date semantics, subtask ordering, Board View column mapping)
-
-**Reconciliation status:** Fully reconciled with Custom Objects PRD as of V1.
+| Document | File | Description |
+|---|---|---|
+| Task Entity Base PRD | `task-entity-base-prd.md` | Entity definition, field registry, status model & categories (4 immutable categories, user-extensible statuses, denormalized status_category, behavioral implications), priority model (fixed 5-level), Universal Attachment (is_primary, standalone allowed), description content architecture (Notes-aligned, no revisions), Key Processes, Action Catalog |
+| Task Entity TDD | `task-entity-tdd.md` | Read model DDL with 14 indexes (FTS, status/priority, dates, overdue candidates, hierarchy, recurrence, source), task_entities junction (is_primary), task_user_roles junction (role CHECK, UNIQUE per user+role), task_dependencies junction (circular prevention CHECK), event sourcing (12 event types), virtual schema, API design (6 groups) |
+| Hierarchy, Dependencies & Recurrence Sub-PRD | `task-hierarchy-dependencies-prd.md` | Subtask hierarchy (self-referential 1:many, unlimited nesting, count rollup, cascade archive, recursive CTE), task dependencies (blocked_by M:M, circular prevention CTE, warn-but-allow), completion-triggered recurrence (RRULE, generation logic, assignee/attachment copying, cancellation) |
+| Assignees, Behaviors & AI Intelligence Sub-PRD | `task-assignees-ai-prd.md` | Task→User relation with assignee/reviewer/watcher roles, overdue detection background job, due date reminder scheduling, AI action-item extraction from Conversations (source tracking, auto-link, assignee inference, priority mapping) |
 
 ---
 
@@ -862,7 +845,11 @@ PRDs/
 ├── note-entity-tdd.md                        # Note technical decisions
 ├── note-content-revisions-prd.md             # Content, revisions & sanitization sub-PRD
 ├── note-attachments-mentions-prd.md          # Attachments, mentions & search sub-PRD
-├── tasks-prd.md
+├── tasks-prd.md                              # Tasks (monolithic, superseded)
+├── task-entity-base-prd.md                   # Task entity definition
+├── task-entity-tdd.md                        # Task technical decisions
+├── task-hierarchy-dependencies-prd.md        # Hierarchy, dependencies & recurrence sub-PRD
+├── task-assignees-ai-prd.md                  # Assignees, behaviors & AI intelligence sub-PRD
 ├── documents-prd.md                          # Documents (monolithic, superseded)
 ├── document-entity-base-prd.md               # Document entity definition
 ├── document-entity-tdd.md                    # Document technical decisions

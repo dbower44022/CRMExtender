@@ -26,7 +26,7 @@ from poc.email_parser import strip_quotes
 def audit(*, limit: int | None = None, show_diffs: int = 10) -> None:
     """Run the audit comparison."""
     with get_connection() as conn:
-        query = "SELECT id, subject, content, body_html FROM communications WHERE content IS NOT NULL"
+        query = "SELECT id, subject, original_text, original_html FROM communications WHERE original_text IS NOT NULL"
         if limit:
             query += f" LIMIT {limit}"
         rows = conn.execute(query).fetchall()
@@ -43,8 +43,8 @@ def audit(*, limit: int | None = None, show_diffs: int = 10) -> None:
     for row in rows:
         email_id = row["id"]
         subject = row["subject"] or "(no subject)"
-        body = row["content"] or ""
-        body_html = row["body_html"] or ""
+        body = row["original_text"] or ""
+        body_html = row["original_html"] or ""
 
         # Old pipeline: text-only
         old_result = strip_quotes(body)

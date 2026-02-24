@@ -17,23 +17,23 @@ def migrate():
     with get_connection() as conn:
         cursor = conn.cursor()
 
-        # Get all communications with body text (include body_html for HTML-aware parsing)
-        cursor.execute("SELECT id, content, body_html FROM communications WHERE content IS NOT NULL")
+        # Get all communications with body text (include original_html for HTML-aware parsing)
+        cursor.execute("SELECT id, original_text, original_html FROM communications WHERE original_text IS NOT NULL")
         communications = cursor.fetchall()
 
         print(f"Processing {len(communications)} communications...")
 
         updated = 0
-        for email_id, body, body_html in communications:
+        for email_id, body, original_html in communications:
             if not body:
                 continue
 
-            stripped = strip_quotes(body, body_html or None)
+            stripped = strip_quotes(body, original_html or None)
 
             # Only update if content changed
             if stripped != body:
                 cursor.execute(
-                    "UPDATE communications SET content = ? WHERE id = ?",
+                    "UPDATE communications SET original_text = ? WHERE id = ?",
                     (stripped, email_id)
                 )
                 updated += 1

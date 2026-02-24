@@ -671,17 +671,22 @@ def _store_thread(
         try:
             conn.execute(
                 """INSERT OR IGNORE INTO communications
-                   (id, account_id, channel, timestamp, content, direction, source,
-                    sender_address, sender_name, subject, body_html, snippet,
+                   (id, account_id, channel, timestamp,
+                    original_text, original_html, cleaned_html, search_text,
+                    direction, source,
+                    sender_address, sender_name, subject, snippet,
                     provider_message_id, provider_thread_id,
                     header_message_id, header_references, header_in_reply_to,
                     is_read, is_current, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     row["id"], row["account_id"], row["channel"],
-                    row["timestamp"], row["content"], row["direction"],
-                    row["source"], row["sender_address"], row["sender_name"],
-                    row["subject"], row["body_html"], row["snippet"],
+                    row["timestamp"],
+                    row["original_text"], row["original_html"],
+                    row["cleaned_html"], row["search_text"],
+                    row["direction"], row["source"],
+                    row["sender_address"], row["sender_name"],
+                    row["subject"], row["snippet"],
                     row["provider_message_id"], row["provider_thread_id"],
                     row["header_message_id"], row["header_references"],
                     row["header_in_reply_to"], row["is_read"],

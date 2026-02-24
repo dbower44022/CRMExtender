@@ -126,7 +126,7 @@ def tmp_db(tmp_path, monkeypatch):
         # Communication linked to conv-1 via acct-1
         conn.execute(
             "INSERT INTO communications "
-            "(id, account_id, channel, timestamp, content, sender_address, "
+            "(id, account_id, channel, timestamp, original_text, sender_address, "
             "created_at, updated_at) "
             "VALUES ('comm-1', 'acct-1', 'email', ?, 'Hello', 'user1@test.com', ?, ?)",
             (_NOW, _NOW, _NOW),

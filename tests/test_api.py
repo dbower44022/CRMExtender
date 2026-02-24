@@ -1444,3 +1444,183 @@ class TestSettingsReferenceData:
         assert "roles" in data
         assert "google_oauth_configured" in data
         assert isinstance(data["google_oauth_configured"], bool)
+
+
+# ---------------------------------------------------------------------------
+# Communication Preview
+# ---------------------------------------------------------------------------
+
+def _seed_communication(
+    comm_id="comm-1",
+    channel="email",
+    subject="Test Subject",
+    cleaned_html="Hello world",
+    search_text="Hello world",
+    snippet="Hello world preview",
+    sender_name="Alice",
+    sender_address="alice@example.com",
+    direction="inbound",
+    is_read=0,
+    is_archived=0,
+    triage_result=None,
+    duration_seconds=None,
+    phone_number_from=None,
+    phone_number_to=None,
+):
+    """Seed a communication row + provider_account (required FK)."""
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO provider_accounts "
+            "(id, customer_id, provider, email_address, is_active, created_at, updated_at) "
+            "VALUES (?, ?, 'gmail', 'test@test.com', 1, ?, ?)",
+            ("pa-comm", CUST_ID, _NOW, _NOW),
+        )
+        conn.execute(
+            "INSERT INTO communications "
+            "(id, account_id, channel, timestamp, cleaned_html, search_text, "
+            "direction, source, "
+            "sender_address, sender_name, subject, snippet, is_read, is_archived, "
+            "triage_result, duration_seconds, phone_number_from, phone_number_to, "
+            "created_at, updated_at) "
+            "VALUES (?, 'pa-comm', ?, ?, ?, ?, ?, 'test', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (comm_id, channel, _NOW, cleaned_html, search_text, direction,
+             sender_address,
+             sender_name, subject, snippet, is_read, is_archived,
+             triage_result, duration_seconds, phone_number_from, phone_number_to,
+             _NOW, _NOW),
+        )
+
+
+class TestCommunicationPreview:
+    def test_preview_not_found(self, client):
+        resp = client.get("/api/v1/communications/nonexistent/preview")
+        assert resp.status_code == 404
+
+    def test_preview_email_basic(self, client):
+        _seed_communication()
+        resp = client.get("/api/v1/communications/comm-1/preview")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == "comm-1"
+        assert data["channel"] == "email"
+        assert data["direction"] == "inbound"
+        assert data["subject"] == "Test Subject"
+        assert data["sender_name"] == "Alice"
+        assert data["sender_address"] == "alice@example.com"
+        assert data["cleaned_html"] == "Hello world"
+        assert data["search_text"] == "Hello world"
+        assert data["snippet"] == "Hello world preview"
+        assert data["timestamp"] is not None
+
+    def test_preview_participants_grouped_by_role(self, client):
+        _seed_communication()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO contacts (id, customer_id, name, source, status, created_at, updated_at) "
+                "VALUES ('contact-bob', ?, 'Bob Contact', 'test', 'active', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO communication_participants (communication_id, address, name, contact_id, role) "
+                "VALUES ('comm-1', 'alice@example.com', 'Alice', NULL, 'from')",
+            )
+            conn.execute(
+                "INSERT INTO communication_participants (communication_id, address, name, contact_id, role) "
+                "VALUES ('comm-1', 'bob@example.com', 'Bob', 'contact-bob', 'to')",
+            )
+            conn.execute(
+                "INSERT INTO communication_participants (communication_id, address, name, contact_id, role) "
+                "VALUES ('comm-1', 'carol@example.com', 'Carol', NULL, 'cc')",
+            )
+            conn.execute(
+                "INSERT INTO communication_participants (communication_id, address, name, contact_id, role) "
+                "VALUES ('comm-1', 'dave@example.com', NULL, NULL, 'bcc')",
+            )
+        resp = client.get("/api/v1/communications/comm-1/preview")
+        data = resp.json()
+        assert len(data["participants"]["from"]) == 1
+        assert data["participants"]["from"][0]["name"] == "Alice"
+        assert len(data["participants"]["to"]) == 1
+        assert data["participants"]["to"][0]["contact_id"] == "contact-bob"
+        assert len(data["participants"]["cc"]) == 1
+        assert data["participants"]["cc"][0]["address"] == "carol@example.com"
+        assert len(data["participants"]["bcc"]) == 1
+        assert data["participants"]["bcc"][0]["address"] == "dave@example.com"
+
+    def test_preview_no_participants(self, client):
+        _seed_communication()
+        resp = client.get("/api/v1/communications/comm-1/preview")
+        data = resp.json()
+        assert data["participants"]["from"] == []
+        assert data["participants"]["to"] == []
+        assert data["participants"]["cc"] == []
+        assert data["participants"]["bcc"] == []
+
+    def test_preview_with_attachments(self, client):
+        _seed_communication()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO attachments (id, communication_id, filename, mime_type, size_bytes, created_at) "
+                "VALUES ('att-1', 'comm-1', 'report.pdf', 'application/pdf', 12345, ?)",
+                (_NOW,),
+            )
+        resp = client.get("/api/v1/communications/comm-1/preview")
+        data = resp.json()
+        assert len(data["attachments"]) == 1
+        att = data["attachments"][0]
+        assert att["id"] == "att-1"
+        assert att["filename"] == "report.pdf"
+        assert att["mime_type"] == "application/pdf"
+        assert att["size_bytes"] == 12345
+
+    def test_preview_no_attachments(self, client):
+        _seed_communication()
+        data = client.get("/api/v1/communications/comm-1/preview").json()
+        assert data["attachments"] == []
+
+    def test_preview_triage_result(self, client):
+        _seed_communication(triage_result="action_required")
+        data = client.get("/api/v1/communications/comm-1/preview").json()
+        assert data["triage_result"] == "action_required"
+
+    def test_preview_triage_null(self, client):
+        _seed_communication(triage_result=None)
+        data = client.get("/api/v1/communications/comm-1/preview").json()
+        assert data["triage_result"] is None
+
+    def test_preview_boolean_fields(self, client):
+        _seed_communication(is_read=1, is_archived=1)
+        data = client.get("/api/v1/communications/comm-1/preview").json()
+        assert data["is_read"] is True
+        assert data["is_archived"] is True
+
+    def test_preview_sms_channel(self, client):
+        _seed_communication(
+            channel="sms", subject=None, cleaned_html="Hey there",
+            search_text="Hey there",
+            phone_number_from="+15551234567",
+        )
+        data = client.get("/api/v1/communications/comm-1/preview").json()
+        assert data["channel"] == "sms"
+        assert data["subject"] is None
+        assert data["cleaned_html"] == "Hey there"
+        assert data["phone_number_from"] == "+15551234567"
+
+    def test_preview_null_content(self, client):
+        _seed_communication(cleaned_html=None, search_text=None, snippet="Just a snippet")
+        data = client.get("/api/v1/communications/comm-1/preview").json()
+        assert data["cleaned_html"] is None
+        assert data["snippet"] == "Just a snippet"
+
+    def test_preview_phone_with_duration(self, client):
+        _seed_communication(
+            channel="phone", subject=None, cleaned_html=None, search_text=None,
+            duration_seconds=300,
+            phone_number_from="+15551111111",
+            phone_number_to="+15552222222",
+        )
+        data = client.get("/api/v1/communications/comm-1/preview").json()
+        assert data["channel"] == "phone"
+        assert data["duration_seconds"] == 300
+        assert data["phone_number_from"] == "+15551111111"
+        assert data["phone_number_to"] == "+15552222222"

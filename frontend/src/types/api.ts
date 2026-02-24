@@ -313,3 +313,44 @@ export interface CompanyMergeResult {
   relationships_reassigned: number
   events_reassigned: number
 }
+
+// --- Communication Preview types ---
+
+export interface CommunicationParticipant {
+  address: string
+  name: string | null
+  contact_id: string | null
+}
+
+export interface CommunicationAttachment {
+  id: string
+  filename: string
+  mime_type: string | null
+  size_bytes: number | null
+}
+
+export interface CommunicationPreviewData {
+  id: string
+  channel: string
+  direction: string | null
+  timestamp: string
+  subject: string | null
+  sender_name: string | null
+  sender_address: string | null
+  cleaned_html: string | null
+  search_text: string | null
+  snippet: string | null
+  triage_result: string | null
+  is_read: boolean
+  is_archived: boolean
+  duration_seconds: number | null
+  phone_number_from: string | null
+  phone_number_to: string | null
+  participants: {
+    from: CommunicationParticipant[]
+    to: CommunicationParticipant[]
+    cc: CommunicationParticipant[]
+    bcc: CommunicationParticipant[]
+  }
+  attachments: CommunicationAttachment[]
+}

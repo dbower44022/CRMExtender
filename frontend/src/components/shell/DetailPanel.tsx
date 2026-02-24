@@ -3,6 +3,7 @@ import { X, ChevronUp, ChevronDown } from 'lucide-react'
 import { useLayoutStore } from '../../stores/layout.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { RecordDetail } from '../detail/RecordDetail.tsx'
+import { CommunicationPreviewCard } from '../detail/CommunicationPreviewCard.tsx'
 
 export function DetailPanel() {
   const hideDetailPanel = useLayoutStore((s) => s.hideDetailPanel)
@@ -71,10 +72,14 @@ export function DetailPanel() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
-        <RecordDetail
-          entityType={activeEntityType}
-          entityId={selectedRowId}
-        />
+        {activeEntityType === 'communication' ? (
+          <CommunicationPreviewCard entityId={selectedRowId} />
+        ) : (
+          <RecordDetail
+            entityType={activeEntityType}
+            entityId={selectedRowId}
+          />
+        )}
       </div>
     </div>
   )

@@ -77,7 +77,7 @@ def migrate():
                 )
 
                 cursor.execute(
-                    "UPDATE communications SET content = ? WHERE id = ?",
+                    "UPDATE communications SET original_text = ? WHERE id = ?",
                     (new_body, db_id)
                 )
                 updated += 1

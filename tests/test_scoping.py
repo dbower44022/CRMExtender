@@ -193,7 +193,7 @@ def _add_comm_and_link(conn, conv_id, account_id, sender="x@test.com"):
     comm_id = _uid()
     conn.execute(
         "INSERT INTO communications "
-        "(id, account_id, channel, timestamp, content, sender_address, "
+        "(id, account_id, channel, timestamp, original_text, sender_address, "
         "created_at, updated_at) "
         "VALUES (?, ?, 'email', ?, 'test', ?, ?, ?)",
         (comm_id, account_id, _NOW, sender, _NOW, _NOW),

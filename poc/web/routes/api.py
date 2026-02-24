@@ -1285,6 +1285,71 @@ def communication_detail_api(request: Request, comm_id: str):
     }
 
 
+@router.get("/communications/{comm_id}/preview")
+def communication_preview_api(request: Request, comm_id: str):
+    """Rich preview data for the communication preview card."""
+    with get_connection() as conn:
+        comm = conn.execute(
+            "SELECT * FROM communications WHERE id = ?", (comm_id,)
+        ).fetchone()
+        if not comm:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        comm = dict(comm)
+
+        # Participants grouped by role
+        parts = conn.execute(
+            "SELECT address, name, contact_id, role "
+            "FROM communication_participants WHERE communication_id = ? "
+            "ORDER BY role, name COLLATE NOCASE",
+            (comm_id,),
+        ).fetchall()
+
+        participants: dict[str, list] = {"from": [], "to": [], "cc": [], "bcc": []}
+        for p in parts:
+            role = p["role"] if p["role"] in participants else "to"
+            participants[role].append({
+                "address": p["address"],
+                "name": p["name"],
+                "contact_id": p["contact_id"],
+            })
+
+        # Attachments
+        attachments = [
+            {
+                "id": a["id"],
+                "filename": a["filename"],
+                "mime_type": a["mime_type"],
+                "size_bytes": a["size_bytes"],
+            }
+            for a in conn.execute(
+                "SELECT id, filename, mime_type, size_bytes "
+                "FROM attachments WHERE communication_id = ?",
+                (comm_id,),
+            ).fetchall()
+        ]
+
+    return {
+        "id": comm["id"],
+        "channel": comm["channel"],
+        "direction": comm.get("direction"),
+        "timestamp": comm.get("timestamp"),
+        "subject": comm.get("subject"),
+        "sender_name": comm.get("sender_name"),
+        "sender_address": comm.get("sender_address"),
+        "cleaned_html": comm.get("cleaned_html") or comm.get("body_html"),
+        "search_text": comm.get("search_text") or comm.get("content"),
+        "snippet": comm.get("snippet"),
+        "triage_result": comm.get("triage_result"),
+        "is_read": bool(comm.get("is_read")),
+        "is_archived": bool(comm.get("is_archived")),
+        "duration_seconds": comm.get("duration_seconds"),
+        "phone_number_from": comm.get("phone_number_from"),
+        "phone_number_to": comm.get("phone_number_to"),
+        "participants": participants,
+        "attachments": attachments,
+    }
+
+
 # ------------------------------------------------------------------
 # Project detail
 # ------------------------------------------------------------------

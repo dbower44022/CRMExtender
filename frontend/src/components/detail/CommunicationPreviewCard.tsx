@@ -154,8 +154,8 @@ function sanitizeHtml(rawHtml: string): string {
   // Remove tracking pixel images (1x1 or hidden) — prevents ERR_BLOCKED_BY_CLIENT from ad blockers
   html = html.replace(/<img\b[^>]*\b(?:width|height)\s*=\s*["']?1(?:px)?["']?[^>]*\/?>/gi, '')
   html = html.replace(/<img\b[^>]*style\s*=\s*["'][^"']*(?:display\s*:\s*none|visibility\s*:\s*hidden)[^"']*["'][^>]*\/?>/gi, '')
-  // Remove known tracking pixel URLs (no width/height attrs, use CSS sizing instead)
-  html = html.replace(/<img\b[^>]*\bsrc\s*=\s*["'][^"']*(?:\/open[?.]|\/track[?.]|email_open_log|\/pixel[?.]|\/beacon[?.]|\.gif\?)[^"']*["'][^>]*\/?>/gi, '')
+  // Remove known tracking pixel URLs and common spacer/beacon image filenames
+  html = html.replace(/<img\b[^>]*\bsrc\s*=\s*["'][^"']*(?:\/open[?.]|\/track[?.]|email_open_log|\/pixel[?.]|\/beacon[?.]|\.gif\?|\/transparent\.gif|\/spacer\.gif|\/blank\.gif|\/clear\.gif)[^"']*["'][^>]*\/?>/gi, '')
   return html
 }
 

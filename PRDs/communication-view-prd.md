@@ -495,12 +495,24 @@ The Content Card is the primary reading surface in the full View. It presents th
 │                                                                   │
 │  RE: new owner of hanger                                          │
 │──────────────────────────────────────────────────────────────────│
-│                                                                   │
+│                                          [PRIMARY ZONE]          │
 │  Your guy.                                                        │
 │                                                                   │
 │  I am on my way home and will call you when I get back in the US. │
 │                                                                   │
 │  Doug                                                             │
+│                                                                   │
+│  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - │
+│                                          [QUOTED ZONE]           │
+│  On Aug 24, 2017, Matt Brennan wrote:    (reduced opacity)       │
+│  │ I thought you wanted to get away from                         │
+│  │ Bill's guy and use my guy? He sent you                        │
+│  │ a quote for $3,000 for the annual...                          │
+│  │                                                               │
+│  │ On Aug 22, 2017, Matt Brennan wrote:                          │
+│  │ │ Stopped by the hanger today and spoke                      │
+│  │ │ to Bill. Sent an e-mail to my mechanic                     │
+│  │ │ and went over what we are looking for...                    │
 │                                                                   │
 │──────────────────────────────────────────────────────────────────│
 │  📎 Attachments (2)                                               │
@@ -571,22 +583,44 @@ Rules for **BCC:**
 - Prominent enough that the user’s eye goes to it naturally as the answer to “what is this about?”
 - If NULL (rare for email), the subject line is omitted and the content flows directly below the recipients.
 
-**Body:**
+**Body — Two-Zone Rendering:**
 
-- cleaned_html rendered as formatted text. The original paragraph structure is preserved.
-- If the email contained HTML formatting (bold, italic, links, lists), cleaned_html should preserve this structure where the extraction pipeline retains it. Simple formatting renders natively; complex HTML layouts are flattened to readable text.
+The Communication Content Card shows the **complete email** — not a stripped version. The user should never wonder "did the system cut something?" However, the new message must visually dominate, with the quoted reply chain clearly subordinate.
+
+The body renders in two visual zones:
+
+**Primary zone — New message content:**
+- Full contrast, full text weight. This is the content the sender actually wrote in this email.
+- Rendered with HTML formatting preserved (bold, italic, links, lists) from the original email.
+- This zone commands the user's attention immediately.
+
+**Quoted zone — Reply chain:**
+- Visually stepped back with three reinforcing cues:
+  1. **Vertical bar** — A subtle left-border line running the full height of the quoted block (the standard "quoted text" convention from email clients).
+  2. **Reduced opacity** — Text renders at reduced contrast (lighter color or lower opacity) so the user's eye stays on the primary zone. Still readable — the user can glance down for thread context without any clicks.
+  3. **Indent** — The quoted block is indented from the left edge, further separating it from the primary content.
+- If the reply chain contains nested quotes (a reply within a reply), each nesting level gets an additional vertical bar and indent, progressively stepping back.
+- The "On [date], [person] wrote:" attribution lines that introduce quoted blocks are part of the quoted zone and receive the same visual treatment.
+
+**Pipeline implication:**
+
+The content extraction pipeline must mark the split point between new content and quoted content rather than removing the quoted content. Specifically, cleaned_html should wrap quoted portions in a semantic element (e.g., `<blockquote class="quoted-reply">`) so the UI can apply the two-zone visual treatment. Signatures, boilerplate, and promotional footers are still removed entirely — only the meaningful quoted reply chain is preserved with markup.
+
+This means cleaned_html serves two different rendering contexts:
+- **Communication Content Card** — Renders the full cleaned_html including the quoted-reply wrappers, with visual treatment applied to the quoted zones.
+- **Conversation timeline** — Strips or collapses the quoted-reply wrappers, showing only the new message content (since the other messages in the thread are already visible as separate timeline entries).
 
 **Attachment area:**
 
-- If has_attachments is true, an attachment section renders below the body, separated by a divider.
+- If has_attachments is true, an attachment section renders below the body (below both zones), separated by a divider.
 - Each attachment renders as a row: file type icon, filename, file size, and a download action button (⬇).
 - Attachment rows are interactive — clicking the download button initiates the download (on-demand from provider in Phase 1, from object storage in Phase 2+).
 
 **View Original expander:**
 
 - A collapsible section at the bottom of the Content Card. Collapsed by default.
-- When expanded, shows original_text — the original, unprocessed content including quoted replies, signatures, and boilerplate that the content extraction pipeline removed.
-- Purpose: debugging and verification. Users can confirm that content extraction didn't remove important content.
+- When expanded, shows original_text — the complete unprocessed plain text including signatures, boilerplate, and promotional footers that the content extraction pipeline removed.
+- Purpose: debugging and verification. Users can confirm that content extraction didn't remove important content. In most cases the two-zone body above shows everything the user needs, making View Original a rarely-used safety net.
 
 ### 7.2 SMS / MMS Content Card
 
@@ -655,9 +689,11 @@ Same structure as Phone Call (Recorded) with video icon and video playback contr
 
 | Rule                      | Behavior                                                                                                                                                                                                                       |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Two-zone body (email)** | New message content renders at full contrast (primary zone). Quoted reply chain renders with vertical left bar, reduced opacity, and indent (quoted zone). Signatures and boilerplate are stripped entirely — only meaningful quoted replies preserved. |
+| **Nested quotes**         | Each nesting level in the reply chain gets an additional vertical bar and indent, progressively stepping back. Deeply nested quotes become increasingly subtle. |
 | **Participant links**     | Resolved contacts are clickable links navigating to the Contact record. Unresolved participants render as plain text with a subtle indicator.                                                                                  |
 | **Fills available space** | No artificial truncation. Content flows to its natural length. Card scrolls if content exceeds available space (in single-column layout, the whole view scrolls; in two-column layout, the left column scrolls independently). |
-| **View Original**         | Available only for channels where cleaned_html differs from original_text (primarily email). Collapsed by default.                                                                                                              |
+| **View Original**         | Available only for email channel. Collapsed by default. Shows original_text with everything the pipeline removed (signatures, boilerplate, promotional footers). |
 | **Attachment actions**    | Download button on each attachment. Playback controls for audio/video recordings. These are the only interactive elements in the Content Card.                                                                                 |
 
 **Tasks:**
@@ -667,16 +703,17 @@ Same structure as Phone Call (Recorded) with video icon and video playback contr
 - [ ] CVCC-03: Implement recipient line logic (current user bold and first, alphabetical remaining, three-name cap, "+X Others" link)
 - [ ] CVCC-04: Implement CC line display with same rules as To line
 - [ ] CVCC-05: Implement subject line as largest/boldest text on Content Card
-- [ ] CVCC-06: Implement email Content Card body rendering (cleaned_html with formatting preserved)
-- [ ] CVCC-07: Implement SMS/MMS Content Card rendering
-- [ ] CVCC-08: Implement recorded call Content Card rendering (transcript + playback)
-- [ ] CVCC-09: Implement manual entry Content Card rendering (phone_manual, video_manual, in_person, note)
-- [ ] CVCC-10: Implement recorded video Content Card rendering (transcript + video playback)
-- [ ] CVCC-11: Implement participant name linking to Contact records
-- [ ] CVCC-12: Implement View Original expander for email
-- [ ] CVCC-13: Implement attachment download action
-- [ ] CVCC-14: Implement audio/video playback controls
-- [ ] CVCC-15: Implement "+X Others" link navigation to Participants Card
+- [ ] CVCC-06: Implement email Content Card two-zone body rendering (primary zone at full contrast, quoted zone with vertical bar + reduced opacity + indent)
+- [ ] CVCC-07: Implement nested quote rendering (progressive vertical bars and indentation per nesting level)
+- [ ] CVCC-08: Implement SMS/MMS Content Card rendering
+- [ ] CVCC-09: Implement recorded call Content Card rendering (transcript + playback)
+- [ ] CVCC-10: Implement manual entry Content Card rendering (phone_manual, video_manual, in_person, note)
+- [ ] CVCC-11: Implement recorded video Content Card rendering (transcript + video playback)
+- [ ] CVCC-12: Implement participant name linking to Contact records
+- [ ] CVCC-13: Implement View Original expander for email
+- [ ] CVCC-14: Implement attachment download action
+- [ ] CVCC-15: Implement audio/video playback controls
+- [ ] CVCC-16: Implement "+X Others" link navigation to Participants Card
 
 **Tests:**
 
@@ -690,17 +727,22 @@ Same structure as Phone Call (Recorded) with video icon and video playback contr
 - [ ] CVCC-T08: "+X Others" link navigates to Participants Card
 - [ ] CVCC-T09: Remaining recipients (after current user) sorted alphabetically by last name
 - [ ] CVCC-T10: Subject line renders as largest/boldest text on the card
-- [ ] CVCC-T11: Resolved participant names render as clickable links
-- [ ] CVCC-T12: Unresolved participant names render as plain text with indicator
-- [ ] CVCC-T13: BCC line visible only to sender/account owner
-- [ ] CVCC-T14: View Original expander shows original_text when expanded
-- [ ] CVCC-T15: View Original expander is collapsed by default
-- [ ] CVCC-T16: Attachment download action initiates file download
-- [ ] CVCC-T17: Audio recording shows playback controls
-- [ ] CVCC-T18: SMS Content Card omits subject and View Original
-- [ ] CVCC-T19: Manual entry Content Card renders user-authored notes
-- [ ] CVCC-T20: Content Card with no attachments omits attachment area entirely
-- [ ] CVCC-T21: Single To recipient, no CC — To line shows one name, CC line omitted
+- [ ] CVCC-T11: New message content renders at full contrast in primary zone
+- [ ] CVCC-T12: Quoted reply chain renders with vertical bar, reduced opacity, and indent
+- [ ] CVCC-T13: Nested quotes show progressive vertical bars and indentation
+- [ ] CVCC-T14: Email with no quoted replies renders entire body as primary zone
+- [ ] CVCC-T15: Signatures and boilerplate are stripped (not in quoted zone)
+- [ ] CVCC-T16: Resolved participant names render as clickable links
+- [ ] CVCC-T17: Unresolved participant names render as plain text with indicator
+- [ ] CVCC-T18: BCC line visible only to sender/account owner
+- [ ] CVCC-T19: View Original expander shows original_text when expanded
+- [ ] CVCC-T20: View Original expander is collapsed by default
+- [ ] CVCC-T21: Attachment download action initiates file download
+- [ ] CVCC-T22: Audio recording shows playback controls
+- [ ] CVCC-T23: SMS Content Card omits subject and View Original
+- [ ] CVCC-T24: Manual entry Content Card renders user-authored notes
+- [ ] CVCC-T25: Content Card with no attachments omits attachment area entirely
+- [ ] CVCC-T26: Single To recipient, no CC — To line shows one name, CC line omitted
 
 ---
 

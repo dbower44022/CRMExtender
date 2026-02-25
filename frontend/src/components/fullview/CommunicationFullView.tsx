@@ -74,6 +74,8 @@ export function CommunicationFullView({ commId, onClose }: CommunicationFullView
       <ParticipantsCard
         participants={data.participants}
         providerAccount={data.provider_account}
+        senderName={data.sender_name}
+        senderAddress={data.sender_address}
         onClose={onClose}
       />
       <SummaryCard data={data} />

@@ -135,3 +135,29 @@ body {
 .separator-handle:active {
   background: var(--color-primary-400);
 }
+
+/* Email body — typography normalization for rendered email HTML */
+.email-body {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--color-surface-800);
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.email-body p { margin: 0 0 0.75em; }
+.email-body p:last-child { margin-bottom: 0; }
+.email-body img { max-width: 100%; height: auto; }
+.email-body a { color: var(--color-primary-600); text-decoration: underline; }
+.email-body ul, .email-body ol { padding-left: 1.5em; margin: 0.5em 0; }
+.email-body li { margin: 0.25em 0; }
+.email-body table { border-collapse: collapse; max-width: 100%; }
+.email-body td, .email-body th { padding: 4px 8px; }
+
+/* Quoted zone — heavy demotion so it clearly reads as "old" */
+.email-body-quoted {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.5;
+}
+.email-body-quoted img { max-width: 100%; height: auto; }
+.email-body-quoted a { color: var(--color-surface-400); }

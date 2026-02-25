@@ -4,6 +4,8 @@ import type { CommunicationFullParticipant, CommunicationProviderAccount } from 
 interface ParticipantsCardProps {
   participants: CommunicationFullParticipant[]
   providerAccount: CommunicationProviderAccount | null
+  senderName: string | null
+  senderAddress: string | null
   onClose: () => void
 }
 
@@ -15,8 +17,28 @@ const ROLE_LABELS: Record<string, string> = {
   participant: 'Participant',
 }
 
-export function ParticipantsCard({ participants, providerAccount, onClose }: ParticipantsCardProps) {
-  if (participants.length === 0) return null
+export function ParticipantsCard({ participants, providerAccount, senderName, senderAddress, onClose }: ParticipantsCardProps) {
+  // Synthesize a sender entry if no 'from' participant exists but we have top-level sender data
+  const hasSenderParticipant = participants.some((p) => p.role === 'from')
+  const allParticipants: CommunicationFullParticipant[] = hasSenderParticipant
+    ? participants
+    : (senderName || senderAddress)
+      ? [
+          {
+            address: senderAddress ?? '',
+            name: senderName,
+            contact_id: null,
+            role: 'from',
+            is_account_owner: false,
+            contact_name: null,
+            company_name: null,
+            title: null,
+          },
+          ...participants,
+        ]
+      : participants
+
+  if (allParticipants.length === 0) return null
 
   const setActiveEntityType = useNavigationStore((s) => s.setActiveEntityType)
   const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
@@ -27,7 +49,7 @@ export function ParticipantsCard({ participants, providerAccount, onClose }: Par
         Participants
       </div>
       <div className="divide-y divide-surface-100">
-        {participants.map((p, i) => (
+        {allParticipants.map((p, i) => (
           <div key={i} className="px-4 py-2.5">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">

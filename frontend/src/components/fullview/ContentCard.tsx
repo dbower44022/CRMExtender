@@ -10,6 +10,8 @@ interface ContentCardProps {
   onClose: () => void
 }
 
+// ---------- Helpers ----------
+
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
@@ -24,42 +26,55 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-/** Format timestamp as two lines: date on top, time below */
 function formatTimestampTwoLine(isoString: string | null | undefined): { datePart: string; timePart: string } | null {
   if (!isoString) return null
   const date = new Date(isoString)
   if (isNaN(date.getTime())) return null
-
   const timePart = format(date, 'h:mm a')
-  if (isToday(date)) {
-    return { datePart: 'Today', timePart }
-  }
-  if (isThisYear(date)) {
-    return { datePart: format(date, 'MMM d'), timePart }
-  }
+  if (isToday(date)) return { datePart: 'Today', timePart }
+  if (isThisYear(date)) return { datePart: format(date, 'MMM d'), timePart }
   return { datePart: format(date, 'MMM d, yyyy'), timePart }
 }
 
-/**
- * Split email HTML into primary and quoted zones.
- * Detects common quote/forward markers and splits at the first match.
- */
+// ---------- Avatar ----------
+
+const AVATAR_COLORS = [
+  '#4f46e5', '#0891b2', '#059669', '#d97706', '#dc2626',
+  '#7c3aed', '#2563eb', '#c026d3', '#ea580c', '#0d9488',
+]
+
+function getAvatarColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
+function SenderAvatar({ name }: { name: string }) {
+  const initial = (name[0] ?? '?').toUpperCase()
+  const bg = getAvatarColor(name)
+  return (
+    <div
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
+      style={{ backgroundColor: bg }}
+    >
+      {initial}
+    </div>
+  )
+}
+
+// ---------- Two-zone split ----------
+
 function splitEmailZones(html: string): { primaryHtml: string; quotedHtml: string | null } {
-  // Detection patterns for quote/forward boundaries
   const patterns = [
-    // "On [date], [name] wrote:" — Gmail/Apple Mail
     /On\s+.{5,80}\s+wrote:\s*/i,
-    // Gmail forward marker
-    /---------- Forwarded message ----------/,
-    // Outlook forward marker
-    /-----Original Message-----/,
-    // Outlook-style quote header block (From: ... Sent: ... To: ... Subject:)
+    /-{5,}\s*Forwarded message\s*-{5,}/,
+    /-{3,}\s*Original Message\s*-{3,}/,
     /From:\s*.+?(?:\r?\n|\s)Sent:\s*.+?(?:\r?\n|\s)To:\s*.+?(?:\r?\n|\s)Subject:/s,
   ]
 
-  // Also check for <blockquote> tags — split at the first one
   const blockquoteIdx = html.search(/<blockquote[\s>]/i)
-
   let earliestIdx = -1
 
   for (const pattern of patterns) {
@@ -69,7 +84,6 @@ function splitEmailZones(html: string): { primaryHtml: string; quotedHtml: strin
     }
   }
 
-  // Use blockquote position if it's earlier
   if (blockquoteIdx !== -1 && (earliestIdx === -1 || blockquoteIdx < earliestIdx)) {
     earliestIdx = blockquoteIdx
   }
@@ -83,6 +97,8 @@ function splitEmailZones(html: string): { primaryHtml: string; quotedHtml: strin
     quotedHtml: html.slice(earliestIdx),
   }
 }
+
+// ---------- Sub-components ----------
 
 function ContactLink({
   participant,
@@ -117,10 +133,6 @@ function ContactLink({
   return <span className={className}>{children}</span>
 }
 
-/**
- * Build a capped recipient list with current-user-first and "+X Others" overflow.
- * Returns array of display elements.
- */
 function RecipientLine({
   label,
   participants,
@@ -134,7 +146,6 @@ function RecipientLine({
 
   const MAX_NAMES = 3
 
-  // Sort: account owner first, then by last name
   const sorted = [...participants].sort((a, b) => {
     if (a.is_account_owner && !b.is_account_owner) return -1
     if (!a.is_account_owner && b.is_account_owner) return 1
@@ -149,9 +160,9 @@ function RecipientLine({
   const overflowCount = sorted.length - MAX_NAMES
 
   return (
-    <div className="flex gap-1.5 text-sm">
-      <span className="shrink-0 text-surface-400">{label}:</span>
-      <span className="text-surface-600">
+    <div className="flex gap-1.5 text-[13px] leading-snug">
+      <span className="shrink-0 font-medium text-surface-500">{label}:</span>
+      <span className="text-surface-700">
         {visible.map((p, i) => {
           const displayName = p.contact_name || p.name || p.address
           return (
@@ -177,8 +188,39 @@ function RecipientLine({
   )
 }
 
+// ---------- Sender resolution ----------
+
+function resolveSender(data: CommunicationFullData): {
+  displayName: string
+  emailAddress: string | null
+  participant: CommunicationFullParticipant | null
+} {
+  const fromParticipant = data.participants.find((p) => p.role === 'from') ?? null
+
+  if (fromParticipant) {
+    const displayName = fromParticipant.contact_name || fromParticipant.name || fromParticipant.address
+    const hasName = !!(fromParticipant.contact_name || fromParticipant.name)
+    return {
+      displayName,
+      emailAddress: hasName ? fromParticipant.address : null,
+      participant: fromParticipant,
+    }
+  }
+
+  const displayName = data.sender_name || data.sender_address || 'Unknown'
+  const hasName = !!data.sender_name
+  return {
+    displayName,
+    emailAddress: hasName ? data.sender_address : null,
+    participant: null,
+  }
+}
+
+// ---------- Main component ----------
+
 export function ContentCard({ data, onClose }: ContentCardProps) {
   const [showOriginal, setShowOriginal] = useState(false)
+  const [showQuoted, setShowQuoted] = useState(false)
 
   const isEmailLike = data.channel === 'email'
   const isPhoneLike = data.channel === 'phone' || data.channel === 'phone_manual' ||
@@ -186,68 +228,68 @@ export function ContentCard({ data, onClose }: ContentCardProps) {
   const isManualEntry = data.channel === 'phone_manual' || data.channel === 'video_manual' ||
                         data.channel === 'in_person' || data.channel === 'note'
 
-  const senderParticipants = data.participants.filter((p) => p.role === 'from')
   const toParticipants = data.participants.filter((p) => p.role === 'to')
   const ccParticipants = data.participants.filter((p) => p.role === 'cc')
   const bccParticipants = data.participants.filter((p) => p.role === 'bcc')
 
-  // For non-email channels, all participants in one line
   const allParticipantNames = data.participants
     .filter((p) => !p.is_account_owner)
     .map((p) => p.contact_name || p.name || p.address)
     .filter(Boolean)
 
-  // Two-zone email body
   const emailZones = isEmailLike && data.cleaned_html
     ? splitEmailZones(sanitizeHtml(data.cleaned_html))
     : null
 
   const timestamp = formatTimestampTwoLine(data.timestamp)
+  const sender = isEmailLike ? resolveSender(data) : null
 
   return (
     <div className="flex flex-col">
-      {/* Header — channel-specific */}
+      {/* ── Email header ── */}
       {isEmailLike ? (
-        <div className="border-b border-surface-200 px-5 py-3">
-          {/* Sender + Timestamp row */}
-          <div className="flex items-start justify-between">
+        <div className="border-b border-surface-200 px-6 py-4">
+          {/* Sender row: avatar + name/email + timestamp */}
+          <div className="flex items-start gap-3">
+            <SenderAvatar name={sender!.displayName} />
             <div className="min-w-0 flex-1">
-              {/* Sender display name — large, bold */}
-              {senderParticipants.length > 0 && (
-                <>
-                  <div className="text-base font-bold text-surface-900">
-                    <ContactLink participant={senderParticipants[0]} onClose={onClose}>
-                      {senderParticipants[0].contact_name || senderParticipants[0].name || senderParticipants[0].address}
-                    </ContactLink>
+              <div className="flex items-start justify-between">
+                <div className="min-w-0">
+                  <div className="text-lg font-bold leading-tight text-surface-900">
+                    {sender!.participant ? (
+                      <ContactLink participant={sender!.participant} onClose={onClose}>
+                        {sender!.displayName}
+                      </ContactLink>
+                    ) : (
+                      <span>{sender!.displayName}</span>
+                    )}
                   </div>
-                  {/* Sender email — smaller, lighter (only if name differs from address) */}
-                  {senderParticipants[0].address &&
-                    (senderParticipants[0].contact_name || senderParticipants[0].name) && (
-                    <div className="text-sm text-surface-400">
-                      {senderParticipants[0].address}
+                  {sender!.emailAddress && (
+                    <div className="mt-0.5 text-[13px] text-surface-500">
+                      {sender!.emailAddress}
                     </div>
                   )}
-                </>
-              )}
-            </div>
-            {/* Timestamp — right-aligned, two lines */}
-            {timestamp && (
-              <div className="shrink-0 text-right text-sm text-surface-500">
-                <div>{timestamp.datePart}</div>
-                <div>{timestamp.timePart}</div>
+                </div>
+                {timestamp && (
+                  <div className="shrink-0 pl-4 text-right text-[13px] leading-tight text-surface-400">
+                    <div>{timestamp.datePart}</div>
+                    <div className="mt-0.5">{timestamp.timePart}</div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Recipients */}
-          <div className="mt-2 space-y-0.5">
-            <RecipientLine label="To" participants={toParticipants} onClose={onClose} />
-            <RecipientLine label="CC" participants={ccParticipants} onClose={onClose} />
-            <RecipientLine label="BCC" participants={bccParticipants} onClose={onClose} />
+              {/* Recipients — below sender name, inside the avatar-indented area */}
+              <div className="mt-2.5 space-y-0.5">
+                <RecipientLine label="To" participants={toParticipants} onClose={onClose} />
+                <RecipientLine label="CC" participants={ccParticipants} onClose={onClose} />
+                <RecipientLine label="BCC" participants={bccParticipants} onClose={onClose} />
+              </div>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="border-b border-surface-200 px-5 py-3">
+        /* ── Non-email header ── */
+        <div className="border-b border-surface-200 px-6 py-4">
           <div className="flex items-start justify-between">
             <div className="text-sm font-semibold text-surface-900">
               {isPhoneLike && !isManualEntry
@@ -258,14 +300,14 @@ export function ContentCard({ data, onClose }: ContentCardProps) {
               }
             </div>
             {timestamp && (
-              <div className="shrink-0 text-right text-sm text-surface-500">
+              <div className="shrink-0 pl-4 text-right text-[13px] leading-tight text-surface-400">
                 <div>{timestamp.datePart}</div>
-                <div>{timestamp.timePart}</div>
+                <div className="mt-0.5">{timestamp.timePart}</div>
               </div>
             )}
           </div>
           {data.duration_seconds != null && (
-            <div className="mt-0.5 text-xs text-surface-500">
+            <div className="mt-1 text-xs text-surface-500">
               Duration: {formatDuration(data.duration_seconds)}
             </div>
           )}
@@ -277,31 +319,53 @@ export function ContentCard({ data, onClose }: ContentCardProps) {
         </div>
       )}
 
-      {/* Subject — largest/boldest text on the card */}
+      {/* ── Subject ── */}
       {data.subject && (
-        <div className="border-b border-surface-200 px-5 py-3">
-          <h2 className="text-lg font-bold text-surface-900">{data.subject}</h2>
+        <div className="border-b border-surface-200 px-6 py-4">
+          <h2 className="text-xl font-bold leading-snug text-surface-900">{data.subject}</h2>
         </div>
       )}
 
-      {/* Body */}
+      {/* ── Body ── */}
       {emailZones ? (
-        <div className="px-5 py-4" style={{ overflowWrap: 'break-word' }}>
-          {/* Primary zone — full contrast */}
-          <div dangerouslySetInnerHTML={{ __html: emailZones.primaryHtml }} />
+        <div className="px-6 py-5">
+          {/* Primary zone — new message content, full contrast, controlled typography */}
+          <div
+            className="email-body"
+            dangerouslySetInnerHTML={{ __html: emailZones.primaryHtml }}
+          />
 
-          {/* Quoted zone — vertical bar, indent, reduced contrast */}
+          {/* Quoted zone — collapsed by default */}
           {emailZones.quotedHtml && (
-            <div
-              className="mt-4 border-l-3 border-surface-300 pl-4 text-surface-500 [&_blockquote]:ml-2 [&_blockquote]:border-l-2 [&_blockquote]:border-surface-200 [&_blockquote]:pl-3"
-              dangerouslySetInnerHTML={{ __html: emailZones.quotedHtml }}
-            />
+            showQuoted ? (
+              <>
+                <button
+                  onClick={() => setShowQuoted(false)}
+                  className="mt-4 flex items-center gap-1.5 text-xs font-medium text-surface-400 hover:text-surface-600"
+                >
+                  <ChevronDown size={12} />
+                  Hide quoted text
+                </button>
+                <div
+                  className="email-body-quoted mt-2 border-l-4 border-surface-200 bg-surface-50 py-3 pl-4 pr-3 text-[13px] text-surface-400 [&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-surface-200 [&_blockquote]:pl-3"
+                  dangerouslySetInnerHTML={{ __html: emailZones.quotedHtml }}
+                />
+              </>
+            ) : (
+              <button
+                onClick={() => setShowQuoted(true)}
+                className="mt-4 flex items-center gap-1.5 text-xs font-medium text-surface-400 hover:text-surface-600"
+              >
+                <ChevronRight size={12} />
+                Show quoted text
+              </button>
+            )
           )}
         </div>
       ) : (
-        <div className="px-5 py-4">
+        <div className="px-6 py-5">
           {data.search_text ? (
-            <div className="whitespace-pre-wrap text-sm leading-relaxed text-surface-700">
+            <div className="email-body whitespace-pre-wrap">
               {data.search_text}
             </div>
           ) : data.snippet ? (
@@ -314,9 +378,9 @@ export function ContentCard({ data, onClose }: ContentCardProps) {
         </div>
       )}
 
-      {/* Attachments */}
+      {/* ── Attachments ── */}
       {data.attachments.length > 0 && (
-        <div className="border-t border-surface-200 px-5 py-3">
+        <div className="border-t border-surface-200 px-6 py-3">
           <div className="mb-2 flex items-center gap-2 text-xs font-medium text-surface-500">
             <Paperclip size={12} />
             Attachments ({data.attachments.length})
@@ -341,18 +405,18 @@ export function ContentCard({ data, onClose }: ContentCardProps) {
         </div>
       )}
 
-      {/* View Original expander */}
+      {/* ── View Original ── */}
       {isEmailLike && data.original_text && (
         <div className="border-t border-surface-200">
           <button
             onClick={() => setShowOriginal(!showOriginal)}
-            className="flex w-full items-center gap-1.5 px-5 py-2.5 text-xs font-medium text-surface-500 hover:bg-surface-50"
+            className="flex w-full items-center gap-1.5 px-6 py-2.5 text-xs font-medium text-surface-500 hover:bg-surface-50"
           >
             {showOriginal ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             View Original
           </button>
           {showOriginal && (
-            <div className="border-t border-surface-100 bg-surface-50 px-5 py-3">
+            <div className="border-t border-surface-100 bg-surface-50 px-6 py-3">
               <pre className="whitespace-pre-wrap text-xs leading-relaxed text-surface-600">
                 {data.original_text}
               </pre>

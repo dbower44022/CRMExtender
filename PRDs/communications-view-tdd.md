@@ -1,6 +1,6 @@
 # Communication View — TDD
 
-**Version:** 1.0
+**Version:** 2.0
 **Last Updated:** 2026-02-24
 **Status:** As-Built
 **Scope:** Feature Implementation
@@ -11,9 +11,9 @@
 
 ## 1. Overview
 
-This document captures the technical decisions made during implementation of the Communication Preview Card (PRD Section 4) and the underlying schema migration that supports HTML email rendering. The implementation spans Phase 32 (Preview Card with plain text) and Phase 32b (schema migration + HTML rendering).
+This document captures the technical decisions made during implementation of the Communication Preview Card (PRD Section 4), the Communication Full View (PRD Sections 5–13), and the underlying schema migration that supports HTML email rendering. The implementation spans Phase 32 (Preview Card with plain text), Phase 32b (schema migration + HTML rendering), and Phase 33 (Full View modal with CRM context cards).
 
-Phase 32 delivered a working preview card using the existing `content` column (quote-stripped plain text). Testing with real production email data revealed that plain text does not preserve the original email experience — formatting, structure, and visual hierarchy are lost. Phase 32b restructured the communications schema to separate raw content from display content and added HTML rendering in the preview card.
+Phase 32 delivered a working preview card using the existing `content` column (quote-stripped plain text). Testing with real production email data revealed that plain text does not preserve the original email experience — formatting, structure, and visual hierarchy are lost. Phase 32b restructured the communications schema to separate raw content from display content and added HTML rendering in the preview card. Phase 33 delivered the Full View — a modal overlay with enriched participant data, conversation assignment, provider account info, and all 8 CRM context cards.
 
 This is a living document. Decisions are recorded as they are made.
 
@@ -103,18 +103,27 @@ This is a living document. Decisions are recorded as they are made.
 
 ### 4.2 Sanitization Rules
 
-**Decision:** Six client-side regex sanitization passes before DOM injection:
+**Decision:** Eleven client-side regex sanitization passes before DOM injection. The sanitizer is a shared module at `frontend/src/lib/sanitizeHtml.ts`, imported by both the Preview Card and the Full View Content Card.
 
-| Rule | Regex | Purpose |
-|---|---|---|
-| Strip `<script>` tags | `/<script\b[^]*?<\/script\s*>/gi` | Prevents JavaScript execution |
-| Strip event handlers | `/\s+on\w+\s*=\s*(?:"[^"]*"\|'[^']*'\|[^\s>]*)/gi` | Removes onclick, onerror, onload, etc. |
-| Neutralize javascript: URLs | `/href\s*=\s*"javascript:[^"]*"/gi` → `href="#"` | Prevents navigation to javascript: protocol |
-| Strip @font-face blocks | `/@font-face\s*\{[^}]*\}/gi` | Prevents CORS errors from external font loads |
-| Strip 1x1 tracking pixels | `/<img\b[^>]*\b(?:width\|height)\s*=\s*["']?1(?:px)?["']?[^>]*\/?>/gi` | Removes tracking pixel images (1x1 dimensions) |
-| Strip hidden images | `/<img\b[^>]*style\s*=\s*["'][^"']*(?:display\s*:\s*none\|visibility\s*:\s*hidden)[^"']*["'][^>]*\/?>/gi` | Removes invisible tracking images |
+| # | Rule | Regex | Purpose |
+|---|---|---|---|
+| 1 | Strip `<script>` tags | `/<script\b[^]*?<\/script\s*>/gi` | Prevents JavaScript execution |
+| 2 | Strip event handlers | `/\s+on\w+\s*=\s*(?:"[^"]*"\|'[^']*'\|[^\s>]*)/gi` | Removes onclick, onerror, onload, etc. |
+| 3 | Neutralize javascript: URLs (double-quoted) | `/href\s*=\s*"javascript:[^"]*"/gi` → `href="#"` | Prevents navigation to javascript: protocol |
+| 4 | Neutralize javascript: URLs (single-quoted) | `/href\s*=\s*'javascript:[^']*'/gi` → `href='#'` | Same as above, single-quote variant |
+| 5 | Strip @font-face blocks | `/@font-face\s*\{[^}]*\}/gi` | Prevents CORS errors from external font loads |
+| 6 | Strip `<base>` tags | `/<base\b[^>]*\/?>/gi` | Prevents email base-href from hijacking page URL resolution |
+| 7 | Strip `<meta>` tags | `/<meta\b[^>]*\/?>/gi` | Prevents email charset/Content-Type meta from conflicting with page |
+| 8 | Strip `<link>` tags | `/<link\b[^>]*\/?>/gi` | Prevents preload/stylesheet CORS errors |
+| 9 | Strip cid: URL references | `/\s(?:src\|href)\s*=\s*["']cid:[^"']*["']/gi` | Removes Content-ID scheme (email-client-only, causes ERR_UNKNOWN_URL_SCHEME) |
+| 10 | Strip tracking pixels | `/<img\b[^>]*\b(?:width\|height)\s*=\s*["']?1(?:px)?["']?[^>]*\/?>/gi` + hidden-image variant | Removes 1x1 and display:none/visibility:hidden images |
+| 11 | Strip known tracking URLs | Pattern matching `/open`, `/track`, `/pixel`, `/beacon`, `.gif?`, spacer/blank/clear/transparent GIF filenames | Removes tracking beacons by URL pattern |
 
-**Rationale:** These six rules address the specific threats and noise observed in production email HTML: inline scripts (marketing analytics), event handlers (tracking pixels with `onerror` fallbacks), javascript: links (rare but present in phishing emails), `@font-face` declarations (present in virtually all marketing emails, causing CORS errors even after removing the iframe), and tracking pixel images. Marketing emails routinely embed 1x1 invisible tracking images from services like GoDaddy, Postmark, SendGrid, and engagement analytics platforms. When ad blockers intercept these requests, they generate `ERR_BLOCKED_BY_CLIENT` console errors. Stripping them from the HTML before rendering prevents the browser from attempting the load at all.
+**Rationale:** These rules address the specific threats and noise observed in production email HTML. The rule set grew iteratively as production testing revealed new issues:
+
+- **Rules 1–5** (Phase 32b): Core security (scripts, event handlers, javascript: URLs) and CORS noise (@font-face). These were the original sanitization rules.
+- **Rules 7–11** (Phase 32b, incremental): Added after production testing revealed `<meta>` tags conflicting with page-level charset parsing, `<link>` tags causing preload warnings, `cid:` scheme URLs generating ERR_UNKNOWN_URL_SCHEME errors, and tracking pixel images triggering ERR_BLOCKED_BY_CLIENT from ad blockers. Known tracking URL patterns (SendGrid, GoDaddy, Facebook, etc.) were stripped by filename/path heuristics.
+- **Rule 6** (Phase 33): Added after discovering that a forwarded email from gradebeam.com contained `<base href="http://www.gradebeam.com/">`. When rendered via `dangerouslySetInnerHTML`, the `<base>` tag injected into the page DOM hijacked the browser's URL resolution for **all** relative paths — causing API fetches (`/api/v1/...`) to resolve against the email's base URL instead of the app's origin. This broke all API calls after viewing that email. The `<base>` tag is the most critical sanitization rule because its effect is not confined to the email's rendering area — it corrupts the entire page's URL resolution.
 
 ### 4.3 CSS Injection Strategy
 
@@ -152,18 +161,19 @@ This is a living document. Decisions are recorded as they are made.
 
 ---
 
-## 5. Frontend Architecture
+## 5. Frontend Architecture — Preview Card
 
 ### 5.1 Component Structure
 
 **Decision:** The `CommunicationPreviewCard` component is a single file at `frontend/src/components/detail/CommunicationPreviewCard.tsx` containing:
 
 - `CommunicationPreviewCard` — Main component with channel-aware rendering
-- `HtmlBody` — Sanitizes and renders email HTML
-- `sanitizeHtml` — Pure function with four regex passes
+- `HtmlBody` — Sanitizes and renders email HTML (imports `sanitizeHtml` from shared module)
 - `formatParticipants` — Truncates participant lists at 3 names
 - `formatDuration` — Formats seconds to human-readable duration
 - `PreviewSkeleton` — Loading state placeholder
+
+The `sanitizeHtml` function was extracted to a shared module at `frontend/src/lib/sanitizeHtml.ts` during Phase 33 so both the Preview Card and the Full View Content Card could use it.
 
 ### 5.2 Data Fetching
 
@@ -213,7 +223,7 @@ These files use `ParsedEmail` dataclass attribute names (`body_plain`, `body_htm
 
 ## 7. Test Coverage
 
-### 7.1 API Tests (12 Communication Preview Tests)
+### 7.1 API Tests — Communication Preview (12 tests)
 
 All tests in `tests/test_api.py::TestCommunicationPreview`:
 
@@ -232,9 +242,31 @@ All tests in `tests/test_api.py::TestCommunicationPreview`:
 | `test_preview_null_content` | Null content falls back to snippet |
 | `test_preview_phone_with_duration` | Phone-specific fields (duration, phone numbers) |
 
-### 7.2 Full Suite Results
+### 7.2 API Tests — Communication Full View (15 tests)
 
-1152 tests total. 1151 pass, 1 pre-existing Google mock failure (`test_sync_contacts_creates_user_contacts` — `UniverseMismatchError` in Google API mock, unrelated to this feature).
+All tests in `tests/test_api.py::TestCommunicationFullView`:
+
+| Test | Validates |
+|---|---|
+| `test_full_not_found` | 404 for nonexistent communication ID |
+| `test_full_email_basic` | All core fields returned (channel, direction, timestamp, subject, cleaned_html, search_text, source, etc.) |
+| `test_full_participants_enriched` | Participants with contact_name, company_name, title populated via JOIN + correlated subqueries |
+| `test_full_participants_unresolved` | Null enrichment fields for participants without CRM contact records |
+| `test_full_conversation_assigned` | Conversation object returned with id, title, status, communication_count |
+| `test_full_conversation_none` | Null conversation when communication is unassigned |
+| `test_full_provider_account` | Provider account object (id, provider, email_address) populated from account_id FK |
+| `test_full_ai_summary_present` | Non-null ai_summary returned |
+| `test_full_ai_summary_null` | Null ai_summary returned as null |
+| `test_full_attachments` | Attachment list with id, filename, mime_type, size_bytes |
+| `test_full_original_text` | original_text field returned for View Original feature |
+| `test_full_provider_ids` | provider_message_id, provider_thread_id, header_message_id all present |
+| `test_full_timestamps` | created_at, updated_at fields returned |
+| `test_full_notes_empty` | Notes always returned as empty list (note_entities CHECK constraint excludes 'communication') |
+| `test_full_triage_result` | triage_result pass-through |
+
+### 7.3 Full Suite Results
+
+1540 tests total. 1538 pass, 2 pre-existing Google mock failures in `test_scoping.py` (unrelated to this feature).
 
 ---
 
@@ -252,6 +284,163 @@ Analysis of the production database (3,409 conversations, ~3,500+ communications
 | 150–366 KB | Heavy marketing HTML | "Automated Actions History" (366 KB), Amazon order emails |
 
 The largest email (366 KB) renders instantly with the direct DOM injection approach. The iframe approach took 30+ seconds for the same email.
+
+---
+
+## 9. Communication Full View (Phase 33)
+
+### 9.1 Architecture: Portal-Based Modal
+
+**Decision:** The Full View renders as a fixed-position overlay via React's `createPortal(…, document.body)`. Escape key and backdrop click close the modal.
+
+**Rationale:** The same pattern used by `RecordModal.tsx` for other entity types. A portal-based modal avoids z-index stacking issues within the nested panel layout (react-resizable-panels → DataGrid → modal). The modal is independent of the grid's scroll and panel hierarchy.
+
+**Alternatives Rejected:**
+
+- Route-based navigation (`/app/communications/{id}`) — Would break the grid context. The user expects to return to their exact scroll position and selection state after closing. A modal preserves this naturally.
+- Replacing the detail panel content — The detail panel is too narrow for the full reading experience. The PRD specifies a near-full-screen overlay.
+
+### 9.2 Backend: Enriched Full View Endpoint
+
+**Decision:** New `GET /api/v1/communications/{comm_id}/full` endpoint returning all communication fields plus enriched participant data, conversation assignment, provider account info, and notes.
+
+**Implementation Details:**
+
+- **Enriched participants:** `LEFT JOIN contacts` for contact_name, plus two correlated subqueries into `contact_companies` for company_name and title (where `is_primary = 1 AND is_current = 1`).
+- **PRAGMA column detection:** The `is_account_owner` column on `communication_participants` was added post-v17 and does not exist in the production database. The endpoint uses `PRAGMA table_info(communication_participants)` at runtime to detect whether the column exists, and conditionally includes it in the SELECT or substitutes `NULL AS is_account_owner`. This avoids a hard migration dependency.
+- **Conversation assignment:** `JOIN conversation_communications → conversations` with a correlated subquery for communication_count.
+- **Provider account:** Simple lookup from `provider_accounts` by `comm.account_id`.
+- **Notes:** Always returns `[]`. The `note_entities` table's CHECK constraint excludes `'communication'` as an entity_type, so no notes can be attached to communications in the current schema.
+- **Content fallbacks:** Same pattern as the preview endpoint — `comm.get("cleaned_html") or comm.get("body_html")` and `comm.get("search_text") or comm.get("content")` for pre/post-migration compatibility.
+
+**Rationale:** A separate `/full` endpoint (rather than expanding the existing `/preview` endpoint) keeps the preview response lightweight for rapid grid browsing. The full endpoint adds 4 extra queries (participants with enrichment, conversation, provider account, notes) that would add unnecessary latency to every preview request.
+
+### 9.3 Responsive Layout: Content-Aware Two-Column
+
+**Decision:** The modal evaluates container width and content word count to determine single-column vs two-column layout:
+
+| Condition | Layout |
+|---|---|
+| Container width < 900px | Single column |
+| Container width ≥ 900px AND word count ≤ 150 | Single column |
+| Container width ≥ 900px AND word count > 150 | Two column (62%/38% split) |
+
+**Implementation:** A `ResizeObserver` on the modal container tracks width changes. Word count is computed from `data.search_text` using `text.trim().split(/\s+/).filter(Boolean).length`. Two-column layout uses CSS flexbox (`flex-[62]` / `flex-[38]`) with independent `overflow-y: auto` scrolling on each column. The Identity Card always spans full width above both columns.
+
+**Rationale:** Short emails (< 150 words) render naturally in single-column — the user doesn't need CRM cards pinned beside a brief message. Long emails benefit from side-by-side layout so the user can read content without scrolling past it to reach CRM context.
+
+**Thresholds:** 900px and 150 words were taken from the PRD guidelines and confirmed through visual testing with production emails. The 62/38 split slightly favors content width over CRM cards.
+
+### 9.4 Card Component Architecture
+
+**Decision:** Ten new components in `frontend/src/components/fullview/`:
+
+| Component | Purpose | Suppression Rule |
+|---|---|---|
+| `CommunicationFullView.tsx` | Modal shell with responsive layout | — |
+| `IdentityCard.tsx` | Channel icon, direction, source, provider account, timestamp | Never |
+| `ContentCard.tsx` | Channel-aware content rendering (email header/body/attachments, SMS, phone, etc.) | Never |
+| `ParticipantsCard.tsx` | All participants with role badges, contact links, title+company, "(You)" badge | Suppressed when 0 participants |
+| `SummaryCard.tsx` | AI summary with source badge, disabled edit/regenerate buttons | Suppressed when ai_summary is null |
+| `ConversationCard.tsx` | Conversation link or "Not assigned" with disabled Assign button | Never |
+| `TriageCard.tsx` | Triage result with disabled Override button | Suppressed when triage_result is null |
+| `NotesCard.tsx` | Notes list with disabled "+ Add" button | Suppressed when notes array is empty |
+| `MetadataCard.tsx` | Source, provider, IDs, timestamps — collapsed by default | Never |
+| `FullViewSkeleton.tsx` | Loading skeleton matching modal layout | — |
+
+**Rationale:** Each CRM card is a separate component matching the PRD's card-based architecture. Cards self-suppress when they have no data, keeping the layout clean. The modal shell orchestrates layout without knowing card internals.
+
+### 9.5 Stubbed Actions
+
+**Decision:** Several PRD-specified actions are rendered as disabled buttons with "Coming soon" tooltips:
+
+| Action | Card | Why Stubbed |
+|---|---|---|
+| Attachment download | ContentCard | Requires storage layer (provider on-demand fetch or object storage) |
+| Edit/Regenerate summary | SummaryCard | Requires Published Summary subsystem |
+| Assign conversation | ConversationCard | Requires conversation picker UI and assignment API |
+| Override triage | TriageCard | Requires triage override API and AI processing queue |
+| Add note | NotesCard | Requires note_entities CHECK constraint change for 'communication' |
+
+**Rationale:** Rendering the buttons as disabled signals to the user that the feature exists conceptually and will be available in the future. Hiding them entirely would give no indication that the workflow is planned.
+
+### 9.6 Opening Mechanisms (Three Triggers)
+
+**Decision:** The Full View opens via three triggers, all converging on the same state (`commFullViewId` in DataGrid):
+
+| Trigger | File | Mechanism |
+|---|---|---|
+| Double-click on communication row | `DataGrid.tsx` | Fast double-click detection → `setCommFullViewId(id)` |
+| Enter key on focused row (non-editable cell) | `useGridKeyboard.ts` | Dispatches `grid:openFullView` custom event |
+| Maximize button on detail panel | `DetailPanel.tsx` | Dispatches `grid:openFullView` custom event |
+
+**Implementation:** DataGrid listens for the `grid:openFullView` custom event. When received with `activeEntityType === 'communication'`, it sets `commFullViewId`. For other entity types, it opens `RecordModal` instead. The custom event pattern decouples the triggers from DataGrid's state — the keyboard handler and detail panel don't need a ref to DataGrid.
+
+The Maximize button (Maximize2 icon from lucide-react) is conditionally rendered in `DetailPanel.tsx` only when `activeEntityType === 'communication'`.
+
+### 9.7 Content Card: Channel-Specific Rendering
+
+**Decision:** The Content Card uses channel detection to render four distinct layouts:
+
+| Channel | Header | Body | Extra |
+|---|---|---|---|
+| `email` | Sender name+email, To/CC/BCC recipient lists with contact links | `cleaned_html` via `dangerouslySetInnerHTML` + `sanitizeHtml` | Attachment list, "View Original" expander |
+| `sms` | Participant name + phone, direction | `search_text` as `whitespace-pre-wrap` | — |
+| `phone`, `video` (recorded) | "Call with [participants]", direction, duration | `search_text` as `whitespace-pre-wrap` | — |
+| `phone_manual`, `video_manual`, `in_person`, `note` | "[Type] with [participants]", direction, duration | `search_text` as `whitespace-pre-wrap` | — |
+
+**Participant linking:** Participant names with a non-null `contact_id` render as buttons that navigate to the contact record (`setActiveEntityType('contact')`, `setSelectedRow(contact_id, -1)`) and close the modal. Unresolved participants render as plain text.
+
+**Fallback chain:** Same as the preview card — `cleaned_html` → `search_text` → `snippet` (italic) → "No content" placeholder.
+
+### 9.8 Participants Card: Enriched Data Display
+
+**Decision:** Each participant renders as a row showing: name (linked if resolved), role badge ("Sender", "To", "CC", "BCC", "Participant"), title + company (from primary affiliation), and "(You)" badge for account owner.
+
+**Enrichment source:** The `/full` endpoint performs the enrichment server-side via SQL JOINs. The frontend receives pre-enriched data — no additional API calls needed per participant.
+
+**Rationale:** Server-side enrichment avoids N+1 API calls (one per participant to resolve contact/company). A single SQL query with LEFT JOIN and correlated subqueries returns all enrichment data in one round trip.
+
+### 9.9 Metadata Card: Collapsed by Default
+
+**Decision:** The Metadata Card renders collapsed by default (header only, with chevron toggle). Expanding reveals source, provider, account, provider IDs, and timestamps in a key-value layout.
+
+**Rationale:** Metadata is diagnostic/power-user information. Keeping it collapsed prevents it from taking space away from more frequently useful cards (participants, summary, conversation).
+
+### 9.10 TypeScript Types (Full View)
+
+**Decision:** Four new interfaces in `frontend/src/types/api.ts`:
+
+- `CommunicationFullParticipant` — extends preview participant with `contact_name`, `company_name`, `title`
+- `CommunicationConversation` — `id`, `title`, `status`, `communication_count`
+- `CommunicationProviderAccount` — `id`, `provider`, `email_address`
+- `CommunicationFullData` — all communication fields plus `participants[]`, `attachments[]`, `conversation`, `provider_account`, `notes[]`
+
+### 9.11 Data Fetching (Full View)
+
+**Decision:** `useCommunicationFull` hook in `frontend/src/api/communicationFull.ts` using `@tanstack/react-query` with 30s stale time and 5-minute GC time. Same caching strategy as the preview hook.
+
+---
+
+## 10. Production Compatibility
+
+### 10.1 Schema Divergence Between Test and Production
+
+**Decision:** The test database uses the latest schema (`cleaned_html`, `search_text`, `original_text`, `original_html`) while the production database is on v17 (`content`, `body_html`). Both API endpoints (preview and full) use `.get()` fallbacks to handle either schema transparently.
+
+**Problem discovered:** The `communication_participants` table in the test DB has an `is_account_owner` column that does not exist in the production DB. A naive `SELECT cp.is_account_owner` would fail with `OperationalError` on production.
+
+**Solution:** Runtime column detection via `PRAGMA table_info(communication_participants)`. If `is_account_owner` is present, select it directly. If not, substitute `NULL AS is_account_owner`. The frontend treats null as `false`.
+
+### 10.2 `<base>` Tag Hijacking (Discovered in Production)
+
+**Decision:** Strip `<base>` tags from email HTML in the sanitizer (Rule 6 in Section 4.2).
+
+**Discovery:** A forwarded email from gradebeam.com contained `<base href="http://www.gradebeam.com/">`. When the CommunicationPreviewCard rendered this email's HTML via `dangerouslySetInnerHTML`, the `<base>` tag was injected into the page DOM. Because `<base>` affects the entire document (not just the containing element), all subsequent `fetch()` calls using relative URLs (`/api/v1/...`) resolved against `http://www.gradebeam.com` instead of `http://localhost:8001`. This caused CORS preflight failures for every API call made after viewing that email — including the Full View's own data fetch.
+
+**Impact:** This was the most severe sanitization issue encountered. Unlike other rules that prevent visual noise or console errors, the `<base>` tag actively **breaks the application's ability to communicate with its own backend**. The effect persists until the user refreshes the page (which discards the injected `<base>` tag from the DOM).
+
+**Fix:** A single regex rule strips all `<base>` tags before DOM injection. This is safe because email HTML has no legitimate reason to set a `<base>` tag — the tag is either an artifact of the original web page the email was forwarded from, or a relative-URL workaround in the email's HTML authoring tool.
 
 ---
 

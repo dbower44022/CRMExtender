@@ -435,37 +435,44 @@ The Communication Identity Card renders at the top of the full View, above the C
 
 ### 6.1 Communication Identity Card Rendering
 
-The Identity Card for a Communication is minimal — it establishes *what* this record is without duplicating the detailed header that appears inside the Content Card.
+The Identity Card for a Communication is minimal — it establishes *what* this record is at a glance, without duplicating any information from the Content Card header.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  ✉ Email · Inbound · Synced           Feb 21, 2026  │
-│  from Work Gmail (doug@company.com)      10:15 AM   │
+│  ✉ Email Communication                Feb 21, 2026  │
+│                                          10:15 AM   │
 └─────────────────────────────────────────────────────┘
 ```
 
 **Fields displayed:**
 
-| Element              | Source                                   | Rendering                                                                         |
-| -------------------- | ---------------------------------------- | --------------------------------------------------------------------------------- |
-| Channel icon + label | channel field                            | Icon and human-readable channel name (e.g., "✉ Email", "📞 Phone Call", "💬 SMS") |
-| Direction            | direction field                          | "Inbound", "Outbound", or "Meeting"                                               |
-| Source               | source field                             | "Synced", "Manual", or "Imported"                                                 |
-| Provider account     | provider_account_id → account_identifier | Account display name or email address. Omitted for manual entries.                |
-| Timestamp            | timestamp field                          | Full date and time, right-aligned                                                 |
+| Element              | Source          | Rendering                                                                                                    |
+| -------------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
+| Channel icon + label | channel field   | Icon and human-readable type label: "✉ Email Communication", "📞 Phone Call", "💬 Text Communication", "🎥 Video Call", "👥 In-Person Meeting", "📝 Note" |
+| Timestamp            | timestamp field | Full date and time, right-aligned                                                                            |
 
-The Identity Card does **not** show the subject, sender, recipients, or content — those belong in the Content Card where they form the natural reading experience. The Identity Card answers "what kind of record is this and where did it come from?"
+**Fields deliberately excluded from the Identity Card:**
+
+| Field            | Reason                                                                                  | Where it lives instead |
+| ---------------- | --------------------------------------------------------------------------------------- | ---------------------- |
+| Direction        | Already obvious from the Content Card header (sender vs. recipients)                    | Metadata Card          |
+| Source           | Developer-facing concept ("synced", "manual", "imported") — not useful for quick scanning | Metadata Card          |
+| Provider account | Which account received this email matters, but is part of the participant story          | Participants Card      |
+
+The Identity Card answers one question: "What kind of record am I looking at?" Everything else — who, what, how it got here — is answered by the Content Card header and CRM layer cards below.
 
 **Tasks:**
 
-- [ ] CVID-01: Implement Communication Identity Card rendering per channel
-- [ ] CVID-02: Identity Card omits provider account for manual entries
+- [ ] CVID-01: Implement Communication Identity Card with channel icon, type label, and timestamp
+- [ ] CVID-02: Implement channel-specific type labels for all channel values
 
 **Tests:**
 
-- [ ] CVID-T01: Synced email Identity Card shows channel, direction, source, provider account, timestamp
-- [ ] CVID-T02: Manual phone call Identity Card omits provider account
-- [ ] CVID-T03: Identity Card renders within Identity Card fixed area (no scrolling)
+- [ ] CVID-T01: Email Identity Card shows "✉ Email Communication" and timestamp
+- [ ] CVID-T02: Phone call Identity Card shows "📞 Phone Call" and timestamp
+- [ ] CVID-T03: SMS Identity Card shows "💬 Text Communication" and timestamp
+- [ ] CVID-T04: Identity Card does not display direction, source, or provider account
+- [ ] CVID-T05: Identity Card renders within Identity Card fixed area (no scrolling)
 
 ---
 
@@ -714,12 +721,15 @@ Each participant renders as a compact row:
 │  Participants                                         │
 │──────────────────────────────────────────────────────│
 │  Bob Smith              Sender                        │
+│  bob.smith@acmecorp.com                               │
 │  VP Engineering · Acme Corp                           │
 │                                                       │
 │  Doug Bower             To           (You)            │
+│  via doug@dougbower.com                               │
 │  Owner · CRMExtender                                  │
 │                                                       │
 │  Jane Lee               CC                            │
+│  jane@acmecorp.com                                    │
 │  Legal Counsel · Acme Corp                            │
 └──────────────────────────────────────────────────────┘
 ```
@@ -728,7 +738,9 @@ Each participant renders as a compact row:
 | ----------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Name                    | Contact display name (or participant display_name if unresolved) | Clickable link to Contact record (if resolved). Plain text with unresolved indicator if pending. |
 | Role                    | Participant relation metadata: role                              | "Sender", "To", "CC", "BCC", "Participant" — right-aligned on the name line                      |
-| Title + Company         | Contact's current employment                                     | Rendered below the name in lighter text. Omitted if the contact has no employment record.        |
+| Email / phone           | Participant relation metadata: address                           | The specific address used in this communication. Rendered below the name in lighter text.        |
+| Receiving account       | provider_account_id → account_identifier                         | For the account owner only: "via [account address]" — shows which of the user's accounts received or sent this communication. |
+| Title + Company         | Contact's current employment                                     | Rendered below the address in lighter text. Omitted if the contact has no employment record.     |
 | Account owner indicator | is_account_owner flag                                            | "(You)" badge if this participant is the account owner                                           |
 
 ### 8.3 Suppression
@@ -741,6 +753,8 @@ The Participants Card is suppressed (hidden) only if the communication has zero 
 - [ ] CVPT-02: Implement Contact record navigation from participant name
 - [ ] CVPT-03: Implement unresolved participant indicator
 - [ ] CVPT-04: Implement account owner "(You)" badge
+- [ ] CVPT-05: Implement participant email/phone address display
+- [ ] CVPT-06: Implement receiving account display ("via [address]") for account owner
 
 **Tests:**
 
@@ -750,6 +764,8 @@ The Participants Card is suppressed (hidden) only if the communication has zero 
 - [ ] CVPT-T04: Account owner participant shows "(You)" badge
 - [ ] CVPT-T05: Participant title and company displayed from employment record
 - [ ] CVPT-T06: Participants Card suppressed when no participant relations exist
+- [ ] CVPT-T07: Participant email/phone address displayed below name
+- [ ] CVPT-T08: Account owner shows "via [account address]" identifying receiving account
 
 ---
 

@@ -11,6 +11,7 @@ import { TriageCard } from './TriageCard.tsx'
 import { NotesCard } from './NotesCard.tsx'
 import { MetadataCard } from './MetadataCard.tsx'
 import { FullViewSkeleton } from './FullViewSkeleton.tsx'
+import type { CommunicationFullData } from '../../types/api.ts'
 
 interface CommunicationFullViewProps {
   commId: string
@@ -18,11 +19,16 @@ interface CommunicationFullViewProps {
 }
 
 const TWO_COLUMN_MIN_WIDTH = 900
-const SHORT_CONTENT_THRESHOLD = 150
 
-function countWords(text: string | null | undefined): number {
-  if (!text) return 0
-  return text.trim().split(/\s+/).filter(Boolean).length
+/** Count visible, non-collapsed CRM cards (Metadata excluded — collapsed by default) */
+function countVisibleCards(data: CommunicationFullData): number {
+  let count = 0
+  if (data.participants.length > 0) count++
+  if (data.ai_summary) count++
+  count++ // Conversation card is always visible
+  if (data.triage_result) count++
+  if (data.notes.length > 0) count++
+  return count
 }
 
 export function CommunicationFullView({ commId, onClose }: CommunicationFullViewProps) {
@@ -59,12 +65,17 @@ export function CommunicationFullView({ commId, onClose }: CommunicationFullView
     [onClose],
   )
 
-  const wordCount = countWords(data?.search_text)
-  const useTwoColumn = containerWidth >= TWO_COLUMN_MIN_WIDTH && wordCount > SHORT_CONTENT_THRESHOLD
+  const useTwoColumn = data
+    ? containerWidth >= TWO_COLUMN_MIN_WIDTH && countVisibleCards(data) >= 2
+    : false
 
   const crmCards = data ? (
     <div className="space-y-3">
-      <ParticipantsCard participants={data.participants} onClose={onClose} />
+      <ParticipantsCard
+        participants={data.participants}
+        providerAccount={data.provider_account}
+        onClose={onClose}
+      />
       <SummaryCard data={data} />
       <ConversationCard conversation={data.conversation} onClose={onClose} />
       {data.triage_result && (
@@ -116,11 +127,11 @@ export function CommunicationFullView({ commId, onClose }: CommunicationFullView
               /* Two-column layout */
               <div className="flex min-h-0 flex-1">
                 {/* Left: Content — scrolls independently */}
-                <div className="flex-[62] overflow-y-auto border-r border-surface-200">
+                <div className="flex-[3] overflow-y-auto border-r border-surface-200">
                   <ContentCard data={data} onClose={onClose} />
                 </div>
                 {/* Right: CRM cards — scrolls independently */}
-                <div className="flex-[38] overflow-y-auto p-4">
+                <div className="flex-[2] overflow-y-auto p-4">
                   {crmCards}
                 </div>
               </div>

@@ -14,6 +14,12 @@ const SOURCE_LABELS: Record<string, string> = {
   test: 'Test',
 }
 
+const DIRECTION_LABELS: Record<string, string> = {
+  inbound: 'Inbound',
+  outbound: 'Outbound',
+  mutual: 'Meeting',
+}
+
 export function MetadataCard({ data }: MetadataCardProps) {
   const [expanded, setExpanded] = useState(false)
 
@@ -29,6 +35,10 @@ export function MetadataCard({ data }: MetadataCardProps) {
       {expanded && (
         <div className="border-t border-surface-200 px-4 py-3">
           <dl className="space-y-2 text-sm">
+            <MetadataRow
+              label="Direction"
+              value={DIRECTION_LABELS[data.direction ?? ''] ?? data.direction}
+            />
             <MetadataRow label="Source" value={SOURCE_LABELS[data.source ?? ''] ?? data.source} />
             {data.provider_account && (
               <>

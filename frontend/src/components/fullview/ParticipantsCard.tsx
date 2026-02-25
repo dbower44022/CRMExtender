@@ -1,8 +1,9 @@
 import { useNavigationStore } from '../../stores/navigation.ts'
-import type { CommunicationFullParticipant } from '../../types/api.ts'
+import type { CommunicationFullParticipant, CommunicationProviderAccount } from '../../types/api.ts'
 
 interface ParticipantsCardProps {
   participants: CommunicationFullParticipant[]
+  providerAccount: CommunicationProviderAccount | null
   onClose: () => void
 }
 
@@ -14,7 +15,7 @@ const ROLE_LABELS: Record<string, string> = {
   participant: 'Participant',
 }
 
-export function ParticipantsCard({ participants, onClose }: ParticipantsCardProps) {
+export function ParticipantsCard({ participants, providerAccount, onClose }: ParticipantsCardProps) {
   if (participants.length === 0) return null
 
   const setActiveEntityType = useNavigationStore((s) => s.setActiveEntityType)
@@ -46,6 +47,16 @@ export function ParticipantsCard({ participants, onClose }: ParticipantsCardProp
                     {p.name || p.address}
                   </span>
                 )}
+                {/* Address line — "via" for account owner, plain address for others */}
+                {p.is_account_owner && providerAccount ? (
+                  <div className="truncate text-xs text-surface-400">
+                    via {providerAccount.email_address}
+                  </div>
+                ) : p.address ? (
+                  <div className="truncate text-xs text-surface-400">
+                    {p.address}
+                  </div>
+                ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="rounded bg-surface-100 px-1.5 py-0.5 text-xs text-surface-500">

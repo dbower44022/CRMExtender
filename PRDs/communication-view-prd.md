@@ -30,27 +30,27 @@ This document implements KP-4 (Viewing a Communication's Full Record) from the E
 
 ### 2.1 Relevant Fields
 
-| Field                                      | Role in View                                                                                                                    |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| Channel                                    | Determines rendering variant (email, SMS, phone, etc.) and icon display.                                                        |
-| Direction                                  | Shown in header area. Drives directional language ("From" / "To" vs. "Participants").                                           |
-| Timestamp                                  | Displayed prominently in header. Universal sequencing key.                                                                      |
-| Subject                                    | Email subject line or meeting title. Primary heading for email and meeting channels. NULL for SMS, most calls.                  |
-| Body Preview                               | First 200 characters of cleaned_html. Used only if cleaned_html is unavailable or for extremely constrained preview contexts. |
+| Field                                      | Role in View                                                                                                                                                   |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Channel                                    | Determines rendering variant (email, SMS, phone, etc.) and icon display.                                                                                       |
+| Direction                                  | Shown in header area. Drives directional language ("From" / "To" vs. "Participants").                                                                          |
+| Timestamp                                  | Displayed prominently in header. Universal sequencing key.                                                                                                     |
+| Subject                                    | Email subject line or meeting title. Primary heading for email and meeting channels. NULL for SMS, most calls.                                                 |
+| Body Preview                               | First 200 characters of cleaned_html. Used only if cleaned_html is unavailable or for extremely constrained preview contexts.                                  |
 | Cleaned HTML                               | HTML content with noise removed but formatting preserved (bold, italic, links, lists). Primary reading content in the Content Card and Preview Card for email. |
-| Search Text                                | Plain text with noise removed. No formatting. Used by AI processing and full-text search. Drives word count for layout decisions. |
-| Original Text                              | Original unprocessed plain text content. Available via "View Original" expander in full View.                                   |
-| Original HTML                              | Original email HTML as received from provider. Not rendered directly to user — used only by content extraction pipeline.        |
-| Summary JSON / Summary HTML / Summary Text | Published Summary fields. Rendered in the Summary Card in full View.                                                            |
-| Summary Source                             | `ai_generated`, `user_authored`, `pass_through`. Drives badge display on Summary Card.                                          |
-| Summary Revision Count                     | Displayed on Summary Card if > 1.                                                                                               |
-| Triage Result                              | If non-NULL, the communication was filtered. Drives display of Triage Card.                                                     |
-| Triage Reason                              | Human-readable triage explanation. Displayed in Triage Card.                                                                    |
-| Duration Seconds                           | Call/meeting duration. Displayed in header for applicable channels.                                                             |
-| Has Attachments / Attachment Count         | Drives attachment indicator in Preview and Attachment Card in full View.                                                        |
-| Conversation ID                            | FK to parent conversation. Drives Conversation Card in full View.                                                               |
-| Provider Account ID                        | Identifies source account. Displayed in Metadata Card.                                                                          |
-| Source                                     | `synced`, `manual`, `imported`. Displayed in Metadata Card.                                                                     |
+| Search Text                                | Plain text with noise removed. No formatting. Used by AI processing and full-text search. Drives word count for layout decisions.                              |
+| Original Text                              | Original unprocessed plain text content. Available via "View Original" expander in full View.                                                                  |
+| Original HTML                              | Original email HTML as received from provider. Not rendered directly to user — used only by content extraction pipeline.                                       |
+| Summary JSON / Summary HTML / Summary Text | Published Summary fields. Rendered in the Summary Card in full View.                                                                                           |
+| Summary Source                             | `ai_generated`, `user_authored`, `pass_through`. Drives badge display on Summary Card.                                                                         |
+| Summary Revision Count                     | Displayed on Summary Card if > 1.                                                                                                                              |
+| Triage Result                              | If non-NULL, the communication was filtered. Drives display of Triage Card.                                                                                    |
+| Triage Reason                              | Human-readable triage explanation. Displayed in Triage Card.                                                                                                   |
+| Duration Seconds                           | Call/meeting duration. Displayed in header for applicable channels.                                                                                            |
+| Has Attachments / Attachment Count         | Drives attachment indicator in Preview and Attachment Card in full View.                                                                                       |
+| Conversation ID                            | FK to parent conversation. Drives Conversation Card in full View.                                                                                              |
+| Provider Account ID                        | Identifies source account. Displayed in Metadata Card.                                                                                                         |
+| Source                                     | `synced`, `manual`, `imported`. Displayed in Metadata Card.                                                                                                    |
 
 ### 2.2 Relevant Relationships
 
@@ -333,6 +333,7 @@ Two-column layout activates only when **both** conditions are true. If either co
 The Window container must be at least **900px wide**. Below this threshold, two columns would be too narrow to be readable.
 
 This applies equally regardless of Window Type:
+
 - **Docked Window** — Container width is the Detail Panel width (determined by the Splitter Bar position). A Docked Window typically ranges from 400px to 1200px. Two columns only activate if the panel is wide enough.
 - **Modal Full Overlay** — Container width is the full Content Panel. On a 4K 27" display this is typically 1400-1800px, so the width condition is almost always met.
 - **Undocked Window** — Container width is whatever the user has sized the window to. Could be anything.
@@ -345,26 +346,26 @@ The right column must have **two or more visible, non-collapsed cards** that wou
 
 The visible card inventory for the right column:
 
-| Card              | When visible                                           | Counts toward threshold? |
-| ----------------- | ------------------------------------------------------ | ------------------------ |
-| Participants Card | Always (unless zero participant relations — rare edge case) | Yes                      |
-| Summary Card      | When summary fields are non-NULL                       | Yes                      |
-| Conversation Card | Always (shows assigned conversation or "Not assigned") | Yes                      |
-| Triage Card       | When triage_result is non-NULL                         | Yes                      |
-| Notes Card        | When notes are attached to the communication           | Yes                      |
-| Metadata Card     | Always present, but **collapsed by default**           | **No** — collapsed cards do not count |
+| Card              | When visible                                                | Counts toward threshold?              |
+| ----------------- | ----------------------------------------------------------- | ------------------------------------- |
+| Participants Card | Always (unless zero participant relations — rare edge case) | Yes                                   |
+| Summary Card      | When summary fields are non-NULL                            | Yes                                   |
+| Conversation Card | Always (shows assigned conversation or "Not assigned")      | Yes                                   |
+| Triage Card       | When triage_result is non-NULL                              | Yes                                   |
+| Notes Card        | When notes are attached to the communication                | Yes                                   |
+| Metadata Card     | Always present, but **collapsed by default**                | **No** — collapsed cards do not count |
 
 **Examples:**
 
-| Scenario                                                     | Visible right-column cards        | Count | Layout        |
-| ------------------------------------------------------------ | --------------------------------- | ----- | ------------- |
-| Wide window, email with summary, 5 participants, notes       | Participants, Summary, Conversation, Notes | 4     | Two-column    |
-| Wide window, email with summary, 2 participants              | Participants, Summary, Conversation | 3     | Two-column    |
-| Wide window, SMS with no summary, just you + sender          | Participants, Conversation        | 2     | Two-column    |
-| Wide window, new email, summary not yet generated            | Participants, Conversation        | 2     | Two-column    |
-| Wide window, triaged email user is reviewing                 | Participants, Conversation, Triage | 3     | Two-column    |
-| Narrow docked window (500px), long email, lots of CRM data   | —                                 | —     | Single-column (width fails) |
-| Wide window, but only Conversation card visible (edge case)  | Conversation                      | 1     | Single-column (not enough CRM content) |
+| Scenario                                                    | Visible right-column cards                 | Count | Layout                                 |
+| ----------------------------------------------------------- | ------------------------------------------ | ----- | -------------------------------------- |
+| Wide window, email with summary, 5 participants, notes      | Participants, Summary, Conversation, Notes | 4     | Two-column                             |
+| Wide window, email with summary, 2 participants             | Participants, Summary, Conversation        | 3     | Two-column                             |
+| Wide window, SMS with no summary, just you + sender         | Participants, Conversation                 | 2     | Two-column                             |
+| Wide window, new email, summary not yet generated           | Participants, Conversation                 | 2     | Two-column                             |
+| Wide window, triaged email user is reviewing                | Participants, Conversation, Triage         | 3     | Two-column                             |
+| Narrow docked window (500px), long email, lots of CRM data  | —                                          | —     | Single-column (width fails)            |
+| Wide window, but only Conversation card visible (edge case) | Conversation                               | 1     | Single-column (not enough CRM content) |
 
 In practice, most communications have at least Participants + Conversation visible (count = 2), so the decision usually comes down to container width alone. The CRM content condition prevents the degenerate case where a wide window shows a nearly-empty right column with excessive white space.
 
@@ -473,18 +474,18 @@ The Identity Card for a Communication is minimal — it establishes *what* this 
 
 **Fields displayed:**
 
-| Element              | Source          | Rendering                                                                                                    |
-| -------------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
+| Element              | Source          | Rendering                                                                                                                                                 |
+| -------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Channel icon + label | channel field   | Icon and human-readable type label: "✉ Email Communication", "📞 Phone Call", "💬 Text Communication", "🎥 Video Call", "👥 In-Person Meeting", "📝 Note" |
-| Timestamp            | timestamp field | Full date and time, right-aligned                                                                            |
+| Timestamp            | timestamp field | Full date and time, right-aligned                                                                                                                         |
 
 **Fields deliberately excluded from the Identity Card:**
 
-| Field            | Reason                                                                                  | Where it lives instead |
-| ---------------- | --------------------------------------------------------------------------------------- | ---------------------- |
-| Direction        | Already obvious from the Content Card header (sender vs. recipients)                    | Metadata Card          |
+| Field            | Reason                                                                                    | Where it lives instead |
+| ---------------- | ----------------------------------------------------------------------------------------- | ---------------------- |
+| Direction        | Already obvious from the Content Card header (sender vs. recipients)                      | Metadata Card          |
 | Source           | Developer-facing concept ("synced", "manual", "imported") — not useful for quick scanning | Metadata Card          |
-| Provider account | Which account received this email matters, but is part of the participant story          | Participants Card      |
+| Provider account | Which account received this email matters, but is part of the participant story           | Participants Card      |
 
 The Identity Card answers one question: "What kind of record am I looking at?" Everything else — who, what, how it got here — is answered by the Content Card header and CRM layer cards below.
 
@@ -617,11 +618,13 @@ The Communication Content Card shows the **complete email** — not a stripped v
 The body renders in two visual zones:
 
 **Primary zone — New message content:**
+
 - Full contrast, full text weight. This is the content the sender actually wrote in this email.
 - Rendered with HTML formatting preserved (bold, italic, links, lists) from the original email.
 - This zone commands the user's attention immediately.
 
 **Quoted zone — Reply chain:**
+
 - Visually stepped back with three reinforcing cues:
   1. **Vertical bar** — A subtle left-border line running the full height of the quoted block (the standard "quoted text" convention from email clients).
   2. **Reduced opacity** — Text renders at reduced contrast (lighter color or lower opacity) so the user's eye stays on the primary zone. Still readable — the user can glance down for thread context without any clicks.
@@ -634,6 +637,7 @@ The body renders in two visual zones:
 The content extraction pipeline must mark the split point between new content and quoted content rather than removing the quoted content. Specifically, cleaned_html should wrap quoted portions in a semantic element (e.g., `<blockquote class="quoted-reply">`) so the UI can apply the two-zone visual treatment. Signatures, boilerplate, and promotional footers are still removed entirely — only the meaningful quoted reply chain is preserved with markup.
 
 This means cleaned_html serves two different rendering contexts:
+
 - **Communication Content Card** — Renders the full cleaned_html including the quoted-reply wrappers, with visual treatment applied to the quoted zones.
 - **Conversation timeline** — Strips or collapses the quoted-reply wrappers, showing only the new message content (since the other messages in the thread are already visible as separate timeline entries).
 
@@ -714,14 +718,14 @@ Same structure as Phone Call (Recorded) with video icon and video playback contr
 
 ### 7.6 Content Card Rendering Rules
 
-| Rule                      | Behavior                                                                                                                                                                                                                       |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Rule                      | Behavior                                                                                                                                                                                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Two-zone body (email)** | New message content renders at full contrast (primary zone). Quoted reply chain renders with vertical left bar, reduced opacity, and indent (quoted zone). Signatures and boilerplate are stripped entirely — only meaningful quoted replies preserved. |
-| **Nested quotes**         | Each nesting level in the reply chain gets an additional vertical bar and indent, progressively stepping back. Deeply nested quotes become increasingly subtle. |
-| **Participant links**     | Resolved contacts are clickable links navigating to the Contact record. Unresolved participants render as plain text with a subtle indicator.                                                                                  |
-| **Fills available space** | No artificial truncation. Content flows to its natural length. Card scrolls if content exceeds available space (in single-column layout, the whole view scrolls; in two-column layout, the left column scrolls independently). |
-| **View Original**         | Available only for email channel. Collapsed by default. Shows original_text with everything the pipeline removed (signatures, boilerplate, promotional footers). |
-| **Attachment actions**    | Download button on each attachment. Playback controls for audio/video recordings. These are the only interactive elements in the Content Card.                                                                                 |
+| **Nested quotes**         | Each nesting level in the reply chain gets an additional vertical bar and indent, progressively stepping back. Deeply nested quotes become increasingly subtle.                                                                                         |
+| **Participant links**     | Resolved contacts are clickable links navigating to the Contact record. Unresolved participants render as plain text with a subtle indicator.                                                                                                           |
+| **Fills available space** | No artificial truncation. Content flows to its natural length. Card scrolls if content exceeds available space (in single-column layout, the whole view scrolls; in two-column layout, the left column scrolls independently).                          |
+| **View Original**         | Available only for email channel. Collapsed by default. Shows original_text with everything the pipeline removed (signatures, boilerplate, promotional footers).                                                                                        |
+| **Attachment actions**    | Download button on each attachment. Playback controls for audio/video recordings. These are the only interactive elements in the Content Card.                                                                                                          |
 
 **Tasks:**
 
@@ -803,14 +807,14 @@ Each participant renders as a compact row:
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element                 | Source                                                           | Rendering                                                                                        |
-| ----------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Name                    | Contact display name (or participant display_name if unresolved) | Clickable link to Contact record (if resolved). Plain text with unresolved indicator if pending. |
-| Role                    | Participant relation metadata: role                              | "Sender", "To", "CC", "BCC", "Participant" — right-aligned on the name line                      |
-| Email / phone           | Participant relation metadata: address                           | The specific address used in this communication. Rendered below the name in lighter text.        |
+| Element                 | Source                                                           | Rendering                                                                                                                     |
+| ----------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Name                    | Contact display name (or participant display_name if unresolved) | Clickable link to Contact record (if resolved). Plain text with unresolved indicator if pending.                              |
+| Role                    | Participant relation metadata: role                              | "Sender", "To", "CC", "BCC", "Participant" — right-aligned on the name line                                                   |
+| Email / phone           | Participant relation metadata: address                           | The specific address used in this communication. Rendered below the name in lighter text.                                     |
 | Receiving account       | provider_account_id → account_identifier                         | For the account owner only: "via [account address]" — shows which of the user's accounts received or sent this communication. |
-| Title + Company         | Contact's current employment                                     | Rendered below the address in lighter text. Omitted if the contact has no employment record.     |
-| Account owner indicator | is_account_owner flag                                            | "(You)" badge if this participant is the account owner                                           |
+| Title + Company         | Contact's current employment                                     | Rendered below the address in lighter text. Omitted if the contact has no employment record.                                  |
+| Account owner indicator | is_account_owner flag                                            | "(You)" badge if this participant is the account owner                                                                        |
 
 ### 8.3 Suppression
 
@@ -865,14 +869,14 @@ The Summary Card displays the Communication's Published Summary — the distille
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element           | Source                                            | Rendering                                                                                                                                                       |
-| ----------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Card header       | "Summary"                                         | Standard card header                                                                                                                                            |
-| Source badge      | summary_source                                    | "🤖 AI Generated", "✍ User Authored", or "📋 Pass-through" — right of header                                                                                    |
-| Edit action       | —                                                 | Pencil icon (✏). Opens the summary in the rich text editor for user editing. Creates a new summary revision on save.                                            |
+| Element           | Source                                            | Rendering                                                                                                                                                      |
+| ----------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Card header       | "Summary"                                         | Standard card header                                                                                                                                           |
+| Source badge      | summary_source                                    | "🤖 AI Generated", "✍ User Authored", or "📋 Pass-through" — right of header                                                                                   |
+| Edit action       | —                                                 | Pencil icon (✏). Opens the summary in the rich text editor for user editing. Creates a new summary revision on save.                                           |
 | Regenerate action | —                                                 | Refresh icon (↻). Available only for AI-generated and pass-through summaries. Re-runs AI summary generation from cleaned_html. Creates a new summary revision. |
-| Summary content   | summary_html                                      | Rendered as rich text (headings, lists, bold). The HTML as produced by the AI or the user's editor.                                                             |
-| Revision info     | summary_revision_count, current revision metadata | "Rev N of N · Last updated [date] by [AI or username]". Clicking opens revision history (future: revision comparison view).                                     |
+| Summary content   | summary_html                                      | Rendered as rich text (headings, lists, bold). The HTML as produced by the AI or the user's editor.                                                            |
+| Revision info     | summary_revision_count, current revision metadata | "Rev N of N · Last updated [date] by [AI or username]". Clicking opens revision history (future: revision comparison view).                                    |
 
 ### 9.3 Suppression
 

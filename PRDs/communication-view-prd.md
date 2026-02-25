@@ -324,31 +324,53 @@ The indicator is a single line showing the triage_result in human-readable form.
 
 ### 5.1 Layout Logic
 
-The Communication full View uses a **content-aware responsive layout** that determines whether to arrange the Content Card and CRM layer cards in a single column (content above, CRM below) or two columns (content on the left, CRM on the right).
+The Communication full View uses a **two-condition layout decision** that determines whether to arrange the Content Card and CRM layer cards in a single column (content above, CRM below) or two columns (content on the left, CRM on the right).
 
-**Decision inputs:**
+Two-column layout activates only when **both** conditions are true. If either condition fails, the layout is single-column.
 
-| Input           | How Measured                                                                                            |
-| --------------- | ------------------------------------------------------------------------------------------------------- |
-| Available width | The rendering width of the Window (Modal Full Overlay, Undocked Window, or Docked Window in View Mode). |
-| Content volume  | Word count of cleaned_html.                                                                            |
+**Condition 1 — Container width:**
 
-**Decision rules:**
+The Window container must be at least **900px wide**. Below this threshold, two columns would be too narrow to be readable.
 
-| Condition                                                                | Layout                                                                                                                                                                                 |
-| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Available width < two-column minimum threshold                           | Single column. Always.                                                                                                                                                                 |
-| Available width ≥ threshold AND content volume ≤ short content threshold | Single column. Content is short enough that it flows naturally above the CRM cards without requiring the user to scroll past a wall of text.                                           |
-| Available width ≥ threshold AND content volume > short content threshold | Two column. Content in the left column (wider), CRM cards stacked in the right column (narrower). This prevents the user from having to scroll past long content to reach CRM context. |
+This applies equally regardless of Window Type:
+- **Docked Window** — Container width is the Detail Panel width (determined by the Splitter Bar position). A Docked Window typically ranges from 400px to 1200px. Two columns only activate if the panel is wide enough.
+- **Modal Full Overlay** — Container width is the full Content Panel. On a 4K 27" display this is typically 1400-1800px, so the width condition is almost always met.
+- **Undocked Window** — Container width is whatever the user has sized the window to. Could be anything.
 
-**Two-column split:** When two-column layout is active, the Content Card occupies approximately 60-65% of the available width and the CRM card column occupies the remaining 35-40%. These proportions are initial defaults — exact values should be tuned during implementation to feel balanced across typical email lengths.
+The 900px threshold ensures each column has at least ~340px of usable width (after padding and gutters) when split at the 60/40 ratio. Below that, both columns would feel cramped.
 
-**Threshold calibration:** The exact thresholds (minimum width for two-column, word count for "short" content) are implementation details to be determined during development and tuned based on visual testing. As a starting point:
+**Condition 2 — Right column has enough CRM content:**
 
-- Two-column minimum width: ~900px (the point where both columns can render comfortably)
-- Short content threshold: ~150 words (the point where single-column layout would push CRM cards below the fold on a typical display)
+The right column must have **two or more visible, non-collapsed cards** that would render. Cards count as visible if their suppression rules (see Sections 8-13) do not hide them.
 
-These are guideline values, not specifications. The goal is that the user perceives the layout as "right" every time.
+The visible card inventory for the right column:
+
+| Card              | When visible                                           | Counts toward threshold? |
+| ----------------- | ------------------------------------------------------ | ------------------------ |
+| Participants Card | Always (unless zero participant relations — rare edge case) | Yes                      |
+| Summary Card      | When summary fields are non-NULL                       | Yes                      |
+| Conversation Card | Always (shows assigned conversation or "Not assigned") | Yes                      |
+| Triage Card       | When triage_result is non-NULL                         | Yes                      |
+| Notes Card        | When notes are attached to the communication           | Yes                      |
+| Metadata Card     | Always present, but **collapsed by default**           | **No** — collapsed cards do not count |
+
+**Examples:**
+
+| Scenario                                                     | Visible right-column cards        | Count | Layout        |
+| ------------------------------------------------------------ | --------------------------------- | ----- | ------------- |
+| Wide window, email with summary, 5 participants, notes       | Participants, Summary, Conversation, Notes | 4     | Two-column    |
+| Wide window, email with summary, 2 participants              | Participants, Summary, Conversation | 3     | Two-column    |
+| Wide window, SMS with no summary, just you + sender          | Participants, Conversation        | 2     | Two-column    |
+| Wide window, new email, summary not yet generated            | Participants, Conversation        | 2     | Two-column    |
+| Wide window, triaged email user is reviewing                 | Participants, Conversation, Triage | 3     | Two-column    |
+| Narrow docked window (500px), long email, lots of CRM data   | —                                 | —     | Single-column (width fails) |
+| Wide window, but only Conversation card visible (edge case)  | Conversation                      | 1     | Single-column (not enough CRM content) |
+
+In practice, most communications have at least Participants + Conversation visible (count = 2), so the decision usually comes down to container width alone. The CRM content condition prevents the degenerate case where a wide window shows a nearly-empty right column with excessive white space.
+
+**Two-column split:** When two-column layout is active, the Content Card occupies approximately **60%** of the container width and the CRM card column occupies approximately **40%**. These proportions provide enough reading width for the email body while giving the CRM cards room for participant names, summaries, and conversation details.
+
+**Re-evaluation:** The layout re-evaluates whenever the container width changes (Splitter Bar dragged, Undocked Window resized, browser window resized). The transition between layouts should be smooth — no jarring content reflow.
 
 ### 5.2 Single-Column Layout
 
@@ -363,7 +385,7 @@ These are guideline values, not specifications. The goal is that the user percei
 │  │  Header (sender, recipients, timestamp)          ││
 │  │  Subject                                         ││
 │  │  ────────────────────────────────────────────    ││
-│  │  Body (cleaned_html)                            ││
+│  │  Body (primary zone + quoted zone)               ││
 │  │  Attachments (with download actions)             ││
 │  └──────────────────────────────────────────────────┘│
 ├──────────────────────────────────────────────────────┤
@@ -389,16 +411,16 @@ These are guideline values, not specifications. The goal is that the user percei
 ├────────────────────────────────────────────────────────────────────┤
 │  Identity Card (full width)                                         │
 ├────────────────────────────┬───────────────────────────────────────┤
-│  Content Card (~60-65%)    │  Participants Card                     │
+│  Content Card (~60%)       │  Participants Card                     │
 │  ┌────────────────────────┐│  ┌───────────────────────────────────┐│
 │  │  Header                ││  │  (participant list)               ││
 │  │  Subject               ││  └───────────────────────────────────┘│
 │  │  ──────────────────    ││  Summary Card                         │
 │  │  Body                  ││  ┌───────────────────────────────────┐│
-│  │  (cleaned_html)       ││  │  (published summary)              ││
+│  │  (primary zone)        ││  │  (published summary)              ││
 │  │                        ││  └───────────────────────────────────┘│
-│  │                        ││  Conversation Card                    │
-│  │                        ││  ┌───────────────────────────────────┐│
+│  │  - - - - - - - - -    ││  Conversation Card                    │
+│  │  (quoted zone)         ││  ┌───────────────────────────────────┐│
 │  │                        ││  │  (conversation link)              ││
 │  │  Attachments           ││  └───────────────────────────────────┘│
 │  └────────────────────────┘│  [Triage Card]                        │
@@ -411,19 +433,24 @@ In two-column layout, the left and right columns scroll independently. The user 
 
 **Tasks:**
 
-- [ ] CVLY-01: Implement content-aware layout decision logic (width threshold + word count threshold)
-- [ ] CVLY-02: Implement single-column layout for full View
-- [ ] CVLY-03: Implement two-column layout with independent scrolling
-- [ ] CVLY-04: Layout re-evaluates on window resize (e.g., Undocked Window resized, Splitter Bar dragged)
+- [ ] CVLY-01: Implement two-condition layout decision (container width ≥ 900px AND ≥ 2 visible non-collapsed CRM cards)
+- [ ] CVLY-02: Implement visible card counting logic (evaluate suppression rules for each CRM card)
+- [ ] CVLY-03: Implement single-column layout for full View
+- [ ] CVLY-04: Implement two-column layout with 60/40 split and independent scrolling
+- [ ] CVLY-05: Layout re-evaluates on container resize (Splitter Bar drag, Undocked Window resize, browser resize)
 
 **Tests:**
 
-- [ ] CVLY-T01: Short email in wide window renders single-column
-- [ ] CVLY-T02: Long email in wide window renders two-column
-- [ ] CVLY-T03: Long email in narrow window renders single-column
-- [ ] CVLY-T04: Resizing window from wide to narrow transitions from two-column to single-column
-- [ ] CVLY-T05: Two-column layout columns scroll independently
-- [ ] CVLY-T06: Short SMS in any width renders single-column
+- [ ] CVLY-T01: Container 1200px wide, 3 visible CRM cards → two-column
+- [ ] CVLY-T02: Container 500px wide, 3 visible CRM cards → single-column (width fails)
+- [ ] CVLY-T03: Container 1200px wide, 1 visible CRM card → single-column (not enough CRM content)
+- [ ] CVLY-T04: Container 900px wide, 2 visible CRM cards → two-column (minimum threshold met)
+- [ ] CVLY-T05: Container 899px wide, 2 visible CRM cards → single-column (just under threshold)
+- [ ] CVLY-T06: Resizing container from 1200px to 500px transitions from two-column to single-column
+- [ ] CVLY-T07: Two-column layout columns scroll independently
+- [ ] CVLY-T08: Collapsed Metadata Card does not count toward visible card threshold
+- [ ] CVLY-T09: Suppressed cards (e.g., Summary Card with NULL fields) do not count toward threshold
+- [ ] CVLY-T10: Layout re-evaluates when Splitter Bar is dragged
 
 ---
 

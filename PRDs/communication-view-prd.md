@@ -122,7 +122,10 @@ Each channel renders its Preview Card differently to match the native reading ex
 ```
 ┌─────────────────────────────────────────────┐
 │  ✉  Bob Smith                    10:15 AM   │
-│     To: Doug Bower, CC: Jane Lee Feb 21     │
+│     bob.smith@acmecorp.com       Feb 21     │
+│                                             │
+│  To: **Doug Bower**, Jane Lee +2 Others     │
+│  CC: Alice Wong +4 Others                   │
 │                                             │
 │  Re: Clause 5 revisions                     │
 │─────────────────────────────────────────────│
@@ -140,23 +143,26 @@ Each channel renders its Preview Card differently to match the native reading ex
 
 **Header area:**
 
-- Channel icon (envelope) and sender display name, right-aligned timestamp
-- Recipient line: "To:" followed by display names (comma-separated). If CC recipients exist, append "CC:" followed by CC display names. If the recipient list exceeds the available width, truncate with ellipsis and count (e.g., "To: Doug Bower, +3 others")
+The Preview Card header follows the same visual hierarchy and recipient rules as the Content Card header (Section 7.1), adapted for the more compact preview context:
+
+- Channel icon (envelope) and **sender display name** (bold, prominent), right-aligned timestamp
+- Sender email address on the second line, smaller and lighter
+- Recipient lines follow the same rules as the Content Card: current user’s name **bold and first** in whichever line (To or CC) they appear in, three-name maximum per line, “+X Others” for overflow. Since the Preview Card is non-interactive, the “+X Others” text is not clickable here.
 - Timestamp renders as time-only if today, date + time if this year, full date + time if older
 
 **Subject line:**
 
-- Rendered as a prominent heading below the header, above the content divider
-- If NULL (rare for email), the subject line is omitted and the content flows directly below the header
+- Rendered as the most prominent text in the Preview Card — bold heading below the recipient lines, above the content divider
+- If NULL (rare for email), the subject line is omitted and the content flows directly below the recipients
 
 **Content area:**
 
-- cleaned_html rendered as plain text, flowing naturally below the subject divider
+- cleaned_html rendered with formatting preserved, flowing naturally below the subject divider
 - Content fills all available space — no artificial truncation. If the email is long and the panel is short, the card scrolls.
 
 **Attachment indicator:**
 
-- If has_attachments is true, a compact attachment line renders at the bottom: paperclip icon followed by filenames (comma-separated). If more than 3 attachments, show first 2 filenames and "+N more"
+- If has_attachments is true, a compact attachment line renders at the bottom: paperclip icon followed by filenames (comma-separated). If more than 3 attachments, show first 2 filenames and “+N more”
 - Non-interactive in the Preview Card — no download actions. Just awareness that attachments exist.
 
 #### 4.2.2 SMS / MMS Preview
@@ -472,53 +478,91 @@ The Content Card is the primary reading surface in the full View. It presents th
 ### 7.1 Email Content Card
 
 ```
-┌──────────────────────────────────────────────────────┐
-│  Bob Smith <bob.smith@acmecorp.com>                   │
-│  To: Doug Bower <doug@company.com>                    │
-│  CC: Jane Lee <jane@company.com>                      │
-│                                                       │
-│  Re: Clause 5 revisions                               │
-│──────────────────────────────────────────────────────│
-│                                                       │
-│  Doug,                                                │
-│                                                       │
-│  I've reviewed the revised language for clause 5      │
-│  and have a few concerns.                             │
-│                                                       │
-│  First, the liability cap at $500K seems low given    │
-│  the project scope. I'd suggest we revisit this       │
-│  with the full team before finalizing.                │
-│                                                       │
-│  Second, the indemnification language in section 8    │
-│  needs to mirror the changes we're making to clause   │
-│  5 — otherwise we have a contradiction.               │
-│                                                       │
-│  Can we schedule a call for Thursday to walk through  │
-│  both sections?                                       │
-│                                                       │
-│  Best,                                                │
-│  Bob                                                  │
-│──────────────────────────────────────────────────────│
-│  📎 Attachments (2)                                   │
-│  ┌──────────────────────────────────────────────────┐│
-│  │  📄 revised_clause5.docx         42 KB  ⬇       ││
-│  │  📄 contract_v3.pdf             128 KB  ⬇       ││
-│  └──────────────────────────────────────────────────┘│
-│──────────────────────────────────────────────────────│
-│  ▸ View Original                                      │
-└──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                                                                   │
+│  Bob Smith                                     Aug 25, 2017      │
+│  bob.smith@acmecorp.com                           6:51 AM        │
+│                                                                   │
+│  To: **Doug Bower**, Jane Lee, Tom Clark +2 Others                │
+│  CC: Alice Wong, Dan White +4 Others                              │
+│                                                                   │
+│  RE: new owner of hanger                                          │
+│──────────────────────────────────────────────────────────────────│
+│                                                                   │
+│  Your guy.                                                        │
+│                                                                   │
+│  I am on my way home and will call you when I get back in the US. │
+│                                                                   │
+│  Doug                                                             │
+│                                                                   │
+│──────────────────────────────────────────────────────────────────│
+│  📎 Attachments (2)                                               │
+│  ┌──────────────────────────────────────────────────────────────┐│
+│  │  📄 revised_clause5.docx         42 KB  ⬇                   ││
+│  │  📄 contract_v3.pdf             128 KB  ⬇                   ││
+│  └──────────────────────────────────────────────────────────────┘│
+│──────────────────────────────────────────────────────────────────│
+│  ▸ View Original                                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-**Header section:**
+**Header section — Visual hierarchy:**
 
-- Sender: display name + email address. Display name renders as the prominent element; email address in lighter text.
-- Recipients: "To:" line with display names + addresses. "CC:" line if CC recipients exist. "BCC:" line if BCC recipients exist (only visible to the sender/account owner).
-- Participant names that are resolved to CRM contacts render as **clickable links** — clicking navigates to the Contact record (opens in a Floating Unmodal preview or navigates to the Contact entity workspace, depending on modifier key).
-- Participant names with pending resolution render as plain text with a subtle "unresolved" indicator.
+The header establishes who, to whom, and what in the first two seconds. Three tiers of prominence:
+
+1. **Sender name** — Largest, boldest text in the header. The user’s first anchor point. Reads as the answer to “who sent this?”
+2. **Subject line** — Largest, boldest text on the entire card (rendered as a heading below the recipient lines). The answer to “what is this about?”
+3. **Sender email, recipients, timestamp** — Clearly readable but subordinate. Supporting context, not primary focus.
+
+**Header section — Sender (left side):**
+
+- **Sender display name** on the first line — large, bold, high contrast. This is the most prominent element in the header area after the subject line. If the sender is unresolved (no CRM contact), the email address renders in the name position instead.
+- **Sender email address** on the second line — smaller, lighter weight. Provides the specific address for disambiguation.
+- Sender name is a clickable link to the Contact record if resolved.
+
+**Header section — Timestamp (right side):**
+
+- Right-aligned on the same line as the sender name.
+- Date on the first line, time on the second line (matching the sender name / sender email two-line structure).
+- Timestamp formatting: Today → time only. This year → “Mon DD” + time. Older → “Mon DD, YYYY” + time.
+
+**Header section — Recipients:**
+
+Recipients use a compact format that answers three questions instantly: “Was I in the To or CC?”, “Who else was involved?”, and “How many people?”
+
+Rules for the **To:** line:
+
+1. If the current user is a To recipient, their name appears **first and bold** — visually distinct from other names.
+2. After the current user (if present), remaining To recipients are listed alphabetically by last name.
+3. Show a maximum of **three names** per line (including the current user if present).
+4. If more To recipients exist beyond three, show **“+X Others”** as a clickable link that navigates to the Participants Card.
+
+Rules for the **CC:** line:
+
+1. CC line is only shown if CC recipients exist.
+2. If the current user is a CC recipient (and not in To), their name appears **first and bold** on the CC line.
+3. Same three-name maximum and “+X Others” link as the To line.
+4. If no CC recipients exist, the CC line is omitted entirely.
+
+Rules for **BCC:**
+
+- BCC recipients are treated identically to single-recipient CC for display purposes. The BCC line is only visible to the sender/account owner.
+
+**Outbound emails:**
+
+- The current user’s name appears in the From line (as sender). No bolding in the To/CC lines since the user is not a recipient.
+
+**Recipient name rendering:**
+
+- Resolved contacts: display name rendered as a clickable link to the Contact record.
+- Unresolved participants: email address rendered as plain text with a subtle “unresolved” indicator.
+- The current user’s name is always **bold** regardless of resolved/unresolved status.
 
 **Subject line:**
 
-- Rendered as a heading below the recipient lines, above the content divider. Prominent but not oversized — it should feel like an email subject, not a page title.
+- Rendered as the **largest, boldest text on the entire Content Card** — a clear heading below the recipient lines, above the content divider.
+- Prominent enough that the user’s eye goes to it naturally as the answer to “what is this about?”
+- If NULL (rare for email), the subject line is omitted and the content flows directly below the recipients.
 
 **Body:**
 
@@ -611,28 +655,45 @@ Same structure as Phone Call (Recorded) with video icon and video playback contr
 
 **Tasks:**
 
-- [ ] CVCC-01: Implement email Content Card rendering (header, subject, body, attachments, View Original)
-- [ ] CVCC-02: Implement SMS/MMS Content Card rendering
-- [ ] CVCC-03: Implement recorded call Content Card rendering (transcript + playback)
-- [ ] CVCC-04: Implement manual entry Content Card rendering (phone_manual, video_manual, in_person, note)
-- [ ] CVCC-05: Implement recorded video Content Card rendering (transcript + video playback)
-- [ ] CVCC-06: Implement participant name linking to Contact records
-- [ ] CVCC-07: Implement View Original expander for email
-- [ ] CVCC-08: Implement attachment download action
-- [ ] CVCC-09: Implement audio/video playback controls
+- [ ] CVCC-01: Implement email Content Card header visual hierarchy (sender name prominent, subject boldest, supporting context subordinate)
+- [ ] CVCC-02: Implement sender display (name bold on line 1, email smaller on line 2, timestamp right-aligned)
+- [ ] CVCC-03: Implement recipient line logic (current user bold and first, alphabetical remaining, three-name cap, "+X Others" link)
+- [ ] CVCC-04: Implement CC line display with same rules as To line
+- [ ] CVCC-05: Implement subject line as largest/boldest text on Content Card
+- [ ] CVCC-06: Implement email Content Card body rendering (cleaned_html with formatting preserved)
+- [ ] CVCC-07: Implement SMS/MMS Content Card rendering
+- [ ] CVCC-08: Implement recorded call Content Card rendering (transcript + playback)
+- [ ] CVCC-09: Implement manual entry Content Card rendering (phone_manual, video_manual, in_person, note)
+- [ ] CVCC-10: Implement recorded video Content Card rendering (transcript + video playback)
+- [ ] CVCC-11: Implement participant name linking to Contact records
+- [ ] CVCC-12: Implement View Original expander for email
+- [ ] CVCC-13: Implement attachment download action
+- [ ] CVCC-14: Implement audio/video playback controls
+- [ ] CVCC-15: Implement "+X Others" link navigation to Participants Card
 
 **Tests:**
 
-- [ ] CVCC-T01: Email Content Card renders full header with sender, To, CC, BCC
-- [ ] CVCC-T02: Resolved participant names render as clickable links
-- [ ] CVCC-T03: Unresolved participant names render as plain text with indicator
-- [ ] CVCC-T04: View Original expander shows original_text when expanded
-- [ ] CVCC-T05: View Original expander is collapsed by default
-- [ ] CVCC-T06: Attachment download action initiates file download
-- [ ] CVCC-T07: Audio recording shows playback controls
-- [ ] CVCC-T08: SMS Content Card omits subject and View Original
-- [ ] CVCC-T09: Manual entry Content Card renders user-authored notes
-- [ ] CVCC-T10: Content Card with no attachments omits attachment area entirely
+- [ ] CVCC-T01: Sender name renders large and bold; sender email renders smaller below
+- [ ] CVCC-T02: Timestamp renders right-aligned opposite sender name
+- [ ] CVCC-T03: Inbound email — current user appears bold and first in To line when user is a To recipient
+- [ ] CVCC-T04: Inbound email — current user appears bold and first in CC line when user is CC only
+- [ ] CVCC-T05: To line with 5 recipients shows 3 names + "+2 Others" link
+- [ ] CVCC-T06: CC line omitted when no CC recipients exist
+- [ ] CVCC-T07: Outbound email — current user in From, no bolding in To/CC lines
+- [ ] CVCC-T08: "+X Others" link navigates to Participants Card
+- [ ] CVCC-T09: Remaining recipients (after current user) sorted alphabetically by last name
+- [ ] CVCC-T10: Subject line renders as largest/boldest text on the card
+- [ ] CVCC-T11: Resolved participant names render as clickable links
+- [ ] CVCC-T12: Unresolved participant names render as plain text with indicator
+- [ ] CVCC-T13: BCC line visible only to sender/account owner
+- [ ] CVCC-T14: View Original expander shows original_text when expanded
+- [ ] CVCC-T15: View Original expander is collapsed by default
+- [ ] CVCC-T16: Attachment download action initiates file download
+- [ ] CVCC-T17: Audio recording shows playback controls
+- [ ] CVCC-T18: SMS Content Card omits subject and View Original
+- [ ] CVCC-T19: Manual entry Content Card renders user-authored notes
+- [ ] CVCC-T20: Content Card with no attachments omits attachment area entirely
+- [ ] CVCC-T21: Single To recipient, no CC — To line shows one name, CC line omitted
 
 ---
 

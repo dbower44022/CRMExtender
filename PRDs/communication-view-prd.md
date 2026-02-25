@@ -122,7 +122,10 @@ Each channel renders its Preview Card differently to match the native reading ex
 ```
 ┌─────────────────────────────────────────────┐
 │  ✉  Bob Smith                    10:15 AM   │
-│     To: Doug Bower, CC: Jane Lee Feb 21     │
+│     bob.smith@acmecorp.com       Feb 21     │
+│                                             │
+│  To: **Doug Bower**, Jane Lee +2 Others     │
+│  CC: Alice Wong +4 Others                   │
 │                                             │
 │  Re: Clause 5 revisions                     │
 │─────────────────────────────────────────────│
@@ -140,23 +143,26 @@ Each channel renders its Preview Card differently to match the native reading ex
 
 **Header area:**
 
-- Channel icon (envelope) and sender display name, right-aligned timestamp
-- Recipient line: "To:" followed by display names (comma-separated). If CC recipients exist, append "CC:" followed by CC display names. If the recipient list exceeds the available width, truncate with ellipsis and count (e.g., "To: Doug Bower, +3 others")
+The Preview Card header follows the same visual hierarchy and recipient rules as the Content Card header (Section 7.1), adapted for the more compact preview context:
+
+- Channel icon (envelope) and **sender display name** (bold, prominent), right-aligned timestamp
+- Sender email address on the second line, smaller and lighter
+- Recipient lines follow the same rules as the Content Card: current user’s name **bold and first** in whichever line (To or CC) they appear in, three-name maximum per line, “+X Others” for overflow. Since the Preview Card is non-interactive, the “+X Others” text is not clickable here.
 - Timestamp renders as time-only if today, date + time if this year, full date + time if older
 
 **Subject line:**
 
-- Rendered as a prominent heading below the header, above the content divider
-- If NULL (rare for email), the subject line is omitted and the content flows directly below the header
+- Rendered as the most prominent text in the Preview Card — bold heading below the recipient lines, above the content divider
+- If NULL (rare for email), the subject line is omitted and the content flows directly below the recipients
 
 **Content area:**
 
-- cleaned_html rendered as plain text, flowing naturally below the subject divider
+- cleaned_html rendered with formatting preserved, flowing naturally below the subject divider
 - Content fills all available space — no artificial truncation. If the email is long and the panel is short, the card scrolls.
 
 **Attachment indicator:**
 
-- If has_attachments is true, a compact attachment line renders at the bottom: paperclip icon followed by filenames (comma-separated). If more than 3 attachments, show first 2 filenames and "+N more"
+- If has_attachments is true, a compact attachment line renders at the bottom: paperclip icon followed by filenames (comma-separated). If more than 3 attachments, show first 2 filenames and “+N more”
 - Non-interactive in the Preview Card — no download actions. Just awareness that attachments exist.
 
 #### 4.2.2 SMS / MMS Preview
@@ -318,31 +324,53 @@ The indicator is a single line showing the triage_result in human-readable form.
 
 ### 5.1 Layout Logic
 
-The Communication full View uses a **content-aware responsive layout** that determines whether to arrange the Content Card and CRM layer cards in a single column (content above, CRM below) or two columns (content on the left, CRM on the right).
+The Communication full View uses a **two-condition layout decision** that determines whether to arrange the Content Card and CRM layer cards in a single column (content above, CRM below) or two columns (content on the left, CRM on the right).
 
-**Decision inputs:**
+Two-column layout activates only when **both** conditions are true. If either condition fails, the layout is single-column.
 
-| Input           | How Measured                                                                                            |
-| --------------- | ------------------------------------------------------------------------------------------------------- |
-| Available width | The rendering width of the Window (Modal Full Overlay, Undocked Window, or Docked Window in View Mode). |
-| Content volume  | Word count of cleaned_html.                                                                            |
+**Condition 1 — Container width:**
 
-**Decision rules:**
+The Window container must be at least **900px wide**. Below this threshold, two columns would be too narrow to be readable.
 
-| Condition                                                                | Layout                                                                                                                                                                                 |
-| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Available width < two-column minimum threshold                           | Single column. Always.                                                                                                                                                                 |
-| Available width ≥ threshold AND content volume ≤ short content threshold | Single column. Content is short enough that it flows naturally above the CRM cards without requiring the user to scroll past a wall of text.                                           |
-| Available width ≥ threshold AND content volume > short content threshold | Two column. Content in the left column (wider), CRM cards stacked in the right column (narrower). This prevents the user from having to scroll past long content to reach CRM context. |
+This applies equally regardless of Window Type:
+- **Docked Window** — Container width is the Detail Panel width (determined by the Splitter Bar position). A Docked Window typically ranges from 400px to 1200px. Two columns only activate if the panel is wide enough.
+- **Modal Full Overlay** — Container width is the full Content Panel. On a 4K 27" display this is typically 1400-1800px, so the width condition is almost always met.
+- **Undocked Window** — Container width is whatever the user has sized the window to. Could be anything.
 
-**Two-column split:** When two-column layout is active, the Content Card occupies approximately 60-65% of the available width and the CRM card column occupies the remaining 35-40%. These proportions are initial defaults — exact values should be tuned during implementation to feel balanced across typical email lengths.
+The 900px threshold ensures each column has at least ~340px of usable width (after padding and gutters) when split at the 60/40 ratio. Below that, both columns would feel cramped.
 
-**Threshold calibration:** The exact thresholds (minimum width for two-column, word count for "short" content) are implementation details to be determined during development and tuned based on visual testing. As a starting point:
+**Condition 2 — Right column has enough CRM content:**
 
-- Two-column minimum width: ~900px (the point where both columns can render comfortably)
-- Short content threshold: ~150 words (the point where single-column layout would push CRM cards below the fold on a typical display)
+The right column must have **two or more visible, non-collapsed cards** that would render. Cards count as visible if their suppression rules (see Sections 8-13) do not hide them.
 
-These are guideline values, not specifications. The goal is that the user perceives the layout as "right" every time.
+The visible card inventory for the right column:
+
+| Card              | When visible                                           | Counts toward threshold? |
+| ----------------- | ------------------------------------------------------ | ------------------------ |
+| Participants Card | Always (unless zero participant relations — rare edge case) | Yes                      |
+| Summary Card      | When summary fields are non-NULL                       | Yes                      |
+| Conversation Card | Always (shows assigned conversation or "Not assigned") | Yes                      |
+| Triage Card       | When triage_result is non-NULL                         | Yes                      |
+| Notes Card        | When notes are attached to the communication           | Yes                      |
+| Metadata Card     | Always present, but **collapsed by default**           | **No** — collapsed cards do not count |
+
+**Examples:**
+
+| Scenario                                                     | Visible right-column cards        | Count | Layout        |
+| ------------------------------------------------------------ | --------------------------------- | ----- | ------------- |
+| Wide window, email with summary, 5 participants, notes       | Participants, Summary, Conversation, Notes | 4     | Two-column    |
+| Wide window, email with summary, 2 participants              | Participants, Summary, Conversation | 3     | Two-column    |
+| Wide window, SMS with no summary, just you + sender          | Participants, Conversation        | 2     | Two-column    |
+| Wide window, new email, summary not yet generated            | Participants, Conversation        | 2     | Two-column    |
+| Wide window, triaged email user is reviewing                 | Participants, Conversation, Triage | 3     | Two-column    |
+| Narrow docked window (500px), long email, lots of CRM data   | —                                 | —     | Single-column (width fails) |
+| Wide window, but only Conversation card visible (edge case)  | Conversation                      | 1     | Single-column (not enough CRM content) |
+
+In practice, most communications have at least Participants + Conversation visible (count = 2), so the decision usually comes down to container width alone. The CRM content condition prevents the degenerate case where a wide window shows a nearly-empty right column with excessive white space.
+
+**Two-column split:** When two-column layout is active, the Content Card occupies approximately **60%** of the container width and the CRM card column occupies approximately **40%**. These proportions provide enough reading width for the email body while giving the CRM cards room for participant names, summaries, and conversation details.
+
+**Re-evaluation:** The layout re-evaluates whenever the container width changes (Splitter Bar dragged, Undocked Window resized, browser window resized). The transition between layouts should be smooth — no jarring content reflow.
 
 ### 5.2 Single-Column Layout
 
@@ -357,7 +385,7 @@ These are guideline values, not specifications. The goal is that the user percei
 │  │  Header (sender, recipients, timestamp)          ││
 │  │  Subject                                         ││
 │  │  ────────────────────────────────────────────    ││
-│  │  Body (cleaned_html)                            ││
+│  │  Body (primary zone + quoted zone)               ││
 │  │  Attachments (with download actions)             ││
 │  └──────────────────────────────────────────────────┘│
 ├──────────────────────────────────────────────────────┤
@@ -383,16 +411,16 @@ These are guideline values, not specifications. The goal is that the user percei
 ├────────────────────────────────────────────────────────────────────┤
 │  Identity Card (full width)                                         │
 ├────────────────────────────┬───────────────────────────────────────┤
-│  Content Card (~60-65%)    │  Participants Card                     │
+│  Content Card (~60%)       │  Participants Card                     │
 │  ┌────────────────────────┐│  ┌───────────────────────────────────┐│
 │  │  Header                ││  │  (participant list)               ││
 │  │  Subject               ││  └───────────────────────────────────┘│
 │  │  ──────────────────    ││  Summary Card                         │
 │  │  Body                  ││  ┌───────────────────────────────────┐│
-│  │  (cleaned_html)       ││  │  (published summary)              ││
+│  │  (primary zone)        ││  │  (published summary)              ││
 │  │                        ││  └───────────────────────────────────┘│
-│  │                        ││  Conversation Card                    │
-│  │                        ││  ┌───────────────────────────────────┐│
+│  │  - - - - - - - - -    ││  Conversation Card                    │
+│  │  (quoted zone)         ││  ┌───────────────────────────────────┐│
 │  │                        ││  │  (conversation link)              ││
 │  │  Attachments           ││  └───────────────────────────────────┘│
 │  └────────────────────────┘│  [Triage Card]                        │
@@ -405,19 +433,24 @@ In two-column layout, the left and right columns scroll independently. The user 
 
 **Tasks:**
 
-- [ ] CVLY-01: Implement content-aware layout decision logic (width threshold + word count threshold)
-- [ ] CVLY-02: Implement single-column layout for full View
-- [ ] CVLY-03: Implement two-column layout with independent scrolling
-- [ ] CVLY-04: Layout re-evaluates on window resize (e.g., Undocked Window resized, Splitter Bar dragged)
+- [ ] CVLY-01: Implement two-condition layout decision (container width ≥ 900px AND ≥ 2 visible non-collapsed CRM cards)
+- [ ] CVLY-02: Implement visible card counting logic (evaluate suppression rules for each CRM card)
+- [ ] CVLY-03: Implement single-column layout for full View
+- [ ] CVLY-04: Implement two-column layout with 60/40 split and independent scrolling
+- [ ] CVLY-05: Layout re-evaluates on container resize (Splitter Bar drag, Undocked Window resize, browser resize)
 
 **Tests:**
 
-- [ ] CVLY-T01: Short email in wide window renders single-column
-- [ ] CVLY-T02: Long email in wide window renders two-column
-- [ ] CVLY-T03: Long email in narrow window renders single-column
-- [ ] CVLY-T04: Resizing window from wide to narrow transitions from two-column to single-column
-- [ ] CVLY-T05: Two-column layout columns scroll independently
-- [ ] CVLY-T06: Short SMS in any width renders single-column
+- [ ] CVLY-T01: Container 1200px wide, 3 visible CRM cards → two-column
+- [ ] CVLY-T02: Container 500px wide, 3 visible CRM cards → single-column (width fails)
+- [ ] CVLY-T03: Container 1200px wide, 1 visible CRM card → single-column (not enough CRM content)
+- [ ] CVLY-T04: Container 900px wide, 2 visible CRM cards → two-column (minimum threshold met)
+- [ ] CVLY-T05: Container 899px wide, 2 visible CRM cards → single-column (just under threshold)
+- [ ] CVLY-T06: Resizing container from 1200px to 500px transitions from two-column to single-column
+- [ ] CVLY-T07: Two-column layout columns scroll independently
+- [ ] CVLY-T08: Collapsed Metadata Card does not count toward visible card threshold
+- [ ] CVLY-T09: Suppressed cards (e.g., Summary Card with NULL fields) do not count toward threshold
+- [ ] CVLY-T10: Layout re-evaluates when Splitter Bar is dragged
 
 ---
 
@@ -429,37 +462,44 @@ The Communication Identity Card renders at the top of the full View, above the C
 
 ### 6.1 Communication Identity Card Rendering
 
-The Identity Card for a Communication is minimal — it establishes *what* this record is without duplicating the detailed header that appears inside the Content Card.
+The Identity Card for a Communication is minimal — it establishes *what* this record is at a glance, without duplicating any information from the Content Card header.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  ✉ Email · Inbound · Synced           Feb 21, 2026  │
-│  from Work Gmail (doug@company.com)      10:15 AM   │
+│  ✉ Email Communication                Feb 21, 2026  │
+│                                          10:15 AM   │
 └─────────────────────────────────────────────────────┘
 ```
 
 **Fields displayed:**
 
-| Element              | Source                                   | Rendering                                                                         |
-| -------------------- | ---------------------------------------- | --------------------------------------------------------------------------------- |
-| Channel icon + label | channel field                            | Icon and human-readable channel name (e.g., "✉ Email", "📞 Phone Call", "💬 SMS") |
-| Direction            | direction field                          | "Inbound", "Outbound", or "Meeting"                                               |
-| Source               | source field                             | "Synced", "Manual", or "Imported"                                                 |
-| Provider account     | provider_account_id → account_identifier | Account display name or email address. Omitted for manual entries.                |
-| Timestamp            | timestamp field                          | Full date and time, right-aligned                                                 |
+| Element              | Source          | Rendering                                                                                                    |
+| -------------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
+| Channel icon + label | channel field   | Icon and human-readable type label: "✉ Email Communication", "📞 Phone Call", "💬 Text Communication", "🎥 Video Call", "👥 In-Person Meeting", "📝 Note" |
+| Timestamp            | timestamp field | Full date and time, right-aligned                                                                            |
 
-The Identity Card does **not** show the subject, sender, recipients, or content — those belong in the Content Card where they form the natural reading experience. The Identity Card answers "what kind of record is this and where did it come from?"
+**Fields deliberately excluded from the Identity Card:**
+
+| Field            | Reason                                                                                  | Where it lives instead |
+| ---------------- | --------------------------------------------------------------------------------------- | ---------------------- |
+| Direction        | Already obvious from the Content Card header (sender vs. recipients)                    | Metadata Card          |
+| Source           | Developer-facing concept ("synced", "manual", "imported") — not useful for quick scanning | Metadata Card          |
+| Provider account | Which account received this email matters, but is part of the participant story          | Participants Card      |
+
+The Identity Card answers one question: "What kind of record am I looking at?" Everything else — who, what, how it got here — is answered by the Content Card header and CRM layer cards below.
 
 **Tasks:**
 
-- [ ] CVID-01: Implement Communication Identity Card rendering per channel
-- [ ] CVID-02: Identity Card omits provider account for manual entries
+- [ ] CVID-01: Implement Communication Identity Card with channel icon, type label, and timestamp
+- [ ] CVID-02: Implement channel-specific type labels for all channel values
 
 **Tests:**
 
-- [ ] CVID-T01: Synced email Identity Card shows channel, direction, source, provider account, timestamp
-- [ ] CVID-T02: Manual phone call Identity Card omits provider account
-- [ ] CVID-T03: Identity Card renders within Identity Card fixed area (no scrolling)
+- [ ] CVID-T01: Email Identity Card shows "✉ Email Communication" and timestamp
+- [ ] CVID-T02: Phone call Identity Card shows "📞 Phone Call" and timestamp
+- [ ] CVID-T03: SMS Identity Card shows "💬 Text Communication" and timestamp
+- [ ] CVID-T04: Identity Card does not display direction, source, or provider account
+- [ ] CVID-T05: Identity Card renders within Identity Card fixed area (no scrolling)
 
 ---
 
@@ -472,70 +512,142 @@ The Content Card is the primary reading surface in the full View. It presents th
 ### 7.1 Email Content Card
 
 ```
-┌──────────────────────────────────────────────────────┐
-│  Bob Smith <bob.smith@acmecorp.com>                   │
-│  To: Doug Bower <doug@company.com>                    │
-│  CC: Jane Lee <jane@company.com>                      │
-│                                                       │
-│  Re: Clause 5 revisions                               │
-│──────────────────────────────────────────────────────│
-│                                                       │
-│  Doug,                                                │
-│                                                       │
-│  I've reviewed the revised language for clause 5      │
-│  and have a few concerns.                             │
-│                                                       │
-│  First, the liability cap at $500K seems low given    │
-│  the project scope. I'd suggest we revisit this       │
-│  with the full team before finalizing.                │
-│                                                       │
-│  Second, the indemnification language in section 8    │
-│  needs to mirror the changes we're making to clause   │
-│  5 — otherwise we have a contradiction.               │
-│                                                       │
-│  Can we schedule a call for Thursday to walk through  │
-│  both sections?                                       │
-│                                                       │
-│  Best,                                                │
-│  Bob                                                  │
-│──────────────────────────────────────────────────────│
-│  📎 Attachments (2)                                   │
-│  ┌──────────────────────────────────────────────────┐│
-│  │  📄 revised_clause5.docx         42 KB  ⬇       ││
-│  │  📄 contract_v3.pdf             128 KB  ⬇       ││
-│  └──────────────────────────────────────────────────┘│
-│──────────────────────────────────────────────────────│
-│  ▸ View Original                                      │
-└──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                                                                   │
+│  Bob Smith                                     Aug 25, 2017      │
+│  bob.smith@acmecorp.com                           6:51 AM        │
+│                                                                   │
+│  To: **Doug Bower**, Jane Lee, Tom Clark +2 Others                │
+│  CC: Alice Wong, Dan White +4 Others                              │
+│                                                                   │
+│  RE: new owner of hanger                                          │
+│──────────────────────────────────────────────────────────────────│
+│                                          [PRIMARY ZONE]          │
+│  Your guy.                                                        │
+│                                                                   │
+│  I am on my way home and will call you when I get back in the US. │
+│                                                                   │
+│  Doug                                                             │
+│                                                                   │
+│  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - │
+│                                          [QUOTED ZONE]           │
+│  On Aug 24, 2017, Matt Brennan wrote:    (reduced opacity)       │
+│  │ I thought you wanted to get away from                         │
+│  │ Bill's guy and use my guy? He sent you                        │
+│  │ a quote for $3,000 for the annual...                          │
+│  │                                                               │
+│  │ On Aug 22, 2017, Matt Brennan wrote:                          │
+│  │ │ Stopped by the hanger today and spoke                      │
+│  │ │ to Bill. Sent an e-mail to my mechanic                     │
+│  │ │ and went over what we are looking for...                    │
+│                                                                   │
+│──────────────────────────────────────────────────────────────────│
+│  📎 Attachments (2)                                               │
+│  ┌──────────────────────────────────────────────────────────────┐│
+│  │  📄 revised_clause5.docx         42 KB  ⬇                   ││
+│  │  📄 contract_v3.pdf             128 KB  ⬇                   ││
+│  └──────────────────────────────────────────────────────────────┘│
+│──────────────────────────────────────────────────────────────────│
+│  ▸ View Original                                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-**Header section:**
+**Header section — Visual hierarchy:**
 
-- Sender: display name + email address. Display name renders as the prominent element; email address in lighter text.
-- Recipients: "To:" line with display names + addresses. "CC:" line if CC recipients exist. "BCC:" line if BCC recipients exist (only visible to the sender/account owner).
-- Participant names that are resolved to CRM contacts render as **clickable links** — clicking navigates to the Contact record (opens in a Floating Unmodal preview or navigates to the Contact entity workspace, depending on modifier key).
-- Participant names with pending resolution render as plain text with a subtle "unresolved" indicator.
+The header establishes who, to whom, and what in the first two seconds. Three tiers of prominence:
+
+1. **Sender name** — Largest, boldest text in the header. The user’s first anchor point. Reads as the answer to “who sent this?”
+2. **Subject line** — Largest, boldest text on the entire card (rendered as a heading below the recipient lines). The answer to “what is this about?”
+3. **Sender email, recipients, timestamp** — Clearly readable but subordinate. Supporting context, not primary focus.
+
+**Header section — Sender (left side):**
+
+- **Sender display name** on the first line — large, bold, high contrast. This is the most prominent element in the header area after the subject line. If the sender is unresolved (no CRM contact), the email address renders in the name position instead.
+- **Sender email address** on the second line — smaller, lighter weight. Provides the specific address for disambiguation.
+- Sender name is a clickable link to the Contact record if resolved.
+
+**Header section — Timestamp (right side):**
+
+- Right-aligned on the same line as the sender name.
+- Date on the first line, time on the second line (matching the sender name / sender email two-line structure).
+- Timestamp formatting: Today → time only. This year → “Mon DD” + time. Older → “Mon DD, YYYY” + time.
+
+**Header section — Recipients:**
+
+Recipients use a compact format that answers three questions instantly: “Was I in the To or CC?”, “Who else was involved?”, and “How many people?”
+
+Rules for the **To:** line:
+
+1. If the current user is a To recipient, their name appears **first and bold** — visually distinct from other names.
+2. After the current user (if present), remaining To recipients are listed alphabetically by last name.
+3. Show a maximum of **three names** per line (including the current user if present).
+4. If more To recipients exist beyond three, show **“+X Others”** as a clickable link that navigates to the Participants Card.
+
+Rules for the **CC:** line:
+
+1. CC line is only shown if CC recipients exist.
+2. If the current user is a CC recipient (and not in To), their name appears **first and bold** on the CC line.
+3. Same three-name maximum and “+X Others” link as the To line.
+4. If no CC recipients exist, the CC line is omitted entirely.
+
+Rules for **BCC:**
+
+- BCC recipients are treated identically to single-recipient CC for display purposes. The BCC line is only visible to the sender/account owner.
+
+**Outbound emails:**
+
+- The current user’s name appears in the From line (as sender). No bolding in the To/CC lines since the user is not a recipient.
+
+**Recipient name rendering:**
+
+- Resolved contacts: display name rendered as a clickable link to the Contact record.
+- Unresolved participants: email address rendered as plain text with a subtle “unresolved” indicator.
+- The current user’s name is always **bold** regardless of resolved/unresolved status.
 
 **Subject line:**
 
-- Rendered as a heading below the recipient lines, above the content divider. Prominent but not oversized — it should feel like an email subject, not a page title.
+- Rendered as the **largest, boldest text on the entire Content Card** — a clear heading below the recipient lines, above the content divider.
+- Prominent enough that the user’s eye goes to it naturally as the answer to “what is this about?”
+- If NULL (rare for email), the subject line is omitted and the content flows directly below the recipients.
 
-**Body:**
+**Body — Two-Zone Rendering:**
 
-- cleaned_html rendered as formatted text. The original paragraph structure is preserved.
-- If the email contained HTML formatting (bold, italic, links, lists), cleaned_html should preserve this structure where the extraction pipeline retains it. Simple formatting renders natively; complex HTML layouts are flattened to readable text.
+The Communication Content Card shows the **complete email** — not a stripped version. The user should never wonder "did the system cut something?" However, the new message must visually dominate, with the quoted reply chain clearly subordinate.
+
+The body renders in two visual zones:
+
+**Primary zone — New message content:**
+- Full contrast, full text weight. This is the content the sender actually wrote in this email.
+- Rendered with HTML formatting preserved (bold, italic, links, lists) from the original email.
+- This zone commands the user's attention immediately.
+
+**Quoted zone — Reply chain:**
+- Visually stepped back with three reinforcing cues:
+  1. **Vertical bar** — A subtle left-border line running the full height of the quoted block (the standard "quoted text" convention from email clients).
+  2. **Reduced opacity** — Text renders at reduced contrast (lighter color or lower opacity) so the user's eye stays on the primary zone. Still readable — the user can glance down for thread context without any clicks.
+  3. **Indent** — The quoted block is indented from the left edge, further separating it from the primary content.
+- If the reply chain contains nested quotes (a reply within a reply), each nesting level gets an additional vertical bar and indent, progressively stepping back.
+- The "On [date], [person] wrote:" attribution lines that introduce quoted blocks are part of the quoted zone and receive the same visual treatment.
+
+**Pipeline implication:**
+
+The content extraction pipeline must mark the split point between new content and quoted content rather than removing the quoted content. Specifically, cleaned_html should wrap quoted portions in a semantic element (e.g., `<blockquote class="quoted-reply">`) so the UI can apply the two-zone visual treatment. Signatures, boilerplate, and promotional footers are still removed entirely — only the meaningful quoted reply chain is preserved with markup.
+
+This means cleaned_html serves two different rendering contexts:
+- **Communication Content Card** — Renders the full cleaned_html including the quoted-reply wrappers, with visual treatment applied to the quoted zones.
+- **Conversation timeline** — Strips or collapses the quoted-reply wrappers, showing only the new message content (since the other messages in the thread are already visible as separate timeline entries).
 
 **Attachment area:**
 
-- If has_attachments is true, an attachment section renders below the body, separated by a divider.
+- If has_attachments is true, an attachment section renders below the body (below both zones), separated by a divider.
 - Each attachment renders as a row: file type icon, filename, file size, and a download action button (⬇).
 - Attachment rows are interactive — clicking the download button initiates the download (on-demand from provider in Phase 1, from object storage in Phase 2+).
 
 **View Original expander:**
 
 - A collapsible section at the bottom of the Content Card. Collapsed by default.
-- When expanded, shows original_text — the original, unprocessed content including quoted replies, signatures, and boilerplate that the content extraction pipeline removed.
-- Purpose: debugging and verification. Users can confirm that content extraction didn't remove important content.
+- When expanded, shows original_text — the complete unprocessed plain text including signatures, boilerplate, and promotional footers that the content extraction pipeline removed.
+- Purpose: debugging and verification. Users can confirm that content extraction didn't remove important content. In most cases the two-zone body above shows everything the user needs, making View Original a rarely-used safety net.
 
 ### 7.2 SMS / MMS Content Card
 
@@ -604,35 +716,60 @@ Same structure as Phone Call (Recorded) with video icon and video playback contr
 
 | Rule                      | Behavior                                                                                                                                                                                                                       |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Two-zone body (email)** | New message content renders at full contrast (primary zone). Quoted reply chain renders with vertical left bar, reduced opacity, and indent (quoted zone). Signatures and boilerplate are stripped entirely — only meaningful quoted replies preserved. |
+| **Nested quotes**         | Each nesting level in the reply chain gets an additional vertical bar and indent, progressively stepping back. Deeply nested quotes become increasingly subtle. |
 | **Participant links**     | Resolved contacts are clickable links navigating to the Contact record. Unresolved participants render as plain text with a subtle indicator.                                                                                  |
 | **Fills available space** | No artificial truncation. Content flows to its natural length. Card scrolls if content exceeds available space (in single-column layout, the whole view scrolls; in two-column layout, the left column scrolls independently). |
-| **View Original**         | Available only for channels where cleaned_html differs from original_text (primarily email). Collapsed by default.                                                                                                              |
+| **View Original**         | Available only for email channel. Collapsed by default. Shows original_text with everything the pipeline removed (signatures, boilerplate, promotional footers). |
 | **Attachment actions**    | Download button on each attachment. Playback controls for audio/video recordings. These are the only interactive elements in the Content Card.                                                                                 |
 
 **Tasks:**
 
-- [ ] CVCC-01: Implement email Content Card rendering (header, subject, body, attachments, View Original)
-- [ ] CVCC-02: Implement SMS/MMS Content Card rendering
-- [ ] CVCC-03: Implement recorded call Content Card rendering (transcript + playback)
-- [ ] CVCC-04: Implement manual entry Content Card rendering (phone_manual, video_manual, in_person, note)
-- [ ] CVCC-05: Implement recorded video Content Card rendering (transcript + video playback)
-- [ ] CVCC-06: Implement participant name linking to Contact records
-- [ ] CVCC-07: Implement View Original expander for email
-- [ ] CVCC-08: Implement attachment download action
-- [ ] CVCC-09: Implement audio/video playback controls
+- [ ] CVCC-01: Implement email Content Card header visual hierarchy (sender name prominent, subject boldest, supporting context subordinate)
+- [ ] CVCC-02: Implement sender display (name bold on line 1, email smaller on line 2, timestamp right-aligned)
+- [ ] CVCC-03: Implement recipient line logic (current user bold and first, alphabetical remaining, three-name cap, "+X Others" link)
+- [ ] CVCC-04: Implement CC line display with same rules as To line
+- [ ] CVCC-05: Implement subject line as largest/boldest text on Content Card
+- [ ] CVCC-06: Implement email Content Card two-zone body rendering (primary zone at full contrast, quoted zone with vertical bar + reduced opacity + indent)
+- [ ] CVCC-07: Implement nested quote rendering (progressive vertical bars and indentation per nesting level)
+- [ ] CVCC-08: Implement SMS/MMS Content Card rendering
+- [ ] CVCC-09: Implement recorded call Content Card rendering (transcript + playback)
+- [ ] CVCC-10: Implement manual entry Content Card rendering (phone_manual, video_manual, in_person, note)
+- [ ] CVCC-11: Implement recorded video Content Card rendering (transcript + video playback)
+- [ ] CVCC-12: Implement participant name linking to Contact records
+- [ ] CVCC-13: Implement View Original expander for email
+- [ ] CVCC-14: Implement attachment download action
+- [ ] CVCC-15: Implement audio/video playback controls
+- [ ] CVCC-16: Implement "+X Others" link navigation to Participants Card
 
 **Tests:**
 
-- [ ] CVCC-T01: Email Content Card renders full header with sender, To, CC, BCC
-- [ ] CVCC-T02: Resolved participant names render as clickable links
-- [ ] CVCC-T03: Unresolved participant names render as plain text with indicator
-- [ ] CVCC-T04: View Original expander shows original_text when expanded
-- [ ] CVCC-T05: View Original expander is collapsed by default
-- [ ] CVCC-T06: Attachment download action initiates file download
-- [ ] CVCC-T07: Audio recording shows playback controls
-- [ ] CVCC-T08: SMS Content Card omits subject and View Original
-- [ ] CVCC-T09: Manual entry Content Card renders user-authored notes
-- [ ] CVCC-T10: Content Card with no attachments omits attachment area entirely
+- [ ] CVCC-T01: Sender name renders large and bold; sender email renders smaller below
+- [ ] CVCC-T02: Timestamp renders right-aligned opposite sender name
+- [ ] CVCC-T03: Inbound email — current user appears bold and first in To line when user is a To recipient
+- [ ] CVCC-T04: Inbound email — current user appears bold and first in CC line when user is CC only
+- [ ] CVCC-T05: To line with 5 recipients shows 3 names + "+2 Others" link
+- [ ] CVCC-T06: CC line omitted when no CC recipients exist
+- [ ] CVCC-T07: Outbound email — current user in From, no bolding in To/CC lines
+- [ ] CVCC-T08: "+X Others" link navigates to Participants Card
+- [ ] CVCC-T09: Remaining recipients (after current user) sorted alphabetically by last name
+- [ ] CVCC-T10: Subject line renders as largest/boldest text on the card
+- [ ] CVCC-T11: New message content renders at full contrast in primary zone
+- [ ] CVCC-T12: Quoted reply chain renders with vertical bar, reduced opacity, and indent
+- [ ] CVCC-T13: Nested quotes show progressive vertical bars and indentation
+- [ ] CVCC-T14: Email with no quoted replies renders entire body as primary zone
+- [ ] CVCC-T15: Signatures and boilerplate are stripped (not in quoted zone)
+- [ ] CVCC-T16: Resolved participant names render as clickable links
+- [ ] CVCC-T17: Unresolved participant names render as plain text with indicator
+- [ ] CVCC-T18: BCC line visible only to sender/account owner
+- [ ] CVCC-T19: View Original expander shows original_text when expanded
+- [ ] CVCC-T20: View Original expander is collapsed by default
+- [ ] CVCC-T21: Attachment download action initiates file download
+- [ ] CVCC-T22: Audio recording shows playback controls
+- [ ] CVCC-T23: SMS Content Card omits subject and View Original
+- [ ] CVCC-T24: Manual entry Content Card renders user-authored notes
+- [ ] CVCC-T25: Content Card with no attachments omits attachment area entirely
+- [ ] CVCC-T26: Single To recipient, no CC — To line shows one name, CC line omitted
 
 ---
 
@@ -653,12 +790,15 @@ Each participant renders as a compact row:
 │  Participants                                         │
 │──────────────────────────────────────────────────────│
 │  Bob Smith              Sender                        │
+│  bob.smith@acmecorp.com                               │
 │  VP Engineering · Acme Corp                           │
 │                                                       │
 │  Doug Bower             To           (You)            │
+│  via doug@dougbower.com                               │
 │  Owner · CRMExtender                                  │
 │                                                       │
 │  Jane Lee               CC                            │
+│  jane@acmecorp.com                                    │
 │  Legal Counsel · Acme Corp                            │
 └──────────────────────────────────────────────────────┘
 ```
@@ -667,7 +807,9 @@ Each participant renders as a compact row:
 | ----------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Name                    | Contact display name (or participant display_name if unresolved) | Clickable link to Contact record (if resolved). Plain text with unresolved indicator if pending. |
 | Role                    | Participant relation metadata: role                              | "Sender", "To", "CC", "BCC", "Participant" — right-aligned on the name line                      |
-| Title + Company         | Contact's current employment                                     | Rendered below the name in lighter text. Omitted if the contact has no employment record.        |
+| Email / phone           | Participant relation metadata: address                           | The specific address used in this communication. Rendered below the name in lighter text.        |
+| Receiving account       | provider_account_id → account_identifier                         | For the account owner only: "via [account address]" — shows which of the user's accounts received or sent this communication. |
+| Title + Company         | Contact's current employment                                     | Rendered below the address in lighter text. Omitted if the contact has no employment record.     |
 | Account owner indicator | is_account_owner flag                                            | "(You)" badge if this participant is the account owner                                           |
 
 ### 8.3 Suppression
@@ -680,6 +822,8 @@ The Participants Card is suppressed (hidden) only if the communication has zero 
 - [ ] CVPT-02: Implement Contact record navigation from participant name
 - [ ] CVPT-03: Implement unresolved participant indicator
 - [ ] CVPT-04: Implement account owner "(You)" badge
+- [ ] CVPT-05: Implement participant email/phone address display
+- [ ] CVPT-06: Implement receiving account display ("via [address]") for account owner
 
 **Tests:**
 
@@ -689,6 +833,8 @@ The Participants Card is suppressed (hidden) only if the communication has zero 
 - [ ] CVPT-T04: Account owner participant shows "(You)" badge
 - [ ] CVPT-T05: Participant title and company displayed from employment record
 - [ ] CVPT-T06: Participants Card suppressed when no participant relations exist
+- [ ] CVPT-T07: Participant email/phone address displayed below name
+- [ ] CVPT-T08: Account owner shows "via [account address]" identifying receiving account
 
 ---
 

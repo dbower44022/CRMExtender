@@ -432,6 +432,8 @@ In practice, most communications have at least Participants + Conversation visib
 
 In two-column layout, the left and right columns scroll independently. The user can scroll through a long email body without losing the CRM context visible in the right column.
 
+**Column visual treatment:** The two columns should feel like distinct zones — the email content (left) and the CRM intelligence sidebar (right). The right column has a subtle background tint and a left border to create a sidebar feel, visually separating CRM context from the email reading surface. The left column (Content Card) has no background treatment — it should feel like reading an email, not like a CRM panel.
+
 **Tasks:**
 
 - [ ] CVLY-01: Implement two-condition layout decision (container width ≥ 900px AND ≥ 2 visible non-collapsed CRM cards)
@@ -439,6 +441,7 @@ In two-column layout, the left and right columns scroll independently. The user 
 - [ ] CVLY-03: Implement single-column layout for full View
 - [ ] CVLY-04: Implement two-column layout with 60/40 split and independent scrolling
 - [ ] CVLY-05: Layout re-evaluates on container resize (Splitter Bar drag, Undocked Window resize, browser resize)
+- [ ] CVLY-06: Implement CRM column visual treatment (subtle background tint + left border)
 
 **Tests:**
 
@@ -452,6 +455,7 @@ In two-column layout, the left and right columns scroll independently. The user 
 - [ ] CVLY-T08: Collapsed Metadata Card does not count toward visible card threshold
 - [ ] CVLY-T09: Suppressed cards (e.g., Summary Card with NULL fields) do not count toward threshold
 - [ ] CVLY-T10: Layout re-evaluates when Splitter Bar is dragged
+- [ ] CVLY-T11: Two-column layout right column has distinct background tint and left border
 
 ---
 
@@ -850,7 +854,13 @@ The Participants Card is suppressed (hidden) only if the communication has zero 
 
 The Summary Card displays the Communication's Published Summary — the distilled representation of the communication's content. This is what appears in the Conversation timeline and what the Conversation-level AI consumes.
 
-### 9.2 Rendering
+### 9.2 Visual Distinction
+
+The Summary Card is visually distinct from other CRM cards. It carries a subtle tinted background and border (e.g., a light blue tint) that signals "this is AI-generated intelligence" at a glance. This helps the user's eye find the summary quickly among the other CRM cards, and reinforces that this content is a distillation rather than raw data.
+
+The tint applies regardless of summary_source — AI-generated, user-authored, and pass-through summaries all get the same card treatment. The source badge (Section 9.3) communicates the origin; the card treatment communicates "this is the summary."
+
+### 9.3 Rendering
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -869,20 +879,20 @@ The Summary Card displays the Communication's Published Summary — the distille
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element           | Source                                            | Rendering                                                                                                                                                      |
-| ----------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Card header       | "Summary"                                         | Standard card header                                                                                                                                           |
-| Source badge      | summary_source                                    | "🤖 AI Generated", "✍ User Authored", or "📋 Pass-through" — right of header                                                                                   |
-| Edit action       | —                                                 | Pencil icon (✏). Opens the summary in the rich text editor for user editing. Creates a new summary revision on save.                                           |
-| Regenerate action | —                                                 | Refresh icon (↻). Available only for AI-generated and pass-through summaries. Re-runs AI summary generation from cleaned_html. Creates a new summary revision. |
-| Summary content   | summary_html                                      | Rendered as rich text (headings, lists, bold). The HTML as produced by the AI or the user's editor.                                                            |
-| Revision info     | summary_revision_count, current revision metadata | "Rev N of N · Last updated [date] by [AI or username]". Clicking opens revision history (future: revision comparison view).                                    |
+| Element           | Source                                            | Rendering                                                                                                                                                       |
+| ----------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Card header       | "Summary"                                         | Standard card header                                                                                                                                            |
+| Source badge      | summary_source                                    | "🤖 AI Generated", "✍ User Authored", or "📋 Pass-through" — right of header                                                                                    |
+| Edit action       | —                                                 | Pencil icon (✏). Opens the summary in the rich text editor for user editing. Creates a new summary revision on save.                                            |
+| Regenerate action | —                                                 | Refresh icon (↻). Available only for AI-generated and pass-through summaries. Re-runs AI summary generation from search_text. Creates a new summary revision. |
+| Summary content   | summary_html                                      | Rendered as rich text (headings, lists, bold). The HTML as produced by the AI or the user's editor.                                                             |
+| Revision info     | summary_revision_count, current revision metadata | "Rev N of N · Last updated [date] by [AI or username]". Clicking opens revision history (future: revision comparison view).                                     |
 
-### 9.3 Suppression
+### 9.4 Suppression
 
 The Summary Card is suppressed if all summary fields are NULL (summary_json, summary_html, summary_text all NULL). This can occur if summary generation has not yet run or if the communication was triaged before summary generation.
 
-### 9.4 Edit and Regenerate Workflows
+### 9.5 Edit and Regenerate Workflows
 
 **Edit:** Clicking the edit icon transitions the Summary Card to Edit Mode — the summary_html is replaced by the rich text editor loaded with summary_json. Save creates a new summary revision with summary_source = 'user_authored'. Cancel discards changes.
 
@@ -897,6 +907,7 @@ Both workflows are defined in detail in the Published Summary Sub-PRD. This sect
 - [ ] CVSU-03: Implement edit action (transition to rich text editor)
 - [ ] CVSU-04: Implement regenerate action with loading state
 - [ ] CVSU-05: Implement revision info display
+- [ ] CVSU-06: Implement Summary Card visual distinction (tinted background and border)
 
 **Tests:**
 
@@ -907,6 +918,7 @@ Both workflows are defined in detail in the Published Summary Sub-PRD. This sect
 - [ ] CVSU-T05: Regenerate action triggers AI pipeline and updates card on completion
 - [ ] CVSU-T06: Summary Card suppressed when all summary fields are NULL
 - [ ] CVSU-T07: Revision info displays correct count and last update metadata
+- [ ] CVSU-T08: Summary Card has visually distinct tinted background regardless of summary_source
 
 ---
 

@@ -879,14 +879,14 @@ The tint applies regardless of summary_source — AI-generated, user-authored, a
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element           | Source                                            | Rendering                                                                                                                                                       |
-| ----------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Card header       | "Summary"                                         | Standard card header                                                                                                                                            |
-| Source badge      | summary_source                                    | "🤖 AI Generated", "✍ User Authored", or "📋 Pass-through" — right of header                                                                                    |
-| Edit action       | —                                                 | Pencil icon (✏). Opens the summary in the rich text editor for user editing. Creates a new summary revision on save.                                            |
+| Element           | Source                                            | Rendering                                                                                                                                                     |
+| ----------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Card header       | "Summary"                                         | Standard card header                                                                                                                                          |
+| Source badge      | summary_source                                    | "🤖 AI Generated", "✍ User Authored", or "📋 Pass-through" — right of header                                                                                  |
+| Edit action       | —                                                 | Pencil icon (✏). Opens the summary in the rich text editor for user editing. Creates a new summary revision on save.                                          |
 | Regenerate action | —                                                 | Refresh icon (↻). Available only for AI-generated and pass-through summaries. Re-runs AI summary generation from search_text. Creates a new summary revision. |
-| Summary content   | summary_html                                      | Rendered as rich text (headings, lists, bold). The HTML as produced by the AI or the user's editor.                                                             |
-| Revision info     | summary_revision_count, current revision metadata | "Rev N of N · Last updated [date] by [AI or username]". Clicking opens revision history (future: revision comparison view).                                     |
+| Summary content   | summary_html                                      | Rendered as rich text (headings, lists, bold). The HTML as produced by the AI or the user's editor.                                                           |
+| Revision info     | summary_revision_count, current revision metadata | "Rev N of N · Last updated [date] by [AI or username]". Clicking opens revision history (future: revision comparison view).                                   |
 
 ### 9.4 Suppression
 

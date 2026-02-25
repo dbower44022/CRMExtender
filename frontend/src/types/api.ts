@@ -354,3 +354,63 @@ export interface CommunicationPreviewData {
   }
   attachments: CommunicationAttachment[]
 }
+
+// --- Communication Full View types ---
+
+export interface CommunicationFullParticipant {
+  address: string
+  name: string | null
+  contact_id: string | null
+  role: string
+  is_account_owner: boolean
+  contact_name: string | null
+  company_name: string | null
+  title: string | null
+}
+
+export interface CommunicationConversation {
+  id: string
+  title: string | null
+  status: string | null
+  communication_count: number
+}
+
+export interface CommunicationProviderAccount {
+  id: string
+  provider: string
+  email_address: string
+}
+
+export interface CommunicationFullData {
+  id: string
+  channel: string
+  direction: string | null
+  timestamp: string
+  subject: string | null
+  sender_name: string | null
+  sender_address: string | null
+  cleaned_html: string | null
+  search_text: string | null
+  original_text: string | null
+  snippet: string | null
+  source: string | null
+  triage_result: string | null
+  triage_reason: string | null
+  is_read: boolean
+  is_archived: boolean
+  duration_seconds: number | null
+  phone_number_from: string | null
+  phone_number_to: string | null
+  ai_summary: string | null
+  ai_summarized_at: string | null
+  provider_message_id: string | null
+  provider_thread_id: string | null
+  header_message_id: string | null
+  created_at: string
+  updated_at: string
+  participants: CommunicationFullParticipant[]
+  attachments: CommunicationAttachment[]
+  conversation: CommunicationConversation | null
+  provider_account: CommunicationProviderAccount | null
+  notes: unknown[]
+}

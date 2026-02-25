@@ -1624,3 +1624,234 @@ class TestCommunicationPreview:
         assert data["duration_seconds"] == 300
         assert data["phone_number_from"] == "+15551111111"
         assert data["phone_number_to"] == "+15552222222"
+
+
+# ---------------------------------------------------------------------------
+# Communication Full View
+# ---------------------------------------------------------------------------
+
+def _seed_full_communication(
+    comm_id="comm-full-1",
+    channel="email",
+    subject="Full View Subject",
+    cleaned_html="<p>Full body</p>",
+    search_text="Full body",
+    original_text="Full body\n-- \nSignature",
+    snippet="Full body preview",
+    sender_name="Alice Sender",
+    sender_address="alice@example.com",
+    direction="inbound",
+    source="synced",
+    triage_result=None,
+    ai_summary=None,
+    ai_summarized_at=None,
+    duration_seconds=None,
+    phone_number_from=None,
+    phone_number_to=None,
+    provider_message_id=None,
+    provider_thread_id=None,
+    header_message_id=None,
+):
+    """Seed a communication for full view tests."""
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO provider_accounts "
+            "(id, customer_id, provider, email_address, is_active, created_at, updated_at) "
+            "VALUES (?, ?, 'gmail', 'test@test.com', 1, ?, ?)",
+            ("pa-full", CUST_ID, _NOW, _NOW),
+        )
+        conn.execute(
+            "INSERT INTO communications "
+            "(id, account_id, channel, timestamp, cleaned_html, search_text, original_text, "
+            "direction, source, "
+            "sender_address, sender_name, subject, snippet, is_read, is_archived, "
+            "triage_result, ai_summary, ai_summarized_at, "
+            "duration_seconds, phone_number_from, phone_number_to, "
+            "provider_message_id, provider_thread_id, header_message_id, "
+            "created_at, updated_at) "
+            "VALUES (?, 'pa-full', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, "
+            "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (comm_id, channel, _NOW, cleaned_html, search_text, original_text,
+             direction, source,
+             sender_address, sender_name, subject, snippet,
+             triage_result, ai_summary, ai_summarized_at,
+             duration_seconds, phone_number_from, phone_number_to,
+             provider_message_id, provider_thread_id, header_message_id,
+             _NOW, _NOW),
+        )
+
+
+class TestCommunicationFullView:
+    def test_full_not_found(self, client):
+        resp = client.get("/api/v1/communications/nonexistent/full")
+        assert resp.status_code == 404
+
+    def test_full_email_basic(self, client):
+        _seed_full_communication()
+        resp = client.get("/api/v1/communications/comm-full-1/full")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == "comm-full-1"
+        assert data["channel"] == "email"
+        assert data["direction"] == "inbound"
+        assert data["subject"] == "Full View Subject"
+        assert data["sender_name"] == "Alice Sender"
+        assert data["sender_address"] == "alice@example.com"
+        assert data["cleaned_html"] == "<p>Full body</p>"
+        assert data["search_text"] == "Full body"
+        assert data["snippet"] == "Full body preview"
+        assert data["source"] == "synced"
+        assert data["is_read"] is False
+        assert data["is_archived"] is False
+        assert data["timestamp"] is not None
+        assert isinstance(data["participants"], list)
+        assert isinstance(data["attachments"], list)
+        assert isinstance(data["notes"], list)
+
+    def test_full_participants_enriched(self, client):
+        _seed_full_communication()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO contacts (id, customer_id, name, source, status, created_at, updated_at) "
+                "VALUES ('ct-enrich', ?, 'Bob Enriched', 'test', 'active', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO companies (id, customer_id, name, domain, created_at, updated_at) "
+                "VALUES ('co-enrich', ?, 'Acme Corp', 'acme.com', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO contact_companies "
+                "(id, contact_id, company_id, is_primary, is_current, title, created_at, updated_at) "
+                "VALUES ('cc-enrich', 'ct-enrich', 'co-enrich', 1, 1, 'VP Engineering', ?, ?)",
+                (_NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO communication_participants "
+                "(communication_id, address, name, contact_id, role) "
+                "VALUES ('comm-full-1', 'bob@acme.com', 'Bob', 'ct-enrich', 'from')",
+            )
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        p = data["participants"][0]
+        assert p["contact_name"] == "Bob Enriched"
+        assert p["company_name"] == "Acme Corp"
+        assert p["title"] == "VP Engineering"
+        assert p["contact_id"] == "ct-enrich"
+        assert p["is_account_owner"] is False  # NULL treated as False
+
+    def test_full_participants_unresolved(self, client):
+        _seed_full_communication()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO communication_participants "
+                "(communication_id, address, name, contact_id, role) "
+                "VALUES ('comm-full-1', 'unknown@ext.com', 'Unknown Person', NULL, 'to')",
+            )
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        p = data["participants"][0]
+        assert p["contact_name"] is None
+        assert p["company_name"] is None
+        assert p["title"] is None
+        assert p["contact_id"] is None
+
+    def test_full_conversation_assigned(self, client):
+        _seed_full_communication()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO conversations (id, customer_id, title, status, created_at, updated_at) "
+                "VALUES ('conv-assign', ?, 'Lease Negotiation', 'active', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO conversation_communications (conversation_id, communication_id, created_at) "
+                "VALUES ('conv-assign', 'comm-full-1', ?)",
+                (_NOW,),
+            )
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        conv = data["conversation"]
+        assert conv is not None
+        assert conv["id"] == "conv-assign"
+        assert conv["title"] == "Lease Negotiation"
+        assert conv["status"] == "active"
+        assert conv["communication_count"] == 1
+
+    def test_full_conversation_none(self, client):
+        _seed_full_communication()
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        assert data["conversation"] is None
+
+    def test_full_provider_account(self, client):
+        _seed_full_communication()
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        pa = data["provider_account"]
+        assert pa is not None
+        assert pa["id"] == "pa-full"
+        assert pa["provider"] == "gmail"
+        assert pa["email_address"] == "test@test.com"
+
+    def test_full_ai_summary_present(self, client):
+        _seed_full_communication(
+            ai_summary="Key points discussed",
+            ai_summarized_at=_NOW,
+        )
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        assert data["ai_summary"] == "Key points discussed"
+        assert data["ai_summarized_at"] == _NOW
+
+    def test_full_ai_summary_null(self, client):
+        _seed_full_communication()
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        assert data["ai_summary"] is None
+        assert data["ai_summarized_at"] is None
+
+    def test_full_attachments(self, client):
+        _seed_full_communication()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO attachments (id, communication_id, filename, mime_type, size_bytes, created_at) "
+                "VALUES ('att-full-1', 'comm-full-1', 'contract.pdf', 'application/pdf', 54321, ?)",
+                (_NOW,),
+            )
+            conn.execute(
+                "INSERT INTO attachments (id, communication_id, filename, mime_type, size_bytes, created_at) "
+                "VALUES ('att-full-2', 'comm-full-1', 'notes.txt', 'text/plain', 1024, ?)",
+                (_NOW,),
+            )
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        assert len(data["attachments"]) == 2
+        filenames = {a["filename"] for a in data["attachments"]}
+        assert "contract.pdf" in filenames
+        assert "notes.txt" in filenames
+
+    def test_full_original_text(self, client):
+        _seed_full_communication(original_text="Original content\n-- \nMy Signature")
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        assert data["original_text"] == "Original content\n-- \nMy Signature"
+
+    def test_full_provider_ids(self, client):
+        _seed_full_communication(
+            provider_message_id="msg-abc123",
+            provider_thread_id="thread-xyz789",
+            header_message_id="<abc@mail.gmail.com>",
+        )
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        assert data["provider_message_id"] == "msg-abc123"
+        assert data["provider_thread_id"] == "thread-xyz789"
+        assert data["header_message_id"] == "<abc@mail.gmail.com>"
+
+    def test_full_timestamps(self, client):
+        _seed_full_communication()
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        assert data["created_at"] is not None
+        assert data["updated_at"] is not None
+
+    def test_full_notes_empty(self, client):
+        _seed_full_communication()
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        assert data["notes"] == []
+
+    def test_full_triage_result(self, client):
+        _seed_full_communication(triage_result="no_known_contacts")
+        data = client.get("/api/v1/communications/comm-full-1/full").json()
+        assert data["triage_result"] == "no_known_contacts"

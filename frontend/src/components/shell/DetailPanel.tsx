@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { X, ChevronUp, ChevronDown } from 'lucide-react'
+import { X, ChevronUp, ChevronDown, Maximize2 } from 'lucide-react'
 import { useLayoutStore } from '../../stores/layout.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { RecordDetail } from '../detail/RecordDetail.tsx'
@@ -62,6 +62,21 @@ export function DetailPanel() {
           >
             <ChevronDown size={14} />
           </button>
+          {activeEntityType === 'communication' && selectedRowId && (
+            <button
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent('grid:openFullView', {
+                    detail: { entityId: selectedRowId },
+                  }),
+                )
+              }}
+              className="flex h-6 w-6 items-center justify-center rounded text-surface-400 transition-colors hover:bg-surface-100 hover:text-surface-600"
+              title="Open full view"
+            >
+              <Maximize2 size={14} />
+            </button>
+          )}
           <button
             onClick={hideDetailPanel}
             className="flex h-6 w-6 items-center justify-center rounded text-surface-400 transition-colors hover:bg-surface-100 hover:text-surface-600"

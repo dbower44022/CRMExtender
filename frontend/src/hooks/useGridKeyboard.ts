@@ -187,13 +187,20 @@ export function useGridKeyboard({
         return
       }
 
-      // Enter: activate editor on focused cell
+      // Enter: activate editor on focused cell, or open full view
       if (e.key === 'Enter') {
         if (selectedRowId && selectedRowIndex >= 0) {
           const fieldKey = visibleColumnKeys[focusedColumn]
           if (fieldKey && isFieldEditable(fieldKey)) {
             e.preventDefault()
             setEditingCell({ rowId: selectedRowId, fieldKey })
+          } else {
+            e.preventDefault()
+            window.dispatchEvent(
+              new CustomEvent('grid:openFullView', {
+                detail: { entityId: selectedRowId },
+              }),
+            )
           }
         }
         return

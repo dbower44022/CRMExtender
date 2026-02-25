@@ -1285,6 +1285,145 @@ def communication_detail_api(request: Request, comm_id: str):
     }
 
 
+@router.get("/communications/{comm_id}/full")
+def communication_full_api(request: Request, comm_id: str):
+    """Full view data for the communication modal — enriched participants,
+    conversation assignment, provider account, notes, and all content fields."""
+    with get_connection() as conn:
+        comm = conn.execute(
+            "SELECT * FROM communications WHERE id = ?", (comm_id,)
+        ).fetchone()
+        if not comm:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        comm = dict(comm)
+
+        # Participants with contact enrichment
+        # Detect whether is_account_owner column exists (added post-v17)
+        _cp_cols = {
+            row[1] for row in conn.execute("PRAGMA table_info(communication_participants)")
+        }
+        _has_owner_col = "is_account_owner" in _cp_cols
+        _owner_select = "cp.is_account_owner" if _has_owner_col else "NULL AS is_account_owner"
+
+        parts = conn.execute(
+            f"SELECT cp.address, cp.name, cp.contact_id, cp.role, "
+            f"       {_owner_select}, "
+            "       c.name AS contact_name, "
+            "       (SELECT co.name FROM companies co "
+            "        JOIN contact_companies cc ON cc.company_id = co.id "
+            "        WHERE cc.contact_id = cp.contact_id "
+            "          AND cc.is_primary = 1 AND cc.is_current = 1 "
+            "        LIMIT 1) AS company_name, "
+            "       (SELECT cc2.title FROM contact_companies cc2 "
+            "        WHERE cc2.contact_id = cp.contact_id "
+            "          AND cc2.is_primary = 1 AND cc2.is_current = 1 "
+            "        LIMIT 1) AS title "
+            "FROM communication_participants cp "
+            "LEFT JOIN contacts c ON c.id = cp.contact_id "
+            "WHERE cp.communication_id = ? "
+            "ORDER BY cp.role, cp.name COLLATE NOCASE",
+            (comm_id,),
+        ).fetchall()
+
+        participants = []
+        for p in parts:
+            participants.append({
+                "address": p["address"],
+                "name": p["name"],
+                "contact_id": p["contact_id"],
+                "role": p["role"],
+                "is_account_owner": bool(p["is_account_owner"]) if p["is_account_owner"] is not None else False,
+                "contact_name": p["contact_name"],
+                "company_name": p["company_name"],
+                "title": p["title"],
+            })
+
+        # Attachments
+        attachments = [
+            {
+                "id": a["id"],
+                "filename": a["filename"],
+                "mime_type": a["mime_type"],
+                "size_bytes": a["size_bytes"],
+            }
+            for a in conn.execute(
+                "SELECT id, filename, mime_type, size_bytes "
+                "FROM attachments WHERE communication_id = ?",
+                (comm_id,),
+            ).fetchall()
+        ]
+
+        # Conversation assignment
+        conversation = None
+        conv_row = conn.execute(
+            "SELECT conv.id, conv.title, conv.status, "
+            "       (SELECT COUNT(*) FROM conversation_communications cc2 "
+            "        WHERE cc2.conversation_id = conv.id) AS communication_count "
+            "FROM conversation_communications cc "
+            "JOIN conversations conv ON conv.id = cc.conversation_id "
+            "WHERE cc.communication_id = ? LIMIT 1",
+            (comm_id,),
+        ).fetchone()
+        if conv_row:
+            conversation = {
+                "id": conv_row["id"],
+                "title": conv_row["title"],
+                "status": conv_row["status"],
+                "communication_count": conv_row["communication_count"],
+            }
+
+        # Provider account
+        provider_account = None
+        if comm.get("account_id"):
+            pa_row = conn.execute(
+                "SELECT id, provider, email_address FROM provider_accounts WHERE id = ?",
+                (comm["account_id"],),
+            ).fetchone()
+            if pa_row:
+                provider_account = {
+                    "id": pa_row["id"],
+                    "provider": pa_row["provider"],
+                    "email_address": pa_row["email_address"],
+                }
+
+        # Notes — always empty list (note_entities CHECK constraint excludes 'communication')
+        notes: list = []
+
+    return {
+        "id": comm["id"],
+        "channel": comm["channel"],
+        "direction": comm.get("direction"),
+        "timestamp": comm.get("timestamp"),
+        "subject": comm.get("subject"),
+        "sender_name": comm.get("sender_name"),
+        "sender_address": comm.get("sender_address"),
+        "cleaned_html": comm.get("cleaned_html") or comm.get("body_html"),
+        "search_text": comm.get("search_text") or comm.get("content"),
+        "original_text": comm.get("original_text"),
+        "snippet": comm.get("snippet"),
+        "source": comm.get("source"),
+        "triage_result": comm.get("triage_result"),
+        "triage_reason": comm.get("triage_reason"),
+        "is_read": bool(comm.get("is_read")),
+        "is_archived": bool(comm.get("is_archived")),
+        "duration_seconds": comm.get("duration_seconds"),
+        "phone_number_from": comm.get("phone_number_from"),
+        "phone_number_to": comm.get("phone_number_to"),
+        "ai_summary": comm.get("ai_summary"),
+        "ai_summarized_at": comm.get("ai_summarized_at"),
+        "provider_message_id": comm.get("provider_message_id"),
+        "provider_thread_id": comm.get("provider_thread_id"),
+        "header_message_id": comm.get("header_message_id"),
+        "created_at": comm.get("created_at"),
+        "updated_at": comm.get("updated_at"),
+        "participants": participants,
+        "attachments": attachments,
+        "conversation": conversation,
+        "provider_account": provider_account,
+        "notes": notes,
+    }
+
+
 @router.get("/communications/{comm_id}/preview")
 def communication_preview_api(request: Request, comm_id: str):
     """Rich preview data for the communication preview card."""

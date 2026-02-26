@@ -2,11 +2,20 @@
 
 ## CRMExtender — Multi-Channel Communication Entity, Provider Framework & Unified Processing Pipeline
 
-**Version:** 3.0
-**Date:** 2026-02-19
+**Version:** 4.0
+**Date:** 2026-02-25
 **Status:** Draft — Fully reconciled with Custom Objects PRD
 **Parent Document:** [CRMExtender PRD v1.1](PRD.md)
 
+> **V4.0 (2026-02-25):**
+> Integrated with **[Outbound Email PRD](outbound-email-prd.md)**. Key changes:
+> - Added `composed` to the `source` Select field options — for emails originated from within CRMExtender's compose experience (field registry and read model table updated).
+> - Added CRM-composed outbound email to the Communication Entry Points table (Section 8).
+> - Added Outbound Email PRD to the channel-related PRDs table in the Executive Summary.
+> - Added Outbound Email PRD to the Dependencies & Related PRDs table (Section 23).
+> - Moved "Email sending from CRM" from Phase 4 and Open Question #3 to resolved — now covered by the Outbound Email PRD.
+> - Removed "Communication templates" from Future Work — now covered by the Outbound Email PRD's Email Template system object type.
+>
 > **V3.0 (2026-02-22):**
 > Terminology standardization pass: Mojibake encoding cleanup. Cross-PRD links updated to current versions (Custom Objects V2, Views & Grid V5, Contact Management V5). Master Glossary V3 cross-reference added to glossary section.
 >
@@ -109,6 +118,12 @@ This PRD defines the Communication entity, the common schema that all channels n
 | **SMS/MMS PRD** (future)                                     | SMS provider adapters (Twilio, OpenPhone); message sync; phone number resolution; MMS media handling                                                                                                        |
 | **Voice/VoIP PRD** (future)                                  | Call recording integration; transcription pipeline; call metadata capture; provider adapters                                                                                                                |
 | **Video Meetings PRD** (future)                              | Zoom/Teams/Meet integration; transcript capture; calendar event correlation; recording management                                                                                                           |
+
+**Outbound communication PRDs:**
+
+| Related PRD                                                  | Scope                                                                                                                                                                                                       |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[Outbound Email PRD](outbound-email-prd.md)**              | Email composition from CRM, reply/forward, email templates (`etl_` prefix), merge fields, signatures, scheduled sends, date-triggered automation rules (`arl_` prefix), approval workflow, click tracking. Extends Communication with `source = 'composed'` and immediate record creation on send. |
 
 ---
 
@@ -223,7 +238,7 @@ The following fields are `is_system = true` and cannot be archived, deleted, or 
 | Content Raw         | `content_raw`         | Text (multi-line)              | NO       | Original content as received from the provider or entered by the user. For email: plain-text body. For transcripts: raw transcript text. Not displayed to users directly.                               |
 | Content HTML        | `content_html`        | Text (multi-line)              | NO       | Original HTML content (email only). Used by the content extraction pipeline. Not displayed to users directly.                                                                                           |
 | Content Clean       | `content_clean`       | Text (multi-line)              | NO       | Processed content with channel-specific noise removed (quoted replies, signatures, boilerplate for email; filler words for transcripts). This is what users see and what AI processes.                  |
-| Source              | `source`              | Select                         | YES      | How the communication entered the system: `synced` (auto-captured from provider), `manual` (user-entered), `imported` (bulk import).                                                                    |
+| Source              | `source`              | Select                         | YES      | How the communication entered the system: `synced` (auto-captured from provider), `manual` (user-entered), `imported` (bulk import), `composed` (originated from CRMExtender's outbound email compose experience — see [Outbound Email PRD](outbound-email-prd.md)). |
 | Provider Account ID | `provider_account_id` | Relation (→ provider_accounts) | NO       | The provider account that captured this communication. NULL for manual entries.                                                                                                                         |
 | Provider Message ID | `provider_message_id` | Text (single-line)             | NO       | The provider's unique identifier for this message (Gmail message ID, Outlook message ID, etc.). Used for deduplication. UNIQUE constraint per provider account.                                         |
 | Provider Thread ID  | `provider_thread_id`  | Text (single-line)             | NO       | The provider's thread/conversation identifier (Gmail `threadId`, Outlook `conversationId`). Used by the Conversations PRD for automatic conversation formation.                                         |
@@ -270,7 +285,7 @@ CREATE TABLE communications (
     content_raw     TEXT,                    -- Original content as received
     content_html    TEXT,                    -- Original HTML (email only)
     content_clean   TEXT,                    -- Processed content (noise removed)
-    source          TEXT NOT NULL,           -- Select: synced, manual, imported
+    source          TEXT NOT NULL,           -- Select: synced, manual, imported, composed
     provider_account_id TEXT,               -- FK → provider_accounts
     provider_message_id TEXT,               -- Provider's unique message ID
     provider_thread_id  TEXT,               -- Provider's thread/conversation ID
@@ -588,6 +603,7 @@ Short communications (SMS, brief notes) display their summary inline without an 
 | Channel            | How It Enters the System                                                                                                | Provider Account Required? |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | `email`            | Auto-synced from Gmail API, Microsoft Graph API, or IMAP via provider adapter                                           | Yes                        |
+| `email` (outbound) | Composed and sent from CRMExtender via the [Outbound Email PRD](outbound-email-prd.md). Creates Communication immediately on send with `source = 'composed'`. Provider sync deduplicates by `provider_message_id`. | Yes                        |
 | `sms` / `mms`      | Auto-synced from SMS provider API (Twilio, OpenPhone, etc.) via provider adapter                                        | Yes                        |
 | `phone_recorded`   | Metadata + recording from VoIP integration; transcript generated via speech-to-text                                     | Yes                        |
 | `phone_manual`     | User creates a Communication record via CRM UI: specifies participants, timestamp, duration, and notes                  | No                         |
@@ -1288,9 +1304,9 @@ Communication summaries often have natural structure: key points, decisions made
 - ML-based triage classification
 - User-configurable triage rules
 - Cross-account communication deduplication
-- Email sending from CRM (elevated OAuth scopes)
-- Communication templates
 - Attachment full-text indexing
+
+> **Note:** Email sending from CRM and communication templates are now covered by the [Outbound Email PRD](outbound-email-prd.md).
 
 ---
 
@@ -1309,6 +1325,7 @@ Communication summaries often have natural structure: key points, decisions made
 | **Views & Grid PRD**                 | Communication views operate on fields from the field registry.                                                                                           | **Views depend on Custom Objects** (which governs Communications).                                                  |
 | **Permissions & Sharing PRD**        | Provider account management, communication visibility, row-level security.                                                                               | **Communications depend on Permissions** for access control.                                                        |
 | **AI Learning & Classification PRD** | AI classification and learning from triage overrides and conversation assignment corrections.                                                            | **AI depends on Communications** for training signals.                                                              |
+| **Outbound Email PRD**               | Email composition from CRM, templates, automation, click tracking. Extends Communication with `source = 'composed'` and immediate record creation. Adds Email Template (`etl_`) and Automation Rule (`arl_`) system object types. | **Bidirectional.** Outbound Email creates Communication records; Communications defines the entity schema and provider framework that outbound sends use. |
 
 ---
 
@@ -1318,7 +1335,7 @@ Communication summaries often have natural structure: key points, decisions made
 
 2. **Real-time sync infrastructure** — Gmail Pub/Sub and Outlook webhooks need publicly accessible callbacks. Cloud function, dedicated endpoint, or message queue? This affects sync latency for production deployment.
 
-3. **Email sending from CRM** — Should the system support sending (requires elevated OAuth scopes like `gmail.send`, `Mail.Send`)? Adds significant value for workflow automation but increases security surface and compliance complexity.
+3. ~~**Email sending from CRM**~~ — **Resolved.** The [Outbound Email PRD](outbound-email-prd.md) defines the full compose, send, template, automation, and click tracking experience. Elevated OAuth scopes (`gmail.send`, `Mail.Send`) are required for connected provider accounts that will be used for sending.
 
 4. **Shared mailbox support** — How should team/shared mailboxes be handled? Current model (Section 8.3) supports tenant-level provider accounts. Should multiple users be able to connect the same mailbox independently (duplicating data), or should it be a single shared connection?
 
@@ -1339,7 +1356,6 @@ Communication summaries often have natural structure: key points, decisions made
 - **Multi-language content extraction** — Current email parsing patterns are English-only. Non-English valedictions, disclaimers, and signature markers need localized pattern sets.
 - **Attachment content indexing** — Full-text search within attached documents (PDF, DOCX) for "find the communication that had the contract attached."
 - **Communication deduplication** — Cross-account detection when the same real-world message is synced from multiple provider accounts.
-- **Communication templates** — Pre-defined templates for common manual entries (site visit report, phone call debrief, meeting minutes).
 - **Bulk operations** — Archive, assign to conversation, or tag multiple communications at once.
 - **Communication analytics** — Volume trends by channel, response time metrics, communication frequency per contact.
 

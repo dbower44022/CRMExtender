@@ -659,6 +659,9 @@ def _store_thread(
 
     # ------------------------------------------------------------------
     # Step 1: Always store communications + participants first
+    # Dedup note: CRM-composed outbound emails already have a communications
+    # record with the same (account_id, provider_message_id). The INSERT OR
+    # IGNORE below silently skips those, preventing duplicates.
     # ------------------------------------------------------------------
     new_comm_ids: list[str] = []
     for em in thread_emails:

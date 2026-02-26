@@ -87,11 +87,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_companies_name ON companies(name);
 
 -- Known contacts (identity resolved via contact_identifiers)
 CREATE TABLE IF NOT EXISTS contacts (
-    id         TEXT PRIMARY KEY,
-    customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
-    name       TEXT,
-    source     TEXT,
-    status     TEXT DEFAULT 'active',
+    id                       TEXT PRIMARY KEY,
+    customer_id              TEXT REFERENCES customers(id) ON DELETE CASCADE,
+    name                     TEXT,
+    source                   TEXT,
+    status                   TEXT DEFAULT 'active',
+    automated_email_opt_out  INTEGER DEFAULT 0,
     created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL,
@@ -135,17 +136,19 @@ CREATE TABLE IF NOT EXISTS contact_companies (
 
 -- Contact identifiers (email, phone, etc.)
 CREATE TABLE IF NOT EXISTS contact_identifiers (
-    id         TEXT PRIMARY KEY,
-    contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
-    type       TEXT NOT NULL,
-    value      TEXT NOT NULL,
-    label      TEXT,
-    is_primary INTEGER DEFAULT 0,
-    is_current INTEGER NOT NULL DEFAULT 1,
-    source     TEXT,
-    verified   INTEGER DEFAULT 0,
-    started_at TEXT,
-    ended_at   TEXT,
+    id                        TEXT PRIMARY KEY,
+    contact_id                TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    type                      TEXT NOT NULL,
+    value                     TEXT NOT NULL,
+    label                     TEXT,
+    is_primary                INTEGER DEFAULT 0,
+    is_current                INTEGER NOT NULL DEFAULT 1,
+    source                    TEXT,
+    verified                  INTEGER DEFAULT 0,
+    started_at                TEXT,
+    ended_at                  TEXT,
+    delivery_status           TEXT DEFAULT 'unknown',
+    delivery_status_updated_at TEXT,
     created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL,
@@ -923,6 +926,65 @@ CREATE TABLE IF NOT EXISTS user_view_layout_overrides (
     updated_at       TEXT NOT NULL,
     UNIQUE(user_id, view_id, display_tier)
 );
+
+-- Outbound email queue (draft/send queue for composed emails)
+CREATE TABLE IF NOT EXISTS outbound_email_queue (
+    id                          TEXT PRIMARY KEY,
+    customer_id                 TEXT NOT NULL REFERENCES customers(id),
+    communication_id            TEXT REFERENCES communications(id),
+    from_account_id             TEXT NOT NULL REFERENCES provider_accounts(id),
+    to_addresses                TEXT NOT NULL,
+    cc_addresses                TEXT,
+    bcc_addresses               TEXT,
+    subject                     TEXT NOT NULL,
+    body_json                   TEXT NOT NULL,
+    body_html                   TEXT NOT NULL,
+    body_text                   TEXT NOT NULL,
+    signature_id                TEXT,
+    source_type                 TEXT NOT NULL,
+    template_id                 TEXT,
+    reply_to_communication_id   TEXT REFERENCES communications(id),
+    forward_of_communication_id TEXT REFERENCES communications(id),
+    conversation_id             TEXT REFERENCES conversations(id),
+    status                      TEXT NOT NULL DEFAULT 'draft',
+    scheduled_send_at           TEXT,
+    sent_at                     TEXT,
+    failure_reason              TEXT,
+    retry_count                 INTEGER DEFAULT 0,
+    created_at                  TEXT NOT NULL,
+    updated_at                  TEXT NOT NULL,
+    created_by                  TEXT REFERENCES users(id),
+    CHECK (source_type IN ('manual', 'reply', 'forward')),
+    CHECK (status IN ('draft', 'queued', 'sending', 'sent', 'failed', 'cancelled'))
+);
+
+-- Outbound email attachments
+CREATE TABLE IF NOT EXISTS outbound_email_attachments (
+    id                TEXT PRIMARY KEY,
+    outbound_email_id TEXT NOT NULL REFERENCES outbound_email_queue(id) ON DELETE CASCADE,
+    filename          TEXT NOT NULL,
+    mime_type         TEXT,
+    size_bytes        INTEGER,
+    storage_ref       TEXT,
+    source            TEXT NOT NULL DEFAULT 'user_attached',
+    display_order     INTEGER NOT NULL DEFAULT 0,
+    created_at        TEXT NOT NULL,
+    CHECK (source IN ('user_attached', 'forwarded'))
+);
+
+-- Email signatures (per-user, optionally per-account)
+CREATE TABLE IF NOT EXISTS email_signatures (
+    id                  TEXT PRIMARY KEY,
+    customer_id         TEXT NOT NULL REFERENCES customers(id),
+    user_id             TEXT NOT NULL REFERENCES users(id),
+    name                TEXT NOT NULL,
+    body_json           TEXT NOT NULL,
+    body_html           TEXT NOT NULL,
+    provider_account_id TEXT REFERENCES provider_accounts(id),
+    is_default          INTEGER NOT NULL DEFAULT 0,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL
+);
 """
 
 _INDEX_SQL = """\
@@ -1103,6 +1165,13 @@ CREATE INDEX IF NOT EXISTS idx_contact_tags_tag          ON contact_tags(tag_id)
 
 -- User view layout overrides
 CREATE INDEX IF NOT EXISTS idx_ulo_user_view             ON user_view_layout_overrides(user_id, view_id);
+
+-- Outbound email queue
+CREATE INDEX IF NOT EXISTS idx_oeq_customer_status       ON outbound_email_queue(customer_id, status);
+CREATE INDEX IF NOT EXISTS idx_oeq_created_by            ON outbound_email_queue(created_by, status);
+
+-- Email signatures
+CREATE INDEX IF NOT EXISTS idx_signatures_user           ON email_signatures(user_id);
 """
 
 _SETTINGS_INDEX_SQL = """\

@@ -33,6 +33,7 @@ def token_path_for_account(email: str) -> Path:
 # Google API scopes
 GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
     "https://www.googleapis.com/auth/contacts.readonly",
     "https://www.googleapis.com/auth/calendar.readonly",
 ]

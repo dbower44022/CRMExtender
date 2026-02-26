@@ -7,6 +7,7 @@ import { UsersSettings } from '../settings/UsersSettings.tsx'
 import { AccountsSettings } from '../settings/AccountsSettings.tsx'
 import { CalendarsSettings } from '../settings/CalendarsSettings.tsx'
 import { RolesSettings } from '../settings/RolesSettings.tsx'
+import { SignatureSettings } from '../settings/SignatureSettings.tsx'
 
 const SETTINGS_COMPONENTS: Record<string, React.FC> = {
   profile: ProfileSettings,
@@ -15,6 +16,7 @@ const SETTINGS_COMPONENTS: Record<string, React.FC> = {
   accounts: AccountsSettings,
   calendars: CalendarsSettings,
   roles: RolesSettings,
+  signatures: SignatureSettings,
 }
 
 export function ContentArea() {

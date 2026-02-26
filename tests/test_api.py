@@ -1855,3 +1855,265 @@ class TestCommunicationFullView:
         _seed_full_communication(triage_result="no_known_contacts")
         data = client.get("/api/v1/communications/comm-full-1/full").json()
         assert data["triage_result"] == "no_known_contacts"
+
+
+# ===========================================================================
+# Outbound Email API Tests
+# ===========================================================================
+
+ACCT_ID = "acct-api-test"
+
+
+def _seed_provider_account():
+    """Seed a provider account + user linkage for outbound tests."""
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO provider_accounts "
+            "(id, customer_id, provider, account_type, email_address, "
+            "auth_token_path, is_active, created_at, updated_at) "
+            "VALUES (?, ?, 'gmail', 'email', 'admin@test.com', '/tmp/token.json', 1, ?, ?)",
+            (ACCT_ID, CUST_ID, _NOW, _NOW),
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO user_provider_accounts "
+            "(id, user_id, account_id, role, created_at) "
+            "VALUES (?, ?, ?, 'owner', ?)",
+            (str(uuid.uuid4()), USER_ID, ACCT_ID, _NOW),
+        )
+
+
+def _seed_outbound_communication():
+    """Seed a communication for compose context tests."""
+    comm_id = "comm-outbound-test"
+    conv_id = "conv-outbound-test"
+    _seed_provider_account()
+    with get_connection() as conn:
+        conn.execute(
+            """INSERT OR IGNORE INTO communications
+               (id, account_id, channel, timestamp, original_text, original_html,
+                cleaned_html, search_text, direction, source,
+                sender_address, sender_name, subject, snippet,
+                provider_message_id, provider_thread_id,
+                header_message_id, is_read, is_current, created_at, updated_at)
+               VALUES (?, ?, 'email', ?, 'Hello', '<p>Hello</p>',
+                       '<p>Hello</p>', 'Hello', 'inbound', 'auto_sync',
+                       'alice@other.com', 'Alice', 'Test Thread', 'Hello...',
+                       'gmail-msg-1', 'gmail-thread-1',
+                       '<msg-1@mail.com>', 1, 1, ?, ?)""",
+            (comm_id, ACCT_ID, _NOW, _NOW, _NOW),
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO communication_participants "
+            "(communication_id, address, name, role) VALUES (?, 'admin@test.com', 'Admin', 'to')",
+            (comm_id,),
+        )
+        conn.execute(
+            """INSERT OR IGNORE INTO conversations
+               (id, customer_id, account_id, title, subject, status,
+                communication_count, message_count, participant_count,
+                first_activity_at, last_activity_at, created_at, updated_at)
+               VALUES (?, ?, ?, 'Test Thread', 'Test Thread', 'active',
+                       1, 1, 2, ?, ?, ?, ?)""",
+            (conv_id, CUST_ID, ACCT_ID, _NOW, _NOW, _NOW, _NOW),
+        )
+        conn.execute(
+            """INSERT OR IGNORE INTO conversation_communications
+               (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at)
+               VALUES (?, ?, 'sync', 1.0, 1, ?)""",
+            (conv_id, comm_id, _NOW),
+        )
+    return comm_id, conv_id
+
+
+class TestOutboundEmailAPI:
+    def test_create_draft(self, client):
+        _seed_provider_account()
+        resp = client.post("/api/v1/outbound-emails", json={
+            "from_account_id": ACCT_ID,
+            "to_addresses": [{"email": "bob@test.com", "name": "Bob"}],
+            "subject": "API Draft Test",
+            "body_json": "{}",
+            "body_html": "<p>Hello</p>",
+            "body_text": "Hello",
+            "source_type": "manual",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "draft"
+        assert data["subject"] == "API Draft Test"
+
+    def test_create_draft_missing_fields(self, client):
+        resp = client.post("/api/v1/outbound-emails", json={
+            "subject": "Test",
+        })
+        assert resp.status_code == 400
+
+    def test_list_drafts(self, client):
+        _seed_provider_account()
+        # Create two drafts
+        for i in range(2):
+            client.post("/api/v1/outbound-emails", json={
+                "from_account_id": ACCT_ID,
+                "to_addresses": [{"email": f"test{i}@test.com"}],
+                "subject": f"Draft {i}",
+                "body_json": "{}",
+                "body_html": "",
+                "body_text": "",
+            })
+        resp = client.get("/api/v1/outbound-emails/drafts")
+        assert resp.status_code == 200
+        assert len(resp.json()) == 2
+
+    def test_get_draft(self, client):
+        _seed_provider_account()
+        create_resp = client.post("/api/v1/outbound-emails", json={
+            "from_account_id": ACCT_ID,
+            "to_addresses": [{"email": "bob@test.com"}],
+            "subject": "Get Test",
+            "body_json": "{}",
+            "body_html": "",
+            "body_text": "",
+        })
+        draft_id = create_resp.json()["id"]
+        resp = client.get(f"/api/v1/outbound-emails/{draft_id}")
+        assert resp.status_code == 200
+        assert resp.json()["subject"] == "Get Test"
+
+    def test_update_draft(self, client):
+        _seed_provider_account()
+        create_resp = client.post("/api/v1/outbound-emails", json={
+            "from_account_id": ACCT_ID,
+            "to_addresses": [{"email": "bob@test.com"}],
+            "subject": "Original",
+            "body_json": "{}",
+            "body_html": "",
+            "body_text": "",
+        })
+        draft_id = create_resp.json()["id"]
+        resp = client.patch(f"/api/v1/outbound-emails/{draft_id}", json={
+            "subject": "Updated",
+        })
+        assert resp.status_code == 200
+        assert resp.json()["subject"] == "Updated"
+
+    def test_cancel_draft(self, client):
+        _seed_provider_account()
+        create_resp = client.post("/api/v1/outbound-emails", json={
+            "from_account_id": ACCT_ID,
+            "to_addresses": [{"email": "bob@test.com"}],
+            "subject": "Cancel Me",
+            "body_json": "{}",
+            "body_html": "",
+            "body_text": "",
+        })
+        draft_id = create_resp.json()["id"]
+        resp = client.post(f"/api/v1/outbound-emails/{draft_id}/cancel")
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
+        # Verify cancelled
+        get_resp = client.get(f"/api/v1/outbound-emails/{draft_id}")
+        assert get_resp.json()["status"] == "cancelled"
+
+    def test_compose_context_reply(self, client):
+        comm_id, conv_id = _seed_outbound_communication()
+        resp = client.get(
+            f"/api/v1/outbound-emails/compose-context"
+            f"?communication_id={comm_id}&action=reply"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["to_addresses"]) > 0
+        assert data["subject"].startswith("Re:")
+        assert data["conversation_id"] == conv_id
+
+    def test_compose_context_forward(self, client):
+        comm_id, conv_id = _seed_outbound_communication()
+        resp = client.get(
+            f"/api/v1/outbound-emails/compose-context"
+            f"?communication_id={comm_id}&action=forward"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["subject"].startswith("Fwd:")
+        assert data["to_addresses"] == []
+
+    def test_compose_context_invalid_action(self, client):
+        resp = client.get(
+            "/api/v1/outbound-emails/compose-context"
+            "?communication_id=x&action=invalid"
+        )
+        assert resp.status_code == 400
+
+    def test_resolve_sender(self, client):
+        _seed_provider_account()
+        resp = client.post("/api/v1/outbound-emails/resolve-sender", json={})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == ACCT_ID
+
+    def test_get_nonexistent_draft(self, client):
+        resp = client.get("/api/v1/outbound-emails/nonexistent-id")
+        assert resp.status_code == 404
+
+
+class TestSignatureAPI:
+    def test_create_signature(self, client):
+        resp = client.post("/api/v1/signatures", json={
+            "name": "My Sig",
+            "body_json": '{"type":"doc"}',
+            "body_html": "<p>Regards</p>",
+            "is_default": True,
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "My Sig"
+        assert data["is_default"] == 1
+
+    def test_list_signatures(self, client):
+        client.post("/api/v1/signatures", json={
+            "name": "Sig 1",
+            "body_json": "{}",
+            "body_html": "<p>1</p>",
+        })
+        client.post("/api/v1/signatures", json={
+            "name": "Sig 2",
+            "body_json": "{}",
+            "body_html": "<p>2</p>",
+        })
+        resp = client.get("/api/v1/signatures")
+        assert resp.status_code == 200
+        assert len(resp.json()) == 2
+
+    def test_update_signature(self, client):
+        create_resp = client.post("/api/v1/signatures", json={
+            "name": "Original",
+            "body_json": "{}",
+            "body_html": "<p>Old</p>",
+        })
+        sig_id = create_resp.json()["id"]
+        resp = client.patch(f"/api/v1/signatures/{sig_id}", json={
+            "name": "Updated",
+        })
+        assert resp.status_code == 200
+        assert resp.json()["name"] == "Updated"
+
+    def test_delete_signature(self, client):
+        create_resp = client.post("/api/v1/signatures", json={
+            "name": "To Delete",
+            "body_json": "{}",
+            "body_html": "<p>X</p>",
+        })
+        sig_id = create_resp.json()["id"]
+        resp = client.delete(f"/api/v1/signatures/{sig_id}")
+        assert resp.status_code == 200
+
+        get_resp = client.get(f"/api/v1/signatures/{sig_id}")
+        assert get_resp.status_code == 404
+
+    def test_create_signature_no_name(self, client):
+        resp = client.post("/api/v1/signatures", json={
+            "body_json": "{}",
+            "body_html": "",
+        })
+        assert resp.status_code == 400

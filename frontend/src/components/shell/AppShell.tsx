@@ -16,6 +16,7 @@ import { ActionPanel } from './ActionPanel.tsx'
 import { ContentArea } from './ContentArea.tsx'
 import { DetailPanel } from './DetailPanel.tsx'
 import { GlobalSearchModal } from '../search/GlobalSearchModal.tsx'
+import { ComposePanel } from '../compose/ComposePanel.tsx'
 import { useDefaultView } from '../../hooks/useDefaultView.ts'
 
 const PREVIEW_PANEL_SIZE_MAP: Record<string, string> = {
@@ -143,6 +144,7 @@ export function AppShell() {
       </div>
     </div>
     {searchModalOpen && <GlobalSearchModal />}
+    <ComposePanel />
     </>
   )
 }

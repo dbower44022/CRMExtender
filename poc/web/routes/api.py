@@ -6,6 +6,7 @@ import json
 import re
 from dataclasses import asdict
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
@@ -2447,6 +2448,360 @@ def settings_reference_data(request: Request):
         "roles": [dict(r) for r in roles],
         "google_oauth_configured": bool(config.GOOGLE_OAUTH_CLIENT_ID),
     }
+
+
+# ------------------------------------------------------------------
+# Outbound Email
+# ------------------------------------------------------------------
+
+@router.post("/outbound-emails")
+async def outbound_create(request: Request):
+    """Create a draft or send immediately."""
+    from ...outbound import create_draft, send_email
+
+    cid = request.state.customer_id
+    uid = request.state.user["id"]
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    to_addresses = body.get("to_addresses", [])
+    if not to_addresses:
+        return JSONResponse({"error": "to_addresses is required"}, status_code=400)
+    if not body.get("subject"):
+        return JSONResponse({"error": "subject is required"}, status_code=400)
+    if not body.get("from_account_id"):
+        return JSONResponse({"error": "from_account_id is required"}, status_code=400)
+
+    with get_connection() as conn:
+        draft = create_draft(
+            conn,
+            customer_id=cid,
+            user_id=uid,
+            from_account_id=body["from_account_id"],
+            to_addresses=to_addresses,
+            cc_addresses=body.get("cc_addresses"),
+            bcc_addresses=body.get("bcc_addresses"),
+            subject=body["subject"],
+            body_json=body.get("body_json", "{}"),
+            body_html=body.get("body_html", ""),
+            body_text=body.get("body_text", ""),
+            source_type=body.get("source_type", "manual"),
+            reply_to_communication_id=body.get("reply_to_communication_id"),
+            forward_of_communication_id=body.get("forward_of_communication_id"),
+            conversation_id=body.get("conversation_id"),
+            signature_id=body.get("signature_id"),
+        )
+
+        # If send_immediately, send right away
+        if body.get("send_immediately"):
+            try:
+                result = send_email(conn, queue_id=draft["id"], user_id=uid)
+                if result.get("status") == "failed":
+                    return JSONResponse(result, status_code=502)
+                return result
+            except Exception as exc:
+                return JSONResponse(
+                    {"error": str(exc), "draft_id": draft["id"]},
+                    status_code=500,
+                )
+
+        return draft
+
+
+@router.get("/outbound-emails/drafts")
+def outbound_list_drafts(request: Request):
+    """List user's drafts."""
+    from ...outbound import list_drafts
+
+    cid = request.state.customer_id
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        return list_drafts(conn, user_id=uid, customer_id=cid)
+
+
+@router.get("/outbound-emails/compose-context")
+def outbound_compose_context(
+    request: Request,
+    communication_id: str = Query(...),
+    action: str = Query(...),
+):
+    """Get reply/forward context for a communication."""
+    from ...outbound import get_compose_context
+
+    if action not in ("reply", "reply_all", "forward"):
+        return JSONResponse({"error": "action must be reply, reply_all, or forward"}, status_code=400)
+
+    cid = request.state.customer_id
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        ctx = get_compose_context(
+            conn,
+            communication_id=communication_id,
+            action=action,
+            user_id=uid,
+            customer_id=cid,
+        )
+    if ctx.get("error"):
+        return JSONResponse(ctx, status_code=404)
+    return ctx
+
+
+@router.post("/outbound-emails/resolve-sender")
+async def outbound_resolve_sender(request: Request):
+    """Get smart default sending account."""
+    from ...outbound import resolve_sending_account
+
+    cid = request.state.customer_id
+    uid = request.state.user["id"]
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    with get_connection() as conn:
+        account_id = resolve_sending_account(
+            conn,
+            user_id=uid,
+            customer_id=cid,
+            reply_to_comm_id=body.get("reply_to_communication_id"),
+            to_email=body.get("to_email"),
+        )
+    if not account_id:
+        return JSONResponse({"error": "No sending account available"}, status_code=404)
+
+    with get_connection() as conn:
+        acct = conn.execute(
+            "SELECT id, email_address, display_name FROM provider_accounts WHERE id = ?",
+            (account_id,),
+        ).fetchone()
+
+    return dict(acct) if acct else {"id": account_id}
+
+
+@router.get("/outbound-emails/{email_id}")
+def outbound_get(request: Request, email_id: str):
+    """Get draft/sent detail."""
+    from ...outbound import get_queue_record
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        record = get_queue_record(conn, queue_id=email_id)
+    if not record:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    if record["created_by"] != uid:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    return record
+
+
+@router.patch("/outbound-emails/{email_id}")
+async def outbound_update(request: Request, email_id: str):
+    """Update draft fields."""
+    from ...outbound import update_draft
+
+    uid = request.state.user["id"]
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    with get_connection() as conn:
+        result = update_draft(conn, draft_id=email_id, user_id=uid, **body)
+    if not result:
+        return JSONResponse({"error": "Not found or not editable"}, status_code=404)
+    return result
+
+
+@router.post("/outbound-emails/{email_id}/send")
+def outbound_send(request: Request, email_id: str):
+    """Send a draft."""
+    from ...outbound import send_email
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        try:
+            result = send_email(conn, queue_id=email_id, user_id=uid)
+            if result.get("status") == "failed":
+                return JSONResponse(result, status_code=502)
+            return result
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        except Exception as exc:
+            return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.post("/outbound-emails/{email_id}/cancel")
+def outbound_cancel(request: Request, email_id: str):
+    """Cancel a draft."""
+    from ...outbound import cancel_draft
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        ok = cancel_draft(conn, queue_id=email_id, user_id=uid)
+    if not ok:
+        return JSONResponse({"error": "Not found or cannot cancel"}, status_code=400)
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Signatures
+# ------------------------------------------------------------------
+
+@router.get("/signatures")
+def signatures_list(request: Request):
+    """List user's signatures."""
+    from ...outbound import list_signatures
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        return list_signatures(conn, user_id=uid)
+
+
+@router.post("/signatures")
+async def signatures_create(request: Request):
+    """Create a signature."""
+    from ...outbound import create_signature
+
+    cid = request.state.customer_id
+    uid = request.state.user["id"]
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    name = (body.get("name") or "").strip()
+    if not name:
+        return JSONResponse({"error": "name is required"}, status_code=400)
+
+    with get_connection() as conn:
+        sig = create_signature(
+            conn,
+            customer_id=cid,
+            user_id=uid,
+            name=name,
+            body_json=body.get("body_json", "{}"),
+            body_html=body.get("body_html", ""),
+            provider_account_id=body.get("provider_account_id"),
+            is_default=bool(body.get("is_default")),
+        )
+    return sig
+
+
+@router.get("/signatures/{sig_id}")
+def signatures_get(request: Request, sig_id: str):
+    """Get signature detail."""
+    from ...outbound import get_signature
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        sig = get_signature(conn, signature_id=sig_id)
+    if not sig or sig["user_id"] != uid:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return sig
+
+
+@router.patch("/signatures/{sig_id}")
+async def signatures_update(request: Request, sig_id: str):
+    """Update a signature."""
+    from ...outbound import update_signature
+
+    uid = request.state.user["id"]
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+    with get_connection() as conn:
+        result = update_signature(conn, signature_id=sig_id, user_id=uid, **body)
+    if not result:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return result
+
+
+@router.delete("/signatures/{sig_id}")
+def signatures_delete(request: Request, sig_id: str):
+    """Delete a signature."""
+    from ...outbound import delete_signature
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        ok = delete_signature(conn, signature_id=sig_id, user_id=uid)
+    if not ok:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Provider Account Reauthorization
+# ------------------------------------------------------------------
+
+@router.post("/settings/accounts/{account_id}/reauthorize")
+def settings_account_reauthorize(request: Request, account_id: str):
+    """Check if account needs reauthorization for send scope."""
+    uid = request.state.user["id"]
+
+    with get_connection() as conn:
+        acct = conn.execute(
+            """SELECT pa.* FROM provider_accounts pa
+               JOIN user_provider_accounts upa ON upa.account_id = pa.id
+               WHERE pa.id = ? AND upa.user_id = ?""",
+            (account_id, uid),
+        ).fetchone()
+
+    if not acct:
+        return JSONResponse({"error": "Account not found"}, status_code=404)
+
+    acct = dict(acct)
+
+    # Check if token already has send scope
+    token_path = Path(acct["auth_token_path"]) if acct.get("auth_token_path") else None
+    has_send_scope = False
+
+    if token_path and token_path.exists():
+        try:
+            import json as json_mod
+            token_data = json_mod.loads(token_path.read_text())
+            scopes = token_data.get("scopes", [])
+            has_send_scope = any("gmail.send" in s for s in scopes)
+        except Exception:
+            pass
+
+    if has_send_scope:
+        return {"needs_reauth": False, "has_send_scope": True}
+
+    # Build OAuth URL for reauthorization
+    if not config.CLIENT_SECRET_PATH.exists():
+        return JSONResponse(
+            {"error": "OAuth client secret not configured"}, status_code=500,
+        )
+
+    try:
+        import json as json_mod
+        client_data = json_mod.loads(config.CLIENT_SECRET_PATH.read_text())
+        installed = client_data.get("installed", {})
+        client_id = installed.get("client_id", "")
+
+        # Build consent URL with all scopes including gmail.send
+        from urllib.parse import urlencode
+        params = urlencode({
+            "client_id": client_id,
+            "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
+            "scope": " ".join(config.GOOGLE_SCOPES),
+            "response_type": "code",
+            "access_type": "offline",
+            "prompt": "consent",
+        })
+        auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{params}"
+
+        return {
+            "needs_reauth": True,
+            "has_send_scope": False,
+            "auth_url": auth_url,
+            "email": acct.get("email_address"),
+        }
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
 
 
 # ------------------------------------------------------------------

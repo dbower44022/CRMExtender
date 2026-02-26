@@ -1,0 +1,134 @@
+/* TipTap Editor Styles */
+.tiptap-editor {
+  min-height: 200px;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-surface-800, #1e293b);
+}
+
+.tiptap-editor:focus {
+  outline: none;
+}
+
+.tiptap-editor p {
+  margin: 0 0 0.5em;
+}
+
+.tiptap-editor h1 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 0.5em 0 0.25em;
+}
+
+.tiptap-editor h2 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 0.5em 0 0.25em;
+}
+
+.tiptap-editor h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0.5em 0 0.25em;
+}
+
+.tiptap-editor ul,
+.tiptap-editor ol {
+  padding-left: 1.5em;
+  margin: 0.25em 0;
+}
+
+.tiptap-editor li {
+  margin: 0.1em 0;
+}
+
+.tiptap-editor blockquote {
+  border-left: 3px solid var(--color-surface-300, #cbd5e1);
+  padding-left: 1em;
+  margin: 0.5em 0;
+  color: var(--color-surface-500, #64748b);
+}
+
+.tiptap-editor code {
+  background: var(--color-surface-100, #f1f5f9);
+  border-radius: 3px;
+  padding: 0.15em 0.3em;
+  font-size: 0.9em;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.tiptap-editor pre {
+  background: var(--color-surface-100, #f1f5f9);
+  border-radius: 6px;
+  padding: 0.75em 1em;
+  margin: 0.5em 0;
+  overflow-x: auto;
+}
+
+.tiptap-editor pre code {
+  background: none;
+  padding: 0;
+}
+
+.tiptap-editor hr {
+  border: none;
+  border-top: 1px solid var(--color-surface-200, #e2e8f0);
+  margin: 1em 0;
+}
+
+.tiptap-editor a {
+  color: var(--color-primary-600, #2563eb);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tiptap-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-surface-400, #94a3b8);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Toolbar */
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--color-surface-200, #e2e8f0);
+  background: var(--color-surface-50, #f8fafc);
+}
+
+.editor-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-surface-600, #475569);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.editor-toolbar button:hover {
+  background: var(--color-surface-200, #e2e8f0);
+}
+
+.editor-toolbar button.is-active {
+  background: var(--color-primary-100, #dbeafe);
+  color: var(--color-primary-700, #1d4ed8);
+}
+
+.editor-toolbar .separator {
+  width: 1px;
+  height: 20px;
+  background: var(--color-surface-200, #e2e8f0);
+  margin: 4px 3px;
+  align-self: center;
+}

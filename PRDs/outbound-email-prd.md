@@ -9,11 +9,12 @@
 
 > **V2.0 (2026-02-22):**
 > Terminology standardization pass: Cross-PRD links updated to current versions (Views & Grid V5, GUI PRD V2, Contact Management V5). Master Glossary V3 cross-reference added to glossary section.
->
+> 
 > **V1.0 (2026-02-20):**
 > This document defines the outbound email subsystem for CRMExtender — the user-facing experience for composing, sending, and managing outgoing email through connected provider accounts. While the Communications PRD defines the channel-agnostic Communication entity and the provider adapter framework for syncing inbound communications, and the planned Email Provider Sync PRD covers the mechanics of Gmail/Outlook/IMAP adapters, this PRD governs the user-initiated sending experience: compose/reply/forward, email templates, signature management, merge field substitution, date-triggered automation rules, scheduled sends, click tracking, and delivery status management.
->
+> 
 > **Architectural positioning:**
+> 
 > - Outbound emails are **Communication records** in the unified object model. Sending an email creates a Communication (`direction = outbound`, `source = composed`) immediately, before the provider sync cycle catches up.
 > - Email templates are a **new system object type** (`is_system = true`, prefix `etl_`) in the Custom Objects framework with their own field registry, event sourcing, and relation model.
 > - Automation rules are a **new system object type** (`is_system = true`, prefix `arl_`) governing date-triggered template sends with View-scoped recipients and mandatory user approval.
@@ -97,14 +98,14 @@ CRMExtender captures and organizes inbound communications, giving users deep vis
 
 **The consequences for CRM users:**
 
-| Pain Point | Impact |
-|---|---|
-| **Context switching** | User sees a Contact needs a follow-up, switches to Gmail, composes the email, switches back to CRM. The CRM view with all the relevant intelligence is no longer visible during composition. |
-| **Broken traceability** | When sending from an external client, the user cannot attach a specific Document version from the CRM. There's no record of which brochure version was sent until the email syncs back and someone manually associates the attachment. |
-| **No template consistency** | Each team member writes their own version of common emails (introductions, follow-ups, pricing responses). No shared library, no merge fields, no version control. |
-| **Manual repetitive sends** | Birthday emails, anniversary greetings, renewal reminders, and seasonal follow-ups are either manually composed each time or forgotten entirely. |
-| **Delayed visibility** | An email sent from Gmail doesn't appear in CRMExtender until the next sync cycle. During that gap, other team members don't know the email was sent, potentially duplicating outreach. |
-| **No engagement signals** | After sending, the user has no visibility into whether the recipient clicked the links in the email. Did they look at the proposal? Did they visit the pricing page? |
+| Pain Point                  | Impact                                                                                                                                                                                                                                 |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Context switching**       | User sees a Contact needs a follow-up, switches to Gmail, composes the email, switches back to CRM. The CRM view with all the relevant intelligence is no longer visible during composition.                                           |
+| **Broken traceability**     | When sending from an external client, the user cannot attach a specific Document version from the CRM. There's no record of which brochure version was sent until the email syncs back and someone manually associates the attachment. |
+| **No template consistency** | Each team member writes their own version of common emails (introductions, follow-ups, pricing responses). No shared library, no merge fields, no version control.                                                                     |
+| **Manual repetitive sends** | Birthday emails, anniversary greetings, renewal reminders, and seasonal follow-ups are either manually composed each time or forgotten entirely.                                                                                       |
+| **Delayed visibility**      | An email sent from Gmail doesn't appear in CRMExtender until the next sync cycle. During that gap, other team members don't know the email was sent, potentially duplicating outreach.                                                 |
+| **No engagement signals**   | After sending, the user has no visibility into whether the recipient clicked the links in the email. Did they look at the proposal? Did they visit the pricing page?                                                                   |
 
 ### Why Existing Solutions Fall Short
 
@@ -130,15 +131,15 @@ CRMExtender closes this gap by making email composition a native CRM action — 
 
 ### Success Metrics
 
-| Metric | Target | Measurement |
-|---|---|---|
-| Compose-to-send time | <60 seconds for template-based sends | Instrumented from compose open to send action |
-| Template adoption rate | >50% of outbound emails use a template within 30 days | DB query: outbound Communications with `template_id` set |
-| Automation approval rate | >90% of generated emails approved without edit | DB query: approved vs. edited vs. rejected automation emails |
-| Click tracking coverage | 100% of body/template links tracked | Audit: compare links in sent HTML vs. tracked link records |
-| Immediate record creation | 100% of sent emails have Communication record within 1 second | Instrumented send pipeline timing |
-| Bounce detection rate | >95% of bounces detected and flagged | Audit: compare provider bounce notifications vs. flagged records |
-| Document attachment traceability | 100% of outbound attachments linked to Document entities | DB query: outbound Communications with attachments vs. Document relations |
+| Metric                           | Target                                                        | Measurement                                                               |
+| -------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Compose-to-send time             | <60 seconds for template-based sends                          | Instrumented from compose open to send action                             |
+| Template adoption rate           | >50% of outbound emails use a template within 30 days         | DB query: outbound Communications with `template_id` set                  |
+| Automation approval rate         | >90% of generated emails approved without edit                | DB query: approved vs. edited vs. rejected automation emails              |
+| Click tracking coverage          | 100% of body/template links tracked                           | Audit: compare links in sent HTML vs. tracked link records                |
+| Immediate record creation        | 100% of sent emails have Communication record within 1 second | Instrumented send pipeline timing                                         |
+| Bounce detection rate            | >95% of bounces detected and flagged                          | Audit: compare provider bounce notifications vs. flagged records          |
+| Document attachment traceability | 100% of outbound attachments linked to Document entities      | DB query: outbound Communications with attachments vs. Document relations |
 
 ---
 
@@ -146,34 +147,34 @@ CRMExtender closes this gap by making email composition a native CRM action — 
 
 ### 4.1 Personas
 
-| Persona | Description | Primary Use |
-|---|---|---|
-| **Solo entrepreneur** | Runs a service business (e.g., gutter cleaning across multiple cities). Manages hundreds of customer relationships with multiple email accounts. | Birthday/anniversary automation, seasonal service reminders, template-based follow-ups. |
-| **Sales professional** | Manages a pipeline of prospects and customers. Needs consistent messaging and engagement visibility. | Templates for follow-ups and proposals, click tracking on pricing links, reply from CRM with full context. |
-| **Team manager** | Oversees a team's outbound communication. Needs shared templates and visibility into team activity. | Shared template library, team-wide automation rules, approval oversight. |
+| Persona                | Description                                                                                                                                      | Primary Use                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Solo entrepreneur**  | Runs a service business (e.g., gutter cleaning across multiple cities). Manages hundreds of customer relationships with multiple email accounts. | Birthday/anniversary automation, seasonal service reminders, template-based follow-ups.                    |
+| **Sales professional** | Manages a pipeline of prospects and customers. Needs consistent messaging and engagement visibility.                                             | Templates for follow-ups and proposals, click tracking on pricing links, reply from CRM with full context. |
+| **Team manager**       | Oversees a team's outbound communication. Needs shared templates and visibility into team activity.                                              | Shared template library, team-wide automation rules, approval oversight.                                   |
 
 ### 4.2 User Stories
 
-| ID | Story | Priority |
-|---|---|---|
-| OE-001 | As a user, I want to compose and send an email to a Contact from within CRMExtender so I don't lose context switching to Gmail. | P0 |
-| OE-002 | As a user, I want to reply to an inbound email directly from the Conversation timeline so I can respond in context. | P0 |
-| OE-003 | As a user, I want the system to automatically select the correct sending account when I reply, using the account that received the original email. | P0 |
-| OE-004 | As a user, I want to forward an email to a new recipient with all original attachments preserved. | P0 |
-| OE-005 | As a user, I want to save email templates with merge fields so I can send consistent messages quickly. | P0 |
-| OE-006 | As a user, I want to share templates with my team so everyone uses consistent messaging. | P1 |
-| OE-007 | As a user, I want to attach Documents from CRMExtender to my outbound email so the system tracks which version was sent. | P0 |
-| OE-008 | As a user, I want to schedule an email to send at a future date/time so I can time my outreach appropriately. | P1 |
-| OE-009 | As a user, I want to set up an automation rule that generates birthday emails for all contacts in a saved View. | P1 |
-| OE-010 | As a user, I want to review and approve automation-generated emails before they send so I maintain personal control. | P0 |
-| OE-011 | As a user, I want to batch-approve multiple automation emails at once when I trust the template. | P1 |
-| OE-012 | As a user, I want to see when a recipient clicks a link in my email so I know they're engaged. | P1 |
-| OE-013 | As a user, I want my outbound email to appear immediately in the Contact timeline so my team sees it right away. | P0 |
-| OE-014 | As a user, I want to manage multiple email signatures and have the correct one applied based on which account I'm sending from. | P1 |
-| OE-015 | As a user, I want to be notified when an email bounces so I can update the contact's information. | P1 |
-| OE-016 | As a user, I want to undock the compose window so I can write an email on one screen while viewing CRM data on another. | P2 |
-| OE-017 | As a user, I want automation rules to skip Contacts who have opted out of automated emails. | P0 |
-| OE-018 | As a user, I want CC/BCC recipients who aren't in my CRM to be automatically created as Contacts. | P1 |
+| ID     | Story                                                                                                                                              | Priority |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| OE-001 | As a user, I want to compose and send an email to a Contact from within CRMExtender so I don't lose context switching to Gmail.                    | P0       |
+| OE-002 | As a user, I want to reply to an inbound email directly from the Conversation timeline so I can respond in context.                                | P0       |
+| OE-003 | As a user, I want the system to automatically select the correct sending account when I reply, using the account that received the original email. | P0       |
+| OE-004 | As a user, I want to forward an email to a new recipient with all original attachments preserved.                                                  | P0       |
+| OE-005 | As a user, I want to save email templates with merge fields so I can send consistent messages quickly.                                             | P0       |
+| OE-006 | As a user, I want to share templates with my team so everyone uses consistent messaging.                                                           | P1       |
+| OE-007 | As a user, I want to attach Documents from CRMExtender to my outbound email so the system tracks which version was sent.                           | P0       |
+| OE-008 | As a user, I want to schedule an email to send at a future date/time so I can time my outreach appropriately.                                      | P1       |
+| OE-009 | As a user, I want to set up an automation rule that generates birthday emails for all contacts in a saved View.                                    | P1       |
+| OE-010 | As a user, I want to review and approve automation-generated emails before they send so I maintain personal control.                               | P0       |
+| OE-011 | As a user, I want to batch-approve multiple automation emails at once when I trust the template.                                                   | P1       |
+| OE-012 | As a user, I want to see when a recipient clicks a link in my email so I know they're engaged.                                                     | P1       |
+| OE-013 | As a user, I want my outbound email to appear immediately in the Contact timeline so my team sees it right away.                                   | P0       |
+| OE-014 | As a user, I want to manage multiple email signatures and have the correct one applied based on which account I'm sending from.                    | P1       |
+| OE-015 | As a user, I want to be notified when an email bounces so I can update the contact's information.                                                  | P1       |
+| OE-016 | As a user, I want to undock the compose window so I can write an email on one screen while viewing CRM data on another.                            | P2       |
+| OE-017 | As a user, I want automation rules to skip Contacts who have opted out of automated emails.                                                        | P0       |
+| OE-018 | As a user, I want CC/BCC recipients who aren't in my CRM to be automatically created as Contacts.                                                  | P1       |
 
 ---
 
@@ -183,21 +184,21 @@ CRMExtender closes this gap by making email composition a native CRM action — 
 
 Email Template is registered as a system object type in the Custom Objects framework:
 
-| Attribute | Value |
-|---|---|
-| `name` | Email Template |
-| `slug` | `email_templates` |
-| `type_prefix` | `etl_` |
-| `is_system` | `true` |
-| `display_name_field_id` | → `name` field |
-| `description` | A reusable email composition template with merge field support, default attachments, and signature association. Used for manual sends and automation rules. |
+| Attribute               | Value                                                                                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                  | Email Template                                                                                                                                              |
+| `slug`                  | `email_templates`                                                                                                                                           |
+| `type_prefix`           | `etl_`                                                                                                                                                      |
+| `is_system`             | `true`                                                                                                                                                      |
+| `display_name_field_id` | → `name` field                                                                                                                                              |
+| `description`           | A reusable email composition template with merge field support, default attachments, and signature association. Used for manual sends and automation rules. |
 
 ### 5.2 Registered Behaviors
 
-| Behavior | Trigger | Description |
-|---|---|---|
-| Merge field validation | On save | Validates that all `{{...}}` merge field references in the template body resolve to known field paths. Warns on unrecognized fields but does not block save. |
-| Usage tracking | On send | Increments usage counters and records the most recent use timestamp when an email is sent using this template. |
+| Behavior                | Trigger            | Description                                                                                                                                                   |
+| ----------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Merge field validation  | On save            | Validates that all `{{...}}` merge field references in the template body resolve to known field paths. Warns on unrecognized fields but does not block save.  |
+| Usage tracking          | On send            | Increments usage counters and records the most recent use timestamp when an email is sent using this template.                                                |
 | Default attachment sync | On Document update | When a Document entity linked as a default attachment receives a new version, the template's attachment reference automatically points to the latest version. |
 
 ### 5.3 Protected Core Fields
@@ -212,23 +213,23 @@ The following fields are `is_system = true` and cannot be archived, deleted, or 
 
 Automation Rule is registered as a system object type in the Custom Objects framework:
 
-| Attribute | Value |
-|---|---|
-| `name` | Automation Rule |
-| `slug` | `automation_rules` |
-| `type_prefix` | `arl_` |
-| `is_system` | `true` |
-| `display_name_field_id` | → `name` field |
-| `description` | A date-triggered email automation that generates outbound emails from a template, scoped to a saved View, on a schedule relative to a Contact date field. Generated emails require user approval before sending. |
+| Attribute               | Value                                                                                                                                                                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                  | Automation Rule                                                                                                                                                                                                  |
+| `slug`                  | `automation_rules`                                                                                                                                                                                               |
+| `type_prefix`           | `arl_`                                                                                                                                                                                                           |
+| `is_system`             | `true`                                                                                                                                                                                                           |
+| `display_name_field_id` | → `name` field                                                                                                                                                                                                   |
+| `description`           | A date-triggered email automation that generates outbound emails from a template, scoped to a saved View, on a schedule relative to a Contact date field. Generated emails require user approval before sending. |
 
 ### 6.2 Registered Behaviors
 
-| Behavior | Trigger | Description |
-|---|---|---|
-| Email generation | On schedule (daily evaluation) | Evaluates the trigger date field for all Contacts in the scoped View, generates outbound email records for qualifying Contacts within the configured timing offset, and places them in `awaiting_approval` status. |
-| Overlap detection | On generation | Checks whether a Contact already has a pending or scheduled outbound email from another automation rule for the same date. Flags overlaps on the generated email record for user awareness during approval. |
-| Opt-out enforcement | On generation | Skips Contacts whose `automated_email_opt_out` flag is `true`. Skips Contacts whose target email address has `delivery_status = bounced`. |
-| Notification | On generation | Sends the rule owner a notification summarizing the generated batch: count of emails, date range, any flagged overlaps or skipped contacts. |
+| Behavior            | Trigger                        | Description                                                                                                                                                                                                        |
+| ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Email generation    | On schedule (daily evaluation) | Evaluates the trigger date field for all Contacts in the scoped View, generates outbound email records for qualifying Contacts within the configured timing offset, and places them in `awaiting_approval` status. |
+| Overlap detection   | On generation                  | Checks whether a Contact already has a pending or scheduled outbound email from another automation rule for the same date. Flags overlaps on the generated email record for user awareness during approval.        |
+| Opt-out enforcement | On generation                  | Skips Contacts whose `automated_email_opt_out` flag is `true`. Skips Contacts whose target email address has `delivery_status = bounced`.                                                                          |
+| Notification        | On generation                  | Sends the rule owner a notification summarizing the generated batch: count of emails, date range, any flagged overlaps or skipped contacts.                                                                        |
 
 ### 6.3 Protected Core Fields
 
@@ -242,35 +243,35 @@ The following fields are `is_system = true` and cannot be archived, deleted, or 
 
 **Universal fields** (present on all object types per Custom Objects PRD Section 7):
 
-| Field | Column | Type | Description |
-|---|---|---|---|
-| ID | `id` | TEXT, PK | Prefixed ULID: `etl_01HX8A...` |
-| Tenant | `tenant_id` | TEXT, NOT NULL | Tenant isolation |
-| Created At | `created_at` | TIMESTAMPTZ, NOT NULL | Record creation timestamp |
-| Updated At | `updated_at` | TIMESTAMPTZ, NOT NULL | Last modification timestamp |
-| Created By | `created_by` | TEXT, FK → users | User who created the template |
-| Updated By | `updated_by` | TEXT, FK → users | User who last modified the template |
-| Archived At | `archived_at` | TIMESTAMPTZ, NULL | Soft-delete timestamp |
+| Field       | Column        | Type                  | Description                         |
+| ----------- | ------------- | --------------------- | ----------------------------------- |
+| ID          | `id`          | TEXT, PK              | Prefixed ULID: `etl_01HX8A...`      |
+| Tenant      | `tenant_id`   | TEXT, NOT NULL        | Tenant isolation                    |
+| Created At  | `created_at`  | TIMESTAMPTZ, NOT NULL | Record creation timestamp           |
+| Updated At  | `updated_at`  | TIMESTAMPTZ, NOT NULL | Last modification timestamp         |
+| Created By  | `created_by`  | TEXT, FK → users      | User who created the template       |
+| Updated By  | `updated_by`  | TEXT, FK → users      | User who last modified the template |
+| Archived At | `archived_at` | TIMESTAMPTZ, NULL     | Soft-delete timestamp               |
 
 **Core system fields** (`is_system = true`, protected):
 
-| Field | Column | Type | Required | Description |
-|---|---|---|---|---|
-| Name | `name` | Text (single-line) | YES | Template display name. E.g., "Birthday Greeting", "Proposal Follow-Up". |
-| Subject | `subject` | Text (single-line) | YES | Email subject line template. Supports merge field substitution: `Happy Birthday, {{contact.first_name}}!` |
-| Visibility | `visibility` | Select | YES | `personal` (visible only to creator) or `shared` (visible to all tenant users). |
-| Category | `category` | Select | NO | User-defined template category. E.g., "Follow-Up", "Holiday", "Sales", "Service Reminder". |
-| Description | `description` | Text (multi-line) | NO | Internal description of the template's purpose and usage context. Not included in the email. |
-| Use Count | `use_count` | Number (integer) | NO | Total number of times this template has been used to send an email. Auto-incremented. |
-| Last Used At | `last_used_at` | TIMESTAMPTZ | NO | Timestamp of most recent use. Auto-updated on send. |
+| Field        | Column         | Type               | Required | Description                                                                                               |
+| ------------ | -------------- | ------------------ | -------- | --------------------------------------------------------------------------------------------------------- |
+| Name         | `name`         | Text (single-line) | YES      | Template display name. E.g., "Birthday Greeting", "Proposal Follow-Up".                                   |
+| Subject      | `subject`      | Text (single-line) | YES      | Email subject line template. Supports merge field substitution: `Happy Birthday, {{contact.first_name}}!` |
+| Visibility   | `visibility`   | Select             | YES      | `personal` (visible only to creator) or `shared` (visible to all tenant users).                           |
+| Category     | `category`     | Select             | NO       | User-defined template category. E.g., "Follow-Up", "Holiday", "Sales", "Service Reminder".                |
+| Description  | `description`  | Text (multi-line)  | NO       | Internal description of the template's purpose and usage context. Not included in the email.              |
+| Use Count    | `use_count`    | Number (integer)   | NO       | Total number of times this template has been used to send an email. Auto-incremented.                     |
+| Last Used At | `last_used_at` | TIMESTAMPTZ        | NO       | Timestamp of most recent use. Auto-updated on send.                                                       |
 
 **Behavior-managed content fields** (not in field registry, stored as columns):
 
-| Field | Column | Type | Description |
-|---|---|---|---|
-| Body JSON | `body_json` | JSONB | Rich text source of truth (same contract as Notes `content_json`). |
-| Body HTML | `body_html` | TEXT | Rendered HTML for preview. Contains merge field placeholders in display form. |
-| Body Text | `body_text` | TEXT | Plain text fallback. Used for email `text/plain` multipart and search indexing. |
+| Field     | Column      | Type  | Description                                                                     |
+| --------- | ----------- | ----- | ------------------------------------------------------------------------------- |
+| Body JSON | `body_json` | JSONB | Rich text source of truth (same contract as Notes `content_json`).              |
+| Body HTML | `body_html` | TEXT  | Rendered HTML for preview. Contains merge field placeholders in display form.   |
+| Body Text | `body_text` | TEXT  | Plain text fallback. Used for email `text/plain` multipart and search indexing. |
 
 ### 7.2 Email Template Read Model Table
 
@@ -337,17 +338,17 @@ When a Document entity linked as a default attachment receives a new version, th
 
 **Core system fields** (`is_system = true`, protected):
 
-| Field | Column | Type | Required | Description |
-|---|---|---|---|---|
-| Name | `name` | Text (single-line) | YES | Rule display name. E.g., "Birthday Greetings", "Annual Service Reminder". |
-| Template ID | `template_id` | Relation (→ email_templates) | YES | The email template this rule uses to generate emails. |
-| View ID | `view_id` | Relation (→ views) | YES | The saved View that defines the recipient scope. Evaluated dynamically at generation time. |
-| Trigger Field | `trigger_field` | Text (single-line) | YES | The date field path on the Contact entity to trigger against. E.g., `birthday`, `anniversary`, or a custom date field slug. |
-| Timing Offset Days | `timing_offset_days` | Number (integer) | YES | Number of days relative to the trigger date. Negative = before (e.g., `-3` means 3 days before birthday). Positive = after. `0` = on the day. |
-| Sending Account ID | `sending_account_id` | Relation (→ provider_accounts) | YES | The provider account to send from. |
-| Status | `status` | Select | YES | `active`, `paused`, `archived`. Only `active` rules generate emails. |
-| Last Run At | `last_run_at` | TIMESTAMPTZ | NO | When the rule last evaluated and generated emails. |
-| Last Run Count | `last_run_count` | Number (integer) | NO | Number of emails generated in the most recent run. |
+| Field              | Column               | Type                           | Required | Description                                                                                                                                   |
+| ------------------ | -------------------- | ------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Name               | `name`               | Text (single-line)             | YES      | Rule display name. E.g., "Birthday Greetings", "Annual Service Reminder".                                                                     |
+| Template ID        | `template_id`        | Relation (→ email_templates)   | YES      | The email template this rule uses to generate emails.                                                                                         |
+| View ID            | `view_id`            | Relation (→ views)             | YES      | The saved View that defines the recipient scope. Evaluated dynamically at generation time.                                                    |
+| Trigger Field      | `trigger_field`      | Text (single-line)             | YES      | The date field path on the Contact entity to trigger against. E.g., `birthday`, `anniversary`, or a custom date field slug.                   |
+| Timing Offset Days | `timing_offset_days` | Number (integer)               | YES      | Number of days relative to the trigger date. Negative = before (e.g., `-3` means 3 days before birthday). Positive = after. `0` = on the day. |
+| Sending Account ID | `sending_account_id` | Relation (→ provider_accounts) | YES      | The provider account to send from.                                                                                                            |
+| Status             | `status`             | Select                         | YES      | `active`, `paused`, `archived`. Only `active` rules generate emails.                                                                          |
+| Last Run At        | `last_run_at`        | TIMESTAMPTZ                    | NO       | When the rule last evaluated and generated emails.                                                                                            |
+| Last Run Count     | `last_run_count`     | Number (integer)               | NO       | Number of emails generated in the most recent run.                                                                                            |
 
 ### 7.5 Automation Rule Read Model Table
 
@@ -393,7 +394,7 @@ CREATE TABLE outbound_email_queue (
     id                      TEXT PRIMARY KEY,        -- Prefixed ULID
     tenant_id               TEXT NOT NULL,
     communication_id        TEXT REFERENCES communications(id),  -- NULL until Communication record created
-    
+
     -- Composition data
     from_account_id         TEXT NOT NULL REFERENCES provider_accounts(id),
     to_addresses            JSONB NOT NULL,          -- [{email, contact_id?}]
@@ -404,14 +405,14 @@ CREATE TABLE outbound_email_queue (
     body_html               TEXT NOT NULL,            -- Email-safe HTML (post-transformation)
     body_text               TEXT NOT NULL,            -- Plain text fallback
     signature_id            TEXT,                     -- Signature applied
-    
+
     -- Source context
     source_type             TEXT NOT NULL,            -- 'manual', 'automation', 'reply', 'forward'
     template_id             TEXT,                     -- Template used, if any
     automation_rule_id      TEXT,                     -- Automation rule, if generated by automation
     reply_to_communication_id TEXT,                   -- Parent Communication for replies
     forward_of_communication_id TEXT,                 -- Source Communication for forwards
-    
+
     -- Scheduling & lifecycle
     status                  TEXT NOT NULL DEFAULT 'draft',
     -- Status values: 'draft', 'awaiting_approval', 'approved', 'scheduled', 'queued',
@@ -420,18 +421,18 @@ CREATE TABLE outbound_email_queue (
     approved_at             TIMESTAMPTZ,
     approved_by             TEXT,
     sent_at                 TIMESTAMPTZ,
-    
+
     -- Automation context
     overlap_flag            BOOLEAN DEFAULT FALSE,    -- Another rule targets same contact on same date
     overlap_details         TEXT,                      -- Human-readable overlap description
-    
+
     -- Failure tracking
     failure_reason          TEXT,
     retry_count             INTEGER DEFAULT 0,
-    
+
     -- Undo-send support
     undo_window_expires_at  TIMESTAMPTZ,             -- Typically send_time + 10 seconds
-    
+
     -- Audit
     created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -524,16 +525,16 @@ CREATE INDEX idx_signatures_account ON email_signatures(provider_account_id);
 
 These fields are added to the Contact entity's field registry (extending the Contact Management PRD):
 
-| Field | Column | Type | Description |
-|---|---|---|---|
+| Field                   | Column                    | Type     | Description                                                                                                           |
+| ----------------------- | ------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
 | Automated Email Opt-Out | `automated_email_opt_out` | Checkbox | `true` = Contact has opted out of automated emails. Automation rules skip this contact. Manual compose is unaffected. |
 
 The following is tracked on contact identifiers (email addresses) in the `contact_identifiers` table:
 
-| Field | Column | Type | Description |
-|---|---|---|---|
-| Delivery Status | `delivery_status` | Select | `valid`, `bounced`, `unknown`. Set by bounce handling. `bounced` addresses are skipped by automation and flagged in compose. |
-| Delivery Status Updated At | `delivery_status_updated_at` | TIMESTAMPTZ | When the delivery status was last updated. |
+| Field                      | Column                       | Type        | Description                                                                                                                  |
+| -------------------------- | ---------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Delivery Status            | `delivery_status`            | Select      | `valid`, `bounced`, `unknown`. Set by bounce handling. `bounced` addresses are skipped by automation and flagged in compose. |
+| Delivery Status Updated At | `delivery_status_updated_at` | TIMESTAMPTZ | When the delivery status was last updated.                                                                                   |
 
 ---
 
@@ -543,15 +544,15 @@ The following is tracked on contact identifiers (email addresses) in the `contac
 
 Users can initiate email composition from multiple locations in the CRM:
 
-| Entry Point | Context Provided | Sending Account Default |
-|---|---|---|
-| **Contact detail panel** → "New Email" action | To: Contact's primary email. | Historical pattern: most-used account for this Contact. If no history, prompt user. |
-| **Conversation timeline** → "Reply" on a Communication | To: original sender. In-reply-to headers set. Quoted content included. | Account that received the original email. |
-| **Conversation timeline** → "Reply All" on a Communication | To/CC: all original participants (excluding self). In-reply-to headers set. | Account that received the original email. |
-| **Conversation timeline** → "Forward" on a Communication | To: empty (user fills in). Original content and attachments included. | Account that received the original email. |
-| **Conversation detail** → "New Email" | To: primary participant(s) of the Conversation. | Historical pattern for the Conversation's contacts. |
-| **Global compose action** (e.g., keyboard shortcut or nav bar button) | Empty compose. No pre-filled context. | User's default sending account. If no default, prompt user. |
-| **Automation approval queue** → "Edit & Approve" | Fully pre-filled from template + merge fields. | As configured on the automation rule. |
+| Entry Point                                                           | Context Provided                                                            | Sending Account Default                                                             |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Contact detail panel** → "New Email" action                         | To: Contact's primary email.                                                | Historical pattern: most-used account for this Contact. If no history, prompt user. |
+| **Conversation timeline** → "Reply" on a Communication                | To: original sender. In-reply-to headers set. Quoted content included.      | Account that received the original email.                                           |
+| **Conversation timeline** → "Reply All" on a Communication            | To/CC: all original participants (excluding self). In-reply-to headers set. | Account that received the original email.                                           |
+| **Conversation timeline** → "Forward" on a Communication              | To: empty (user fills in). Original content and attachments included.       | Account that received the original email.                                           |
+| **Conversation detail** → "New Email"                                 | To: primary participant(s) of the Conversation.                             | Historical pattern for the Conversation's contacts.                                 |
+| **Global compose action** (e.g., keyboard shortcut or nav bar button) | Empty compose. No pre-filled context.                                       | User's default sending account. If no default, prompt user.                         |
+| **Automation approval queue** → "Edit & Approve"                      | Fully pre-filled from template + merge fields.                              | As configured on the automation rule.                                               |
 
 ### 8.2 Panel-Based Composer
 
@@ -583,13 +584,13 @@ The compose panel can be undocked into a separate OS-level window (Flutter multi
 
 When a compose session is initiated, the system selects the default sending account using the following priority chain (first match wins):
 
-| Priority | Condition | Default Account |
-|---|---|---|
-| 1 | **Reply/Reply All/Forward** — composing in response to an existing Communication | The provider account that received/synced the original Communication (`provider_account_id` on the parent Communication record). |
-| 2 | **Historical pattern** — the To recipient is a Contact with prior outbound email from the user | The provider account most recently used by this user to send email to this Contact. Determined by querying outbound Communications to this Contact's email addresses, ordered by timestamp desc. |
-| 3 | **User default** — user has set a default sending account in their settings | The user's configured default provider account. |
-| 4 | **Only one account** — user has exactly one connected email account | That account. |
-| 5 | **Ambiguous** — none of the above resolve | Prompt the user to select an account. The compose panel opens with the From field highlighted and a dropdown of available accounts. |
+| Priority | Condition                                                                                      | Default Account                                                                                                                                                                                  |
+| -------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1        | **Reply/Reply All/Forward** — composing in response to an existing Communication               | The provider account that received/synced the original Communication (`provider_account_id` on the parent Communication record).                                                                 |
+| 2        | **Historical pattern** — the To recipient is a Contact with prior outbound email from the user | The provider account most recently used by this user to send email to this Contact. Determined by querying outbound Communications to this Contact's email addresses, ordered by timestamp desc. |
+| 3        | **User default** — user has set a default sending account in their settings                    | The user's configured default provider account.                                                                                                                                                  |
+| 4        | **Only one account** — user has exactly one connected email account                            | That account.                                                                                                                                                                                    |
+| 5        | **Ambiguous** — none of the above resolve                                                      | Prompt the user to select an account. The compose panel opens with the From field highlighted and a dropdown of available accounts.                                                              |
 
 ### 9.2 Visibility and Override
 
@@ -624,16 +625,16 @@ At send time, the rich text content (`body_json`) is transformed into email-safe
 
 **Transformation rules:**
 
-| Rich Text Feature | Email-Safe Output |
-|---|---|
-| CSS classes / external stylesheets | Inline styles on each element |
-| Modern CSS (flexbox, grid) | Table-based layout where needed |
-| Custom fonts | System font stack fallback (`Arial, Helvetica, sans-serif`) |
-| Responsive width | Fixed-width container (600px) with percentage-based inner elements |
-| Images | `<img>` with explicit `width` and `height` attributes; hosted on CRMExtender CDN |
-| Links | Standard `<a>` tags with link tracking rewrite (Section 21) |
-| Background colors | Inline `background-color` style |
-| Margin/padding | Inline styles or table cell padding |
+| Rich Text Feature                  | Email-Safe Output                                                                |
+| ---------------------------------- | -------------------------------------------------------------------------------- |
+| CSS classes / external stylesheets | Inline styles on each element                                                    |
+| Modern CSS (flexbox, grid)         | Table-based layout where needed                                                  |
+| Custom fonts                       | System font stack fallback (`Arial, Helvetica, sans-serif`)                      |
+| Responsive width                   | Fixed-width container (600px) with percentage-based inner elements               |
+| Images                             | `<img>` with explicit `width` and `height` attributes; hosted on CRMExtender CDN |
+| Links                              | Standard `<a>` tags with link tracking rewrite (Section 21)                      |
+| Background colors                  | Inline `background-color` style                                                  |
+| Margin/padding                     | Inline styles or table cell padding                                              |
 
 **Multipart message format:** Every outbound email is sent as `multipart/alternative` with both `text/html` (email-safe HTML) and `text/plain` (generated from `body_text`) parts. This ensures readability for recipients whose email clients prefer or require plain text.
 
@@ -697,11 +698,11 @@ When an outbound email is sent with a freeform email address (not linked to an e
 
 BCC participants are recorded on the Communication record's Communication Participants relation with `role = bcc`. Visibility rules:
 
-| Viewer | Can see BCC participants? |
-|---|---|
-| The sender (created_by on the Communication) | Yes |
-| Tenant Admins / Sys Admins | Yes |
-| Other tenant users | No — BCC participants are excluded from participant lists for non-sender, non-admin viewers |
+| Viewer                                       | Can see BCC participants?                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| The sender (created_by on the Communication) | Yes                                                                                         |
+| Tenant Admins / Sys Admins                   | Yes                                                                                         |
+| Other tenant users                           | No — BCC participants are excluded from participant lists for non-sender, non-admin viewers |
 
 ---
 
@@ -709,12 +710,12 @@ BCC participants are recorded on the Communication record's Communication Partic
 
 ### 13.1 Attachment Sources
 
-| Source | Flow |
-|---|---|
-| **Upload from device** | File picker → file uploaded to object storage → Document entity created (Documents PRD Section 17) → linked to outbound email via `outbound_email_attachments`. |
-| **Attach from Documents** | User browses/searches CRMExtender Documents → selects one or more → linked to outbound email. The Document's current version is referenced. |
-| **Template default attachments** | When a template is applied, its default attachments (Section 7.3) are automatically included. The user can remove or add to these. |
-| **Forward attachments** | When forwarding, original Communication's Document attachments are included automatically. |
+| Source                           | Flow                                                                                                                                                            |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Upload from device**           | File picker → file uploaded to object storage → Document entity created (Documents PRD Section 17) → linked to outbound email via `outbound_email_attachments`. |
+| **Attach from Documents**        | User browses/searches CRMExtender Documents → selects one or more → linked to outbound email. The Document's current version is referenced.                     |
+| **Template default attachments** | When a template is applied, its default attachments (Section 7.3) are automatically included. The user can remove or add to these.                              |
+| **Forward attachments**          | When forwarding, original Communication's Document attachments are included automatically.                                                                      |
 
 ### 13.2 Version Tracking
 
@@ -736,10 +737,10 @@ The template editor is the same rich text editor as the compose panel, with the 
 
 ### 14.2 Ownership and Visibility
 
-| Visibility | Who can create | Who can view/use | Who can edit | Who can delete |
-|---|---|---|---|---|
-| `personal` | Any user | Creator only | Creator only | Creator only |
-| `shared` | Any user | All tenant users | Creator only | Creator + Admins |
+| Visibility | Who can create | Who can view/use | Who can edit | Who can delete   |
+| ---------- | -------------- | ---------------- | ------------ | ---------------- |
+| `personal` | Any user       | Creator only     | Creator only | Creator only     |
+| `shared`   | Any user       | All tenant users | Creator only | Creator + Admins |
 
 A template's visibility can be changed from `personal` to `shared` (and vice versa) by the creator. Changing from `shared` to `personal` does not affect automation rules that reference the template — those rules continue to function but will fail if the template is archived.
 
@@ -771,26 +772,26 @@ Merge fields use double-brace syntax: `{{entity.field}}`. This syntax is used in
 
 ### 15.2 Available Merge Fields
 
-| Category | Field Path | Resolves To |
-|---|---|---|
-| **Contact** | `{{contact.first_name}}` | Contact's first name |
-| | `{{contact.last_name}}` | Contact's last name |
-| | `{{contact.full_name}}` | Contact's display name (first + last) |
-| | `{{contact.email}}` | Contact's primary email address |
-| | `{{contact.phone}}` | Contact's primary phone number |
-| | `{{contact.title}}` | Contact's job title |
-| | `{{contact.company_name}}` | Display name of the Contact's primary company |
-| **Company** | `{{company.name}}` | Company display name (via Contact's primary company) |
-| | `{{company.domain}}` | Company primary domain |
-| | `{{company.industry}}` | Company industry field |
-| **Sender** | `{{user.first_name}}` | Current user's first name |
-| | `{{user.last_name}}` | Current user's last name |
-| | `{{user.full_name}}` | Current user's display name |
-| | `{{user.email}}` | Sending account email address |
-| | `{{user.phone}}` | Current user's phone number |
-| | `{{user.title}}` | Current user's job title |
-| **Date** | `{{today}}` | Current date (formatted per tenant locale) |
-| | `{{current_year}}` | Current year (4-digit) |
+| Category    | Field Path                 | Resolves To                                          |
+| ----------- | -------------------------- | ---------------------------------------------------- |
+| **Contact** | `{{contact.first_name}}`   | Contact's first name                                 |
+|             | `{{contact.last_name}}`    | Contact's last name                                  |
+|             | `{{contact.full_name}}`    | Contact's display name (first + last)                |
+|             | `{{contact.email}}`        | Contact's primary email address                      |
+|             | `{{contact.phone}}`        | Contact's primary phone number                       |
+|             | `{{contact.title}}`        | Contact's job title                                  |
+|             | `{{contact.company_name}}` | Display name of the Contact's primary company        |
+| **Company** | `{{company.name}}`         | Company display name (via Contact's primary company) |
+|             | `{{company.domain}}`       | Company primary domain                               |
+|             | `{{company.industry}}`     | Company industry field                               |
+| **Sender**  | `{{user.first_name}}`      | Current user's first name                            |
+|             | `{{user.last_name}}`       | Current user's last name                             |
+|             | `{{user.full_name}}`       | Current user's display name                          |
+|             | `{{user.email}}`           | Sending account email address                        |
+|             | `{{user.phone}}`           | Current user's phone number                          |
+|             | `{{user.title}}`           | Current user's job title                             |
+| **Date**    | `{{today}}`                | Current date (formatted per tenant locale)           |
+|             | `{{current_year}}`         | Current year (4-digit)                               |
 
 Custom fields on Contact and Company entities are also accessible via their field slugs: `{{contact.custom_field_slug}}`, `{{company.custom_field_slug}}`.
 
@@ -815,13 +816,13 @@ Users manage signatures in their account settings. Each signature consists of:
 
 ### 16.2 Signature Selection Logic
 
-| Compose Action | Signature Applied |
-|---|---|
+| Compose Action                               | Signature Applied                                                                                             |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | New compose from a specific provider account | That account's default signature. Falls back to user's overall default signature. Falls back to no signature. |
-| Reply / Reply All | Follows the matched signature's `reply_behavior` setting. |
-| Forward | Full signature (same as new compose). |
-| Change sending account during compose | Signature swaps to the new account's default. |
-| User manually changes | Selected signature persists for this compose session regardless of account changes. |
+| Reply / Reply All                            | Follows the matched signature's `reply_behavior` setting.                                                     |
+| Forward                                      | Full signature (same as new compose).                                                                         |
+| Change sending account during compose        | Signature swaps to the new account's default.                                                                 |
+| User manually changes                        | Selected signature persists for this compose session regardless of account changes.                           |
 
 ### 16.3 Signature in Email
 
@@ -904,14 +905,14 @@ Date-triggered automation allows users to configure rules that automatically gen
 
 When creating an automation rule, the user configures:
 
-| Setting | Description | Example |
-|---|---|---|
-| **Name** | Display name for the rule. | "Birthday Greetings" |
-| **Trigger field** | A date field on the Contact entity. Can be a system field (e.g., `birthday`) or a custom date field. | `birthday` |
-| **Timing offset** | Days relative to the trigger date. Negative = before, 0 = on the day, positive = after. | `-3` (three days before birthday) |
-| **Recipient View** | A saved View that defines the scope of Contacts this rule applies to. The View is evaluated dynamically at generation time — if a Contact is added to or removed from the View's filter criteria, the rule automatically adjusts. | "Active Customers" View |
-| **Template** | The email template to use. | "Birthday Greeting" template |
-| **Sending account** | Which provider account to send from. | `doug@example.com` |
+| Setting             | Description                                                                                                                                                                                                                       | Example                           |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| **Name**            | Display name for the rule.                                                                                                                                                                                                        | "Birthday Greetings"              |
+| **Trigger field**   | A date field on the Contact entity. Can be a system field (e.g., `birthday`) or a custom date field.                                                                                                                              | `birthday`                        |
+| **Timing offset**   | Days relative to the trigger date. Negative = before, 0 = on the day, positive = after.                                                                                                                                           | `-3` (three days before birthday) |
+| **Recipient View**  | A saved View that defines the scope of Contacts this rule applies to. The View is evaluated dynamically at generation time — if a Contact is added to or removed from the View's filter criteria, the rule automatically adjusts. | "Active Customers" View           |
+| **Template**        | The email template to use.                                                                                                                                                                                                        | "Birthday Greeting" template      |
+| **Sending account** | Which provider account to send from.                                                                                                                                                                                              | `doug@example.com`                |
 
 ### 19.3 Daily Evaluation Job
 
@@ -935,11 +936,11 @@ A scheduled job runs daily (configurable time, default: 2:00 AM in the tenant's 
 
 ### 19.4 Rule Lifecycle
 
-| Status | Behavior |
-|---|---|
-| `active` | Rule is evaluated on each daily run. New emails are generated for qualifying Contacts. |
-| `paused` | Rule is skipped during daily evaluation. Existing pending emails in the approval queue are not affected — they remain awaiting approval. |
-| `archived` | Rule is soft-deleted. Not evaluated. Existing pending emails in the approval queue are cancelled. |
+| Status     | Behavior                                                                                                                                 |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `active`   | Rule is evaluated on each daily run. New emails are generated for qualifying Contacts.                                                   |
+| `paused`   | Rule is skipped during daily evaluation. Existing pending emails in the approval queue are not affected — they remain awaiting approval. |
+| `archived` | Rule is soft-deleted. Not evaluated. Existing pending emails in the approval queue are cancelled.                                        |
 
 Pausing a rule is useful for temporary suspension (e.g., holiday period) without losing the configuration. Reactivating a paused rule causes the next daily evaluation to pick up any Contacts whose trigger dates were missed during the pause.
 
@@ -969,11 +970,11 @@ Each email in the approval queue displays:
 
 The user can:
 
-| Action | Result |
-|---|---|
-| **Approve** | Email transitions to `scheduled` (if `scheduled_send_at` is set) or `queued` (for immediate send). |
+| Action             | Result                                                                                                                                 |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Approve**        | Email transitions to `scheduled` (if `scheduled_send_at` is set) or `queued` (for immediate send).                                     |
 | **Edit & Approve** | Opens the email in the compose panel for editing. After edits, the user approves and the email transitions to `scheduled` or `queued`. |
-| **Reject** | Email transitions to `rejected`. Not sent. The rejection is logged for rule performance tracking. |
+| **Reject**         | Email transitions to `rejected`. Not sent. The rejection is logged for rule performance tracking.                                      |
 
 ### 20.3 Batch Approval
 
@@ -1016,11 +1017,11 @@ When a recipient clicks a tracked link:
 
 Click data is displayed passively in existing views:
 
-| Location | Display |
-|---|---|
-| **Communication record detail** | A "Link Clicks" section showing each tracked link's original URL, total click count, and most recent click time. |
-| **Contact timeline** | Click events appear as activity items: "{Contact} clicked {link description} in your email '{subject}'" with timestamp. |
-| **Template usage stats** | Aggregate click-through rates per template (total links clicked / total links sent across all emails using that template). |
+| Location                        | Display                                                                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Communication record detail** | A "Link Clicks" section showing each tracked link's original URL, total click count, and most recent click time.           |
+| **Contact timeline**            | Click events appear as activity items: "{Contact} clicked {link description} in your email '{subject}'" with timestamp.    |
+| **Template usage stats**        | Aggregate click-through rates per template (total links clicked / total links sent across all emails using that template). |
 
 No real-time notifications or alerts are generated for clicks in V1. Click data is available for passive review and for building Views/filters (e.g., "show me Contacts who clicked a link in the last 7 days").
 
@@ -1072,6 +1073,7 @@ Additional terminal state: `cancelled` (user cancels a scheduled or draft email)
 When an outbound email transitions to `sending`:
 
 1. **Create Communication record.** A new Communication (`com_` prefix) is created in the `communications` table with:
+   
    - `direction = 'outbound'`
    - `source = 'composed'` (new source value for CRM-originated sends)
    - `channel = 'email'`
@@ -1129,12 +1131,12 @@ When the user composes a fresh email outside of any Conversation context (from a
 
 When the provider API returns an error during send:
 
-| Error Type | Detection | System Response |
-|---|---|---|
-| **Hard bounce** (address doesn't exist, domain invalid) | Provider API error response or post-send bounce notification (DSN) | Queue record → `failed`. Communication record `delivery_status` field set to `bounced`. |
-| **Soft bounce** (mailbox full, temporary issue) | Provider API error or DSN | Queue record → `failed` with retry eligibility. Up to 3 retries with exponential backoff over 24 hours. |
-| **Provider rejection** (rate limited, flagged as spam) | Provider API HTTP error (429, 550, etc.) | Queue record → `failed`. Logged for troubleshooting. No automatic retry for spam flags. Rate-limit retries follow provider `Retry-After` header. |
-| **Authentication failure** (token expired) | Provider API HTTP 401 | Attempt token refresh. If refresh fails, queue record → `failed`, provider account status → `error`. User notified to re-authenticate. |
+| Error Type                                              | Detection                                                          | System Response                                                                                                                                  |
+| ------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Hard bounce** (address doesn't exist, domain invalid) | Provider API error response or post-send bounce notification (DSN) | Queue record → `failed`. Communication record `delivery_status` field set to `bounced`.                                                          |
+| **Soft bounce** (mailbox full, temporary issue)         | Provider API error or DSN                                          | Queue record → `failed` with retry eligibility. Up to 3 retries with exponential backoff over 24 hours.                                          |
+| **Provider rejection** (rate limited, flagged as spam)  | Provider API HTTP error (429, 550, etc.)                           | Queue record → `failed`. Logged for troubleshooting. No automatic retry for spam flags. Rate-limit retries follow provider `Retry-After` header. |
+| **Authentication failure** (token expired)              | Provider API HTTP 401                                              | Attempt token refresh. If refresh fails, queue record → `failed`, provider account status → `error`. User notified to re-authenticate.           |
 
 ### 24.2 Contact Email Flagging
 
@@ -1248,31 +1250,31 @@ Outbound email queue state transitions are captured as events on the parent Comm
 
 The email template object type's field registry generates a virtual schema table for use in Data Source queries:
 
-| Virtual Column | Source | Type |
-|---|---|---|
-| `id` | `id` | TEXT |
-| `name` | `name` | TEXT |
-| `subject` | `subject` | TEXT |
-| `visibility` | `visibility` | TEXT |
-| `category` | `category` | TEXT |
-| `use_count` | `use_count` | INTEGER |
+| Virtual Column | Source         | Type        |
+| -------------- | -------------- | ----------- |
+| `id`           | `id`           | TEXT        |
+| `name`         | `name`         | TEXT        |
+| `subject`      | `subject`      | TEXT        |
+| `visibility`   | `visibility`   | TEXT        |
+| `category`     | `category`     | TEXT        |
+| `use_count`    | `use_count`    | INTEGER     |
 | `last_used_at` | `last_used_at` | TIMESTAMPTZ |
-| `created_at` | `created_at` | TIMESTAMPTZ |
-| `created_by` | `created_by` | TEXT |
+| `created_at`   | `created_at`   | TIMESTAMPTZ |
+| `created_by`   | `created_by`   | TEXT        |
 
 ### 27.2 Automation Rule Virtual Schema
 
-| Virtual Column | Source | Type |
-|---|---|---|
-| `id` | `id` | TEXT |
-| `name` | `name` | TEXT |
-| `template_id` | `template_id` | TEXT |
-| `view_id` | `view_id` | TEXT |
-| `trigger_field` | `trigger_field` | TEXT |
-| `timing_offset_days` | `timing_offset_days` | INTEGER |
-| `status` | `status` | TEXT |
-| `last_run_at` | `last_run_at` | TIMESTAMPTZ |
-| `last_run_count` | `last_run_count` | INTEGER |
+| Virtual Column       | Source               | Type        |
+| -------------------- | -------------------- | ----------- |
+| `id`                 | `id`                 | TEXT        |
+| `name`               | `name`               | TEXT        |
+| `template_id`        | `template_id`        | TEXT        |
+| `view_id`            | `view_id`            | TEXT        |
+| `trigger_field`      | `trigger_field`      | TEXT        |
+| `timing_offset_days` | `timing_offset_days` | INTEGER     |
+| `status`             | `status`             | TEXT        |
+| `last_run_at`        | `last_run_at`        | TIMESTAMPTZ |
+| `last_run_count`     | `last_run_count`     | INTEGER     |
 
 ### 27.3 Click Tracking Virtual Schema
 
@@ -1289,81 +1291,81 @@ These computed fields are available as filter and sort criteria in Views.
 
 ### 28.1 Compose & Send API
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/v1/outbound-emails` | POST | Create a new outbound email (draft or immediate send). Body includes recipients, subject, body, attachments, sending account, template_id, reply context. |
-| `/api/v1/outbound-emails/{id}` | GET | Get outbound email detail (draft, scheduled, or sent). |
-| `/api/v1/outbound-emails/{id}` | PATCH | Update a draft or scheduled email (recipients, subject, body, schedule time). |
-| `/api/v1/outbound-emails/{id}/send` | POST | Send a draft immediately (enters undo-send window). |
-| `/api/v1/outbound-emails/{id}/schedule` | POST | Schedule a draft for future send. Body: `{scheduled_send_at}`. |
-| `/api/v1/outbound-emails/{id}/cancel` | POST | Cancel a scheduled or draft email. |
-| `/api/v1/outbound-emails/{id}/undo` | POST | Undo a send during the undo window. |
-| `/api/v1/outbound-emails/drafts` | GET | List current user's drafts. |
-| `/api/v1/outbound-emails/scheduled` | GET | List current user's scheduled emails. |
+| Endpoint                                | Method | Description                                                                                                                                               |
+| --------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/v1/outbound-emails`               | POST   | Create a new outbound email (draft or immediate send). Body includes recipients, subject, body, attachments, sending account, template_id, reply context. |
+| `/api/v1/outbound-emails/{id}`          | GET    | Get outbound email detail (draft, scheduled, or sent).                                                                                                    |
+| `/api/v1/outbound-emails/{id}`          | PATCH  | Update a draft or scheduled email (recipients, subject, body, schedule time).                                                                             |
+| `/api/v1/outbound-emails/{id}/send`     | POST   | Send a draft immediately (enters undo-send window).                                                                                                       |
+| `/api/v1/outbound-emails/{id}/schedule` | POST   | Schedule a draft for future send. Body: `{scheduled_send_at}`.                                                                                            |
+| `/api/v1/outbound-emails/{id}/cancel`   | POST   | Cancel a scheduled or draft email.                                                                                                                        |
+| `/api/v1/outbound-emails/{id}/undo`     | POST   | Undo a send during the undo window.                                                                                                                       |
+| `/api/v1/outbound-emails/drafts`        | GET    | List current user's drafts.                                                                                                                               |
+| `/api/v1/outbound-emails/scheduled`     | GET    | List current user's scheduled emails.                                                                                                                     |
 
 ### 28.2 Approval API
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/v1/outbound-emails/awaiting-approval` | GET | List emails awaiting approval (filterable by rule, date, recipient). |
-| `/api/v1/outbound-emails/{id}/approve` | POST | Approve a single email for sending. |
-| `/api/v1/outbound-emails/{id}/reject` | POST | Reject a single email. Optional body: `{reason}`. |
-| `/api/v1/outbound-emails/batch-approve` | POST | Approve multiple emails. Body: `{ids: [...]}`. |
-| `/api/v1/outbound-emails/batch-reject` | POST | Reject multiple emails. Body: `{ids: [...], reason?}`. |
+| Endpoint                                    | Method | Description                                                          |
+| ------------------------------------------- | ------ | -------------------------------------------------------------------- |
+| `/api/v1/outbound-emails/awaiting-approval` | GET    | List emails awaiting approval (filterable by rule, date, recipient). |
+| `/api/v1/outbound-emails/{id}/approve`      | POST   | Approve a single email for sending.                                  |
+| `/api/v1/outbound-emails/{id}/reject`       | POST   | Reject a single email. Optional body: `{reason}`.                    |
+| `/api/v1/outbound-emails/batch-approve`     | POST   | Approve multiple emails. Body: `{ids: [...]}`.                       |
+| `/api/v1/outbound-emails/batch-reject`      | POST   | Reject multiple emails. Body: `{ids: [...], reason?}`.               |
 
 ### 28.3 Template CRUD API
 
 Per Custom Objects PRD Section 23.4:
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/v1/email-templates` | GET | List templates (filterable by visibility, category, creator). |
-| `/api/v1/email-templates` | POST | Create a template. |
-| `/api/v1/email-templates/{id}` | GET | Get template detail with body, merge fields, and default attachments. |
-| `/api/v1/email-templates/{id}` | PATCH | Update template fields or body. |
-| `/api/v1/email-templates/{id}/archive` | POST | Archive a template. |
-| `/api/v1/email-templates/{id}/unarchive` | POST | Restore a template. |
-| `/api/v1/email-templates/{id}/attachments` | GET | List default attachments. |
-| `/api/v1/email-templates/{id}/attachments` | POST | Add a default attachment (body: `{document_id}`). |
-| `/api/v1/email-templates/{id}/attachments/{attachment_id}` | DELETE | Remove a default attachment. |
-| `/api/v1/email-templates/{id}/preview` | POST | Preview template with merge fields resolved against a specific Contact. Body: `{contact_id}`. |
+| Endpoint                                                   | Method | Description                                                                                   |
+| ---------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------- |
+| `/api/v1/email-templates`                                  | GET    | List templates (filterable by visibility, category, creator).                                 |
+| `/api/v1/email-templates`                                  | POST   | Create a template.                                                                            |
+| `/api/v1/email-templates/{id}`                             | GET    | Get template detail with body, merge fields, and default attachments.                         |
+| `/api/v1/email-templates/{id}`                             | PATCH  | Update template fields or body.                                                               |
+| `/api/v1/email-templates/{id}/archive`                     | POST   | Archive a template.                                                                           |
+| `/api/v1/email-templates/{id}/unarchive`                   | POST   | Restore a template.                                                                           |
+| `/api/v1/email-templates/{id}/attachments`                 | GET    | List default attachments.                                                                     |
+| `/api/v1/email-templates/{id}/attachments`                 | POST   | Add a default attachment (body: `{document_id}`).                                             |
+| `/api/v1/email-templates/{id}/attachments/{attachment_id}` | DELETE | Remove a default attachment.                                                                  |
+| `/api/v1/email-templates/{id}/preview`                     | POST   | Preview template with merge fields resolved against a specific Contact. Body: `{contact_id}`. |
 
 ### 28.4 Automation Rule API
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/v1/automation-rules` | GET | List automation rules (filterable by status). |
-| `/api/v1/automation-rules` | POST | Create an automation rule. |
-| `/api/v1/automation-rules/{id}` | GET | Get rule detail with last run info. |
-| `/api/v1/automation-rules/{id}` | PATCH | Update rule configuration. |
-| `/api/v1/automation-rules/{id}/pause` | POST | Pause the rule. |
-| `/api/v1/automation-rules/{id}/activate` | POST | Activate (or reactivate) the rule. |
-| `/api/v1/automation-rules/{id}/archive` | POST | Archive the rule (cancels pending emails). |
-| `/api/v1/automation-rules/{id}/preview` | POST | Dry-run: show which Contacts would qualify and what emails would be generated, without actually generating them. |
+| Endpoint                                 | Method | Description                                                                                                      |
+| ---------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| `/api/v1/automation-rules`               | GET    | List automation rules (filterable by status).                                                                    |
+| `/api/v1/automation-rules`               | POST   | Create an automation rule.                                                                                       |
+| `/api/v1/automation-rules/{id}`          | GET    | Get rule detail with last run info.                                                                              |
+| `/api/v1/automation-rules/{id}`          | PATCH  | Update rule configuration.                                                                                       |
+| `/api/v1/automation-rules/{id}/pause`    | POST   | Pause the rule.                                                                                                  |
+| `/api/v1/automation-rules/{id}/activate` | POST   | Activate (or reactivate) the rule.                                                                               |
+| `/api/v1/automation-rules/{id}/archive`  | POST   | Archive the rule (cancels pending emails).                                                                       |
+| `/api/v1/automation-rules/{id}/preview`  | POST   | Dry-run: show which Contacts would qualify and what emails would be generated, without actually generating them. |
 
 ### 28.5 Signature API
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/v1/signatures` | GET | List current user's signatures. |
-| `/api/v1/signatures` | POST | Create a signature. |
-| `/api/v1/signatures/{id}` | GET | Get signature detail. |
-| `/api/v1/signatures/{id}` | PATCH | Update signature content or settings. |
-| `/api/v1/signatures/{id}` | DELETE | Delete a signature. |
+| Endpoint                  | Method | Description                           |
+| ------------------------- | ------ | ------------------------------------- |
+| `/api/v1/signatures`      | GET    | List current user's signatures.       |
+| `/api/v1/signatures`      | POST   | Create a signature.                   |
+| `/api/v1/signatures/{id}` | GET    | Get signature detail.                 |
+| `/api/v1/signatures/{id}` | PATCH  | Update signature content or settings. |
+| `/api/v1/signatures/{id}` | DELETE | Delete a signature.                   |
 
 ### 28.6 Click Tracking API
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/v1/communications/{id}/click-tracking` | GET | List tracked links and click events for a Communication. |
-| `/api/v1/contacts/{id}/click-activity` | GET | List all click events attributed to a Contact (paginated, sorted by time). |
-| `/c/{tracking_token}` | GET | Public redirect endpoint. Records click and redirects to original URL. (No authentication required.) |
+| Endpoint                                     | Method | Description                                                                                          |
+| -------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| `/api/v1/communications/{id}/click-tracking` | GET    | List tracked links and click events for a Communication.                                             |
+| `/api/v1/contacts/{id}/click-activity`       | GET    | List all click events attributed to a Contact (paginated, sorted by time).                           |
+| `/c/{tracking_token}`                        | GET    | Public redirect endpoint. Records click and redirects to original URL. (No authentication required.) |
 
 ### 28.7 Unsubscribe API
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/unsubscribe/{token}` | GET | Public unsubscribe page. Displays confirmation and sets opt-out flag. (No authentication required.) |
+| Endpoint               | Method | Description                                                                                         |
+| ---------------------- | ------ | --------------------------------------------------------------------------------------------------- |
+| `/unsubscribe/{token}` | GET    | Public unsubscribe page. Displays confirmation and sets opt-out flag. (No authentication required.) |
 
 ---
 
@@ -1478,18 +1480,18 @@ CRMExtender's target users are relationship-focused professionals, not high-volu
 
 ## 31. Dependencies & Related PRDs
 
-| PRD | Relationship | Dependency Direction |
-|---|---|---|
-| **Communications PRD** | Outbound emails are Communication records. This PRD extends the Communication entity with outbound-specific behaviors and adds the `composed` source value. | **Bidirectional.** Communications PRD defines the entity; this PRD adds compose/send behavior. Communications PRD needs update to add `source = 'composed'` option and reference this PRD. |
-| **Email Provider Sync PRD** (planned) | This PRD uses the provider adapter's send method. The sync PRD handles deduplication when synced sent-folder messages match CRM-composed sends. | **Bidirectional.** Sync PRD provides send API; this PRD defines when/how send is called. |
-| **Documents PRD** | All attachments create Document entities. Template default attachments reference Documents. | **This PRD depends on Documents** for attachment storage and version tracking. |
-| **Conversations PRD** | Reply conversation assignment uses Conversations. New compose delegates to conversation formation logic. | **This PRD depends on Conversations** for thread assignment. |
-| **Contact Management PRD** | Merge fields resolve against Contact fields. Auto-create Contacts for unknown recipients. Bounce handling updates Contact identifiers. Opt-out field added to Contact entity. | **Bidirectional.** Contact PRD needs update to add `automated_email_opt_out` field and `delivery_status` on identifiers. |
-| **Custom Objects PRD** | Email Template and Automation Rule are system object types. Standard framework for field registry, event sourcing, and virtual schema. | **This PRD depends on Custom Objects** for the entity framework. |
-| **Views & Grid PRD** | Automation rules scope recipients to saved Views. Awaiting Approval is a system View. Click tracking data is filterable in Views. | **This PRD depends on Views** for automation scoping and approval UI. |
-| **Notes PRD** | Shared rich text editor and content architecture. | **Shared dependency** on the same editor component. |
-| **Permissions & Sharing PRD** | Template visibility, BCC visibility, and automation rule access follow RBAC. | **This PRD depends on Permissions** for access control. |
-| **GUI Functional Requirements PRD** | Compose panel uses the contextual action panel layout. Undockable window uses Flutter multi-window. | **This PRD depends on GUI PRD** for layout integration. |
+| PRD                                   | Relationship                                                                                                                                                                  | Dependency Direction                                                                                                                                                                       |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Communications PRD**                | Outbound emails are Communication records. This PRD extends the Communication entity with outbound-specific behaviors and adds the `composed` source value.                   | **Bidirectional.** Communications PRD defines the entity; this PRD adds compose/send behavior. Communications PRD needs update to add `source = 'composed'` option and reference this PRD. |
+| **Email Provider Sync PRD** (planned) | This PRD uses the provider adapter's send method. The sync PRD handles deduplication when synced sent-folder messages match CRM-composed sends.                               | **Bidirectional.** Sync PRD provides send API; this PRD defines when/how send is called.                                                                                                   |
+| **Documents PRD**                     | All attachments create Document entities. Template default attachments reference Documents.                                                                                   | **This PRD depends on Documents** for attachment storage and version tracking.                                                                                                             |
+| **Conversations PRD**                 | Reply conversation assignment uses Conversations. New compose delegates to conversation formation logic.                                                                      | **This PRD depends on Conversations** for thread assignment.                                                                                                                               |
+| **Contact Management PRD**            | Merge fields resolve against Contact fields. Auto-create Contacts for unknown recipients. Bounce handling updates Contact identifiers. Opt-out field added to Contact entity. | **Bidirectional.** Contact PRD needs update to add `automated_email_opt_out` field and `delivery_status` on identifiers.                                                                   |
+| **Custom Objects PRD**                | Email Template and Automation Rule are system object types. Standard framework for field registry, event sourcing, and virtual schema.                                        | **This PRD depends on Custom Objects** for the entity framework.                                                                                                                           |
+| **Views & Grid PRD**                  | Automation rules scope recipients to saved Views. Awaiting Approval is a system View. Click tracking data is filterable in Views.                                             | **This PRD depends on Views** for automation scoping and approval UI.                                                                                                                      |
+| **Notes PRD**                         | Shared rich text editor and content architecture.                                                                                                                             | **Shared dependency** on the same editor component.                                                                                                                                        |
+| **Permissions & Sharing PRD**         | Template visibility, BCC visibility, and automation rule access follow RBAC.                                                                                                  | **This PRD depends on Permissions** for access control.                                                                                                                                    |
+| **GUI Functional Requirements PRD**   | Compose panel uses the contextual action panel layout. Undockable window uses Flutter multi-window.                                                                           | **This PRD depends on GUI PRD** for layout integration.                                                                                                                                    |
 
 ---
 
@@ -1531,22 +1533,22 @@ CRMExtender's target users are relationship-focused professionals, not high-volu
 
 General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
-| Term | Definition |
-|---|---|
-| **Outbound email** | An email composed and sent from within CRMExtender, as opposed to one composed in an external email client and later synced. |
-| **Email template** | A reusable email composition blueprint with merge field placeholders, stored as a system object type (`etl_` prefix). |
-| **Merge field** | A placeholder in a template that is resolved to actual data at compose or generation time. Syntax: `{{entity.field}}`. |
-| **Automation rule** | A configuration that generates outbound emails based on Contact date fields, scoped to a saved View, with mandatory approval before sending. Stored as a system object type (`arl_` prefix). |
-| **Approval queue** | The list of automation-generated emails awaiting user review and approval before sending. |
-| **Click tracking** | The system of rewriting links in outbound email body content to pass through a redirect service, recording recipient clicks. |
-| **Tracked link** | A link in an outbound email whose URL has been rewritten to include a tracking token for click detection. |
-| **Undo-send window** | A 10-second delay after the user clicks Send during which the email can be recalled. |
-| **Email-safe HTML** | HTML that uses inline styles, table-based layout, and limited CSS to render consistently across email clients (Gmail, Outlook, Apple Mail, etc.). |
-| **Sending identity** | The provider account (email address) from which an outbound email is sent. Selected by the smart default priority chain or manually by the user. |
-| **Provider adapter** | A module implementing the provider interface for a specific email service (Gmail, Outlook, IMAP). Used for both fetching inbound and sending outbound email. |
-| **Bounce** | A delivery failure where the recipient's mail server rejects the email. Hard bounces indicate permanent failure (invalid address); soft bounces indicate temporary issues. |
-| **Opt-out** | A Contact-level flag (`automated_email_opt_out`) that prevents automation rules from generating emails for that Contact. Does not affect manual sends. |
-| **DSN** | Delivery Status Notification — a standardized email message sent by a mail server to report delivery success or failure. |
+| Term                 | Definition                                                                                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Outbound email**   | An email composed and sent from within CRMExtender, as opposed to one composed in an external email client and later synced.                                                                 |
+| **Email template**   | A reusable email composition blueprint with merge field placeholders, stored as a system object type (`etl_` prefix).                                                                        |
+| **Merge field**      | A placeholder in a template that is resolved to actual data at compose or generation time. Syntax: `{{entity.field}}`.                                                                       |
+| **Automation rule**  | A configuration that generates outbound emails based on Contact date fields, scoped to a saved View, with mandatory approval before sending. Stored as a system object type (`arl_` prefix). |
+| **Approval queue**   | The list of automation-generated emails awaiting user review and approval before sending.                                                                                                    |
+| **Click tracking**   | The system of rewriting links in outbound email body content to pass through a redirect service, recording recipient clicks.                                                                 |
+| **Tracked link**     | A link in an outbound email whose URL has been rewritten to include a tracking token for click detection.                                                                                    |
+| **Undo-send window** | A 10-second delay after the user clicks Send during which the email can be recalled.                                                                                                         |
+| **Email-safe HTML**  | HTML that uses inline styles, table-based layout, and limited CSS to render consistently across email clients (Gmail, Outlook, Apple Mail, etc.).                                            |
+| **Sending identity** | The provider account (email address) from which an outbound email is sent. Selected by the smart default priority chain or manually by the user.                                             |
+| **Provider adapter** | A module implementing the provider interface for a specific email service (Gmail, Outlook, IMAP). Used for both fetching inbound and sending outbound email.                                 |
+| **Bounce**           | A delivery failure where the recipient's mail server rejects the email. Hard bounces indicate permanent failure (invalid address); soft bounces indicate temporary issues.                   |
+| **Opt-out**          | A Contact-level flag (`automated_email_opt_out`) that prevents automation rules from generating emails for that Contact. Does not affect manual sends.                                       |
+| **DSN**              | Delivery Status Notification — a standardized email message sent by a mail server to report delivery success or failure.                                                                     |
 
 ---
 

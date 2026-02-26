@@ -1,4 +1,4 @@
-"""Gmail API wrapper: fetch threads and parse messages."""
+"""Gmail API wrapper: fetch threads, parse messages, and send email."""
 
 from __future__ import annotations
 
@@ -9,6 +9,10 @@ import logging
 import re
 from datetime import datetime, timezone
 from email.header import decode_header
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email import encoders
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -344,3 +348,84 @@ def fetch_messages(
 
     log.info("Fetched %d/%d messages", len(emails), len(message_ids))
     return emails
+
+
+def send_message(
+    creds: Credentials,
+    from_email: str,
+    to: list[str],
+    subject: str,
+    body_html: str,
+    body_text: str,
+    cc: list[str] | None = None,
+    bcc: list[str] | None = None,
+    in_reply_to: str | None = None,
+    references: str | None = None,
+    thread_id: str | None = None,
+    attachments: list[dict] | None = None,
+    rate_limiter: RateLimiter | None = None,
+) -> tuple[str, str]:
+    """Send an email via Gmail API.
+
+    Returns (provider_message_id, provider_thread_id).
+
+    Each attachment dict should have keys: filename, mime_type, data (bytes).
+    """
+    if rate_limiter:
+        rate_limiter.acquire()
+
+    # Build MIME message
+    if attachments:
+        msg = MIMEMultipart("mixed")
+        alt = MIMEMultipart("alternative")
+        alt.attach(MIMEText(body_text, "plain", "utf-8"))
+        alt.attach(MIMEText(body_html, "html", "utf-8"))
+        msg.attach(alt)
+        for att in attachments:
+            maintype, subtype = (att.get("mime_type") or "application/octet-stream").split("/", 1)
+            part = MIMEBase(maintype, subtype)
+            part.set_payload(att["data"])
+            encoders.encode_base64(part)
+            part.add_header(
+                "Content-Disposition", "attachment",
+                filename=att.get("filename", "attachment"),
+            )
+            msg.attach(part)
+    else:
+        msg = MIMEMultipart("alternative")
+        msg.attach(MIMEText(body_text, "plain", "utf-8"))
+        msg.attach(MIMEText(body_html, "html", "utf-8"))
+
+    msg["From"] = from_email
+    msg["To"] = ", ".join(to)
+    if cc:
+        msg["Cc"] = ", ".join(cc)
+    if bcc:
+        msg["Bcc"] = ", ".join(bcc)
+    msg["Subject"] = subject
+
+    if in_reply_to:
+        msg["In-Reply-To"] = in_reply_to
+    if references:
+        msg["References"] = references
+
+    # Encode as base64url
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
+
+    # Send via Gmail API
+    service = build("gmail", "v1", credentials=creds)
+    send_body: dict = {"raw": raw}
+    if thread_id:
+        send_body["threadId"] = thread_id
+
+    result = (
+        service.users()
+        .messages()
+        .send(userId="me", body=send_body)
+        .execute()
+    )
+
+    provider_msg_id = result.get("id", "")
+    provider_thread_id = result.get("threadId", "")
+    log.info("Sent message %s in thread %s", provider_msg_id, provider_thread_id)
+    return provider_msg_id, provider_thread_id

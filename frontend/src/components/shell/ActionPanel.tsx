@@ -20,12 +20,14 @@ import {
   Sliders,
   Shield,
   Users,
+  FileSignature,
 } from 'lucide-react'
 
 const SETTINGS_TABS = [
   { key: 'profile', label: 'Profile', icon: User, adminOnly: false },
   { key: 'accounts', label: 'Accounts', icon: Key, adminOnly: false },
   { key: 'calendars', label: 'Calendars', icon: Calendar, adminOnly: false },
+  { key: 'signatures', label: 'Signatures', icon: FileSignature, adminOnly: false },
   { key: 'system', label: 'System', icon: Sliders, adminOnly: true },
   { key: 'roles', label: 'Roles', icon: Shield, adminOnly: true },
   { key: 'users', label: 'Users', icon: Users, adminOnly: true },

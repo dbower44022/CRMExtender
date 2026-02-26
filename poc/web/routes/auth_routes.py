@@ -30,8 +30,21 @@ _GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 
+def _has_any_users() -> bool:
+    """Return True if at least one user exists in the database."""
+    with get_connection() as conn:
+        row = conn.execute("SELECT 1 FROM users LIMIT 1").fetchone()
+    return row is not None
+
+
 def _is_registration_enabled() -> bool:
-    """Check if self-registration is enabled via system setting."""
+    """Check if self-registration is enabled.
+
+    Always enabled when no users exist (fresh database), so the first
+    user can create an account through the web UI.
+    """
+    if not _has_any_users():
+        return True
     return get_setting(DEFAULT_CUSTOMER_ID, "allow_self_registration") == "true"
 
 
@@ -140,8 +153,11 @@ async def register_submit(request: Request):
     if password != confirm_password:
         return _error("Passwords do not match")
 
+    # First user gets admin role; subsequent registrations get user role
+    role = "admin" if not _has_any_users() else "user"
+
     try:
-        user = create_user(DEFAULT_CUSTOMER_ID, email, name, role="user", password=password)
+        user = create_user(DEFAULT_CUSTOMER_ID, email, name, role=role, password=password)
     except ValueError:
         return _error("An account with this email already exists")
 

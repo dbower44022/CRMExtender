@@ -387,62 +387,47 @@ This means the app started successfully. The database is created automatically o
 
 The application requires you to log in. You need to create an admin account before you can use it.
 
-### 8.1 Open a shell inside the container
+### 8.1 Open the registration page
 
-```bash
-docker compose exec app bash
-```
-
-This drops you into a command prompt inside the running app container. You'll see something like:
+On a fresh database with no users, the application automatically enables the "Create Account" link on the login page. Open your browser and go to:
 
 ```
-root@abc123:/app#
+https://server-ip-address/login
 ```
 
-### 8.2 Create the admin user
+You'll see a login form with a **Create Account** link. Click it.
 
-Run this Python command inside the container to create your first user:
+### 8.2 Register the first user
 
-```bash
-python3 -c "
-from poc.database import init_db, get_connection
-from poc.hierarchy import create_user
+Fill out the registration form:
 
-init_db()
-user = create_user(
-    customer_id='cust-default',
-    email='admin@example.com',
-    name='Admin User',
-    role='admin',
-    password='your-secure-password'
-)
-print(f'Created user: {user[\"email\"]}')
-"
-```
+- **Name** — Your display name
+- **Email** — Use a real email address (especially if you plan to connect Gmail later)
+- **Password** — Choose a strong password (minimum 8 characters)
+- **Confirm Password** — Re-enter the same password
 
-**Change these values:**
+Click **Register**. You will be automatically logged in and redirected to the dashboard.
 
-- `email` — Use a real email address (especially if you plan to connect Gmail later)
-- `name` — Your display name
-- `password` — Choose a strong password
+> **Important:** The first user registered on a fresh database is automatically given the **admin** role. All subsequent registrations (if self-registration remains enabled) create regular users.
 
-### 8.3 Exit the container shell
+### 8.3 Disable self-registration (recommended)
 
-```bash
-exit
-```
+Once your admin account is created, you probably want to disable public registration. You can do this from the web UI:
 
-You're now back on the host server.
+1. Go to **Settings** (gear icon) > **System**
+2. Set **Allow Self-Registration** to **No** / **false**
 
-### 8.4 (Alternative) Using bootstrap-user with a Gmail account
+After this, new user accounts can only be created by an admin through the Settings > Users page.
 
-If you've already connected a Gmail provider account (see [Section 9](#9-connect-a-gmail-account-optional)), there's a simpler shortcut:
+### 8.4 (Alternative) Create a user via the CLI
+
+If you prefer, you can also create a user from the command line:
 
 ```bash
 docker compose exec app python -m poc bootstrap-user --password your-password
 ```
 
-This automatically creates an admin user using the name and email from your connected Gmail account. It only works if a provider account already exists.
+This creates an admin user from an existing Gmail provider account. It only works if a provider account has already been connected (see [Section 9](#9-connect-a-gmail-account-optional)).
 
 ---
 

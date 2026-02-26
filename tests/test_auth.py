@@ -376,3 +376,97 @@ class TestRegistration:
     def test_login_page_hides_create_link(self, auth_client):
         resp = auth_client.get("/login")
         assert "Create an account" not in resp.text
+
+
+# ---------------------------------------------------------------------------
+# First-user auto-registration (empty database)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def empty_db(tmp_path, monkeypatch):
+    """Database with schema but no users (fresh deployment)."""
+    db_file = tmp_path / "empty.db"
+    monkeypatch.setattr("poc.config.DB_PATH", db_file)
+    init_db(db_file)
+    # Seed the default customer (required for create_user)
+    with get_connection(db_file) as conn:
+        conn.execute(
+            "INSERT INTO customers (id, name, slug, is_active, created_at, updated_at) "
+            "VALUES ('cust-default', 'Default', 'default', 1, ?, ?)",
+            (_NOW, _NOW),
+        )
+    return db_file
+
+
+@pytest.fixture()
+def empty_auth_client(empty_db, monkeypatch):
+    """Auth-enabled client with an empty users table."""
+    monkeypatch.setattr("poc.config.CRM_AUTH_ENABLED", True)
+    from poc.web.app import create_app
+    app = create_app()
+    return TestClient(app, raise_server_exceptions=False)
+
+
+class TestFirstUserRegistration:
+    """Registration auto-enables on a fresh DB with no users."""
+
+    def test_register_enabled_on_empty_db(self, empty_auth_client):
+        resp = empty_auth_client.get("/register", follow_redirects=False)
+        assert resp.status_code == 200
+        assert "Create your account" in resp.text
+
+    def test_login_shows_create_link_on_empty_db(self, empty_auth_client):
+        resp = empty_auth_client.get("/login")
+        assert "Create an account" in resp.text
+
+    def test_first_user_gets_admin_role(self, empty_auth_client, empty_db):
+        resp = empty_auth_client.post("/register", data={
+            "name": "First Admin",
+            "email": "first@example.com",
+            "password": "password123",
+            "confirm_password": "password123",
+        }, follow_redirects=False)
+        assert resp.status_code == 303
+        assert "crm_session" in resp.cookies
+
+        with get_connection(empty_db) as conn:
+            user = conn.execute(
+                "SELECT role FROM users WHERE email = 'first@example.com'"
+            ).fetchone()
+        assert user["role"] == "admin"
+
+    def test_registration_disabled_after_first_user(self, empty_auth_client, empty_db):
+        # Register first user
+        empty_auth_client.post("/register", data={
+            "name": "First Admin",
+            "email": "first@example.com",
+            "password": "password123",
+            "confirm_password": "password123",
+        })
+        # Registration should now be disabled (no explicit setting)
+        resp = empty_auth_client.get("/register", follow_redirects=False)
+        assert resp.status_code == 302
+        assert "/login" in resp.headers["location"]
+
+    def test_second_user_gets_user_role_when_enabled(self, empty_auth_client, empty_db):
+        # Register first user (admin)
+        empty_auth_client.post("/register", data={
+            "name": "First Admin",
+            "email": "first@example.com",
+            "password": "password123",
+            "confirm_password": "password123",
+        })
+        # Enable registration explicitly
+        set_setting("cust-default", "allow_self_registration", "true", db_path=empty_db)
+        # Register second user
+        empty_auth_client.post("/register", data={
+            "name": "Second User",
+            "email": "second@example.com",
+            "password": "password123",
+            "confirm_password": "password123",
+        })
+        with get_connection(empty_db) as conn:
+            user = conn.execute(
+                "SELECT role FROM users WHERE email = 'second@example.com'"
+            ).fetchone()
+        assert user["role"] == "user"

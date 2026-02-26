@@ -7,7 +7,9 @@
   color: var(--color-surface-800, #1e293b);
 }
 
-.tiptap-editor:focus {
+.tiptap-editor:focus,
+.tiptap-editor [contenteditable]:focus,
+.tiptap-editor .ProseMirror:focus {
   outline: none;
 }
 

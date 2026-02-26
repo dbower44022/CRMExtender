@@ -105,11 +105,13 @@ export function useGridKeyboard({
         return
       }
 
-      // Don't intercept when focus is in an input/textarea/select
+      // Don't intercept when focus is in an input/textarea/select/contenteditable
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
-        e.target instanceof HTMLSelectElement
+        e.target instanceof HTMLSelectElement ||
+        (e.target instanceof HTMLElement &&
+          (e.target.isContentEditable || e.target.closest('[contenteditable="true"]')))
       ) {
         return
       }

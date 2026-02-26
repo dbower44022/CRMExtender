@@ -130,5 +130,9 @@ credentials/*.json
 # Database
 data/
 
+# TLS certificates (generated per-deployment)
+deploy/certs/*.crt
+deploy/certs/*.key
+
 # React frontend build (include for production serving)
 !frontend/dist/

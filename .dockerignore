@@ -1,0 +1,12 @@
+.git
+data/
+credentials/
+__pycache__
+node_modules/
+.env
+venv/
+tests/
+.claude/
+deploy/certs/
+*.pyc
+*.egg-info

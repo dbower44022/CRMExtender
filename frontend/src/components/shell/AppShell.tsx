@@ -29,6 +29,7 @@ const PREVIEW_PANEL_SIZE_MAP: Record<string, string> = {
 export function AppShell() {
   const actionPanelVisible = useLayoutStore((s) => s.actionPanelVisible)
   const detailPanelVisible = useLayoutStore((s) => s.detailPanelVisible)
+  const detailPanelExpanded = useLayoutStore((s) => s.detailPanelExpanded)
   const searchModalOpen = useLayoutStore((s) => s.searchModalOpen)
   const openSearchModal = useLayoutStore((s) => s.openSearchModal)
   const activeViewId = useNavigationStore((s) => s.activeViewId)
@@ -76,6 +77,8 @@ export function AppShell() {
     if (!panel) return
     if (settingsMode) {
       panel.resize('0%')
+    } else if (detailPanelExpanded && detailPanelVisible) {
+      panel.resize('65%')
     } else if (detailPanelVisible) {
       const previewSize = viewConfig?.preview_panel_size ?? 'medium'
       const size = PREVIEW_PANEL_SIZE_MAP[previewSize] ?? '30%'
@@ -83,7 +86,7 @@ export function AppShell() {
     } else {
       panel.resize('0%')
     }
-  }, [detailPanelVisible, detailRef, viewConfig?.preview_panel_size, settingsMode])
+  }, [detailPanelVisible, detailPanelExpanded, detailRef, viewConfig?.preview_panel_size, settingsMode])
 
   // Ctrl+K / Cmd+K to open search modal
   useEffect(() => {
@@ -130,7 +133,7 @@ export function AppShell() {
             panelRef={detailRef}
             defaultSize="0%"
             minSize="0%"
-            maxSize="60%"
+            maxSize="80%"
             collapsible
             collapsedSize="0%"
           >

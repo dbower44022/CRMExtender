@@ -1,12 +1,16 @@
-import { useCallback } from 'react'
-import { X, ChevronUp, ChevronDown, Maximize2 } from 'lucide-react'
+import { useCallback, useEffect } from 'react'
+import { X, ChevronUp, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import { useLayoutStore } from '../../stores/layout.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { RecordDetail } from '../detail/RecordDetail.tsx'
 import { CommunicationPreviewCard } from '../detail/CommunicationPreviewCard.tsx'
+import { CommunicationFullContent } from '../fullview/CommunicationFullView.tsx'
 
 export function DetailPanel() {
   const hideDetailPanel = useLayoutStore((s) => s.hideDetailPanel)
+  const detailPanelExpanded = useLayoutStore((s) => s.detailPanelExpanded)
+  const expandDetailPanel = useLayoutStore((s) => s.expandDetailPanel)
+  const collapseDetailPanel = useLayoutStore((s) => s.collapseDetailPanel)
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)
   const selectedRowId = useNavigationStore((s) => s.selectedRowId)
   const selectedRowIndex = useNavigationStore((s) => s.selectedRowIndex)
@@ -14,9 +18,10 @@ export function DetailPanel() {
   const canGoPrev = selectedRowIndex > 0
   const canGoNext = selectedRowIndex >= 0 && selectedRowIndex < loadedRowCount - 1
 
+  const isExpandedComm = detailPanelExpanded && activeEntityType === 'communication'
+
   const handlePrev = useCallback(() => {
     if (!canGoPrev) return
-    // We need to read the rows from the grid — dispatch a custom event
     window.dispatchEvent(
       new CustomEvent('detailPanel:navigate', { detail: { direction: -1 } }),
     )
@@ -28,6 +33,22 @@ export function DetailPanel() {
       new CustomEvent('detailPanel:navigate', { detail: { direction: 1 } }),
     )
   }, [canGoNext])
+
+  // Escape key: expanded → collapse to preview; preview → close panel
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      // Don't interfere with other modals (search, etc.)
+      if ((e.target as HTMLElement)?.closest('[role="dialog"]')) return
+      if (detailPanelExpanded) {
+        collapseDetailPanel()
+      } else {
+        hideDetailPanel()
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [detailPanelExpanded, collapseDetailPanel, hideDetailPanel])
 
   if (!selectedRowId) {
     return (
@@ -43,7 +64,7 @@ export function DetailPanel() {
     <div className="flex h-full flex-col bg-surface-0">
       <div className="flex items-center justify-between border-b border-surface-200 px-4 py-2">
         <span className="text-xs font-medium text-surface-500 uppercase">
-          Preview
+          {isExpandedComm ? 'Communication' : 'Preview'}
         </span>
         <div className="flex items-center gap-1">
           <button
@@ -63,19 +84,23 @@ export function DetailPanel() {
             <ChevronDown size={14} />
           </button>
           {activeEntityType === 'communication' && selectedRowId && (
-            <button
-              onClick={() => {
-                window.dispatchEvent(
-                  new CustomEvent('grid:openFullView', {
-                    detail: { entityId: selectedRowId },
-                  }),
-                )
-              }}
-              className="flex h-6 w-6 items-center justify-center rounded text-surface-400 transition-colors hover:bg-surface-100 hover:text-surface-600"
-              title="Open full view"
-            >
-              <Maximize2 size={14} />
-            </button>
+            isExpandedComm ? (
+              <button
+                onClick={collapseDetailPanel}
+                className="flex h-6 w-6 items-center justify-center rounded text-surface-400 transition-colors hover:bg-surface-100 hover:text-surface-600"
+                title="Collapse to preview"
+              >
+                <Minimize2 size={14} />
+              </button>
+            ) : (
+              <button
+                onClick={expandDetailPanel}
+                className="flex h-6 w-6 items-center justify-center rounded text-surface-400 transition-colors hover:bg-surface-100 hover:text-surface-600"
+                title="Expand full view"
+              >
+                <Maximize2 size={14} />
+              </button>
+            )
           )}
           <button
             onClick={hideDetailPanel}
@@ -86,14 +111,23 @@ export function DetailPanel() {
           </button>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto">
-        {activeEntityType === 'communication' ? (
-          <CommunicationPreviewCard entityId={selectedRowId} />
-        ) : (
-          <RecordDetail
-            entityType={activeEntityType}
-            entityId={selectedRowId}
+      <div className="flex-1 overflow-hidden">
+        {isExpandedComm ? (
+          <CommunicationFullContent
+            commId={selectedRowId}
+            onNavigateAway={collapseDetailPanel}
           />
+        ) : activeEntityType === 'communication' ? (
+          <div className="h-full overflow-y-auto">
+            <CommunicationPreviewCard entityId={selectedRowId} />
+          </div>
+        ) : (
+          <div className="h-full overflow-y-auto">
+            <RecordDetail
+              entityType={activeEntityType}
+              entityId={selectedRowId}
+            />
+          </div>
         )}
       </div>
     </div>

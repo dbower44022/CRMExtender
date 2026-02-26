@@ -18,7 +18,6 @@ import { useGridIntelligence } from '../../hooks/useGridIntelligence.ts'
 import { CellRenderer } from './CellRenderer.tsx'
 import { InlineEditor } from './InlineEditor.tsx'
 import { RecordModal } from './RecordModal.tsx'
-import { CommunicationFullView } from '../fullview/CommunicationFullView.tsx'
 import { RowContextMenu } from './RowContextMenu.tsx'
 import { ColumnHeaderMenu } from './ColumnHeaderMenu.tsx'
 import { useUpdateViewColumns } from '../../api/views.ts'
@@ -52,6 +51,7 @@ export function DataGrid() {
   const setSort = useNavigationStore((s) => s.setSort)
   const clearSort = useNavigationStore((s) => s.clearSort)
   const showDetailPanel = useLayoutStore((s) => s.showDetailPanel)
+  const expandDetailPanel = useLayoutStore((s) => s.expandDetailPanel)
 
   const { data: registry } = useEntityRegistry()
   const { data: viewConfig } = useViewConfig(activeViewId)
@@ -131,7 +131,6 @@ export function DataGrid() {
     timer: null,
   })
   const [recordModal, setRecordModal] = useState<{ entityType: string; entityId: string } | null>(null)
-  const [commFullViewId, setCommFullViewId] = useState<string | null>(null)
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -218,19 +217,19 @@ export function DataGrid() {
     return () => window.removeEventListener('detailPanel:navigate', handleNavigate)
   }, [rows, setSelectedRow])
 
-  // Listen for openFullView events (Enter key, maximize button)
+  // Listen for openFullView events (Enter key)
   useEffect(() => {
     const handleOpenFullView = (e: Event) => {
       const { entityId } = (e as CustomEvent).detail
       if (activeEntityType === 'communication') {
-        setCommFullViewId(entityId)
+        expandDetailPanel()
       } else {
         setRecordModal({ entityType: activeEntityType, entityId })
       }
     }
     window.addEventListener('grid:openFullView', handleOpenFullView)
     return () => window.removeEventListener('grid:openFullView', handleOpenFullView)
-  }, [activeEntityType])
+  }, [activeEntityType, expandDetailPanel])
 
   // Listen for cell clear events from keyboard handler
   const cellEdit = useCellEdit()
@@ -440,7 +439,8 @@ export function DataGrid() {
         }
 
         if (activeEntityType === 'communication') {
-          setCommFullViewId(id)
+          setSelectedRow(id, index)
+          expandDetailPanel()
         } else {
           setRecordModal({ entityType: activeEntityType, entityId: id })
         }
@@ -897,14 +897,6 @@ export function DataGrid() {
         />
       )}
 
-      {/* Communication full view modal */}
-      {commFullViewId && (
-        <CommunicationFullView
-          commId={commFullViewId}
-          onClose={() => setCommFullViewId(null)}
-        />
-      )}
-
       {/* Row context menu */}
       {contextMenu && (
         <RowContextMenu
@@ -922,7 +914,8 @@ export function DataGrid() {
           }}
           onOpenModal={() => {
             if (activeEntityType === 'communication') {
-              setCommFullViewId(contextMenu.rowId)
+              setSelectedRow(contextMenu.rowId, contextMenu.rowIndex)
+              expandDetailPanel()
             } else {
               setRecordModal({ entityType: activeEntityType, entityId: contextMenu.rowId })
             }

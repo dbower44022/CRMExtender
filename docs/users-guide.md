@@ -1,7 +1,8 @@
 # User's Guide
 
-This guide covers day-to-day usage of the CRM Extender email pipeline:
-setup, account management, running syncs, and understanding the output.
+This guide covers day-to-day usage of CRM Extender: new account
+onboarding, account management, running syncs, and understanding the
+output.
 
 ---
 
@@ -1276,6 +1277,129 @@ in `event_participants` with the appropriate role (organizer or
 attendee) and RSVP status.
 
 Unmatched attendees (email not in the CRM) are silently skipped.
+
+---
+
+## New Account Onboarding
+
+This section walks a new user through their first login, from creating
+an account to connecting Gmail and running the first sync.
+
+### Step 1: Create Your Account
+
+When CRM Extender is first deployed, there are no user accounts.  The
+login page automatically shows a **Create Account** link in this case.
+
+1. Open the application in your browser (e.g., `https://your-server/`)
+2. On the login page, click **Create an account**
+3. Fill in your **Name**, **Email**, and **Password** (minimum 8
+   characters)
+4. Click **Register**
+
+You are automatically logged in and taken to the dashboard.
+
+> **First user is admin:** The very first account created on a fresh
+> system is automatically given the **admin** role, which grants access
+> to system settings, user management, and provider account
+> configuration.  All subsequent registrations (if enabled) create
+> regular user accounts.
+
+### Step 2: Disable Self-Registration (Admin)
+
+Once the admin account exists, self-registration is automatically
+disabled.  No action is needed unless you want to allow other users to
+register themselves:
+
+- To **enable** self-registration: go to **Settings > System** and set
+  **Allow Self-Registration** to `true`
+- To **add users manually** (recommended): go to **Settings > Users**
+  and create accounts for your team members
+
+### Step 3: Connect a Gmail Account (Admin)
+
+To sync email, contacts, and calendar events, an admin needs to connect
+at least one Google account.
+
+**Prerequisites:**
+
+- A `client_secret.json` file from Google Cloud Console must be in the
+  server's `credentials/` directory (your server administrator handles
+  this during deployment — see the
+  [Deployment Guide](deployment_guide.md))
+- The Google Cloud project must have Gmail API, People API, and Google
+  Calendar API enabled
+
+**Connect the account:**
+
+1. Go to **Settings > Accounts**
+2. Click **Connect Google Account**
+3. Sign in with the Google account you want to connect
+4. Grant access to Gmail, Contacts, and Calendar when prompted
+5. You are redirected back to the Accounts page with the new account
+   listed
+
+You can connect multiple Google accounts.  Each account syncs
+independently.
+
+### Step 4: Select Calendars to Sync
+
+After connecting a Google account, choose which calendars to sync:
+
+1. Go to **Settings > Calendars**
+2. Click **Load Calendars** next to the connected account
+3. Check the calendars you want (typically the primary calendar)
+4. Click **Save**
+
+### Step 5: Run Your First Sync
+
+Navigate to the **Communications** tab and click **Sync** to pull in
+email conversations.  For calendar events, go to the **Events** tab and
+click **Sync Events**.
+
+The first sync may take a few minutes depending on how much email you
+have.  Subsequent syncs are incremental and much faster.
+
+### Step 6: Explore the Interface
+
+CRM Extender offers two interfaces:
+
+- **Classic UI** (`https://your-server/`) — the HTMX-based interface
+  with dedicated pages for contacts, companies, conversations, events,
+  projects, relationships, and notes
+- **React App** (`https://your-server/app/`) — the modern grid-based
+  interface with resizable panels, infinite scrolling, inline editing,
+  and a unified view system
+
+Both interfaces share the same data and login session.
+
+### Inviting Additional Users
+
+As an admin, you can add team members in two ways:
+
+1. **Manual creation** (recommended) — go to **Settings > Users**,
+   click **Add User**, and fill in their name, email, and a temporary
+   password.  Share the credentials with them securely.
+
+2. **Self-registration** — enable it in **Settings > System** by
+   setting **Allow Self-Registration** to `true`.  Share the
+   application URL with your team and they can create their own
+   accounts.  New users get the **user** role (not admin).
+
+### What Regular Users See
+
+Users with the **user** role can:
+
+- View and search contacts, companies, conversations, events, and notes
+- Use the "My" scope toggle to see only their own data or "All" to see
+  shared data
+- Create and edit notes, relationships, and projects
+- Compose and send email (if a provider account is shared with them)
+
+Users with the **user** role cannot:
+
+- Access system settings or user management
+- Connect or manage provider accounts
+- Change other users' roles or passwords
 
 ---
 

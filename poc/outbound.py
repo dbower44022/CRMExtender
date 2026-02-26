@@ -211,8 +211,9 @@ def send_email(conn, *, queue_id: str, user_id: str) -> dict:
         (record["from_account_id"],),
     ).fetchone()
     if not acct:
-        _fail_send(conn, queue_id, "Provider account not found")
-        raise ValueError("Provider account not found")
+        reason = "Provider account not found"
+        _fail_send(conn, queue_id, reason)
+        return {"queue_id": queue_id, "status": "failed", "failure_reason": reason}
 
     acct = dict(acct)
     from_email = acct["email_address"]
@@ -222,8 +223,9 @@ def send_email(conn, *, queue_id: str, user_id: str) -> dict:
     try:
         creds = get_credentials_for_account(token_path)
     except Exception as exc:
-        _fail_send(conn, queue_id, f"Could not load credentials: {exc}")
-        raise ValueError(f"Could not load credentials: {exc}") from exc
+        reason = f"Could not load credentials: {exc}"
+        _fail_send(conn, queue_id, reason)
+        return {"queue_id": queue_id, "status": "failed", "failure_reason": reason}
 
     # Resolve body with signature
     body_html = record["body_html"]
@@ -439,19 +441,30 @@ def _create_communication_record(
     now = _now_iso()
     comm_id = str(uuid.uuid4())
 
+    # Detect schema version: v18+ uses original_text/original_html/cleaned_html/search_text,
+    # pre-v18 uses content/body_html
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(communications)").fetchall()}
+    if "original_text" in cols:
+        text_cols = "original_text, original_html, cleaned_html, search_text"
+        text_vals = (body_text, body_html, body_html, body_text)
+    else:
+        text_cols = "content, body_html"
+        text_vals = (body_text, body_html)
+
+    placeholders = ", ".join(["?"] * len(text_vals))
     conn.execute(
-        """INSERT INTO communications
+        f"""INSERT INTO communications
            (id, account_id, channel, timestamp,
-            original_text, original_html, cleaned_html, search_text,
+            {text_cols},
             direction, source,
             sender_address, sender_name, subject, snippet,
             provider_message_id, provider_thread_id,
             is_read, is_current, created_at, updated_at)
-           VALUES (?, ?, 'email', ?, ?, ?, ?, ?, 'outbound', 'composed',
+           VALUES (?, ?, 'email', ?, {placeholders}, 'outbound', 'composed',
                    ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)""",
         (
             comm_id, queue_record["from_account_id"], now,
-            body_text, body_html, body_html, body_text,
+            *text_vals,
             from_email, None, queue_record["subject"],
             body_text[:200] if body_text else "",
             provider_msg_id, provider_thread_id,

@@ -1,8 +1,6 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import LinkExtension from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
-import UnderlineExtension from '@tiptap/extension-underline'
 import { EditorToolbar } from './EditorToolbar.tsx'
 import './editor.css'
 
@@ -27,13 +25,12 @@ export function RichTextEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
-      }),
-      LinkExtension.configure({
-        openOnClick: false,
-        HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
+        link: {
+          openOnClick: false,
+          HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
+        },
       }),
       Placeholder.configure({ placeholder }),
-      UnderlineExtension,
     ],
     content: content || '',
     editable,

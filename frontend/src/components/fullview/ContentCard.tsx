@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, ChevronDown, Paperclip, Download } from 'lucide-react'
-import { format, isToday, isThisYear } from 'date-fns'
+import { format } from 'date-fns'
 import { sanitizeHtml } from '../../lib/sanitizeHtml.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import type { CommunicationFullData, CommunicationFullParticipant } from '../../types/api.ts'
@@ -30,10 +30,7 @@ function formatTimestampTwoLine(isoString: string | null | undefined): { datePar
   if (!isoString) return null
   const date = new Date(isoString)
   if (isNaN(date.getTime())) return null
-  const timePart = format(date, 'h:mm a')
-  if (isToday(date)) return { datePart: 'Today', timePart }
-  if (isThisYear(date)) return { datePart: format(date, 'MMM d'), timePart }
-  return { datePart: format(date, 'MMM d, yyyy'), timePart }
+  return { datePart: format(date, 'MMM d, yyyy'), timePart: format(date, 'h:mm a') }
 }
 
 // ---------- Avatar ----------

@@ -340,9 +340,8 @@ The three dimensions are independent: System: active + AI: closed → recent mes
 
 ### 8.2 View Conversation
 
-**Supports processes:** KP-3, KP-4
-**Trigger:** User navigates to conversation detail.
-**Outcome:** Timeline with Published Summary cards, AI panel, entity associations.
+**Summary:** How a Conversation record is displayed — both the Preview Card (browsing in the Detail Panel) and the full View (deep reading with timeline and CRM intelligence cards). Covers standard and aggregate Conversation variants, responsive two-column layout with dynamic column sizing and per-conversation splitter persistence, participant color-coded timeline with Sender → Recipient format, AI Intelligence Card (read-only action items), Participants Card (derived only), Entity Associations Card (including explicitly linked contacts), Children Card, and user-configurable timeline order.
+**Sub-PRD:** [conversation-view-prd.md]
 
 ### 8.3 Edit Conversation
 
@@ -457,6 +456,7 @@ Alert fatigue is the #1 reason CRM users disable notifications. Requiring explic
 |---|---|
 | [Conversation Entity TDD](conversation-entity-tdd.md) | Technical decisions for conversation implementation |
 | [Formation & Stitching Sub-PRD](conversation-formation-prd.md) | How communications enter conversations |
+| [View Conversation Sub-PRD](conversation-view-prd.md) | Preview Card and full View rendering for standard and aggregate Conversations |
 | [AI Intelligence & Review Sub-PRD](conversation-ai-intelligence-prd.md) | AI classification, summarization, extraction, review workflow |
 | [Views & Alerts Sub-PRD](conversation-views-alerts-prd.md) | Conversation views and user-defined alerts |
 | [Communications Entity Base PRD](communication-entity-base-prd.md) | The atomic communication records conversations group |

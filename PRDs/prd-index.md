@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 19.0
-**Last Updated:** 2026-02-23
+**Version:** 20.0
+**Last Updated:** 2026-02-27
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V20.0 (2026-02-27):** Added Conversation View Sub-PRD (`conversation-view-prd.md`) — Preview Card and full View rendering for standard and aggregate Conversations. Updated Conversation Entity Base PRD action catalog to reference the new sub-PRD.
 
 > **V19.0 (2026-02-23):** Decomposed Custom Objects PRD (1,542 lines) into Framework PRD + 2 Sub-PRDs (Field System, Relation System) + TDD. First framework-level (non-entity) decomposition — subsystem-based rather than entity/action-based.
 
@@ -16,7 +18,7 @@
 
 > **V14.0 (2026-02-23):** Decomposed Documents PRD (1,331 lines) into Document Entity Base PRD + 3 Action Sub-PRDs (Upload/Versioning/Storage, Content Processing Pipeline, Communication & Profile Asset Integration) + Document Entity TDD. Follows V2 methodology. Monolithic documents-prd.md retained as superseded reference.
 
-> **V13.0 (2026-02-23):** Decomposed Conversations PRD (1,171 lines) into Conversation Entity Base PRD + 3 Action Sub-PRDs (Formation & Stitching, AI Intelligence & Review, Views & Alerts) + Conversation Entity TDD. Follows V2 methodology. Monolithic conversations-prd.md retained as superseded reference.
+> **V13.0 (2026-02-23):** Decomposed Conversations PRD (1,171 lines) into Conversation Entity Base PRD + 4 Action Sub-PRDs (Formation & Stitching, AI Intelligence & Review, View Conversation, Views & Alerts) + Conversation Entity TDD. Follows V2 methodology. Monolithic conversations-prd.md retained as superseded reference.
 
 > **V12.0 (2026-02-23):** Decomposed Communications PRD (1,420 lines) into Communication Entity Base PRD + 4 Action Sub-PRDs (Published Summary, Provider & Sync Framework, Participant Resolution, Triage & Filtering) + Communication Entity TDD. Follows V2 methodology: field metadata, Key Processes, embedded task/test plans. Monolithic communications-prd.md retained as superseded reference.
 
@@ -59,6 +61,7 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | &nbsp;&nbsp;└ Conversation Entity TDD | 1.0 | `conversation-entity-tdd.md` | Draft — Living document, 8 sections | 2026-02-23 |
 | └ Formation & Stitching | 1.0 | `conversation-formation-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ AI Intelligence & Review | 1.0 | `conversation-ai-intelligence-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+| └ View Conversation | 1.1 | `conversation-view-prd.md` | Draft — Preview Card + full View, task/test plan | 2026-02-27 |
 | └ Views & Alerts | 1.0 | `conversation-views-alerts-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Contact Management | 5.0 | `contact-management-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | └ Contact Entity Base | 9.0 | `contact-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
@@ -206,6 +209,7 @@ Document version history is managed by Git. Previous versions of any document ca
 | Conversation Entity TDD | `conversation-entity-tdd.md` | Read model table DDL, conversation_members junction table, segment data model, event sourcing, virtual schema queries, API design (5 API groups) |
 | Formation & Stitching Sub-PRD | `conversation-formation-prd.md` | Email thread auto-formation, participant-based defaults, manual assignment, AI-suggested splitting, cross-channel stitching, communication segmentation (split/reference model) |
 | AI Intelligence & Review Sub-PRD | `conversation-ai-intelligence-prd.md` | Three AI roles (classify & route, summarize, extract intelligence), confidence scoring, re-summarization triggers, review workflow, learning from user corrections |
+| View Conversation Sub-PRD | `conversation-view-prd.md` | Preview Card (standard and aggregate variants, participant color-coded timeline entries, Sender → Recipient format), full View (responsive two-column layout with dynamic column sizing and per-conversation splitter persistence, Timeline Card, Participants Card, AI Intelligence Card with read-only action items, Entity Associations Card, Children Card, Notes Card, Metadata Card) |
 | Views & Alerts Sub-PRD | `conversation-views-alerts-prd.md` | Conversation view patterns, shareable views, user-defined alert architecture (no defaults), frequency/aggregation/delivery |
 
 ---
@@ -810,6 +814,7 @@ PRDs/
 ├── conversation-formation-prd.md             # Formation & stitching sub-PRD
 ├── conversation-ai-intelligence-prd.md       # AI intelligence & review sub-PRD
 ├── conversation-views-alerts-prd.md          # Views & alerts sub-PRD
+├── conversation-view-prd.md                  # View conversation sub-PRD (Preview + full View)
 ├── events-prd.md                             # Events (monolithic, superseded)
 ├── event-entity-base-prd.md                  # Event entity definition
 ├── event-entity-tdd.md                       # Event technical decisions

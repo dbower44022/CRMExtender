@@ -1,6 +1,6 @@
 # Conversation — View Conversation Sub-PRD
 
-**Version:** 1.2
+**Version:** 1.3
 **Last Updated:** 2026-02-27
 **Status:** Draft
 **Entity Base PRD:** [conversation-entity-base-prd.md]
@@ -22,7 +22,7 @@ The document covers both standard Conversations (is_aggregate = false) and aggre
 ### 1.2 Preconditions
 
 - Conversation record exists and is accessible to the current user (per Permissions & Sharing PRD).
-- For standard Conversations: at least one Communication exists with a Published Summary.
+- For standard Conversations: at least one Communication exists with cleaned_html content.
 - For aggregate Conversations: at least one child Conversation or direct Communication exists.
 - Participant resolution has run for Communications in the Conversation.
 
@@ -56,7 +56,7 @@ The document covers both standard Conversations (is_aggregate = false) and aggre
 
 ### 2.2 Relevant Relationships
 
-- **Communications (Direct)** — FK reference from Communication to Conversation. Rendered as the conversation timeline in the Timeline Card, each Communication represented by its Published Summary.
+- **Communications (Direct)** — FK reference from Communication to Conversation. Rendered as the conversation timeline in the Timeline Card, each Communication represented by its cleaned_html content.
 - **Child Conversations (Membership)** — Many-to-many via junction table. For aggregates: rendered as child entries in the Preview Card and as the Children Card in full View.
 - **Projects** — Via system Relation Type `conversation_projects`. Rendered in Entity Associations Card.
 - **Companies** — Via system Relation Type `conversation_companies`. Rendered in Entity Associations Card.
@@ -69,7 +69,7 @@ The document covers both standard Conversations (is_aggregate = false) and aggre
 
 - **GUI Preview Card Amendment:** The Preview Card is a system-wide Card Type. This document defines the Conversation-specific rendering for that card, including standard and aggregate variants.
 - **GUI Functional Requirements PRD:** The Card-Based Architecture (Section 15), Window Types (Section 14), Display Modes, and Date & Time Display Standards (Section 2.3) define the containers and formatting conventions this view renders into. The dynamic responsive layout logic defined here extends the Card Layout Area behavior for Conversation full Views.
-- **Communication Published Summary Sub-PRD:** Defines the Published Summary content rendered in each timeline entry. The Conversation timeline is a sequence of references to Communication Published Summaries.
+- **Communication Published Summary Sub-PRD:** Defines the Published Summary used for AI intelligence. The Conversation timeline renders the Communication's cleaned_html content directly, not the Published Summary.
 - **Communication View Sub-PRD:** Defines the Communication full View that renders in the Undocked Window when the user double-clicks a timeline entry.
 - **Contact Entity Base PRD:** Participant names in the Participants Card and timeline entries link to Contact records.
 - **AI Intelligence & Review Sub-PRD:** Defines AI classification, summarization, and extraction workflows that populate the AI Intelligence Card fields.
@@ -84,7 +84,7 @@ The document covers both standard Conversations (is_aggregate = false) and aggre
 
 **Step 1 — Preview Card renders:** The Preview Card replaces any previous content in the Window. Rendering begins immediately on focus change (target: < 200ms). The card presents the most recent conversation activity.
 
-**Step 2 — User scans activity:** The user reads the Preview Card to catch up on recent activity. For standard Conversations, the card shows the most recent Published Summary entries, most-recent-first. For aggregate Conversations, the card shows child Conversations sorted by last activity. The user scrolls through recent activity to decide whether deeper attention is warranted.
+**Step 2 — User scans activity:** The user reads the Preview Card to catch up on recent activity. For standard Conversations, the card shows the most recent communication entries, most-recent-first. For aggregate Conversations, the card shows child Conversations sorted by last activity. The user scrolls through recent activity to decide whether deeper attention is warranted.
 
 **Step 3 — User decides:** The user either moves to the next row (arrow key, click) causing a new Preview Card to render, or opens the full View (double-click, Enter key, or Maximize button) to see the complete timeline with CRM context.
 
@@ -94,7 +94,7 @@ The document covers both standard Conversations (is_aggregate = false) and aggre
 
 **Step 1 — Layout determined:** The system evaluates the available container width to determine single-column or two-column layout (see Section 5).
 
-**Step 2 — Timeline renders:** The primary content area presents the conversation timeline — chronologically ordered Published Summary entries with channel icons, sender names, timestamps, and summary content. Timeline order follows the user's global preference (oldest-first or newest-first). Each entry links to its full Communication record.
+**Step 2 — Timeline renders:** The primary content area presents the conversation timeline — chronologically ordered communication entries with channel icons, sender names, timestamps, and the sender's cleaned content. Timeline order follows the user's global preference (oldest-first or newest-first). Each entry links to its full Communication record.
 
 **Step 3 — CRM layer renders:** Beside the timeline (two-column) or below it (single-column), the CRM intelligence cards render: Participants Card, AI Intelligence Card, Entity Associations Card, and conditionally the Children Card (aggregates only), Notes Card, and Metadata Card. Cards with no data are suppressed entirely.
 
@@ -108,7 +108,7 @@ The document covers both standard Conversations (is_aggregate = false) and aggre
 
 **Step 2 — Children Card renders prominently:** The Children Card lists all child Conversations with their subjects, statuses, communication counts, and last activity dates. Each child is a navigable link to its own Conversation record.
 
-**Step 3 — Direct Communications timeline:** If the aggregate has direct Communications (not belonging to any child), the Timeline Card renders these with the same Published Summary entry format as a standard Conversation.
+**Step 3 — Direct Communications timeline:** If the aggregate has direct Communications (not belonging to any child), the Timeline Card renders these with the same cleaned_html entry format as a standard Conversation.
 
 **Step 4 — AI Intelligence Card:** The aggregate-level AI summary synthesizes across all children and direct Communications. This is a higher-order summary, not a concatenation.
 
@@ -172,7 +172,7 @@ The header is deliberately minimal — two lines — to maximize the space avail
 Each entry renders as a compact summary card with participant color coding:
 
 - **Identity line:** Colored contact circle + channel icon + sender display name + "→" + recipient name(s) (truncated with "+N" for overflow). Timestamp on a second line, right-aligned or below the names.
-- **Summary text:** The Communication's Published Summary (summary_html rendered as text in the preview context), flowing naturally below the identity line
+- **Communication content:** The Communication's cleaned_html rendered as text in the preview context, flowing naturally below the identity line
 
 Timeline entries flow from most-recent-first. Content fills all available space — no artificial limit on the number of entries visible. If the conversation has more entries than fit in the available space, the card scrolls.
 
@@ -180,7 +180,7 @@ Timeline entries flow from most-recent-first. Content fills all available space 
 
 Each participant's summary entries receive a **deterministic background color tint** derived from the participant's contact ID. This enables instant visual scanning of who is speaking as the user scrolls through entries.
 
-- A palette of 8–10 distinguishable but subtle background tints is used. Tints must be light enough that summary text remains highly readable.
+- A palette of 8–10 distinguishable but subtle background tints is used. Tints must be light enough that communication text remains highly readable.
 - The account owner (current user) always receives a **fixed, recognizable tint** (e.g., a consistent light blue) that does not vary by conversation. This lets the user instantly spot their own contributions.
 - All other participants receive colors assigned deterministically from their contact ID, ensuring the same person always has the same color across all conversations.
 - Adjacent entries from the same participant use the same color. Adjacent entries from different participants use different colors, creating a visual "stripe" pattern that makes speaker changes obvious at a glance.
@@ -235,7 +235,7 @@ Each child Conversation renders as a compact entry, sorted by last activity desc
 
 - **Subject line:** Type icon (💬 or 📂 for nested aggregates) + child Conversation subject. Nested aggregates render identically to standard child conversations — no special treatment.
 - **Status line:** System status badge + communication count
-- **Most recent activity:** Channel icon + sender name + timestamp + summary text from the most recent Communication's Published Summary
+- **Most recent activity:** Channel icon + sender name + timestamp + content preview from the most recent Communication's cleaned_html
 
 **Direct Communications group:**
 
@@ -248,8 +248,8 @@ Direct Communications within this group are sorted by receive date (most recent 
 | Rule | Standard | Aggregate |
 |---|---|---|
 | **Header** | 2 lines: icon + subject / statuses + count + channels | 2 lines: icon + subject / statuses + child count |
-| **Primary content** | Published Summary entries, most-recent-first | Child Conversations sorted by last activity desc |
-| **Entry format** | Channel icon + sender + timestamp + summary text | Subject + status + count + most recent summary |
+| **Primary content** | Communication entries (cleaned_html), most-recent-first | Child Conversations sorted by last activity desc |
+| **Entry format** | Channel icon + sender + timestamp + cleaned content | Subject + status + count + most recent content |
 | **Direct Communications** | N/A | Separate group at bottom, sorted by receive date |
 | **Color coding** | Background tint per participant | N/A for child entries; applied to Direct Communications entries |
 | **Scrolling** | Scrolls if content exceeds available space | Scrolls if content exceeds available space |
@@ -271,13 +271,13 @@ Direct Communications within this group are sorted by receive date (most recent 
 **Tests:**
 
 - [ ] CNVP-T01: Standard Preview Card shows header with subject, statuses, count, and channel breakdown
-- [ ] CNVP-T02: Standard Preview Card shows Published Summary entries most-recent-first
-- [ ] CNVP-T03: Each timeline entry shows channel icon, sender name, timestamp, and summary text
+- [ ] CNVP-T02: Standard Preview Card shows communication entries (cleaned_html) most-recent-first
+- [ ] CNVP-T03: Each timeline entry shows channel icon, sender name, timestamp, and cleaned_html content
 - [ ] CNVP-T04: Participant color coding assigns deterministic colors from contact ID
 - [ ] CNVP-T05: Account owner entries always use fixed color tint
 - [ ] CNVP-T06: Adjacent entries from different participants have visually distinct background tints
 - [ ] CNVP-T07: Aggregate Preview Card shows child conversations sorted by last activity descending
-- [ ] CNVP-T08: Each child entry shows subject, status, count, and most recent summary
+- [ ] CNVP-T08: Each child entry shows subject, status, count, and most recent cleaned content
 - [ ] CNVP-T09: Aggregate Direct Communications render as separate bottom group
 - [ ] CNVP-T10: Nested aggregate children render identically to standard children
 - [ ] CNVP-T11: Timestamps format correctly per Date & Time Display Standards (5 tiers)
@@ -312,7 +312,7 @@ When two-column layout is active, the column widths are determined dynamically b
 
 | Constraint | Value | Rationale |
 |---|---|---|
-| Left column (timeline) minimum | 40% of container width | Ensures summary text is readable without excessive line wrapping |
+| Left column (timeline) minimum | 40% of container width | Ensures communication content is readable without excessive line wrapping |
 | Right column (CRM) minimum | 280px | Participant names, summary text, entity names need this minimum to not look cramped |
 | Right column (CRM) maximum | 60% of container width | Implied by left column minimum; prevents CRM sidebar from dominating |
 
@@ -335,7 +335,7 @@ When two-column layout is active, the column widths are determined dynamically b
 ├──────────────────────────────────────────────────────┤
 │  Identity Card                                         │
 ├──────────────────────────────────────────────────────┤
-│  Timeline Card (Published Summary entries)             │
+│  Timeline Card (communication entries)                  │
 │  ┌──────────────────────────────────────────────────┐ │
 │  │  🔵 ✉ Bob Smith → Doug Bower                    │ │
 │  │  Today, Feb 21 - 10:15 AM                        │ │
@@ -509,7 +509,7 @@ The Conversation Identity Card renders at the top of the full View, above the Ti
 
 **Supports processes:** KP-2 (step 2, step 4), KP-3 (step 3)
 
-The Timeline Card is the primary content surface in the Conversation full View. It presents the conversation as a chronological sequence of Published Summary entries — the user reads through the conversation history, seeing each communication's distilled contribution.
+The Timeline Card is the primary content surface in the Conversation full View. It presents the conversation as a chronological sequence of communication entries — the user reads through the conversation history, seeing each communication's actual sender-composed content (cleaned of quoted replies, signatures, and boilerplate).
 
 ### 7.1 Timeline Order
 
@@ -524,7 +524,7 @@ The preference is stored as a user-level setting (not per-conversation). An **in
 
 ### 7.2 Timeline Entry Rendering
 
-Each Communication in the Conversation renders as a summary entry with prominent sender identification and full summary content:
+Each Communication in the Conversation renders as a timeline entry with prominent sender identification and the sender's actual composed content:
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
@@ -543,11 +543,11 @@ Each Communication in the Conversation renders as a summary entry with prominent
 - **Sender display name** — large, bold font. Clickable link to Contact record if resolved. For directional channels (email, SMS), followed by "→" and the primary recipient display name. For multi-party channels (calls, meetings), followed by "→" and participant names (comma-separated, truncated with "+N" for overflow)
 - **Timestamp** (right-aligned) — same-sized font as the sender name, per GUI FR PRD Section 2.3 Date & Time Display Standards
 
-**Summary content:**
+**Communication content:**
 
-- The Communication's Published Summary (summary_html) rendered as formatted HTML preserving bold, italic, links, and lists
+- The Communication's **cleaned_html** rendered as formatted HTML preserving bold, italic, links, and lists. This is the sender's actual composed content with channel-specific noise removed (quoted replies, signatures, boilerplate stripped) — not the AI-generated Published Summary.
 - Content flows naturally below the identity line with no artificial truncation
-- If the summary is long, the entry expands to accommodate it — the full summary_html is always rendered
+- If the content is long, the entry expands to accommodate it — the full cleaned_html is always rendered
 
 **Participant color coding:**
 
@@ -555,7 +555,7 @@ Timeline entries use the same deterministic participant color coding as the Prev
 
 ### 7.3 Timeline Entry — Attachment Indicator
 
-If the Communication has attachments (has_attachments = true), a compact attachment indicator renders below the summary content: paperclip icon followed by the count ("📎 3 attachments"). Attachments are not downloadable from the timeline — the user navigates to the full Communication record for attachment actions.
+If the Communication has attachments (has_attachments = true), a compact attachment indicator renders below the communication content: paperclip icon followed by the count ("📎 3 attachments"). Attachments are not downloadable from the timeline — the user navigates to the full Communication record for attachment actions.
 
 ### 7.4 Timeline Entry — Segment Indicator
 
@@ -579,10 +579,10 @@ Double-clicking a timeline entry opens the corresponding Communication record in
 
 **Tasks:**
 
-- [ ] CNVT-01: Implement Timeline Card with chronological Published Summary entries
+- [ ] CNVT-01: Implement Timeline Card with chronological communication entries displaying cleaned_html
 - [ ] CNVT-02: Implement user preference for timeline order (oldest-first, newest-first)
 - [ ] CNVT-03: Implement inline toggle for temporary order reversal
-- [ ] CNVT-04: Implement timeline entry rendering (colored circle, channel icon, sender → recipient, timestamp, summary)
+- [ ] CNVT-04: Implement timeline entry rendering (colored circle, channel icon, sender → recipient, timestamp, cleaned_html content)
 - [ ] CNVT-05: Implement participant color coding on timeline entries (colored circle + background tint)
 - [ ] CNVT-06: Implement attachment indicator on timeline entries
 - [ ] CNVT-07: Implement segment indicator with navigation link
@@ -600,7 +600,7 @@ Double-clicking a timeline entry opens the corresponding Communication record in
 - [ ] CNVT-T02: Timeline renders entries in newest-first order when user preference is newest-first
 - [ ] CNVT-T03: Inline toggle reverses order temporarily without changing global preference
 - [ ] CNVT-T04: Toggle resets when navigating away and returning
-- [ ] CNVT-T05: Each entry shows colored circle, channel icon, sender → recipient, timestamp, and summary content
+- [ ] CNVT-T05: Each entry shows colored circle, channel icon, sender → recipient, timestamp, and cleaned_html content
 - [ ] CNVT-T06: Timestamps follow Date & Time Display Standards (5 tiers)
 - [ ] CNVT-T07: Double-click on timeline entry opens Communication in Undocked Window
 - [ ] CNVT-T08: Participant color coding matches Preview Card colors for the same contacts
@@ -610,7 +610,7 @@ Double-clicking a timeline entry opens the corresponding Communication record in
 - [ ] CNVT-T12: Empty conversation shows appropriate empty state
 - [ ] CNVT-T13: Sender name links to Contact record when resolved
 - [ ] CNVT-T14: Recipient overflow truncates with "+N" count
-- [ ] CNVT-T15: Summary content renders full summary_html with formatting preserved
+- [ ] CNVT-T15: Communication content renders full cleaned_html with formatting preserved
 - [ ] CNVT-T16: Second double-click on different entry updates existing Undocked Window (no second window)
 - [ ] CNVT-T17: Single-click focuses timeline entry with visual highlight without opening Communication
 - [ ] CNVT-T18: Arrow keys navigate focus between timeline entries
@@ -1092,7 +1092,7 @@ An inline toggle on the Timeline Card header allows temporary reversal per-sessi
 | [GUI Functional Requirements PRD](gui-functional-requirements-prd.md) | Card-Based Architecture, Window Types, Display Modes, Date & Time Display Standards. |
 | [GUI Preview Card Amendment](gui-preview-card-amendment.md) | System-wide Preview Card type definition. |
 | [Communication Entity Base PRD](communication-entity-base-prd.md) | The atomic communication records that compose the conversation timeline. |
-| [Communication Published Summary Sub-PRD](communication-published-summary-prd.md) | Summary content rendered in timeline entries. |
+| [Communication Published Summary Sub-PRD](communication-published-summary-prd.md) | Defines Published Summary used for AI intelligence. Timeline entries render cleaned_html content, not Published Summary. |
 | [Communication View Sub-PRD](communication-view-prd.md) | Full Communication record view rendered in Undocked Window via timeline entry double-click. |
 | [Contact Entity Base PRD](contact-entity-base-prd.md) | Contact record navigation from participant and sender links. |
 | [Projects PRD](projects-prd.md) | Project entity referenced in Entity Associations Card. |

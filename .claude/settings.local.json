@@ -75,7 +75,12 @@
       "Bash(printf:*)",
       "Bash(npx vite build:*)",
       "Bash(git pull:*)",
-      "Bash(\" separator warnings, link preload unused-resource\nwarnings, cid: ERR_UNKNOWN_URL_SCHEME, and tracking pixel ERR_BLOCKED_BY_CLIENT\nfrom Facebook/SendGrid/etc.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(\" separator warnings, link preload unused-resource\nwarnings, cid: ERR_UNKNOWN_URL_SCHEME, and tracking pixel ERR_BLOCKED_BY_CLIENT\nfrom Facebook/SendGrid/etc.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(chmod +x:*)",
+      "Bash(docker compose:*)",
+      "Bash(sudo docker:*)",
+      "Bash(echo:*)",
+      "Bash(done)"
     ]
   }
 }

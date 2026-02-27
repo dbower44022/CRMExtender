@@ -1,5 +1,6 @@
 # CRMExtender — PRD Index
 
+<<<<<<< Updated upstream
 **Version:** 20.0
 **Last Updated:** 2026-02-27
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
@@ -19,6 +20,15 @@
 > **V14.0 (2026-02-23):** Decomposed Documents PRD (1,331 lines) into Document Entity Base PRD + 3 Action Sub-PRDs (Upload/Versioning/Storage, Content Processing Pipeline, Communication & Profile Asset Integration) + Document Entity TDD. Follows V2 methodology. Monolithic documents-prd.md retained as superseded reference.
 
 > **V13.0 (2026-02-23):** Decomposed Conversations PRD (1,171 lines) into Conversation Entity Base PRD + 4 Action Sub-PRDs (Formation & Stitching, AI Intelligence & Review, View Conversation, Views & Alerts) + Conversation Entity TDD. Follows V2 methodology. Monolithic conversations-prd.md retained as superseded reference.
+=======
+**Version:** 14.0
+**Last Updated:** 2026-02-23
+**Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V14.0 (2026-02-23):** Decomposed Documents PRD (1,331 lines) into Document Entity Base PRD + 3 Action Sub-PRDs (Upload/Versioning/Storage, Content Processing Pipeline, Communication & Profile Asset Integration) + Document Entity TDD. Follows V2 methodology. Monolithic documents-prd.md retained as superseded reference.
+
+> **V13.0 (2026-02-23):** Decomposed Conversations PRD (1,171 lines) into Conversation Entity Base PRD + 3 Action Sub-PRDs (Formation & Stitching, AI Intelligence & Review, Views & Alerts) + Conversation Entity TDD. Follows V2 methodology. Monolithic conversations-prd.md retained as superseded reference.
+>>>>>>> Stashed changes
 
 > **V12.0 (2026-02-23):** Decomposed Communications PRD (1,420 lines) into Communication Entity Base PRD + 4 Action Sub-PRDs (Published Summary, Provider & Sync Framework, Participant Resolution, Triage & Filtering) + Communication Entity TDD. Follows V2 methodology: field metadata, Key Processes, embedded task/test plans. Monolithic communications-prd.md retained as superseded reference.
 
@@ -44,11 +54,15 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | PRD Methodology Guide | 2.0 | `prd-methodology-guide.md` | Updated — Key Processes, field metadata, † convention | 2026-02-23 |
 | Product TDD | 1.0 | `product-tdd.md` | Draft — 13 sections, living document | 2026-02-23 |
 | GUI Functional Requirements | 2.0 | `gui-functional-requirements-prd.md` | Draft — Terminology standardized | 2026-02-21 |
+<<<<<<< Updated upstream
 | Custom Objects | 2.0 | `custom-objects-prd.md` | Superseded — decomposed into Framework PRD + 2 Sub-PRDs + TDD | 2026-02-23 |
 | └ Custom Objects Framework | 1.0 | `custom-objects-framework-prd.md` | Draft — V2 methodology (Key Processes) | 2026-02-23 |
 | &nbsp;&nbsp;└ Custom Objects TDD | 1.0 | `custom-objects-tdd.md` | Draft — Living document, 7 sections | 2026-02-23 |
 | └ Field System | 1.0 | `custom-objects-field-system-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Relation System | 1.0 | `custom-objects-relation-system-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+=======
+| Custom Objects | 2.0 | `custom-objects-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+>>>>>>> Stashed changes
 | Communications | 3.0 | `communications-prd.md` | Superseded — decomposed into Entity Base + 4 Sub-PRDs + TDD | 2026-02-23 |
 | └ Communication Entity Base | 1.0 | `communication-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
 | &nbsp;&nbsp;└ Communication Entity TDD | 1.0 | `communication-entity-tdd.md` | Draft — Living document, 10 sections | 2026-02-23 |
@@ -61,7 +75,10 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | &nbsp;&nbsp;└ Conversation Entity TDD | 1.0 | `conversation-entity-tdd.md` | Draft — Living document, 8 sections | 2026-02-23 |
 | └ Formation & Stitching | 1.0 | `conversation-formation-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ AI Intelligence & Review | 1.0 | `conversation-ai-intelligence-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+<<<<<<< Updated upstream
 | └ View Conversation | 1.1 | `conversation-view-prd.md` | Draft — Preview Card + full View, task/test plan | 2026-02-27 |
+=======
+>>>>>>> Stashed changes
 | └ Views & Alerts | 1.0 | `conversation-views-alerts-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Contact Management | 5.0 | `contact-management-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | └ Contact Entity Base | 9.0 | `contact-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
@@ -81,6 +98,7 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | └ Enrichment Pipeline | 1.0 | `company-enrichment-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Intelligence & Scoring | 1.0 | `company-intelligence-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Social Media Profiles | 1.0 | `company-social-profiles-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+<<<<<<< Updated upstream
 | Event Management | 3.0 | `events-prd.md` | Superseded — decomposed into Entity Base + 2 Sub-PRDs + TDD | 2026-02-23 |
 | └ Event Entity Base | 1.0 | `event-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
 | &nbsp;&nbsp;└ Event Entity TDD | 1.0 | `event-entity-tdd.md` | Draft — Living document, 10 sections | 2026-02-23 |
@@ -96,16 +114,25 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | &nbsp;&nbsp;└ Task Entity TDD | 1.0 | `task-entity-tdd.md` | Draft — Living document, 9 sections | 2026-02-23 |
 | └ Hierarchy, Dependencies & Recurrence | 1.0 | `task-hierarchy-dependencies-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Assignees, Behaviors & AI Intelligence | 1.0 | `task-assignees-ai-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+=======
+| Event Management | 3.0 | `events-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+| Notes | 3.0 | `notes-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+| Tasks | 2.0 | `tasks-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+>>>>>>> Stashed changes
 | Documents | 2.0 | `documents-prd.md` | Superseded — decomposed into Entity Base + 3 Sub-PRDs + TDD | 2026-02-23 |
 | └ Document Entity Base | 1.0 | `document-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
 | &nbsp;&nbsp;└ Document Entity TDD | 1.0 | `document-entity-tdd.md` | Draft — Living document, 11 sections | 2026-02-23 |
 | └ Upload, Versioning & Storage | 1.0 | `document-upload-storage-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Content Processing Pipeline | 1.0 | `document-content-processing-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ Communication & Asset Integration | 1.0 | `document-integration-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+<<<<<<< Updated upstream
 | Projects | 3.0 | `projects-prd.md` | Superseded — decomposed into Entity Base + 1 Sub-PRD + TDD | 2026-02-23 |
 | └ Project Entity Base | 1.0 | `project-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
 | &nbsp;&nbsp;└ Project Entity TDD | 1.0 | `project-entity-tdd.md` | Draft — Living document, 7 sections | 2026-02-23 |
 | └ Entity Relations & Aggregation | 1.0 | `project-relations-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
+=======
+| Projects | 3.0 | `projects-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+>>>>>>> Stashed changes
 | Outbound Email | 2.0 | `outbound-email-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Views & Grid | 5.0 | `views-grid-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Data Sources | 1.0 | `data-sources-prd.md` | Draft — Terminology standardized | 2026-02-22 |
@@ -129,7 +156,11 @@ Document version history is managed by Git. Previous versions of any document ca
 - 2026-02-19: Topic entity eliminated; Projects PRD extracted from Conversations PRD
 - 2026-02-21: GUI terminology standardization (V2); Adaptive Grid Intelligence terminology alignment
 - 2026-02-22: Full ecosystem terminology alignment across all PRDs; Custom Objects V2; mojibake cleanup
+<<<<<<< Updated upstream
 - 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Event entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Note entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Task entity decomposed into Entity Base PRD + 2 Action Sub-PRDs + TDD; Project entity decomposed into Entity Base PRD + 1 Action Sub-PRD + TDD; Custom Objects framework decomposed into Framework PRD + 2 Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning. **All 9 entity PRDs + Custom Objects framework decomposed.**
+=======
+- 2026-02-23: PRD Methodology V2 (Key Processes, field metadata, † caching convention); Product TDD and Contact Entity TDD created; Contact entity decomposed into Entity Base PRD + 6 Action Sub-PRDs; Company entity decomposed into Entity Base PRD + 6 Action Sub-PRDs + TDD; Communication entity decomposed into Entity Base PRD + 4 Action Sub-PRDs + TDD; Conversation entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; Document entity decomposed into Entity Base PRD + 3 Action Sub-PRDs + TDD; migrated from versioned filenames to Git-based versioning
+>>>>>>> Stashed changes
 
 ---
 
@@ -209,7 +240,10 @@ Document version history is managed by Git. Previous versions of any document ca
 | Conversation Entity TDD | `conversation-entity-tdd.md` | Read model table DDL, conversation_members junction table, segment data model, event sourcing, virtual schema queries, API design (5 API groups) |
 | Formation & Stitching Sub-PRD | `conversation-formation-prd.md` | Email thread auto-formation, participant-based defaults, manual assignment, AI-suggested splitting, cross-channel stitching, communication segmentation (split/reference model) |
 | AI Intelligence & Review Sub-PRD | `conversation-ai-intelligence-prd.md` | Three AI roles (classify & route, summarize, extract intelligence), confidence scoring, re-summarization triggers, review workflow, learning from user corrections |
+<<<<<<< Updated upstream
 | View Conversation Sub-PRD | `conversation-view-prd.md` | Preview Card (standard and aggregate variants, participant color-coded timeline entries, Sender → Recipient format), full View (responsive two-column layout with dynamic column sizing and per-conversation splitter persistence, Timeline Card, Participants Card, AI Intelligence Card with read-only action items, Entity Associations Card, Children Card, Notes Card, Metadata Card) |
+=======
+>>>>>>> Stashed changes
 | Views & Alerts Sub-PRD | `conversation-views-alerts-prd.md` | Conversation view patterns, shareable views, user-defined alert architecture (no defaults), frequency/aggregation/delivery |
 
 ---
@@ -814,6 +848,7 @@ PRDs/
 ├── conversation-formation-prd.md             # Formation & stitching sub-PRD
 ├── conversation-ai-intelligence-prd.md       # AI intelligence & review sub-PRD
 ├── conversation-views-alerts-prd.md          # Views & alerts sub-PRD
+<<<<<<< Updated upstream
 ├── conversation-view-prd.md                  # View conversation sub-PRD (Preview + full View)
 ├── events-prd.md                             # Events (monolithic, superseded)
 ├── event-entity-base-prd.md                  # Event entity definition
@@ -830,16 +865,25 @@ PRDs/
 ├── task-entity-tdd.md                        # Task technical decisions
 ├── task-hierarchy-dependencies-prd.md        # Hierarchy, dependencies & recurrence sub-PRD
 ├── task-assignees-ai-prd.md                  # Assignees, behaviors & AI intelligence sub-PRD
+=======
+├── events-prd.md
+├── notes-prd.md
+├── tasks-prd.md
+>>>>>>> Stashed changes
 ├── documents-prd.md                          # Documents (monolithic, superseded)
 ├── document-entity-base-prd.md               # Document entity definition
 ├── document-entity-tdd.md                    # Document technical decisions
 ├── document-upload-storage-prd.md            # Upload, versioning & storage sub-PRD
 ├── document-content-processing-prd.md        # Content processing pipeline sub-PRD
 ├── document-integration-prd.md               # Communication & asset integration sub-PRD
+<<<<<<< Updated upstream
 ├── projects-prd.md                           # Projects (monolithic, superseded)
 ├── project-entity-base-prd.md                # Project entity definition
 ├── project-entity-tdd.md                     # Project technical decisions
 ├── project-relations-prd.md                  # Entity relations & aggregation sub-PRD
+=======
+├── projects-prd.md
+>>>>>>> Stashed changes
 ├── outbound-email-prd.md
 ├── views-grid-prd.md
 ├── data-sources-prd.md

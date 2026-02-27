@@ -32,27 +32,27 @@ The document covers both standard Conversations (is_aggregate = false) and aggre
 
 ### 2.1 Relevant Fields
 
-| Field | Role in View |
-|---|---|
-| Subject | Primary heading in Identity Card and Preview Card header. Display name field. |
-| Is Aggregate | Determines rendering variant (standard timeline vs. aggregate child list) and type icon. |
-| System Status | Displayed in Identity Card and Preview Card header as a status badge. |
-| AI Status | Displayed in Identity Card and Preview Card header as a status badge. |
-| AI Summary | Rendered in the AI Intelligence Card in full View. |
-| AI Action Items | Rendered in the AI Intelligence Card in full View. |
-| AI Key Topics | Rendered in the AI Intelligence Card in full View. |
-| AI Confidence | Displayed in the AI Intelligence Card in full View. |
-| AI Last Processed At | Displayed in the AI Intelligence Card in full View. |
-| Communication Count | Displayed in Preview Card header and Identity Card. For aggregates: includes all children's counts recursively. |
-| Channel Breakdown | Displayed in Preview Card header as compact channel icons with counts. |
-| First Activity At | Available in Metadata Card. |
-| Last Activity At | Displayed in Preview Card header. Drives recency context. |
-| Stale After Days | Displayed in Metadata Card. Editable threshold. |
-| Closed After Days | Displayed in Metadata Card. Editable threshold. |
-| Description | Displayed in Identity Card area. Primarily useful for aggregates. |
-| Created By | Displayed in Metadata Card. |
-| Created At | Displayed in Metadata Card. |
-| Updated At | Displayed in Metadata Card. |
+| Field                | Role in View                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Subject              | Primary heading in Identity Card and Preview Card header. Display name field.                                   |
+| Is Aggregate         | Determines rendering variant (standard timeline vs. aggregate child list) and type icon.                        |
+| System Status        | Displayed in Identity Card and Preview Card header as a status badge.                                           |
+| AI Status            | Displayed in Identity Card and Preview Card header as a status badge.                                           |
+| AI Summary           | Rendered in the AI Intelligence Card in full View.                                                              |
+| AI Action Items      | Rendered in the AI Intelligence Card in full View.                                                              |
+| AI Key Topics        | Rendered in the AI Intelligence Card in full View.                                                              |
+| AI Confidence        | Displayed in the AI Intelligence Card in full View.                                                             |
+| AI Last Processed At | Displayed in the AI Intelligence Card in full View.                                                             |
+| Communication Count  | Displayed in Preview Card header and Identity Card. For aggregates: includes all children's counts recursively. |
+| Channel Breakdown    | Displayed in Preview Card header as compact channel icons with counts.                                          |
+| First Activity At    | Available in Metadata Card.                                                                                     |
+| Last Activity At     | Displayed in Preview Card header. Drives recency context.                                                       |
+| Stale After Days     | Displayed in Metadata Card. Editable threshold.                                                                 |
+| Closed After Days    | Displayed in Metadata Card. Editable threshold.                                                                 |
+| Description          | Displayed in Identity Card area. Primarily useful for aggregates.                                               |
+| Created By           | Displayed in Metadata Card.                                                                                     |
+| Created At           | Displayed in Metadata Card.                                                                                     |
+| Updated At           | Displayed in Metadata Card.                                                                                     |
 
 ### 2.2 Relevant Relationships
 
@@ -245,18 +245,18 @@ Direct Communications within this group are sorted by receive date (most recent 
 
 ### 4.4 Preview Card Rendering Rules Summary
 
-| Rule | Standard | Aggregate |
-|---|---|---|
-| **Header** | 2 lines: icon + subject / statuses + count + channels | 2 lines: icon + subject / statuses + child count |
-| **Primary content** | Communication entries (cleaned_html), most-recent-first | Child Conversations sorted by last activity desc |
-| **Entry format** | Channel icon + sender + timestamp + cleaned content | Subject + status + count + most recent content |
-| **Direct Communications** | N/A | Separate group at bottom, sorted by receive date |
-| **Color coding** | Background tint per participant | N/A for child entries; applied to Direct Communications entries |
-| **Scrolling** | Scrolls if content exceeds available space | Scrolls if content exceeds available space |
-| **Truncation** | No artificial truncation | No artificial truncation |
-| **Timeline order** | Always most-recent-first | Always most-recent-activity-first |
-| **AI intelligence** | Not shown | Not shown |
-| **Interactive elements** | None (Preview Card is read-only per GUI Preview Card Amendment) | None |
+| Rule                      | Standard                                                        | Aggregate                                                       |
+| ------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
+| **Header**                | 2 lines: icon + subject / statuses + count + channels           | 2 lines: icon + subject / statuses + child count                |
+| **Primary content**       | Communication entries (cleaned_html), most-recent-first         | Child Conversations sorted by last activity desc                |
+| **Entry format**          | Channel icon + sender + timestamp + cleaned content             | Subject + status + count + most recent content                  |
+| **Direct Communications** | N/A                                                             | Separate group at bottom, sorted by receive date                |
+| **Color coding**          | Background tint per participant                                 | N/A for child entries; applied to Direct Communications entries |
+| **Scrolling**             | Scrolls if content exceeds available space                      | Scrolls if content exceeds available space                      |
+| **Truncation**            | No artificial truncation                                        | No artificial truncation                                        |
+| **Timeline order**        | Always most-recent-first                                        | Always most-recent-activity-first                               |
+| **AI intelligence**       | Not shown                                                       | Not shown                                                       |
+| **Interactive elements**  | None (Preview Card is read-only per GUI Preview Card Amendment) | None                                                            |
 
 **Tasks:**
 
@@ -310,11 +310,11 @@ When two-column layout is active, the column widths are determined dynamically b
 
 **Column constraints:**
 
-| Constraint | Value | Rationale |
-|---|---|---|
-| Left column (timeline) minimum | 40% of container width | Ensures communication content is readable without excessive line wrapping |
-| Right column (CRM) minimum | 280px | Participant names, summary text, entity names need this minimum to not look cramped |
-| Right column (CRM) maximum | 60% of container width | Implied by left column minimum; prevents CRM sidebar from dominating |
+| Constraint                     | Value                  | Rationale                                                                           |
+| ------------------------------ | ---------------------- | ----------------------------------------------------------------------------------- |
+| Left column (timeline) minimum | 40% of container width | Ensures communication content is readable without excessive line wrapping           |
+| Right column (CRM) minimum     | 280px                  | Participant names, summary text, entity names need this minimum to not look cramped |
+| Right column (CRM) maximum     | 60% of container width | Implied by left column minimum; prevents CRM sidebar from dominating                |
 
 **Sizing algorithm:**
 
@@ -466,26 +466,26 @@ The Conversation Identity Card renders at the top of the full View, above the Ti
 
 **Fields displayed:**
 
-| Element | Source | Rendering |
-|---|---|---|
-| Type icon | is_aggregate | 💬 for standard, 📂 for aggregate |
-| Subject | subject field | Bold, prominent. Primary heading. |
-| System status | system_status | Badge: "Active", "Stale", "Closed" |
-| AI status | ai_status | Badge: "Open", "Closed", "Uncertain". Omitted if NULL (AI not yet processed). |
-| Communication count | communication_count | "N communications" — for aggregates, this is the recursive rolled-up count. |
-| Child count | Derived from membership | Aggregates only: "N conversations" shown before communication count. |
-| Channel breakdown | channel_breakdown | Compact channel icons with counts (✉8 💬2 📞2). Omitted if single channel. |
-| Description | description field | If non-NULL, rendered as a third line below the status line. Lighter text. |
+| Element             | Source                  | Rendering                                                                     |
+| ------------------- | ----------------------- | ----------------------------------------------------------------------------- |
+| Type icon           | is_aggregate            | 💬 for standard, 📂 for aggregate                                             |
+| Subject             | subject field           | Bold, prominent. Primary heading.                                             |
+| System status       | system_status           | Badge: "Active", "Stale", "Closed"                                            |
+| AI status           | ai_status               | Badge: "Open", "Closed", "Uncertain". Omitted if NULL (AI not yet processed). |
+| Communication count | communication_count     | "N communications" — for aggregates, this is the recursive rolled-up count.   |
+| Child count         | Derived from membership | Aggregates only: "N conversations" shown before communication count.          |
+| Channel breakdown   | channel_breakdown       | Compact channel icons with counts (✉8 💬2 📞2). Omitted if single channel.    |
+| Description         | description field       | If non-NULL, rendered as a third line below the status line. Lighter text.    |
 
 **Fields deliberately excluded from the Identity Card:**
 
-| Field | Reason | Where it lives instead |
-|---|---|---|
-| AI Summary | Too long for Identity Card; warrants its own card | AI Intelligence Card |
-| AI Action Items | Structured data requiring its own rendering | AI Intelligence Card |
-| Participants | Derived list, potentially long | Participants Card |
-| Entity associations | Relationship data | Entity Associations Card |
-| Stale/closed thresholds | Configuration detail | Metadata Card |
+| Field                   | Reason                                            | Where it lives instead   |
+| ----------------------- | ------------------------------------------------- | ------------------------ |
+| AI Summary              | Too long for Identity Card; warrants its own card | AI Intelligence Card     |
+| AI Action Items         | Structured data requiring its own rendering       | AI Intelligence Card     |
+| Participants            | Derived list, potentially long                    | Participants Card        |
+| Entity associations     | Relationship data                                 | Entity Associations Card |
+| Stale/closed thresholds | Configuration detail                              | Metadata Card            |
 
 **Tasks:**
 
@@ -515,10 +515,10 @@ The Timeline Card is the primary content surface in the Conversation full View. 
 
 The timeline respects a **global user preference** for reading order:
 
-| Setting | Behavior | Use Case |
-|---|---|---|
-| Oldest-first (default) | First communication at top, most recent at bottom | Reads like a natural narrative |
-| Newest-first | Most recent communication at top, oldest at bottom | Jump to latest activity in long conversations |
+| Setting                | Behavior                                           | Use Case                                      |
+| ---------------------- | -------------------------------------------------- | --------------------------------------------- |
+| Oldest-first (default) | First communication at top, most recent at bottom  | Reads like a natural narrative                |
+| Newest-first           | Most recent communication at top, oldest at bottom | Jump to latest activity in long conversations |
 
 The preference is stored as a user-level setting (not per-conversation). An **inline toggle button** on the Timeline Card header allows temporary reversal without changing the global preference. The toggle resets when the user navigates away.
 
@@ -649,14 +649,14 @@ The Participants Card shows all participants in the Conversation — derived fro
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element | Source | Rendering |
-|---|---|---|
-| Card header | "Participants" with count in parentheses | Standard card header |
-| Name | Contact display name | Clickable link to Contact record (if resolved). Bold. |
-| Communication count | Count of Communications in this Conversation where this contact is a participant | Right-aligned on the name line. Provides a sense of each person's involvement level. |
-| Title + Company | Contact's current employment | Below the name in lighter text. Omitted if no employment record. |
-| Account owner indicator | Derived from current user | "(You)" badge if this participant is the account owner. |
-| Color swatch | Participant color from palette | Small color indicator matching the timeline entry background tint for this participant, enabling visual cross-reference. |
+| Element                 | Source                                                                           | Rendering                                                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Card header             | "Participants" with count in parentheses                                         | Standard card header                                                                                                     |
+| Name                    | Contact display name                                                             | Clickable link to Contact record (if resolved). Bold.                                                                    |
+| Communication count     | Count of Communications in this Conversation where this contact is a participant | Right-aligned on the name line. Provides a sense of each person's involvement level.                                     |
+| Title + Company         | Contact's current employment                                                     | Below the name in lighter text. Omitted if no employment record.                                                         |
+| Account owner indicator | Derived from current user                                                        | "(You)" badge if this participant is the account owner.                                                                  |
+| Color swatch            | Participant color from palette                                                   | Small color indicator matching the timeline entry background tint for this participant, enabling visual cross-reference. |
 
 **Participant ordering:** Participants are ordered by communication count descending (most active participants first). The account owner is always listed first regardless of count.
 
@@ -732,17 +732,17 @@ The AI Intelligence Card carries the same subtle tinted background and border tr
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element | Source | Rendering |
-|---|---|---|
-| Card header | "AI Intelligence" | Standard card header with tinted background |
-| Source badge | — | "🤖 AI Generated" — always AI for conversation-level summaries |
-| Edit action | — | Pencil icon (✏). Opens AI summary in rich text editor for manual editing. |
-| Regenerate action | — | Refresh icon (↻). Re-triggers AI analysis across all Communications. |
-| Summary | ai_summary | Rendered as formatted text. 2–4 sentence narrative of conversation state. |
-| Action Items | ai_action_items | Rendered as a **read-only** list with assignee names (clickable links to Contact records) and deadlines if present. Action items are not completable from this card — completion is managed through the Task workflow. |
-| Key Topics | ai_key_topics | Rendered as inline tags/chips separated by middot or as a flowing list. |
-| Confidence | ai_confidence | Decimal displayed with "Confidence:" label. |
-| Last processed | ai_last_processed_at | Timestamp per Date & Time Display Standards. |
+| Element           | Source               | Rendering                                                                                                                                                                                                              |
+| ----------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Card header       | "AI Intelligence"    | Standard card header with tinted background                                                                                                                                                                            |
+| Source badge      | —                    | "🤖 AI Generated" — always AI for conversation-level summaries                                                                                                                                                         |
+| Edit action       | —                    | Pencil icon (✏). Opens AI summary in rich text editor for manual editing.                                                                                                                                              |
+| Regenerate action | —                    | Refresh icon (↻). Re-triggers AI analysis across all Communications.                                                                                                                                                   |
+| Summary           | ai_summary           | Rendered as formatted text. 2–4 sentence narrative of conversation state.                                                                                                                                              |
+| Action Items      | ai_action_items      | Rendered as a **read-only** list with assignee names (clickable links to Contact records) and deadlines if present. Action items are not completable from this card — completion is managed through the Task workflow. |
+| Key Topics        | ai_key_topics        | Rendered as inline tags/chips separated by middot or as a flowing list.                                                                                                                                                |
+| Confidence        | ai_confidence        | Decimal displayed with "Confidence:" label.                                                                                                                                                                            |
+| Last processed    | ai_last_processed_at | Timestamp per Date & Time Display Standards.                                                                                                                                                                           |
 
 ### 9.4 Suppression
 
@@ -809,13 +809,13 @@ The Entity Associations Card shows all entities linked to this Conversation via 
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element | Source | Rendering |
-|---|---|---|
-| Card header | "Associations" with "+ Link" action | Standard card header. "+ Link" opens an entity picker for adding new associations. |
-| Projects | `conversation_projects` Relation Type | Project name (clickable link) + status. Grouped under "Projects:" header. |
-| Companies | `conversation_companies` Relation Type | Company name (clickable link). Grouped under "Companies:" header. |
-| Contacts (explicit) | `conversation_contacts` Relation Type | Contact name (clickable link) + title + company. Grouped under "Contacts:" header. These are contacts explicitly associated with the conversation who are NOT derived participants — stakeholders, decision-makers, managers who should be informed. Shown here rather than in the Participants Card to prevent confusion with people who actually communicated. |
-| Events | `conversation_events` Relation Type | Event title (clickable link) + date. Grouped under "Events:" header. |
+| Element             | Source                                 | Rendering                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Card header         | "Associations" with "+ Link" action    | Standard card header. "+ Link" opens an entity picker for adding new associations.                                                                                                                                                                                                                                                                               |
+| Projects            | `conversation_projects` Relation Type  | Project name (clickable link) + status. Grouped under "Projects:" header.                                                                                                                                                                                                                                                                                        |
+| Companies           | `conversation_companies` Relation Type | Company name (clickable link). Grouped under "Companies:" header.                                                                                                                                                                                                                                                                                                |
+| Contacts (explicit) | `conversation_contacts` Relation Type  | Contact name (clickable link) + title + company. Grouped under "Contacts:" header. These are contacts explicitly associated with the conversation who are NOT derived participants — stakeholders, decision-makers, managers who should be informed. Shown here rather than in the Participants Card to prevent confusion with people who actually communicated. |
+| Events              | `conversation_events` Relation Type    | Event title (clickable link) + date. Grouped under "Events:" header.                                                                                                                                                                                                                                                                                             |
 
 Each association group is only rendered if it has at least one entry. Empty groups are omitted (no "Projects: None" placeholder).
 
@@ -873,12 +873,12 @@ The Children Card appears only for aggregate Conversations (is_aggregate = true)
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element | Source | Rendering |
-|---|---|---|
-| Card header | "Conversations" with count and "+ Add" action | "+ Add" opens a conversation picker to add existing conversations as children, or create a new child. |
-| Child entries | conversation_members | Type icon (💬 or 📂), subject (clickable), "→ Open" navigation action |
-| Child status | system_status, communication_count, last_activity_at | Status badge, communication count, last activity timestamp |
-| Child count | For nested aggregates | "N conversations" shown instead of last activity for aggregate children |
+| Element       | Source                                               | Rendering                                                                                             |
+| ------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Card header   | "Conversations" with count and "+ Add" action        | "+ Add" opens a conversation picker to add existing conversations as children, or create a new child. |
+| Child entries | conversation_members                                 | Type icon (💬 or 📂), subject (clickable), "→ Open" navigation action                                 |
+| Child status  | system_status, communication_count, last_activity_at | Status badge, communication count, last activity timestamp                                            |
+| Child count   | For nested aggregates                                | "N conversations" shown instead of last activity for aggregate children                               |
 
 **Ordering:** Children are sorted by last_activity_at descending (most recently active first).
 
@@ -933,9 +933,9 @@ Same pattern as the Communication Notes Card:
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element | Rendering |
-|---|---|
-| Card header | "Notes" with count in parentheses. "+ Add" action to create a new note attached to this Conversation. |
+| Element      | Rendering                                                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Card header  | "Notes" with count in parentheses. "+ Add" action to create a new note attached to this Conversation.                                      |
 | Note entries | Author name, timestamp (per Date & Time Display Standards), and note content preview. Each note is clickable to open the full Note record. |
 
 ### 12.3 Suppression
@@ -985,15 +985,15 @@ The Metadata Card displays system information, lifecycle configuration, and even
 └──────────────────────────────────────────────────────┘
 ```
 
-| Element | Source | Rendering |
-|---|---|---|
-| Type | is_aggregate | "Standard Conversation" or "Aggregate Conversation" |
-| Created By | created_by | User display name. "System" for auto-formed Conversations. |
-| Created / Updated | created_at, updated_at | Timestamps per Date & Time Display Standards |
-| First / Last Activity | first_activity_at, last_activity_at | Timestamps per Date & Time Display Standards |
-| Stale After | stale_after_days | "N days" — editable |
-| Closed After | closed_after_days | "N days" — editable |
-| Event History | conversation_events | Collapsible list of event records. Collapsed by default. When expanded, shows event type, timestamp, changed_by, and change details. |
+| Element               | Source                              | Rendering                                                                                                                            |
+| --------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Type                  | is_aggregate                        | "Standard Conversation" or "Aggregate Conversation"                                                                                  |
+| Created By            | created_by                          | User display name. "System" for auto-formed Conversations.                                                                           |
+| Created / Updated     | created_at, updated_at              | Timestamps per Date & Time Display Standards                                                                                         |
+| First / Last Activity | first_activity_at, last_activity_at | Timestamps per Date & Time Display Standards                                                                                         |
+| Stale After           | stale_after_days                    | "N days" — editable                                                                                                                  |
+| Closed After          | closed_after_days                   | "N days" — editable                                                                                                                  |
+| Event History         | conversation_events                 | Collapsible list of event records. Collapsed by default. When expanded, shows event type, timestamp, changed_by, and change details. |
 
 ### 13.3 Default State
 
@@ -1072,8 +1072,8 @@ The order prioritizes the most frequently needed information:
 
 ### 15.1 Timeline Order Preference
 
-| Setting | Values | Default | Scope |
-|---|---|---|---|
+| Setting        | Values                     | Default      | Scope                  |
+| -------------- | -------------------------- | ------------ | ---------------------- |
 | Timeline order | Oldest-first, Newest-first | Oldest-first | Global user preference |
 
 This setting controls the default timeline order when opening any Conversation in full View. The Preview Card always uses most-recent-first regardless of this setting.
@@ -1084,18 +1084,18 @@ An inline toggle on the Timeline Card header allows temporary reversal per-sessi
 
 ## Related Documents
 
-| Document | Relationship |
-|---|---|
-| [Conversation Entity Base PRD](conversation-entity-base-prd.md) | Parent entity PRD. Defines KP-4 which this document implements. |
-| [Conversation Entity TDD](conversation-entity-tdd.md) | Technical decisions for conversation data storage and retrieval. |
-| [AI Intelligence & Review Sub-PRD](conversation-ai-intelligence-prd.md) | AI classification, summarization, extraction workflows referenced by the AI Intelligence Card. |
-| [GUI Functional Requirements PRD](gui-functional-requirements-prd.md) | Card-Based Architecture, Window Types, Display Modes, Date & Time Display Standards. |
-| [GUI Preview Card Amendment](gui-preview-card-amendment.md) | System-wide Preview Card type definition. |
-| [Communication Entity Base PRD](communication-entity-base-prd.md) | The atomic communication records that compose the conversation timeline. |
+| Document                                                                          | Relationship                                                                                                             |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [Conversation Entity Base PRD](conversation-entity-base-prd.md)                   | Parent entity PRD. Defines KP-4 which this document implements.                                                          |
+| [Conversation Entity TDD](conversation-entity-tdd.md)                             | Technical decisions for conversation data storage and retrieval.                                                         |
+| [AI Intelligence & Review Sub-PRD](conversation-ai-intelligence-prd.md)           | AI classification, summarization, extraction workflows referenced by the AI Intelligence Card.                           |
+| [GUI Functional Requirements PRD](gui-functional-requirements-prd.md)             | Card-Based Architecture, Window Types, Display Modes, Date & Time Display Standards.                                     |
+| [GUI Preview Card Amendment](gui-preview-card-amendment.md)                       | System-wide Preview Card type definition.                                                                                |
+| [Communication Entity Base PRD](communication-entity-base-prd.md)                 | The atomic communication records that compose the conversation timeline.                                                 |
 | [Communication Published Summary Sub-PRD](communication-published-summary-prd.md) | Defines Published Summary used for AI intelligence. Timeline entries render cleaned_html content, not Published Summary. |
-| [Communication View Sub-PRD](communication-view-prd.md) | Full Communication record view rendered in Undocked Window via timeline entry double-click. |
-| [Contact Entity Base PRD](contact-entity-base-prd.md) | Contact record navigation from participant and sender links. |
-| [Projects PRD](projects-prd.md) | Project entity referenced in Entity Associations Card. |
-| [Notes PRD](notes-prd.md) | Note attachment and creation referenced by the Notes Card. |
-| [Permissions & Sharing PRD](permissions-sharing-prd.md) | Access control for conversation records. |
-| [Master Glossary](glossary.md) | Term definitions. |
+| [Communication View Sub-PRD](communication-view-prd.md)                           | Full Communication record view rendered in Undocked Window via timeline entry double-click.                              |
+| [Contact Entity Base PRD](contact-entity-base-prd.md)                             | Contact record navigation from participant and sender links.                                                             |
+| [Projects PRD](projects-prd.md)                                                   | Project entity referenced in Entity Associations Card.                                                                   |
+| [Notes PRD](notes-prd.md)                                                         | Note attachment and creation referenced by the Notes Card.                                                               |
+| [Permissions & Sharing PRD](permissions-sharing-prd.md)                           | Access control for conversation records.                                                                                 |
+| [Master Glossary](glossary.md)                                                    | Term definitions.                                                                                                        |

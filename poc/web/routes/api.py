@@ -1367,11 +1367,24 @@ def conversation_full_api(request: Request, conversation_id: str):
         ]
 
         # ALL communications, chronological ASC
+        # Subqueries: sender contact_id, primary recipient name/count, attachment count
         comms = conn.execute(
             "SELECT comm.id, comm.channel, comm.direction, comm.subject, "
             "       comm.sender_name, comm.sender_address, comm.timestamp, "
             "       comm.snippet, comm.ai_summary, "
-            "       cc.is_primary, cc.assignment_source "
+            "       cc.is_primary, cc.assignment_source, "
+            "       (SELECT cp.contact_id FROM communication_participants cp "
+            "        WHERE cp.communication_id = comm.id AND cp.role = 'from' "
+            "        LIMIT 1) AS sender_contact_id, "
+            "       (SELECT COALESCE(cp.name, cp.address) "
+            "        FROM communication_participants cp "
+            "        WHERE cp.communication_id = comm.id AND cp.role = 'to' "
+            "        ORDER BY cp.name COLLATE NOCASE LIMIT 1) AS recipient_name, "
+            "       (SELECT COUNT(*) FROM communication_participants cp "
+            "        WHERE cp.communication_id = comm.id "
+            "        AND cp.role IN ('to', 'participant')) AS recipient_count, "
+            "       (SELECT COUNT(*) FROM attachments a "
+            "        WHERE a.communication_id = comm.id) AS attachment_count "
             "FROM communications comm "
             "JOIN conversation_communications cc ON cc.communication_id = comm.id "
             "WHERE cc.conversation_id = ? "
@@ -1392,6 +1405,10 @@ def conversation_full_api(request: Request, conversation_id: str):
                 "ai_summary": c["ai_summary"],
                 "is_primary": bool(c["is_primary"]),
                 "assignment_source": c["assignment_source"],
+                "sender_contact_id": c["sender_contact_id"],
+                "recipient_name": c["recipient_name"],
+                "recipient_count": c["recipient_count"] or 0,
+                "attachment_count": c["attachment_count"] or 0,
             }
             for c in comms
         ]

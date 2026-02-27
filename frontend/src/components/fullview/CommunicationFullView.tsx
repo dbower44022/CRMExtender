@@ -90,11 +90,11 @@ export function CommunicationFullContent({ commId, onNavigateAway }: Communicati
             /* Two-column layout */
             <div className="flex min-h-0 flex-1">
               {/* Left: Content — scrolls independently */}
-              <div className="flex-[3] overflow-y-auto border-r border-surface-200">
+              <div className="flex-[3] overflow-y-auto">
                 <ContentCard data={data} onClose={onNavigateAway} />
               </div>
-              {/* Right: CRM cards — scrolls independently */}
-              <div className="flex-[2] overflow-y-auto p-4">
+              {/* Right: CRM cards — scrolls independently, subtle sidebar tint */}
+              <div className="flex-[2] overflow-y-auto border-l border-surface-200 bg-surface-50 p-4">
                 {crmCards}
               </div>
             </div>

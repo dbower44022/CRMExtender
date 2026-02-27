@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChevronRight, ChevronDown, Paperclip, Download } from 'lucide-react'
-import { format, isToday, isYesterday, isThisYear, differenceInCalendarDays } from 'date-fns'
 import { sanitizeHtml } from '../../lib/sanitizeHtml.ts'
+import { formatTimestampTwoLine } from '../../lib/formatTimestamp.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import type { CommunicationFullData, CommunicationFullParticipant } from '../../types/api.ts'
 
@@ -24,20 +24,6 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-/** Contextual date formatting split into date + time parts for two-line rendering. */
-function formatTimestampTwoLine(isoString: string | null | undefined): { datePart: string; timePart: string } | null {
-  if (!isoString) return null
-  const date = new Date(isoString)
-  if (isNaN(date.getTime())) return null
-  const timePart = format(date, 'h:mm a')
-  if (isToday(date)) return { datePart: `Today - ${format(date, 'MMM dd')}`, timePart }
-  if (isYesterday(date)) return { datePart: `Yesterday - ${format(date, 'MMM dd')}`, timePart }
-  const daysAgo = differenceInCalendarDays(new Date(), date)
-  if (daysAgo >= 2 && daysAgo <= 6) return { datePart: format(date, 'EEE MMM dd'), timePart }
-  if (isThisYear(date)) return { datePart: format(date, 'MMM dd'), timePart }
-  return { datePart: format(date, 'MMM dd yyyy'), timePart }
 }
 
 // ---------- Avatar ----------
@@ -222,7 +208,14 @@ function RecipientLine({
           )
         })}
         {overflowCount > 0 && (
-          <span className="ml-1 text-surface-400">+{overflowCount} Others</span>
+          <button
+            className="ml-1 text-primary-600 hover:underline"
+            onClick={() => {
+              document.getElementById('participants-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+          >
+            +{overflowCount} Others
+          </button>
         )}
       </span>
     </div>
@@ -261,7 +254,7 @@ function resolveSender(data: CommunicationFullData): {
 
 export function ContentCard({ data, onClose }: ContentCardProps) {
   const [showOriginal, setShowOriginal] = useState(false)
-  const [showQuoted, setShowQuoted] = useState(false)
+  const [showQuoted, setShowQuoted] = useState(true)
 
   const isEmailLike = data.channel === 'email'
   const isPhoneLike = data.channel === 'phone' || data.channel === 'phone_manual' ||

@@ -245,18 +245,24 @@ Direct Communications within this group are sorted by receive date (most recent 
 
 ### 4.4 Preview Card Rendering Rules Summary
 
-| Rule                      | Standard                                                        | Aggregate                                                       |
-| ------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
-| **Header**                | 2 lines: icon + subject / statuses + count + channels           | 2 lines: icon + subject / statuses + child count                |
-| **Primary content**       | Communication entries (cleaned_html), most-recent-first         | Child Conversations sorted by last activity desc                |
-| **Entry format**          | Channel icon + sender + timestamp + cleaned content             | Subject + status + count + most recent content                  |
-| **Direct Communications** | N/A                                                             | Separate group at bottom, sorted by receive date                |
-| **Color coding**          | Background tint per participant                                 | N/A for child entries; applied to Direct Communications entries |
-| **Scrolling**             | Scrolls if content exceeds available space                      | Scrolls if content exceeds available space                      |
-| **Truncation**            | No artificial truncation                                        | No artificial truncation                                        |
-| **Timeline order**        | Always most-recent-first                                        | Always most-recent-activity-first                               |
-| **AI intelligence**       | Not shown                                                       | Not shown                                                       |
-| **Interactive elements**  | None (Preview Card is read-only per GUI Preview Card Amendment) | None                                                            |
+| Rule                     | Standard                                                | Aggregate                                        |
+| ------------------------ | ------------------------------------------------------- | ------------------------------------------------ |
+| **Header**               | 2 lines: icon + subject / statuses + count + channels   | 2 lines: icon + subject / statuses + child count |
+| <<<<<<< Updated upstream |                                                         |                                                  |
+| **Primary content**      | Communication entries (cleaned_html), most-recent-first | Child Conversations sorted by last activity desc |
+| **Entry format**         | Channel icon + sender + timestamp + cleaned content     | Subject + status + count + most recent content   |
+| =======                  |                                                         |                                                  |
+| **Primary content**      | Published Summary entries, most-recent-first            | Child Conversations sorted by last activity desc |
+| **Entry format**         | Channel icon + sender + timestamp + summary text        | Subject + status + count + most recent summary   |
+
+> > > > > > > Stashed changes
+> > > > > > > | **Direct Communications** | N/A                                                             | Separate group at bottom, sorted by receive date                |
+> > > > > > > | **Color coding**          | Background tint per participant                                 | N/A for child entries; applied to Direct Communications entries |
+> > > > > > > | **Scrolling**             | Scrolls if content exceeds available space                      | Scrolls if content exceeds available space                      |
+> > > > > > > | **Truncation**            | No artificial truncation                                        | No artificial truncation                                        |
+> > > > > > > | **Timeline order**        | Always most-recent-first                                        | Always most-recent-activity-first                               |
+> > > > > > > | **AI intelligence**       | Not shown                                                       | Not shown                                                       |
+> > > > > > > | **Interactive elements**  | None (Preview Card is read-only per GUI Preview Card Amendment) | None                                                            |
 
 **Tasks:**
 
@@ -310,11 +316,16 @@ When two-column layout is active, the column widths are determined dynamically b
 
 **Column constraints:**
 
-| Constraint                     | Value                  | Rationale                                                                           |
-| ------------------------------ | ---------------------- | ----------------------------------------------------------------------------------- |
-| Left column (timeline) minimum | 40% of container width | Ensures communication content is readable without excessive line wrapping           |
-| Right column (CRM) minimum     | 280px                  | Participant names, summary text, entity names need this minimum to not look cramped |
-| Right column (CRM) maximum     | 60% of container width | Implied by left column minimum; prevents CRM sidebar from dominating                |
+| Constraint                     | Value                  | Rationale                                                                 |
+| ------------------------------ | ---------------------- | ------------------------------------------------------------------------- |
+| <<<<<<< Updated upstream       |                        |                                                                           |
+| Left column (timeline) minimum | 40% of container width | Ensures communication content is readable without excessive line wrapping |
+| =======                        |                        |                                                                           |
+| Left column (timeline) minimum | 40% of container width | Ensures summary text is readable without excessive line wrapping          |
+
+> > > > > > > Stashed changes
+> > > > > > > | Right column (CRM) minimum     | 280px                  | Participant names, summary text, entity names need this minimum to not look cramped |
+> > > > > > > | Right column (CRM) maximum     | 60% of container width | Implied by left column minimum; prevents CRM sidebar from dominating                |
 
 **Sizing algorithm:**
 
@@ -1084,6 +1095,7 @@ An inline toggle on the Timeline Card header allows temporary reversal per-sessi
 
 ## Related Documents
 
+<<<<<<< Updated upstream
 | Document                                                                          | Relationship                                                                                                             |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | [Conversation Entity Base PRD](conversation-entity-base-prd.md)                   | Parent entity PRD. Defines KP-4 which this document implements.                                                          |
@@ -1099,3 +1111,21 @@ An inline toggle on the Timeline Card header allows temporary reversal per-sessi
 | [Notes PRD](notes-prd.md)                                                         | Note attachment and creation referenced by the Notes Card.                                                               |
 | [Permissions & Sharing PRD](permissions-sharing-prd.md)                           | Access control for conversation records.                                                                                 |
 | [Master Glossary](glossary.md)                                                    | Term definitions.                                                                                                        |
+=======
+| Document                                                                          | Relationship                                                                                   |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [Conversation Entity Base PRD](conversation-entity-base-prd.md)                   | Parent entity PRD. Defines KP-4 which this document implements.                                |
+| [Conversation Entity TDD](conversation-entity-tdd.md)                             | Technical decisions for conversation data storage and retrieval.                               |
+| [AI Intelligence & Review Sub-PRD](conversation-ai-intelligence-prd.md)           | AI classification, summarization, extraction workflows referenced by the AI Intelligence Card. |
+| [GUI Functional Requirements PRD](gui-functional-requirements-prd.md)             | Card-Based Architecture, Window Types, Display Modes, Date & Time Display Standards.           |
+| [GUI Preview Card Amendment](gui-preview-card-amendment.md)                       | System-wide Preview Card type definition.                                                      |
+| [Communication Entity Base PRD](communication-entity-base-prd.md)                 | The atomic communication records that compose the conversation timeline.                       |
+| [Communication Published Summary Sub-PRD](communication-published-summary-prd.md) | Summary content rendered in timeline entries.                                                  |
+| [Communication View Sub-PRD](communication-view-prd.md)                           | Full Communication record view navigated to via "View Original" links.                         |
+| [Contact Entity Base PRD](contact-entity-base-prd.md)                             | Contact record navigation from participant and sender links.                                   |
+| [Projects PRD](projects-prd.md)                                                   | Project entity referenced in Entity Associations Card.                                         |
+| [Notes PRD](notes-prd.md)                                                         | Note attachment and creation referenced by the Notes Card.                                     |
+| [Permissions & Sharing PRD](permissions-sharing-prd.md)                           | Access control for conversation records.                                                       |
+| [Master Glossary](glossary.md)                                                    | Term definitions.                                                                              |
+
+> > > > > > > Stashed changes

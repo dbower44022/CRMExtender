@@ -1,12 +1,21 @@
 import { useCommunicationPreview } from '../../api/communicationPreview.ts'
 import { CHANNEL_ICONS, CHANNEL_LABELS } from '../../lib/channelIcons.ts'
-import { formatTimestamp } from '../../lib/formatTimestamp.ts'
+import { formatPreviewTimestamp } from '../../lib/formatTimestamp.ts'
 import { sanitizeHtml } from '../../lib/sanitizeHtml.ts'
 import { Paperclip, AlertTriangle } from 'lucide-react'
-import type { CommunicationParticipant } from '../../types/api.ts'
+import type { CommunicationParticipant, CommunicationAttachment } from '../../types/api.ts'
 
 interface CommunicationPreviewCardProps {
   entityId: string
+}
+
+/** Direction arrow for non-email channels */
+function directionLabel(direction: string | null, channel: string): string | null {
+  if (channel === 'email') return null
+  if (channel === 'in_person' || channel === 'video_manual' || channel === 'phone_manual') return '↔ Meeting'
+  if (direction === 'outbound') return '→ Outbound'
+  if (direction === 'inbound') return '← Inbound'
+  return null
 }
 
 export function CommunicationPreviewCard({ entityId }: CommunicationPreviewCardProps) {
@@ -29,8 +38,17 @@ export function CommunicationPreviewCard({ entityId }: CommunicationPreviewCardP
   const ChannelIcon = CHANNEL_ICONS[data.channel] ?? CHANNEL_ICONS.email
   const channelLabel = CHANNEL_LABELS[data.channel] ?? data.channel
   const isEmailLike = data.channel === 'email'
+  const isSms = data.channel === 'sms'
+  const isPhoneRecorded = data.channel === 'phone'
+  const isVideoRecorded = data.channel === 'video'
+  const isManualEntry = data.channel === 'phone_manual' || data.channel === 'video_manual' ||
+                        data.channel === 'in_person' || data.channel === 'note'
   const isPhoneLike = data.channel === 'phone' || data.channel === 'phone_manual' ||
                       data.channel === 'video' || data.channel === 'video_manual'
+  const direction = directionLabel(data.direction, data.channel)
+
+  // Resolve display name for header
+  const headerName = data.sender_name || data.sender_address || channelLabel
 
   return (
     <div className="flex h-full flex-col">
@@ -42,7 +60,7 @@ export function CommunicationPreviewCard({ entityId }: CommunicationPreviewCardP
         </div>
       )}
 
-      {/* Header: channel icon + sender + timestamp */}
+      {/* Header: channel icon + sender + direction + timestamp */}
       <div className="flex items-start gap-3 border-b border-surface-200 px-4 py-3">
         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-100 text-surface-500">
           <ChannelIcon size={16} />
@@ -50,17 +68,20 @@ export function CommunicationPreviewCard({ entityId }: CommunicationPreviewCardP
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="truncate text-sm font-semibold text-surface-900">
-              {data.sender_name || data.sender_address || channelLabel}
+              {headerName}
             </span>
             <span className="shrink-0 text-xs text-surface-400">
-              {formatTimestamp(data.timestamp)}
+              {formatPreviewTimestamp(data.timestamp)}
             </span>
           </div>
-          {data.sender_name && data.sender_address && (
+          {/* Sub-line: email address or direction indicator */}
+          {isEmailLike && data.sender_name && data.sender_address ? (
             <div className="truncate text-xs text-surface-400">
               {data.sender_address}
             </div>
-          )}
+          ) : direction ? (
+            <div className="text-xs text-surface-400">{direction}</div>
+          ) : null}
         </div>
       </div>
 
@@ -82,15 +103,15 @@ export function CommunicationPreviewCard({ entityId }: CommunicationPreviewCardP
         </div>
       )}
 
-      {/* Subject */}
-      {data.subject && (
+      {/* Subject — shown for email and manual entries with a subject, hidden for SMS */}
+      {data.subject && !isSms && (
         <div className="border-b border-surface-200 px-4 py-2">
           <h3 className="text-sm font-semibold text-surface-900">{data.subject}</h3>
         </div>
       )}
 
-      {/* Duration (phone/video only) */}
-      {isPhoneLike && data.duration_seconds != null && (
+      {/* Duration + phone numbers (phone/video channels) */}
+      {(isPhoneLike || isPhoneRecorded || isVideoRecorded) && data.duration_seconds != null && (
         <div className="border-b border-surface-200 px-4 py-2 text-xs text-surface-500">
           Duration: {formatDuration(data.duration_seconds)}
           {data.phone_number_from && (
@@ -102,12 +123,12 @@ export function CommunicationPreviewCard({ entityId }: CommunicationPreviewCardP
         </div>
       )}
 
-      {/* Attachments */}
+      {/* Attachments — filenames with sizes, "+N more" for >3 */}
       {data.attachments.length > 0 && (
         <div className="flex items-center gap-2 border-b border-surface-200 px-4 py-2 text-xs text-surface-500">
           <Paperclip size={12} className="shrink-0" />
           <span className="truncate">
-            {data.attachments.map(a => a.filename).join(', ')}
+            {formatAttachments(data.attachments)}
           </span>
         </div>
       )}
@@ -153,6 +174,25 @@ function formatParticipants(participants: CommunicationParticipant[]): string {
     return names.join(', ')
   }
   return `${names.slice(0, MAX_SHOWN).join(', ')} +${names.length - MAX_SHOWN} others`
+}
+
+function formatAttachments(attachments: CommunicationAttachment[]): string {
+  const MAX_SHOWN = 2
+  const shown = attachments.slice(0, MAX_SHOWN).map(a => {
+    if (a.size_bytes != null) return `${a.filename} (${formatFileSize(a.size_bytes)})`
+    return a.filename
+  })
+  const overflow = attachments.length - MAX_SHOWN
+  if (overflow > 0) {
+    return `${shown.join(', ')} +${overflow} more`
+  }
+  return shown.join(', ')
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function formatDuration(seconds: number): string {

@@ -89,13 +89,13 @@ export function ConversationFullView({ convId, onNavigateAway }: ConversationFul
 
           {useTwoColumn ? (
             <div className="flex min-h-0 flex-1">
-              <div className="flex flex-[3] flex-col overflow-y-auto border-r border-surface-200">
+              <div className="flex flex-[3] flex-col overflow-y-auto">
                 <ConversationTimelineCard
                   communications={data.communications}
                   onNavigateAway={onNavigateAway}
                 />
               </div>
-              <div className="flex-[2] overflow-y-auto p-4">
+              <div className="flex-[2] overflow-y-auto border-l border-surface-200 bg-surface-50 p-4">
                 {crmCards}
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { Reply, ReplyAll, Forward } from 'lucide-react'
 import { CHANNEL_ICONS, CHANNEL_TYPE_LABELS } from '../../lib/channelIcons.ts'
-import { formatTimestamp } from '../../lib/formatTimestamp.ts'
+import { formatTimestampTwoLine } from '../../lib/formatTimestamp.ts'
 import { useComposeStore } from '../../stores/compose.ts'
 import type { CommunicationFullData } from '../../types/api.ts'
 
@@ -13,6 +13,7 @@ export function IdentityCard({ data }: IdentityCardProps) {
   const channelLabel = CHANNEL_TYPE_LABELS[data.channel] ?? data.channel
   const openCompose = useComposeStore((s) => s.openCompose)
   const isEmail = data.channel === 'email'
+  const timestamp = formatTimestampTwoLine(data.timestamp)
 
   return (
     <div className="border-b border-surface-200 bg-surface-50 px-5 py-3">
@@ -50,7 +51,12 @@ export function IdentityCard({ data }: IdentityCardProps) {
               </button>
             </>
           )}
-          <span className="text-sm text-surface-500">{formatTimestamp(data.timestamp)}</span>
+          {timestamp && (
+            <div className="text-right text-sm leading-tight text-surface-500">
+              <div>{timestamp.datePart}</div>
+              <div className="text-xs text-surface-400">{timestamp.timePart}</div>
+            </div>
+          )}
         </div>
       </div>
     </div>

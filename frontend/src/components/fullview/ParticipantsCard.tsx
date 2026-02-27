@@ -1,3 +1,4 @@
+import { UserX } from 'lucide-react'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import type { CommunicationFullParticipant, CommunicationProviderAccount } from '../../types/api.ts'
 
@@ -44,7 +45,7 @@ export function ParticipantsCard({ participants, providerAccount, senderName, se
   const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
 
   return (
-    <div className="rounded-lg border border-surface-200 bg-white">
+    <div id="participants-card" className="rounded-lg border border-surface-200 bg-white">
       <div className="border-b border-surface-200 px-4 py-2.5 text-xs font-semibold uppercase text-surface-500">
         Participants
       </div>
@@ -65,8 +66,9 @@ export function ParticipantsCard({ participants, providerAccount, senderName, se
                     {p.contact_name || p.name || p.address}
                   </button>
                 ) : (
-                  <span className="truncate text-sm text-surface-700">
-                    {p.name || p.address}
+                  <span className="flex items-center gap-1.5 truncate text-sm text-surface-700">
+                    <span className="truncate">{p.name || p.address}</span>
+                    <UserX size={12} className="shrink-0 text-surface-400" title="Unresolved contact" />
                   </span>
                 )}
                 {/* Address line — "via" for account owner, plain address for others */}

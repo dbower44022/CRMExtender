@@ -16,8 +16,8 @@ export function ConversationSummaryCard({ data }: ConversationSummaryCardProps) 
   if (!data.ai_summary && !data.ai_action_items && !data.ai_topics) return null
 
   return (
-    <div className="rounded-lg border border-surface-200 bg-white">
-      <div className="flex items-center justify-between border-b border-surface-200 px-4 py-2.5">
+    <div className="rounded-lg border border-blue-200 bg-blue-50">
+      <div className="flex items-center justify-between border-b border-blue-200 px-4 py-2.5">
         <div className="flex items-center gap-2">
           <Bot size={14} className="text-surface-400" />
           <span className="text-xs font-semibold uppercase text-surface-500">AI Summary</span>

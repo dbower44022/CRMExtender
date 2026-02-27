@@ -161,3 +161,19 @@ body {
 }
 .email-body-quoted img { max-width: 100%; height: auto; }
 .email-body-quoted a { color: var(--color-surface-400); }
+
+/* Progressive nested quote styling — each level indented with vertical bar */
+.email-body-quoted blockquote {
+  margin: 0.5em 0;
+  padding-left: 1em;
+  border-left: 3px solid var(--color-surface-300);
+  opacity: 0.85;
+}
+.email-body-quoted blockquote blockquote {
+  border-left-color: var(--color-surface-200);
+  opacity: 0.75;
+}
+.email-body-quoted blockquote blockquote blockquote {
+  border-left-color: var(--color-surface-200);
+  opacity: 0.65;
+}

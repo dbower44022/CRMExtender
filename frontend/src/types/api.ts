@@ -487,6 +487,10 @@ export interface ConversationCommunication {
   ai_summary: string | null
   is_primary: boolean
   assignment_source: string | null
+  sender_contact_id: string | null
+  recipient_name: string | null
+  recipient_count: number
+  attachment_count: number
 }
 
 export interface ConversationEvent {

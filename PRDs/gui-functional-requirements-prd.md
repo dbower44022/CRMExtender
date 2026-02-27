@@ -2,8 +2,8 @@
 
 ## CRMExtender — Application Shell, Navigation, Layout Patterns & Interaction Paradigms
 
-**Version:** 3.0
-**Date:** 2026-02-22
+**Version:** 3.1
+**Date:** 2026-02-27
 **Status:** Draft
 **Parent Document:** [CRMExtender PRD v1.1](PRD.md)
 
@@ -15,6 +15,9 @@
 > 
 > **V3.0 (2026-02-22):**
 > Rewrote Section 7.3 (Row Focus, Row Selection & Detail Panel Sync) to establish the two-layer Focus vs. Selection interaction model as shell-level contracts. Focus (browsing) and Selection (marking for bulk operations) are now explicitly separated, with the focused record as the universal anchor for all range-selection operations. Section 7.3 defines the abstract concepts, shell-level contracts (Detail Panel follows focus, Content Tool Bar follows selection count), four visual record states, and key principles that apply to all view types. Grid-specific interaction mechanics (clicks, modifier keys, arrow keys) are delegated to the Views & Grid PRD Section 13.3. Rewrote Section 11.4 (Content Tool Bar Active Selection State) as a graduated three-state transition: State 1 (no selection, default), State 2 (1 checkbox, selection info on left, entity actions retained on right), State 3 (2+ checkboxes, Bulk Action Mode with bulk action buttons on right). Added Section 11.5 (Content Tool Bar Context Menu) providing right-click access to view configuration editors (Edit View, Edit Columns, Edit Filters, Edit Sorting, Edit Grouping, Edit Grid Display). Added Section 11.6 (Grid Display Settings) defining the five grid appearance settings (Row Density, Font Size, Alternating Row Colors, Gridlines, Row Hover Highlight) and the three-tier cascade (system defaults → user preferences → per-view overrides). Added Section 11.7 (Bulk Operation Progress Modal) defining the four-phase lifecycle for bulk operations: Confirmation, Live Processing with per-record status, Failure Disposition with Skip/Force/Cancel Remaining and "apply to all similar failures" support, and Completion Summary. Aligned with Views & Grid PRD V7.
+> 
+> **V3.1 (2026-02-27):**
+> Replaced static date format example in Section 2.3 with Contextual Date Formatting specification — dates now display using recency-based formatting (Today, Yesterday, abbreviated day name for 2–6 days, month/day for current year, month/day/year for previous years) with date-only field support and user preference compliance. Updated Section 8.2 Detail Panel display to cross-reference the new specification.
 > 
 > This document defines the GUI functional requirements for the CRMExtender production application. It establishes the application shell, navigation architecture, layout patterns, Window Types, Display Modes, Card Types, editing paradigms, and interaction patterns that all entity-specific interfaces plug into. This PRD is the "container" specification — it defines how the application works as a cohesive product, while entity-specific PRDs (Contacts, Companies, Tasks, etc.) define what appears within these containers.
 > 
@@ -126,7 +129,15 @@ The default state of every record display is **view mode**, optimized for readin
 - Compound fields (address, name) are rendered as a single formatted block, not as individual labeled inputs
 - Boolean fields render as descriptive text or icons, not as checkboxes
 - Relation fields render as clickable entity names, not as dropdown selectors
-- Date fields render as formatted dates ("Feb 19, 2026"), not as date pickers
+- Date fields render using **Contextual Date Formatting** — the display adapts based on recency to maximize human readability:
+  - **Today:** "Today - March 10 - 2:30 PM"
+  - **Yesterday:** "Yesterday - March 09 - 4:00 PM"
+  - **2–6 days ago:** "Tue March 08 - 5:30 PM" (abbreviated day name)
+  - **7+ days ago, current year:** "March 01 - 7:30 AM"
+  - **Previous year(s):** "March 01 2024 - 7:30 AM"
+  - **Date-only fields** (no time component, e.g., birthdays, contract start dates) follow the same recency logic without the time portion: "Today - March 10" / "Yesterday - March 09" / "Tue March 08" / "March 01" / "March 01 2024"
+  - Time format (12-hour vs 24-hour) and other display conventions respect the user's date format preferences (Section 19.2)
+  - Date fields never render as date pickers in read mode
 
 ### 2.4 Content-Proportional Space Allocation
 
@@ -480,7 +491,7 @@ Content rendered within the Detail Panel (via the Docked Window) follows all fiv
 - **No empty fields:** If a field has no value, it does not render. No "Set Name..." placeholders, no "No phone numbers" labels, no empty field rows.
 - **No data duplication:** Each value appears exactly once. If the contact's email is in the Identity Card, it does not repeat in an Attribute Card or sidebar.
 - **Content-proportional space:** Cards are sized to their content. A Card with 50 items gets significantly more vertical space than a Card with 1 item. Cards with 0 items are fully suppressed.
-- **View-optimized display:** Field values render as formatted text, not as input controls. Addresses render as compact multi-line text. Dates render as human-readable strings. Relations render as clickable entity names.
+- **View-optimized display:** Field values render as formatted text, not as input controls. Addresses render as compact multi-line text. Dates render using Contextual Date Formatting (Section 2.3). Relations render as clickable entity names.
 - **Density by default:** Minimal padding, compact typography, no decorative whitespace. Every pixel is used for data.
 
 ### 8.3 Panel States

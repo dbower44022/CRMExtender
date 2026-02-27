@@ -1,3 +1,5 @@
+name: crmextender
+
 services:
   app:
     build: .

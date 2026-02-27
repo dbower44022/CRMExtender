@@ -66,7 +66,7 @@ You will need:
 | What                      | Why                              | How to check             |
 | ------------------------- | -------------------------------- | ------------------------ |
 | An Ubuntu/Debian server   | The machine you're deploying to  | `lsb_release -a`         |
-| SSH access to that server | To run commands remotely         | `ssh user@server-ip`     |
+| SSH access to that server | To run commands remotely         | `ssh <user>@<server-ip>` |
 | Docker Engine 24+         | Runs the application containers  | `docker --version`       |
 | Docker Compose v2         | Orchestrates multiple containers | `docker compose version` |
 | Git                       | To download the code             | `git --version`          |
@@ -87,10 +87,16 @@ You will also need:
 Open a terminal and SSH into your server:
 
 ```bash
-ssh your-username@server-ip-address
+ssh <your-username>@<server-ip-address>
 ```
 
-Replace `your-username` with your login name and `server-ip-address` with the server's IP (e.g., `192.168.1.50`).
+For example, if your username is `doug` and the server's IP is `192.168.254.66`:
+
+```bash
+ssh doug@192.168.254.66
+```
+
+The format is always `ssh username@ip-address` — the `@` separates the two parts, with no spaces.
 
 ### 3.2 Install Docker
 
@@ -133,7 +139,7 @@ sudo usermod -aG docker $USER
 
 ```bash
 exit
-ssh your-username@server-ip-address
+ssh <your-username>@<server-ip-address>   # e.g., ssh doug@192.168.254.66
 ```
 
 Verify it works:
@@ -222,7 +228,7 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 Copy the output and paste it as the value:
 
 ```
-SESSION_SECRET_KEY=paste-the-random-string-here
+SESSION_SECRET_KEY=<paste-the-random-string-here>
 ```
 
 > **Why this matters:** If you leave the default value (`change-me-in-production`), anyone who knows that string could forge login sessions.
@@ -250,7 +256,7 @@ CRM_UPLOAD_DIR=/app/data/uploads
 If you have an Anthropic API key and want AI features (conversation summarization, triage):
 
 ```
-ANTHROPIC_API_KEY=sk-ant-your-key-here
+ANTHROPIC_API_KEY=<your-anthropic-api-key>
 ```
 
 The app works without this — you just won't get AI summaries.
@@ -278,8 +284,8 @@ CRM_AUTH_ENABLED=true
 ### 5.5 Example complete .env file
 
 ```
-ANTHROPIC_API_KEY=sk-ant-abc123...
-SESSION_SECRET_KEY=a1b2c3d4e5f6...long-random-hex-string...
+ANTHROPIC_API_KEY=<your-anthropic-api-key>
+SESSION_SECRET_KEY=<your-random-hex-string>
 CRM_AUTH_ENABLED=true
 CRM_TIMEZONE=America/New_York
 POC_DB_PATH=/app/data/crm_extender.db
@@ -293,6 +299,8 @@ Save and close the file.
 ## 6. Generate TLS Certificates
 
 HTTPS requires a TLS certificate. For an internal test server, a self-signed certificate is fine. Browsers will show a warning the first time, but the connection will still be encrypted.
+
+> **Important:** You must generate your own certificates on each server. Never copy certificates from another machine or share them. The certificate files are excluded from git by `.gitignore`.
 
 ### 6.1 Run the certificate generator
 
@@ -392,7 +400,7 @@ The application requires you to log in. You need to create an admin account befo
 On a fresh database with no users, the application automatically enables the "Create Account" link on the login page. Open your browser and go to:
 
 ```
-https://server-ip-address/login
+https://<server-ip-address>/login
 ```
 
 You'll see a login form with a **Create Account** link. Click it.
@@ -424,7 +432,7 @@ After this, new user accounts can only be created by an admin through the Settin
 If you prefer, you can also create a user from the command line:
 
 ```bash
-docker compose exec app python -m poc bootstrap-user --password your-password
+docker compose exec app python -m poc bootstrap-user --password <your-password>
 ```
 
 This creates an admin user from an existing Gmail provider account. It only works if a provider account has already been connected (see [Section 9](#9-connect-a-gmail-account-optional)).
@@ -454,7 +462,7 @@ Ask your team lead for this file if you don't have it.
 From your local machine:
 
 ```bash
-scp /path/to/client_secret.json your-username@server-ip:~/CRMExtender/credentials/
+scp <path/to/client_secret.json> <your-username>@<server-ip-address>:~/CRMExtender/credentials/
 ```
 
 Or if you have the file locally, you can paste its contents:
@@ -468,7 +476,7 @@ nano ~/CRMExtender/credentials/client_secret.json
 
 #### Option A: Using the Web UI (recommended)
 
-1. Log in to the app at `https://server-ip/app/`
+1. Log in to the app at `https://<server-ip-address>/app/`
 2. Navigate to **Settings** (gear icon) > **Accounts**
 3. Click **Add Account**
 4. Complete the Google OAuth consent flow in your browser
@@ -482,7 +490,7 @@ This approach opens a browser window for OAuth consent. It works if you have a g
 
 ```bash
 # In a separate terminal, set up the tunnel
-ssh -L 8080:localhost:8080 your-username@server-ip
+ssh -L 8080:localhost:8080 <your-username>@<server-ip-address>
 
 # On the server
 docker compose exec app python -m poc add-account
@@ -519,7 +527,7 @@ This is correct — it means the app is running and reachable through nginx.
 On your local machine, open:
 
 ```
-https://server-ip-address/
+https://<server-ip-address>/
 ```
 
 > **Browser certificate warning:** You'll see a warning like "Your connection is not private" or "This site's security certificate is not trusted." This is expected with self-signed certificates. Click "Advanced" → "Proceed" (or equivalent) to continue.
@@ -531,7 +539,7 @@ You should see the login page. Log in with the credentials you created in [Secti
 After logging in, navigate to:
 
 ```
-https://server-ip-address/app/
+https://<server-ip-address>/app/
 ```
 
 This is the modern React interface with the grid-based layout.
@@ -631,7 +639,7 @@ Then copy the backup off the server:
 
 ```bash
 # From your local machine
-scp your-username@server-ip:~/CRMExtender/data/crm_extender-backup.db ./
+scp <your-username>@<server-ip-address>:~/CRMExtender/data/crm_extender-backup.db ./
 ```
 
 ### Opening a shell inside the container
@@ -694,7 +702,7 @@ docker compose restart nginx
 This is normal when `CRM_AUTH_ENABLED=true`. You need to:
 
 1. Create a user account (see [Section 8](#8-create-the-first-user-account))
-2. Log in at `https://server-ip/login`
+2. Log in at `https://<server-ip-address>/login`
 
 ### Cannot reach the server from another machine
 
@@ -737,13 +745,13 @@ If both containers show `Up`, the issue is likely a firewall or that you're usin
 
 ### App starts but shows "may need migration" warning
 
-If upgrading from an older database, you may need to run migrations:
+If upgrading from an older database, run the migrate command to automatically detect and apply all pending migrations:
 
 ```bash
 docker compose exec app python -m poc migrate
 ```
 
-Check the app logs for the specific migration version needed.
+This reads the current schema version, then runs each needed migration in order. To preview changes without modifying the database, add `--dry-run`.
 
 ### Docker build fails with "npm ci" errors
 
@@ -772,10 +780,10 @@ docker system prune -a
 Reset it using the built-in CLI command:
 
 ```bash
-docker compose exec app python -m poc set-password admin@example.com --password new-password-here
+docker compose exec app python -m poc set-password <email-address> --password <new-password>
 ```
 
-Replace `admin@example.com` with the actual email and `new-password-here` with the new password. If you omit `--password`, it will prompt you interactively (with confirmation).
+Replace `<email-address>` with the account's email and `<new-password>` with the new password. If you omit `--password`, it will prompt you interactively (with confirmation).
 
 ---
 

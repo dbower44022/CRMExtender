@@ -891,6 +891,77 @@ def cmd_migrate_to_v8(args: argparse.Namespace) -> None:
     migrate(db_path, dry_run=args.dry_run)
 
 
+def cmd_migrate(args: argparse.Namespace) -> None:
+    """Run all pending database migrations to bring the schema up to date."""
+    import importlib
+    import sqlite3 as _sqlite3
+
+    LATEST_VERSION = 19
+    MIGRATIONS = list(range(2, LATEST_VERSION + 1))  # [2, 3, ..., 19]
+
+    db_path = args.db
+    if not db_path:
+        db_path = config.DB_PATH
+
+    if not db_path.exists():
+        console.print(f"[red]Database not found:[/red] {db_path}")
+        raise SystemExit(1)
+
+    conn = _sqlite3.connect(str(db_path))
+    try:
+        current = conn.execute("PRAGMA user_version").fetchone()[0]
+    finally:
+        conn.close()
+
+    # Fresh databases (created by init_db) have user_version=0 but already
+    # have the latest schema.  Detect this by checking for a table that only
+    # exists in v19+.
+    if current == 0:
+        conn = _sqlite3.connect(str(db_path))
+        try:
+            tables = {
+                r[0]
+                for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
+        finally:
+            conn.close()
+        if "outbound_email_queue" in tables:
+            console.print(
+                f"[green]Database is already at the latest schema (v{LATEST_VERSION}).[/green]"
+            )
+            return
+        # Genuinely old DB (pre-v11, user_version never set).
+        # All migrations are idempotent, so running from v2 is safe.
+        console.print(
+            "[yellow]Database has no version marker — running all migrations from v2.[/yellow]"
+        )
+
+    if current >= LATEST_VERSION:
+        console.print(
+            f"[green]Database is already at v{current} (latest is v{LATEST_VERSION}). "
+            f"Nothing to do.[/green]"
+        )
+        return
+
+    applied = []
+    for version in MIGRATIONS:
+        if version <= current:
+            continue
+        module_name = f".migrate_to_v{version}"
+        console.print(f"  Running migration to v{version}…")
+        mod = importlib.import_module(module_name, package="poc")
+        mod.migrate(db_path, dry_run=args.dry_run)
+        applied.append(version)
+
+    prefix = "[bold cyan](dry run)[/bold cyan] " if args.dry_run else ""
+    console.print(
+        f"\n{prefix}[green]Applied {len(applied)} migration(s): "
+        f"v{applied[0]}–v{applied[-1]}.[/green]"
+    )
+
+
 def cmd_resolve_domains(args: argparse.Namespace) -> None:
     """Resolve unlinked contacts to companies by email domain."""
     from .domain_resolver import resolve_unlinked_contacts
@@ -1523,6 +1594,12 @@ def build_parser() -> argparse.ArgumentParser:
     ec.add_argument("--provider", default="website_scraper",
                     help="Enrichment provider (default: website_scraper)")
 
+    # migrate (unified)
+    mg = sub.add_parser("migrate", help="Run all pending migrations to bring the database up to date")
+    mg.add_argument("--db", type=Path, help="Path to the SQLite database file")
+    mg.add_argument("--dry-run", action="store_true",
+                    help="Apply migrations to backup copies instead of the real database")
+
     # migrate-to-v4
     m4 = sub.add_parser("migrate-to-v4", help="Migrate database from v3 to v4")
     m4.add_argument("--db", type=Path, help="Path to the SQLite database file")
@@ -1601,6 +1678,7 @@ def main() -> None:
         "merge-companies": cmd_merge_companies,
         "score-companies": cmd_score_companies,
         "score-contacts": cmd_score_contacts,
+        "migrate": cmd_migrate,
         "migrate-to-v4": cmd_migrate_to_v4,
         "migrate-to-v5": cmd_migrate_to_v5,
         "migrate-to-v6": cmd_migrate_to_v6,

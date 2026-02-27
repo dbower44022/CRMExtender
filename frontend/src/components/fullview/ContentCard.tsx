@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, ChevronDown, Paperclip, Download } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, isToday, isYesterday, isThisYear, differenceInCalendarDays } from 'date-fns'
 import { sanitizeHtml } from '../../lib/sanitizeHtml.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import type { CommunicationFullData, CommunicationFullParticipant } from '../../types/api.ts'
@@ -26,11 +26,18 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/** Contextual date formatting split into date + time parts for two-line rendering. */
 function formatTimestampTwoLine(isoString: string | null | undefined): { datePart: string; timePart: string } | null {
   if (!isoString) return null
   const date = new Date(isoString)
   if (isNaN(date.getTime())) return null
-  return { datePart: format(date, 'MMM d, yyyy'), timePart: format(date, 'h:mm a') }
+  const timePart = format(date, 'h:mm a')
+  if (isToday(date)) return { datePart: `Today - ${format(date, 'MMM dd')}`, timePart }
+  if (isYesterday(date)) return { datePart: `Yesterday - ${format(date, 'MMM dd')}`, timePart }
+  const daysAgo = differenceInCalendarDays(new Date(), date)
+  if (daysAgo >= 2 && daysAgo <= 6) return { datePart: format(date, 'EEE MMM dd'), timePart }
+  if (isThisYear(date)) return { datePart: format(date, 'MMM dd'), timePart }
+  return { datePart: format(date, 'MMM dd yyyy'), timePart }
 }
 
 // ---------- Avatar ----------

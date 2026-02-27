@@ -4,7 +4,9 @@ import { useLayoutStore } from '../../stores/layout.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { RecordDetail } from '../detail/RecordDetail.tsx'
 import { CommunicationPreviewCard } from '../detail/CommunicationPreviewCard.tsx'
+import { ConversationPreviewCard } from '../detail/ConversationPreviewCard.tsx'
 import { CommunicationFullContent } from '../fullview/CommunicationFullView.tsx'
+import { ConversationFullView } from '../fullview/ConversationFullView.tsx'
 
 export function DetailPanel() {
   const hideDetailPanel = useLayoutStore((s) => s.hideDetailPanel)
@@ -19,6 +21,7 @@ export function DetailPanel() {
   const canGoNext = selectedRowIndex >= 0 && selectedRowIndex < loadedRowCount - 1
 
   const isExpandedComm = detailPanelExpanded && activeEntityType === 'communication'
+  const isExpandedConv = detailPanelExpanded && activeEntityType === 'conversation'
 
   const handlePrev = useCallback(() => {
     if (!canGoPrev) return
@@ -64,7 +67,7 @@ export function DetailPanel() {
     <div className="flex h-full flex-col bg-surface-0">
       <div className="flex items-center justify-between border-b border-surface-200 px-4 py-2">
         <span className="text-xs font-medium text-surface-500 uppercase">
-          {isExpandedComm ? 'Communication' : 'Preview'}
+          {isExpandedComm ? 'Communication' : isExpandedConv ? 'Conversation' : 'Preview'}
         </span>
         <div className="flex items-center gap-1">
           <button
@@ -83,8 +86,8 @@ export function DetailPanel() {
           >
             <ChevronDown size={14} />
           </button>
-          {activeEntityType === 'communication' && selectedRowId && (
-            isExpandedComm ? (
+          {(activeEntityType === 'communication' || activeEntityType === 'conversation') && selectedRowId && (
+            (isExpandedComm || isExpandedConv) ? (
               <button
                 onClick={collapseDetailPanel}
                 className="flex h-6 w-6 items-center justify-center rounded text-surface-400 transition-colors hover:bg-surface-100 hover:text-surface-600"
@@ -117,9 +120,18 @@ export function DetailPanel() {
             commId={selectedRowId}
             onNavigateAway={collapseDetailPanel}
           />
+        ) : isExpandedConv ? (
+          <ConversationFullView
+            convId={selectedRowId}
+            onNavigateAway={collapseDetailPanel}
+          />
         ) : activeEntityType === 'communication' ? (
           <div className="h-full overflow-y-auto">
             <CommunicationPreviewCard entityId={selectedRowId} />
+          </div>
+        ) : activeEntityType === 'conversation' ? (
+          <div className="h-full overflow-y-auto">
+            <ConversationPreviewCard entityId={selectedRowId} />
           </div>
         ) : (
           <div className="h-full overflow-y-auto">

@@ -1858,6 +1858,546 @@ class TestCommunicationFullView:
 
 
 # ===========================================================================
+# Conversation Preview / Full View Tests
+# ===========================================================================
+
+def _seed_conversation(
+    conv_id="conv-preview-1",
+    title="Test Conversation",
+    status="active",
+    ai_summary=None,
+    ai_status=None,
+    ai_action_items=None,
+    ai_topics=None,
+    ai_summarized_at=None,
+    triage_result=None,
+    dismissed=0,
+    dismissed_reason=None,
+    dismissed_at=None,
+    topic_id=None,
+    account_id=None,
+    communication_count=0,
+    participant_count=0,
+    message_count=0,
+    first_activity_at=None,
+    last_activity_at=None,
+    first_message_at=None,
+    last_message_at=None,
+    created_by=None,
+    updated_by=None,
+):
+    """Seed a conversation for preview/full tests."""
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO conversations "
+            "(id, customer_id, account_id, topic_id, title, status, "
+            "communication_count, participant_count, message_count, "
+            "first_activity_at, last_activity_at, first_message_at, last_message_at, "
+            "ai_summary, ai_status, ai_action_items, ai_topics, ai_summarized_at, "
+            "triage_result, dismissed, dismissed_reason, dismissed_at, "
+            "created_by, updated_by, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (conv_id, CUST_ID, account_id, topic_id, title, status,
+             communication_count, participant_count, message_count,
+             first_activity_at, last_activity_at, first_message_at, last_message_at,
+             ai_summary, ai_status, ai_action_items, ai_topics, ai_summarized_at,
+             triage_result, dismissed, dismissed_reason, dismissed_at,
+             created_by, updated_by, _NOW, _NOW),
+        )
+
+
+def _seed_conv_participant(conv_id, address, name=None, contact_id=None,
+                           communication_count=0, first_seen_at=None, last_seen_at=None):
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO conversation_participants "
+            "(conversation_id, email_address, address, name, contact_id, "
+            "communication_count, first_seen_at, last_seen_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (conv_id, address, address, name, contact_id,
+             communication_count, first_seen_at, last_seen_at),
+        )
+
+
+def _seed_conv_communication(conv_id, comm_id, channel="email", subject=None,
+                              sender_name=None, sender_address=None, direction="inbound",
+                              snippet=None, ai_summary=None, is_primary=1,
+                              assignment_source="sync", timestamp=None):
+    ts = timestamp or _NOW
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO provider_accounts "
+            "(id, customer_id, provider, email_address, is_active, created_at, updated_at) "
+            "VALUES (?, ?, 'gmail', 'test@test.com', 1, ?, ?)",
+            ("pa-conv", CUST_ID, _NOW, _NOW),
+        )
+        conn.execute(
+            "INSERT INTO communications "
+            "(id, account_id, channel, timestamp, direction, source, "
+            "sender_name, sender_address, subject, snippet, ai_summary, "
+            "is_read, is_archived, created_at, updated_at) "
+            "VALUES (?, 'pa-conv', ?, ?, ?, 'test', ?, ?, ?, ?, ?, 0, 0, ?, ?)",
+            (comm_id, channel, ts, direction, sender_name, sender_address,
+             subject, snippet, ai_summary, _NOW, _NOW),
+        )
+        conn.execute(
+            "INSERT INTO conversation_communications "
+            "(conversation_id, communication_id, is_primary, assignment_source, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (conv_id, comm_id, is_primary, assignment_source, _NOW),
+        )
+
+
+def _seed_conv_tag(conv_id, tag_name, source="ai", confidence=1.0):
+    tag_id = f"tag-{tag_name.lower().replace(' ', '-')}"
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO tags (id, customer_id, name, source, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (tag_id, CUST_ID, tag_name, source, _NOW),
+        )
+        conn.execute(
+            "INSERT INTO conversation_tags (conversation_id, tag_id, source, confidence, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (conv_id, tag_id, source, confidence, _NOW),
+        )
+    return tag_id
+
+
+class TestConversationPreview:
+    def test_preview_not_found(self, client):
+        resp = client.get("/api/v1/conversations/nonexistent/preview")
+        assert resp.status_code == 404
+
+    def test_preview_basic_fields(self, client):
+        _seed_conversation(
+            title="Lease Negotiation",
+            status="active",
+            communication_count=5,
+            participant_count=3,
+            first_activity_at="2025-01-01T10:00:00Z",
+            last_activity_at="2025-01-15T14:00:00Z",
+        )
+        resp = client.get("/api/v1/conversations/conv-preview-1/preview")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == "conv-preview-1"
+        assert data["title"] == "Lease Negotiation"
+        assert data["status"] == "active"
+        assert data["communication_count"] == 5
+        assert data["participant_count"] == 3
+        assert data["first_activity_at"] == "2025-01-01T10:00:00Z"
+        assert data["last_activity_at"] == "2025-01-15T14:00:00Z"
+        assert isinstance(data["participants"], list)
+        assert isinstance(data["recent_communications"], list)
+        assert isinstance(data["tags"], list)
+
+    def test_preview_customer_isolation(self, client):
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO customers (id, name, slug, is_active, created_at, updated_at) "
+                "VALUES ('cust-other', 'Other Org', 'other', 1, ?, ?)",
+                (_NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO conversations (id, customer_id, title, status, created_at, updated_at) "
+                "VALUES ('conv-other', 'cust-other', 'Other Conv', 'active', ?, ?)",
+                (_NOW, _NOW),
+            )
+        resp = client.get("/api/v1/conversations/conv-other/preview")
+        assert resp.status_code == 404
+
+    def test_preview_participants_with_contact(self, client):
+        _seed_conversation()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO contacts (id, customer_id, name, source, status, created_at, updated_at) "
+                "VALUES ('ct-prev', ?, 'Alice Contact', 'test', 'active', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+        _seed_conv_participant("conv-preview-1", "alice@test.com", "Alice", "ct-prev",
+                               communication_count=10, last_seen_at="2025-01-15T14:00:00Z")
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert len(data["participants"]) == 1
+        p = data["participants"][0]
+        assert p["address"] == "alice@test.com"
+        assert p["name"] == "Alice"
+        assert p["contact_id"] == "ct-prev"
+        assert p["contact_name"] == "Alice Contact"
+        assert p["communication_count"] == 10
+        assert p["last_seen_at"] == "2025-01-15T14:00:00Z"
+
+    def test_preview_participants_without_contact(self, client):
+        _seed_conversation()
+        _seed_conv_participant("conv-preview-1", "unknown@ext.com", "Unknown", None,
+                               communication_count=2)
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        p = data["participants"][0]
+        assert p["contact_id"] is None
+        assert p["contact_name"] is None
+
+    def test_preview_recent_communications_last_5(self, client):
+        _seed_conversation()
+        for i in range(7):
+            _seed_conv_communication(
+                "conv-preview-1", f"comm-prev-{i}",
+                subject=f"Subject {i}",
+                sender_name=f"Sender {i}",
+                sender_address=f"sender{i}@test.com",
+                snippet=f"Snippet {i}",
+                timestamp=f"2025-01-{10+i:02d}T10:00:00Z",
+            )
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert len(data["recent_communications"]) == 5
+        # DESC order — most recent first
+        assert data["recent_communications"][0]["subject"] == "Subject 6"
+        assert data["recent_communications"][4]["subject"] == "Subject 2"
+
+    def test_preview_recent_communications_fields(self, client):
+        _seed_conversation()
+        _seed_conv_communication(
+            "conv-preview-1", "comm-prev-f",
+            channel="email", subject="Important",
+            sender_name="Bob", sender_address="bob@test.com",
+            direction="outbound", snippet="Hey there",
+        )
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        c = data["recent_communications"][0]
+        assert c["id"] == "comm-prev-f"
+        assert c["channel"] == "email"
+        assert c["subject"] == "Important"
+        assert c["sender_name"] == "Bob"
+        assert c["sender_address"] == "bob@test.com"
+        assert c["direction"] == "outbound"
+        assert c["snippet"] == "Hey there"
+
+    def test_preview_tags(self, client):
+        _seed_conversation()
+        _seed_conv_tag("conv-preview-1", "Important", source="manual")
+        _seed_conv_tag("conv-preview-1", "Follow-up", source="ai")
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert len(data["tags"]) == 2
+        tag_names = {t["name"] for t in data["tags"]}
+        assert "Important" in tag_names
+        assert "Follow-up" in tag_names
+
+    def test_preview_ai_summary(self, client):
+        _seed_conversation(ai_summary="Discussion about lease terms", ai_status="open")
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["ai_summary"] == "Discussion about lease terms"
+        assert data["ai_status"] == "open"
+
+    def test_preview_ai_fields_null(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["ai_summary"] is None
+        assert data["ai_status"] is None
+
+    def test_preview_triage_result(self, client):
+        _seed_conversation(triage_result="action_required")
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["triage_result"] == "action_required"
+
+    def test_preview_dismissed(self, client):
+        _seed_conversation(dismissed=1)
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["dismissed"] is True
+
+    def test_preview_empty_lists(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["participants"] == []
+        assert data["recent_communications"] == []
+        assert data["tags"] == []
+
+
+class TestConversationFullView:
+    def test_full_not_found(self, client):
+        resp = client.get("/api/v1/conversations/nonexistent/full")
+        assert resp.status_code == 404
+
+    def test_full_basic_fields(self, client):
+        _seed_conversation(
+            title="Full Conversation",
+            status="active",
+            communication_count=10,
+            participant_count=4,
+            message_count=8,
+            first_activity_at="2025-01-01T10:00:00Z",
+            last_activity_at="2025-01-20T10:00:00Z",
+            first_message_at="2025-01-02T10:00:00Z",
+            last_message_at="2025-01-19T10:00:00Z",
+        )
+        resp = client.get("/api/v1/conversations/conv-preview-1/full")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == "conv-preview-1"
+        assert data["title"] == "Full Conversation"
+        assert data["status"] == "active"
+        assert data["communication_count"] == 10
+        assert data["participant_count"] == 4
+        assert data["message_count"] == 8
+        assert data["first_activity_at"] == "2025-01-01T10:00:00Z"
+        assert data["last_activity_at"] == "2025-01-20T10:00:00Z"
+        assert data["first_message_at"] == "2025-01-02T10:00:00Z"
+        assert data["last_message_at"] == "2025-01-19T10:00:00Z"
+        assert data["created_at"] is not None
+        assert data["updated_at"] is not None
+
+    def test_full_customer_isolation(self, client):
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO customers (id, name, slug, is_active, created_at, updated_at) "
+                "VALUES ('cust-other-f', 'Other Org', 'otherf', 1, ?, ?)",
+                (_NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO conversations (id, customer_id, title, status, created_at, updated_at) "
+                "VALUES ('conv-other-f', 'cust-other-f', 'Other Conv', 'active', ?, ?)",
+                (_NOW, _NOW),
+            )
+        resp = client.get("/api/v1/conversations/conv-other-f/full")
+        assert resp.status_code == 404
+
+    def test_full_enriched_participants(self, client):
+        _seed_conversation()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO contacts (id, customer_id, name, source, status, created_at, updated_at) "
+                "VALUES ('ct-full-enrich', ?, 'Bob Full', 'test', 'active', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO companies (id, customer_id, name, domain, created_at, updated_at) "
+                "VALUES ('co-full-enrich', ?, 'Acme Full Corp', 'acme-full.com', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO contact_companies "
+                "(id, contact_id, company_id, is_primary, is_current, title, created_at, updated_at) "
+                "VALUES ('cc-full-enrich', 'ct-full-enrich', 'co-full-enrich', 1, 1, 'CTO', ?, ?)",
+                (_NOW, _NOW),
+            )
+        _seed_conv_participant("conv-preview-1", "bob@acme-full.com", "Bob", "ct-full-enrich",
+                               communication_count=5, first_seen_at="2025-01-01T00:00:00Z",
+                               last_seen_at="2025-01-15T00:00:00Z")
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        p = data["participants"][0]
+        assert p["contact_name"] == "Bob Full"
+        assert p["company_name"] == "Acme Full Corp"
+        assert p["title"] == "CTO"
+        assert p["first_seen_at"] == "2025-01-01T00:00:00Z"
+        assert p["last_seen_at"] == "2025-01-15T00:00:00Z"
+
+    def test_full_participants_unresolved(self, client):
+        _seed_conversation()
+        _seed_conv_participant("conv-preview-1", "unknown@ext.com", "Unknown", None)
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        p = data["participants"][0]
+        assert p["contact_name"] is None
+        assert p["company_name"] is None
+        assert p["title"] is None
+
+    def test_full_communications_chronological_asc(self, client):
+        _seed_conversation()
+        _seed_conv_communication("conv-preview-1", "comm-full-a", subject="First",
+                                  timestamp="2025-01-01T10:00:00Z")
+        _seed_conv_communication("conv-preview-1", "comm-full-b", subject="Second",
+                                  timestamp="2025-01-02T10:00:00Z")
+        _seed_conv_communication("conv-preview-1", "comm-full-c", subject="Third",
+                                  timestamp="2025-01-03T10:00:00Z")
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert len(data["communications"]) == 3
+        assert data["communications"][0]["subject"] == "First"
+        assert data["communications"][1]["subject"] == "Second"
+        assert data["communications"][2]["subject"] == "Third"
+
+    def test_full_communication_fields(self, client):
+        _seed_conversation()
+        _seed_conv_communication(
+            "conv-preview-1", "comm-full-fields",
+            channel="email", subject="Detailed",
+            sender_name="Alice", sender_address="alice@test.com",
+            direction="outbound", snippet="Preview text",
+            ai_summary="AI generated summary",
+            is_primary=0, assignment_source="manual",
+        )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        c = data["communications"][0]
+        assert c["id"] == "comm-full-fields"
+        assert c["channel"] == "email"
+        assert c["direction"] == "outbound"
+        assert c["subject"] == "Detailed"
+        assert c["sender_name"] == "Alice"
+        assert c["sender_address"] == "alice@test.com"
+        assert c["snippet"] == "Preview text"
+        assert c["ai_summary"] == "AI generated summary"
+        assert c["is_primary"] is False
+        assert c["assignment_source"] == "manual"
+
+    def test_full_tags_with_confidence(self, client):
+        _seed_conversation()
+        _seed_conv_tag("conv-preview-1", "Urgent", source="manual", confidence=1.0)
+        _seed_conv_tag("conv-preview-1", "Sales", source="ai", confidence=0.85)
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert len(data["tags"]) == 2
+        sales_tag = next(t for t in data["tags"] if t["name"] == "Sales")
+        assert sales_tag["source"] == "ai"
+        assert sales_tag["confidence"] == 0.85
+
+    def test_full_events(self, client):
+        _seed_conversation()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO events (id, title, event_type, start_datetime, status, source, created_at, updated_at) "
+                "VALUES ('evt-conv-1', 'Follow-up Call', 'meeting', '2025-01-10T14:00:00Z', 'confirmed', 'google', ?, ?)",
+                (_NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO event_conversations (event_id, conversation_id, created_at) "
+                "VALUES ('evt-conv-1', 'conv-preview-1', ?)",
+                (_NOW,),
+            )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert len(data["events"]) == 1
+        e = data["events"][0]
+        assert e["id"] == "evt-conv-1"
+        assert e["title"] == "Follow-up Call"
+        assert e["event_type"] == "meeting"
+        assert e["start_datetime"] == "2025-01-10T14:00:00Z"
+        assert e["status"] == "confirmed"
+
+    def test_full_events_empty(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["events"] == []
+
+    def test_full_notes(self, client):
+        _seed_conversation()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO notes (id, customer_id, title, created_by, updated_by, created_at, updated_at) "
+                "VALUES ('note-conv-1', ?, 'Meeting Notes', ?, ?, ?, ?)",
+                (CUST_ID, USER_ID, USER_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO note_revisions (id, note_id, revision_number, content_html, created_at) "
+                "VALUES ('rev-conv-1', 'note-conv-1', 1, '<p>Key discussion points</p>', ?)",
+                (_NOW,),
+            )
+            conn.execute(
+                "INSERT INTO note_entities (note_id, entity_type, entity_id, is_pinned, created_at) "
+                "VALUES ('note-conv-1', 'conversation', 'conv-preview-1', 1, ?)",
+                (_NOW,),
+            )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert len(data["notes"]) == 1
+        n = data["notes"][0]
+        assert n["id"] == "note-conv-1"
+        assert n["title"] == "Meeting Notes"
+        assert n["content_preview"] == "Key discussion points"
+        assert n["is_pinned"] is True
+
+    def test_full_notes_empty(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["notes"] == []
+
+    def test_full_topic_project(self, client):
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO projects (id, customer_id, name, status, created_at, updated_at) "
+                "VALUES ('proj-conv-1', ?, 'Sales Pipeline', 'active', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO topics (id, project_id, name, source, created_at, updated_at) "
+                "VALUES ('topic-conv-1', 'proj-conv-1', 'Lease Negotiations', 'user', ?, ?)",
+                (_NOW, _NOW),
+            )
+        _seed_conversation(topic_id="topic-conv-1")
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["topic"] is not None
+        assert data["topic"]["id"] == "topic-conv-1"
+        assert data["topic"]["name"] == "Lease Negotiations"
+        assert data["topic"]["project_id"] == "proj-conv-1"
+        assert data["topic"]["project_name"] == "Sales Pipeline"
+
+    def test_full_topic_none(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["topic"] is None
+
+    def test_full_provider_account(self, client):
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO provider_accounts "
+                "(id, customer_id, provider, email_address, is_active, created_at, updated_at) "
+                "VALUES ('pa-conv-full', ?, 'gmail', 'team@company.com', 1, ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+        _seed_conversation(account_id="pa-conv-full")
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        pa = data["provider_account"]
+        assert pa is not None
+        assert pa["id"] == "pa-conv-full"
+        assert pa["provider"] == "gmail"
+        assert pa["email_address"] == "team@company.com"
+
+    def test_full_provider_account_none(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["provider_account"] is None
+
+    def test_full_ai_fields(self, client):
+        _seed_conversation(
+            ai_summary="Discussion summary",
+            ai_status="open",
+            ai_action_items="- Follow up\n- Send proposal",
+            ai_topics="sales,negotiation",
+            ai_summarized_at="2025-01-15T10:00:00Z",
+        )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["ai_summary"] == "Discussion summary"
+        assert data["ai_status"] == "open"
+        assert data["ai_action_items"] == "- Follow up\n- Send proposal"
+        assert data["ai_topics"] == "sales,negotiation"
+        assert data["ai_summarized_at"] == "2025-01-15T10:00:00Z"
+
+    def test_full_ai_fields_null(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["ai_summary"] is None
+        assert data["ai_status"] is None
+        assert data["ai_action_items"] is None
+        assert data["ai_topics"] is None
+        assert data["ai_summarized_at"] is None
+
+    def test_full_dismissed_fields(self, client):
+        _seed_conversation(
+            dismissed=1,
+            dismissed_reason="Not relevant",
+            dismissed_at="2025-01-12T09:00:00Z",
+        )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["dismissed"] is True
+        assert data["dismissed_reason"] == "Not relevant"
+        assert data["dismissed_at"] == "2025-01-12T09:00:00Z"
+
+    def test_full_created_updated_by(self, client):
+        _seed_conversation(created_by=USER_ID, updated_by=USER_ID)
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["created_by_name"] == "Admin"
+        assert data["updated_by_name"] == "Admin"
+
+    def test_full_created_updated_by_null(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["created_by_name"] is None
+        assert data["updated_by_name"] is None
+
+
+# ===========================================================================
 # Outbound Email API Tests
 # ===========================================================================
 

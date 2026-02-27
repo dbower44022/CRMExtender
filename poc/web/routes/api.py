@@ -1212,6 +1212,336 @@ def conversation_detail_api(request: Request, conversation_id: str):
     }
 
 
+# ------------------------------------------------------------------
+# Conversation preview / full
+# ------------------------------------------------------------------
+
+@router.get("/conversations/{conversation_id}/preview")
+def conversation_preview_api(request: Request, conversation_id: str):
+    """Rich preview data for the conversation preview card."""
+    cid = request.state.customer_id
+
+    with get_connection() as conn:
+        conv = conn.execute(
+            "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
+        ).fetchone()
+        if not conv:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        conv = dict(conv)
+        if conv.get("customer_id") and conv["customer_id"] != cid:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+
+        # Participants with optional contact enrichment
+        parts = conn.execute(
+            "SELECT cp.address, cp.name, cp.contact_id, cp.communication_count, "
+            "       cp.last_seen_at, c.name AS contact_name "
+            "FROM conversation_participants cp "
+            "LEFT JOIN contacts c ON c.id = cp.contact_id "
+            "WHERE cp.conversation_id = ? "
+            "ORDER BY cp.communication_count DESC, cp.name COLLATE NOCASE",
+            (conversation_id,),
+        ).fetchall()
+
+        participants = [
+            {
+                "address": p["address"],
+                "name": p["name"],
+                "contact_id": p["contact_id"],
+                "contact_name": p["contact_name"],
+                "communication_count": p["communication_count"] or 0,
+                "last_seen_at": p["last_seen_at"],
+            }
+            for p in parts
+        ]
+
+        # Recent communications (last 5, DESC)
+        recent_comms = conn.execute(
+            "SELECT comm.id, comm.channel, comm.subject, comm.sender_name, "
+            "       comm.sender_address, comm.timestamp, comm.snippet, comm.direction "
+            "FROM communications comm "
+            "JOIN conversation_communications cc ON cc.communication_id = comm.id "
+            "WHERE cc.conversation_id = ? "
+            "ORDER BY comm.timestamp DESC LIMIT 5",
+            (conversation_id,),
+        ).fetchall()
+
+        recent_communications = [
+            {
+                "id": c["id"],
+                "channel": c["channel"],
+                "subject": c["subject"],
+                "sender_name": c["sender_name"],
+                "sender_address": c["sender_address"],
+                "timestamp": c["timestamp"],
+                "snippet": c["snippet"],
+                "direction": c["direction"],
+            }
+            for c in recent_comms
+        ]
+
+        # Tags
+        tags = [
+            {
+                "id": t["id"],
+                "name": t["name"],
+                "source": t["source"],
+            }
+            for t in conn.execute(
+                "SELECT t.id, t.name, ct.source "
+                "FROM conversation_tags ct "
+                "JOIN tags t ON t.id = ct.tag_id "
+                "WHERE ct.conversation_id = ? "
+                "ORDER BY t.name COLLATE NOCASE",
+                (conversation_id,),
+            ).fetchall()
+        ]
+
+    return {
+        "id": conv["id"],
+        "title": conv.get("title"),
+        "status": conv.get("status"),
+        "communication_count": conv.get("communication_count") or 0,
+        "participant_count": conv.get("participant_count") or 0,
+        "first_activity_at": conv.get("first_activity_at"),
+        "last_activity_at": conv.get("last_activity_at"),
+        "ai_summary": conv.get("ai_summary"),
+        "ai_status": conv.get("ai_status"),
+        "triage_result": conv.get("triage_result"),
+        "dismissed": bool(conv.get("dismissed")),
+        "participants": participants,
+        "recent_communications": recent_communications,
+        "tags": tags,
+    }
+
+
+@router.get("/conversations/{conversation_id}/full")
+def conversation_full_api(request: Request, conversation_id: str):
+    """Full view data for the conversation — enriched participants,
+    all communications, events, notes, topic/project, and metadata."""
+    cid = request.state.customer_id
+
+    with get_connection() as conn:
+        conv = conn.execute(
+            "SELECT * FROM conversations WHERE id = ?", (conversation_id,)
+        ).fetchone()
+        if not conv:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        conv = dict(conv)
+        if conv.get("customer_id") and conv["customer_id"] != cid:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+
+        # Enriched participants (company_name, title from primary affiliation)
+        parts = conn.execute(
+            "SELECT cp.address, cp.name, cp.contact_id, cp.communication_count, "
+            "       cp.first_seen_at, cp.last_seen_at, "
+            "       c.name AS contact_name, "
+            "       (SELECT co.name FROM companies co "
+            "        JOIN contact_companies cc ON cc.company_id = co.id "
+            "        WHERE cc.contact_id = cp.contact_id "
+            "          AND cc.is_primary = 1 AND cc.is_current = 1 "
+            "        LIMIT 1) AS company_name, "
+            "       (SELECT cc2.title FROM contact_companies cc2 "
+            "        WHERE cc2.contact_id = cp.contact_id "
+            "          AND cc2.is_primary = 1 AND cc2.is_current = 1 "
+            "        LIMIT 1) AS title "
+            "FROM conversation_participants cp "
+            "LEFT JOIN contacts c ON c.id = cp.contact_id "
+            "WHERE cp.conversation_id = ? "
+            "ORDER BY cp.communication_count DESC, cp.name COLLATE NOCASE",
+            (conversation_id,),
+        ).fetchall()
+
+        participants = [
+            {
+                "address": p["address"],
+                "name": p["name"],
+                "contact_id": p["contact_id"],
+                "contact_name": p["contact_name"],
+                "communication_count": p["communication_count"] or 0,
+                "first_seen_at": p["first_seen_at"],
+                "last_seen_at": p["last_seen_at"],
+                "company_name": p["company_name"],
+                "title": p["title"],
+            }
+            for p in parts
+        ]
+
+        # ALL communications, chronological ASC
+        comms = conn.execute(
+            "SELECT comm.id, comm.channel, comm.direction, comm.subject, "
+            "       comm.sender_name, comm.sender_address, comm.timestamp, "
+            "       comm.snippet, comm.ai_summary, "
+            "       cc.is_primary, cc.assignment_source "
+            "FROM communications comm "
+            "JOIN conversation_communications cc ON cc.communication_id = comm.id "
+            "WHERE cc.conversation_id = ? "
+            "ORDER BY comm.timestamp ASC",
+            (conversation_id,),
+        ).fetchall()
+
+        communications = [
+            {
+                "id": c["id"],
+                "channel": c["channel"],
+                "direction": c["direction"],
+                "subject": c["subject"],
+                "sender_name": c["sender_name"],
+                "sender_address": c["sender_address"],
+                "timestamp": c["timestamp"],
+                "snippet": c["snippet"],
+                "ai_summary": c["ai_summary"],
+                "is_primary": bool(c["is_primary"]),
+                "assignment_source": c["assignment_source"],
+            }
+            for c in comms
+        ]
+
+        # Tags with confidence
+        tags = [
+            {
+                "id": t["id"],
+                "name": t["name"],
+                "source": t["source"],
+                "confidence": t["confidence"],
+            }
+            for t in conn.execute(
+                "SELECT t.id, t.name, ct.source, ct.confidence "
+                "FROM conversation_tags ct "
+                "JOIN tags t ON t.id = ct.tag_id "
+                "WHERE ct.conversation_id = ? "
+                "ORDER BY t.name COLLATE NOCASE",
+                (conversation_id,),
+            ).fetchall()
+        ]
+
+        # Events linked via event_conversations
+        events = [
+            {
+                "id": e["id"],
+                "title": e["title"],
+                "event_type": e["event_type"],
+                "start_datetime": e["start_datetime"],
+                "status": e["status"],
+            }
+            for e in conn.execute(
+                "SELECT e.id, e.title, e.event_type, e.start_datetime, e.status "
+                "FROM event_conversations ec "
+                "JOIN events e ON e.id = ec.event_id "
+                "WHERE ec.conversation_id = ? "
+                "ORDER BY e.start_datetime DESC",
+                (conversation_id,),
+            ).fetchall()
+        ]
+
+        # Notes linked via note_entities
+        notes_rows = conn.execute(
+            "SELECT n.id, n.title, n.updated_at, ne.is_pinned, "
+            "       (SELECT nr.content_html FROM note_revisions nr "
+            "        WHERE nr.note_id = n.id "
+            "        ORDER BY nr.revision_number DESC LIMIT 1) AS content_html "
+            "FROM note_entities ne "
+            "JOIN notes n ON n.id = ne.note_id "
+            "WHERE ne.entity_type = 'conversation' AND ne.entity_id = ? "
+            "ORDER BY ne.is_pinned DESC, n.updated_at DESC",
+            (conversation_id,),
+        ).fetchall()
+
+        notes = []
+        for nr in notes_rows:
+            content_html = nr["content_html"] or ""
+            # Strip HTML tags for preview, truncate to 200 chars
+            preview = re.sub(r"<[^>]+>", "", content_html)[:200]
+            notes.append({
+                "id": nr["id"],
+                "title": nr["title"],
+                "content_preview": preview,
+                "updated_at": nr["updated_at"],
+                "is_pinned": bool(nr["is_pinned"]),
+            })
+
+        # Provider account
+        provider_account = None
+        if conv.get("account_id"):
+            pa_row = conn.execute(
+                "SELECT id, provider, email_address FROM provider_accounts WHERE id = ?",
+                (conv["account_id"],),
+            ).fetchone()
+            if pa_row:
+                provider_account = {
+                    "id": pa_row["id"],
+                    "provider": pa_row["provider"],
+                    "email_address": pa_row["email_address"],
+                }
+
+        # Topic / project
+        topic = None
+        if conv.get("topic_id"):
+            topic_row = conn.execute(
+                "SELECT t.id, t.name, t.project_id, p.name AS project_name "
+                "FROM topics t "
+                "LEFT JOIN projects p ON p.id = t.project_id "
+                "WHERE t.id = ?",
+                (conv["topic_id"],),
+            ).fetchone()
+            if topic_row:
+                topic = {
+                    "id": topic_row["id"],
+                    "name": topic_row["name"],
+                    "project_id": topic_row["project_id"],
+                    "project_name": topic_row["project_name"],
+                }
+
+        # Created/updated by names
+        created_by_name = None
+        if conv.get("created_by"):
+            u = conn.execute(
+                "SELECT name FROM users WHERE id = ?", (conv["created_by"],)
+            ).fetchone()
+            if u:
+                created_by_name = u["name"]
+
+        updated_by_name = None
+        if conv.get("updated_by"):
+            u = conn.execute(
+                "SELECT name FROM users WHERE id = ?", (conv["updated_by"],)
+            ).fetchone()
+            if u:
+                updated_by_name = u["name"]
+
+    return {
+        "id": conv["id"],
+        "title": conv.get("title"),
+        "status": conv.get("status"),
+        "communication_count": conv.get("communication_count") or 0,
+        "participant_count": conv.get("participant_count") or 0,
+        "message_count": conv.get("message_count") or 0,
+        "first_activity_at": conv.get("first_activity_at"),
+        "last_activity_at": conv.get("last_activity_at"),
+        "first_message_at": conv.get("first_message_at"),
+        "last_message_at": conv.get("last_message_at"),
+        "ai_summary": conv.get("ai_summary"),
+        "ai_status": conv.get("ai_status"),
+        "ai_action_items": conv.get("ai_action_items"),
+        "ai_topics": conv.get("ai_topics"),
+        "ai_summarized_at": conv.get("ai_summarized_at"),
+        "triage_result": conv.get("triage_result"),
+        "dismissed": bool(conv.get("dismissed")),
+        "dismissed_reason": conv.get("dismissed_reason"),
+        "dismissed_at": conv.get("dismissed_at"),
+        "participants": participants,
+        "communications": communications,
+        "tags": tags,
+        "events": events,
+        "notes": notes,
+        "provider_account": provider_account,
+        "topic": topic,
+        "created_at": conv.get("created_at"),
+        "updated_at": conv.get("updated_at"),
+        "created_by_name": created_by_name,
+        "updated_by_name": updated_by_name,
+    }
+
+
 @router.get("/events/{event_id}")
 def event_detail_api(request: Request, event_id: str):
     with get_connection() as conn:

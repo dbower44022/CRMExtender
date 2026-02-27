@@ -414,3 +414,139 @@ export interface CommunicationFullData {
   provider_account: CommunicationProviderAccount | null
   notes: unknown[]
 }
+
+// --- Conversation Preview types ---
+
+export interface ConversationPreviewParticipant {
+  address: string
+  name: string | null
+  contact_id: string | null
+  contact_name: string | null
+  communication_count: number
+  last_seen_at: string | null
+}
+
+export interface ConversationPreviewCommunication {
+  id: string
+  channel: string
+  subject: string | null
+  sender_name: string | null
+  sender_address: string | null
+  timestamp: string | null
+  snippet: string | null
+  direction: string | null
+}
+
+export interface ConversationTag {
+  id: string
+  name: string
+  source: string | null
+  confidence?: number
+}
+
+export interface ConversationPreviewData {
+  id: string
+  title: string | null
+  status: string | null
+  communication_count: number
+  participant_count: number
+  first_activity_at: string | null
+  last_activity_at: string | null
+  ai_summary: string | null
+  ai_status: string | null
+  triage_result: string | null
+  dismissed: boolean
+  participants: ConversationPreviewParticipant[]
+  recent_communications: ConversationPreviewCommunication[]
+  tags: ConversationTag[]
+}
+
+// --- Conversation Full View types ---
+
+export interface ConversationFullParticipant {
+  address: string
+  name: string | null
+  contact_id: string | null
+  contact_name: string | null
+  communication_count: number
+  first_seen_at: string | null
+  last_seen_at: string | null
+  company_name: string | null
+  title: string | null
+}
+
+export interface ConversationCommunication {
+  id: string
+  channel: string
+  direction: string | null
+  subject: string | null
+  sender_name: string | null
+  sender_address: string | null
+  timestamp: string | null
+  snippet: string | null
+  ai_summary: string | null
+  is_primary: boolean
+  assignment_source: string | null
+}
+
+export interface ConversationEvent {
+  id: string
+  title: string | null
+  event_type: string | null
+  start_datetime: string | null
+  status: string | null
+}
+
+export interface ConversationNote {
+  id: string
+  title: string | null
+  content_preview: string
+  updated_at: string
+  is_pinned: boolean
+}
+
+export interface ConversationTopic {
+  id: string
+  name: string
+  project_id: string
+  project_name: string | null
+}
+
+export interface ConversationProviderAccount {
+  id: string
+  provider: string
+  email_address: string
+}
+
+export interface ConversationFullData {
+  id: string
+  title: string | null
+  status: string | null
+  communication_count: number
+  participant_count: number
+  message_count: number
+  first_activity_at: string | null
+  last_activity_at: string | null
+  first_message_at: string | null
+  last_message_at: string | null
+  ai_summary: string | null
+  ai_status: string | null
+  ai_action_items: string | null
+  ai_topics: string | null
+  ai_summarized_at: string | null
+  triage_result: string | null
+  dismissed: boolean
+  dismissed_reason: string | null
+  dismissed_at: string | null
+  participants: ConversationFullParticipant[]
+  communications: ConversationCommunication[]
+  tags: ConversationTag[]
+  events: ConversationEvent[]
+  notes: ConversationNote[]
+  provider_account: ConversationProviderAccount | null
+  topic: ConversationTopic | null
+  created_at: string
+  updated_at: string
+  created_by_name: string | null
+  updated_by_name: string | null
+}

@@ -1,6 +1,6 @@
 # Conversation — View Conversation Sub-PRD
 
-**Version:** 1.1
+**Version:** 1.2
 **Last Updated:** 2026-02-27
 **Status:** Draft
 **Entity Base PRD:** [conversation-entity-base-prd.md]
@@ -70,7 +70,7 @@ The document covers both standard Conversations (is_aggregate = false) and aggre
 - **GUI Preview Card Amendment:** The Preview Card is a system-wide Card Type. This document defines the Conversation-specific rendering for that card, including standard and aggregate variants.
 - **GUI Functional Requirements PRD:** The Card-Based Architecture (Section 15), Window Types (Section 14), Display Modes, and Date & Time Display Standards (Section 2.3) define the containers and formatting conventions this view renders into. The dynamic responsive layout logic defined here extends the Card Layout Area behavior for Conversation full Views.
 - **Communication Published Summary Sub-PRD:** Defines the Published Summary content rendered in each timeline entry. The Conversation timeline is a sequence of references to Communication Published Summaries.
-- **Communication View Sub-PRD:** Defines the Communication full View that users navigate to via "View Original" links on timeline entries.
+- **Communication View Sub-PRD:** Defines the Communication full View that renders in the Undocked Window when the user double-clicks a timeline entry.
 - **Contact Entity Base PRD:** Participant names in the Participants Card and timeline entries link to Contact records.
 - **AI Intelligence & Review Sub-PRD:** Defines AI classification, summarization, and extraction workflows that populate the AI Intelligence Card fields.
 
@@ -98,7 +98,7 @@ The document covers both standard Conversations (is_aggregate = false) and aggre
 
 **Step 3 — CRM layer renders:** Beside the timeline (two-column) or below it (single-column), the CRM intelligence cards render: Participants Card, AI Intelligence Card, Entity Associations Card, and conditionally the Children Card (aggregates only), Notes Card, and Metadata Card. Cards with no data are suppressed entirely.
 
-**Step 4 — User interacts:** The user reads the timeline, reviews the CRM context, and may take actions: navigate to a Communication's full record ("View Original"), navigate to a participant's Contact record (Participants Card), edit entity associations (Entity Associations Card), drill into a child Conversation (Children Card), or add a note (Notes Card).
+**Step 4 — User interacts:** The user reads the timeline, reviews the CRM context, and may take actions: double-click a timeline entry to open the Communication in an Undocked Window, navigate to a participant's Contact record (Participants Card), edit entity associations (Entity Associations Card), drill into a child Conversation (Children Card), or add a note (Notes Card).
 
 ### KP-3: Viewing an Aggregate Conversation in Full
 
@@ -529,7 +529,7 @@ Each Communication in the Conversation renders as a summary entry with prominent
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │  🔵 ✉ Bob Smith → Doug Bower        Today, Feb 21 - 10:15 AM │
-│                                                    [View Original]
+│                                                                 │
 │  Confirmed the revised clause 5 language is acceptable after    │
 │  consulting with legal. Will send signed copy by Friday.        │
 │  Key concern resolved: liability cap at $500K approved.         │
@@ -542,7 +542,6 @@ Each Communication in the Conversation renders as a summary entry with prominent
 - **Channel icon** (✉ email, 💬 SMS, 📞 phone, 🎥 video, 👥 in-person)
 - **Sender display name** — large, bold font. Clickable link to Contact record if resolved. For directional channels (email, SMS), followed by "→" and the primary recipient display name. For multi-party channels (calls, meetings), followed by "→" and participant names (comma-separated, truncated with "+N" for overflow)
 - **Timestamp** (right-aligned) — same-sized font as the sender name, per GUI FR PRD Section 2.3 Date & Time Display Standards
-- **"View Original" link** (right-aligned, below timestamp) — navigates to the Communication's full record (Communication View Sub-PRD)
 
 **Summary content:**
 
@@ -566,18 +565,34 @@ If the Communication's presence in this Conversation is via a Segment (the commu
 
 The Timeline Card is never suppressed — it always renders, even if the Conversation has zero Communications (showing an empty state: "No communications in this conversation yet").
 
+### 7.6 Double-Click Navigation to Communication
+
+Double-clicking a timeline entry opens the corresponding Communication record in an **Undocked Window**, following the standard double-click navigation pattern defined in the GUI Functional Requirements PRD.
+
+**Reuse behavior:** If an Undocked Window is already open from a previous timeline entry double-click within the same Conversation, the existing Undocked Window updates to show the newly selected Communication rather than spawning a second window. This follows the same pattern as arrow-key navigation in the grid updating an Undocked Window — the window acts as a persistent "communication reader" that follows the user's selections in the timeline.
+
+**Single-click behavior:** Single-clicking a timeline entry focuses that entry visually (subtle highlight consistent with the grid focus indicator pattern) but does not open the Communication. Focus enables keyboard navigation — the user can arrow-key through timeline entries and press Enter to open the focused entry in the Undocked Window.
+
+**Keyboard shortcut:** Pressing Enter on a focused timeline entry is equivalent to double-clicking — it opens or updates the Undocked Window with the focused Communication.
+
+**Window lifecycle:** The Undocked Window opened via timeline entry navigation is a standard Communication Undocked Window as defined in the Communication View Sub-PRD. It supports all standard window operations: maximize to Modal Full Overlay, re-dock, close. Closing the Undocked Window does not affect the Conversation full View.
+
 **Tasks:**
 
 - [ ] CNVT-01: Implement Timeline Card with chronological Published Summary entries
 - [ ] CNVT-02: Implement user preference for timeline order (oldest-first, newest-first)
 - [ ] CNVT-03: Implement inline toggle for temporary order reversal
-- [ ] CNVT-04: Implement timeline entry rendering (colored circle, channel icon, sender → recipient, timestamp, summary, View Original)
+- [ ] CNVT-04: Implement timeline entry rendering (colored circle, channel icon, sender → recipient, timestamp, summary)
 - [ ] CNVT-05: Implement participant color coding on timeline entries (colored circle + background tint)
 - [ ] CNVT-06: Implement attachment indicator on timeline entries
 - [ ] CNVT-07: Implement segment indicator with navigation link
 - [ ] CNVT-08: Implement empty state for conversations with zero communications
 - [ ] CNVT-09: Implement sender name as clickable link to Contact record
 - [ ] CNVT-10: Implement sender → recipient display with overflow truncation (+N)
+- [ ] CNVT-11: Implement double-click on timeline entry opens Communication in Undocked Window
+- [ ] CNVT-12: Implement Undocked Window reuse (second double-click updates existing window)
+- [ ] CNVT-13: Implement single-click focus with visual highlight on timeline entries
+- [ ] CNVT-14: Implement Enter key on focused timeline entry opens Communication in Undocked Window
 
 **Tests:**
 
@@ -587,7 +602,7 @@ The Timeline Card is never suppressed — it always renders, even if the Convers
 - [ ] CNVT-T04: Toggle resets when navigating away and returning
 - [ ] CNVT-T05: Each entry shows colored circle, channel icon, sender → recipient, timestamp, and summary content
 - [ ] CNVT-T06: Timestamps follow Date & Time Display Standards (5 tiers)
-- [ ] CNVT-T07: "View Original" link navigates to Communication full record
+- [ ] CNVT-T07: Double-click on timeline entry opens Communication in Undocked Window
 - [ ] CNVT-T08: Participant color coding matches Preview Card colors for the same contacts
 - [ ] CNVT-T09: Account owner entries use fixed color tint
 - [ ] CNVT-T10: Attachment indicator shows for communications with attachments
@@ -596,6 +611,11 @@ The Timeline Card is never suppressed — it always renders, even if the Convers
 - [ ] CNVT-T13: Sender name links to Contact record when resolved
 - [ ] CNVT-T14: Recipient overflow truncates with "+N" count
 - [ ] CNVT-T15: Summary content renders full summary_html with formatting preserved
+- [ ] CNVT-T16: Second double-click on different entry updates existing Undocked Window (no second window)
+- [ ] CNVT-T17: Single-click focuses timeline entry with visual highlight without opening Communication
+- [ ] CNVT-T18: Arrow keys navigate focus between timeline entries
+- [ ] CNVT-T19: Enter key on focused entry opens Communication in Undocked Window
+- [ ] CNVT-T20: Closing the Undocked Window does not affect the Conversation full View
 
 ---
 
@@ -1073,7 +1093,7 @@ An inline toggle on the Timeline Card header allows temporary reversal per-sessi
 | [GUI Preview Card Amendment](gui-preview-card-amendment.md) | System-wide Preview Card type definition. |
 | [Communication Entity Base PRD](communication-entity-base-prd.md) | The atomic communication records that compose the conversation timeline. |
 | [Communication Published Summary Sub-PRD](communication-published-summary-prd.md) | Summary content rendered in timeline entries. |
-| [Communication View Sub-PRD](communication-view-prd.md) | Full Communication record view navigated to via "View Original" links. |
+| [Communication View Sub-PRD](communication-view-prd.md) | Full Communication record view rendered in Undocked Window via timeline entry double-click. |
 | [Contact Entity Base PRD](contact-entity-base-prd.md) | Contact record navigation from participant and sender links. |
 | [Projects PRD](projects-prd.md) | Project entity referenced in Entity Associations Card. |
 | [Notes PRD](notes-prd.md) | Note attachment and creation referenced by the Notes Card. |

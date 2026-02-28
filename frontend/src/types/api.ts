@@ -435,6 +435,11 @@ export interface ConversationPreviewCommunication {
   timestamp: string | null
   snippet: string | null
   direction: string | null
+  cleaned_html: string | null
+  sender_contact_id: string | null
+  recipient_name: string | null
+  recipient_count: number
+  attachment_count: number
 }
 
 export interface ConversationTag {
@@ -456,6 +461,8 @@ export interface ConversationPreviewData {
   ai_status: string | null
   triage_result: string | null
   dismissed: boolean
+  channel_breakdown: Record<string, number>
+  account_owner_email: string | null
   participants: ConversationPreviewParticipant[]
   recent_communications: ConversationPreviewCommunication[]
   tags: ConversationTag[]
@@ -484,6 +491,7 @@ export interface ConversationCommunication {
   sender_address: string | null
   timestamp: string | null
   snippet: string | null
+  cleaned_html: string | null
   ai_summary: string | null
   is_primary: boolean
   assignment_source: string | null
@@ -542,6 +550,8 @@ export interface ConversationFullData {
   dismissed: boolean
   dismissed_reason: string | null
   dismissed_at: string | null
+  channel_breakdown: Record<string, number>
+  account_owner_email: string | null
   participants: ConversationFullParticipant[]
   communications: ConversationCommunication[]
   tags: ConversationTag[]

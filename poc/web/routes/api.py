@@ -1254,14 +1254,27 @@ def conversation_preview_api(request: Request, conversation_id: str):
             for p in parts
         ]
 
-        # Recent communications (last 5, DESC)
+        # All communications, DESC
         recent_comms = conn.execute(
             "SELECT comm.id, comm.channel, comm.subject, comm.sender_name, "
-            "       comm.sender_address, comm.timestamp, comm.snippet, comm.direction "
+            "       comm.sender_address, comm.timestamp, comm.snippet, "
+            "       comm.direction, comm.cleaned_html, "
+            "       (SELECT cp.contact_id FROM communication_participants cp "
+            "        WHERE cp.communication_id = comm.id AND cp.role = 'from' "
+            "        LIMIT 1) AS sender_contact_id, "
+            "       (SELECT COALESCE(cp.name, cp.address) "
+            "        FROM communication_participants cp "
+            "        WHERE cp.communication_id = comm.id AND cp.role = 'to' "
+            "        ORDER BY cp.name COLLATE NOCASE LIMIT 1) AS recipient_name, "
+            "       (SELECT COUNT(*) FROM communication_participants cp "
+            "        WHERE cp.communication_id = comm.id "
+            "        AND cp.role IN ('to', 'participant')) AS recipient_count, "
+            "       (SELECT COUNT(*) FROM attachments a "
+            "        WHERE a.communication_id = comm.id) AS attachment_count "
             "FROM communications comm "
             "JOIN conversation_communications cc ON cc.communication_id = comm.id "
             "WHERE cc.conversation_id = ? "
-            "ORDER BY comm.timestamp DESC LIMIT 5",
+            "ORDER BY comm.timestamp DESC",
             (conversation_id,),
         ).fetchall()
 
@@ -1275,9 +1288,35 @@ def conversation_preview_api(request: Request, conversation_id: str):
                 "timestamp": c["timestamp"],
                 "snippet": c["snippet"],
                 "direction": c["direction"],
+                "cleaned_html": c["cleaned_html"],
+                "sender_contact_id": c["sender_contact_id"],
+                "recipient_name": c["recipient_name"],
+                "recipient_count": c["recipient_count"] or 0,
+                "attachment_count": c["attachment_count"] or 0,
             }
             for c in recent_comms
         ]
+
+        # Channel breakdown
+        channel_rows = conn.execute(
+            "SELECT comm.channel, COUNT(*) AS cnt "
+            "FROM communications comm "
+            "JOIN conversation_communications cc ON cc.communication_id = comm.id "
+            "WHERE cc.conversation_id = ? "
+            "GROUP BY comm.channel",
+            (conversation_id,),
+        ).fetchall()
+        channel_breakdown = {r["channel"]: r["cnt"] for r in channel_rows}
+
+        # Account owner email
+        account_owner_email = None
+        if conv.get("account_id"):
+            pa = conn.execute(
+                "SELECT email_address FROM provider_accounts WHERE id = ?",
+                (conv["account_id"],),
+            ).fetchone()
+            if pa:
+                account_owner_email = pa["email_address"]
 
         # Tags
         tags = [
@@ -1308,6 +1347,8 @@ def conversation_preview_api(request: Request, conversation_id: str):
         "ai_status": conv.get("ai_status"),
         "triage_result": conv.get("triage_result"),
         "dismissed": bool(conv.get("dismissed")),
+        "channel_breakdown": channel_breakdown,
+        "account_owner_email": account_owner_email,
         "participants": participants,
         "recent_communications": recent_communications,
         "tags": tags,
@@ -1371,7 +1412,7 @@ def conversation_full_api(request: Request, conversation_id: str):
         comms = conn.execute(
             "SELECT comm.id, comm.channel, comm.direction, comm.subject, "
             "       comm.sender_name, comm.sender_address, comm.timestamp, "
-            "       comm.snippet, comm.ai_summary, "
+            "       comm.snippet, comm.cleaned_html, comm.ai_summary, "
             "       cc.is_primary, cc.assignment_source, "
             "       (SELECT cp.contact_id FROM communication_participants cp "
             "        WHERE cp.communication_id = comm.id AND cp.role = 'from' "
@@ -1402,6 +1443,7 @@ def conversation_full_api(request: Request, conversation_id: str):
                 "sender_address": c["sender_address"],
                 "timestamp": c["timestamp"],
                 "snippet": c["snippet"],
+                "cleaned_html": c["cleaned_html"],
                 "ai_summary": c["ai_summary"],
                 "is_primary": bool(c["is_primary"]),
                 "assignment_source": c["assignment_source"],
@@ -1412,6 +1454,17 @@ def conversation_full_api(request: Request, conversation_id: str):
             }
             for c in comms
         ]
+
+        # Channel breakdown
+        channel_rows = conn.execute(
+            "SELECT comm.channel, COUNT(*) AS cnt "
+            "FROM communications comm "
+            "JOIN conversation_communications cc ON cc.communication_id = comm.id "
+            "WHERE cc.conversation_id = ? "
+            "GROUP BY comm.channel",
+            (conversation_id,),
+        ).fetchall()
+        channel_breakdown = {r["channel"]: r["cnt"] for r in channel_rows}
 
         # Tags with confidence
         tags = [
@@ -1545,6 +1598,8 @@ def conversation_full_api(request: Request, conversation_id: str):
         "dismissed": bool(conv.get("dismissed")),
         "dismissed_reason": conv.get("dismissed_reason"),
         "dismissed_at": conv.get("dismissed_at"),
+        "channel_breakdown": channel_breakdown,
+        "account_owner_email": provider_account["email_address"] if provider_account else None,
         "participants": participants,
         "communications": communications,
         "tags": tags,

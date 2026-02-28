@@ -1,4 +1,4 @@
-import { Bot } from 'lucide-react'
+import { Bot, Pencil, RefreshCw } from 'lucide-react'
 import { formatTimestamp } from '../../lib/formatTimestamp.ts'
 import type { ConversationFullData } from '../../types/api.ts'
 
@@ -22,11 +22,27 @@ export function ConversationSummaryCard({ data }: ConversationSummaryCardProps) 
           <Bot size={14} className="text-surface-400" />
           <span className="text-xs font-semibold uppercase text-surface-500">AI Summary</span>
         </div>
-        {data.ai_status && (
-          <span className={`rounded px-1.5 py-0.5 text-xs capitalize ${AI_STATUS_COLORS[data.ai_status] ?? 'bg-surface-100 text-surface-500'}`}>
-            {data.ai_status}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {data.ai_status && (
+            <span className={`rounded px-1.5 py-0.5 text-xs capitalize ${AI_STATUS_COLORS[data.ai_status] ?? 'bg-surface-100 text-surface-500'}`}>
+              {data.ai_status}
+            </span>
+          )}
+          <button
+            disabled
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-surface-300"
+            title="Edit (coming soon)"
+          >
+            <Pencil size={11} />
+          </button>
+          <button
+            disabled
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-surface-300"
+            title="Regenerate (coming soon)"
+          >
+            <RefreshCw size={11} />
+          </button>
+        </div>
       </div>
       <div className="px-4 py-3 space-y-3">
         {/* Summary text */}

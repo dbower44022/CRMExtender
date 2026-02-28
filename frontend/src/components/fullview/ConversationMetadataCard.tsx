@@ -22,6 +22,8 @@ export function ConversationMetadataCard({ data }: ConversationMetadataCardProps
       {expanded && (
         <div className="border-t border-surface-200 px-4 py-3">
           <dl className="space-y-2 text-sm">
+            <MetadataRow label="First Activity" value={formatTimestamp(data.first_activity_at)} />
+            <MetadataRow label="Last Activity" value={formatTimestamp(data.last_activity_at)} />
             {data.provider_account && (
               <>
                 <MetadataRow label="Provider" value={data.provider_account.provider} />

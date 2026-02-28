@@ -1,5 +1,6 @@
 import { MessageSquare } from 'lucide-react'
 import { formatTimestamp } from '../../lib/formatTimestamp.ts'
+import { ChannelBreakdown } from '../shared/ChannelBreakdown.tsx'
 import type { ConversationFullData } from '../../types/api.ts'
 
 interface ConversationIdentityCardProps {
@@ -43,6 +44,7 @@ export function ConversationIdentityCard({ data }: ConversationIdentityCardProps
         </div>
         <div className="flex items-center gap-3 text-xs text-surface-400">
           <span>{data.communication_count} comm{data.communication_count !== 1 ? 's' : ''}</span>
+          <ChannelBreakdown breakdown={data.channel_breakdown} />
           <span>{data.participant_count} participant{data.participant_count !== 1 ? 's' : ''}</span>
         </div>
       </div>

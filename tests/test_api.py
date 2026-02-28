@@ -1922,7 +1922,8 @@ def _seed_conv_participant(conv_id, address, name=None, contact_id=None,
 def _seed_conv_communication(conv_id, comm_id, channel="email", subject=None,
                               sender_name=None, sender_address=None, direction="inbound",
                               snippet=None, ai_summary=None, is_primary=1,
-                              assignment_source="sync", timestamp=None):
+                              assignment_source="sync", timestamp=None,
+                              cleaned_html=None):
     ts = timestamp or _NOW
     with get_connection() as conn:
         conn.execute(
@@ -1935,10 +1936,10 @@ def _seed_conv_communication(conv_id, comm_id, channel="email", subject=None,
             "INSERT INTO communications "
             "(id, account_id, channel, timestamp, direction, source, "
             "sender_name, sender_address, subject, snippet, ai_summary, "
-            "is_read, is_archived, created_at, updated_at) "
-            "VALUES (?, 'pa-conv', ?, ?, ?, 'test', ?, ?, ?, ?, ?, 0, 0, ?, ?)",
+            "cleaned_html, is_read, is_archived, created_at, updated_at) "
+            "VALUES (?, 'pa-conv', ?, ?, ?, 'test', ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)",
             (comm_id, channel, ts, direction, sender_name, sender_address,
-             subject, snippet, ai_summary, _NOW, _NOW),
+             subject, snippet, ai_summary, cleaned_html, _NOW, _NOW),
         )
         conn.execute(
             "INSERT INTO conversation_communications "
@@ -2036,7 +2037,7 @@ class TestConversationPreview:
         assert p["contact_id"] is None
         assert p["contact_name"] is None
 
-    def test_preview_recent_communications_last_5(self, client):
+    def test_preview_recent_communications_all_returned(self, client):
         _seed_conversation()
         for i in range(7):
             _seed_conv_communication(
@@ -2048,10 +2049,10 @@ class TestConversationPreview:
                 timestamp=f"2025-01-{10+i:02d}T10:00:00Z",
             )
         data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
-        assert len(data["recent_communications"]) == 5
+        assert len(data["recent_communications"]) == 7
         # DESC order — most recent first
         assert data["recent_communications"][0]["subject"] == "Subject 6"
-        assert data["recent_communications"][4]["subject"] == "Subject 2"
+        assert data["recent_communications"][6]["subject"] == "Subject 0"
 
     def test_preview_recent_communications_fields(self, client):
         _seed_conversation()
@@ -2395,6 +2396,145 @@ class TestConversationFullView:
         data = client.get("/api/v1/conversations/conv-preview-1/full").json()
         assert data["created_by_name"] is None
         assert data["updated_by_name"] is None
+
+    # --- New: cleaned_html, channel_breakdown, account_owner_email ---
+
+    def test_preview_cleaned_html(self, client):
+        _seed_conversation()
+        _seed_conv_communication(
+            "conv-preview-1", "comm-html-1",
+            cleaned_html="<p>Hello world</p>",
+            snippet="Hello world",
+        )
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        c = data["recent_communications"][0]
+        assert c["cleaned_html"] == "<p>Hello world</p>"
+
+    def test_preview_cleaned_html_null(self, client):
+        _seed_conversation()
+        _seed_conv_communication("conv-preview-1", "comm-html-null")
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        c = data["recent_communications"][0]
+        assert c["cleaned_html"] is None
+
+    def test_preview_sender_contact_id(self, client):
+        _seed_conversation()
+        _seed_conv_communication(
+            "conv-preview-1", "comm-sender-cid",
+            sender_address="alice@test.com",
+        )
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO contacts (id, customer_id, name, source, status, created_at, updated_at) "
+                "VALUES ('ct-alice', ?, 'Alice', 'test', 'active', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO communication_participants "
+                "(communication_id, address, name, role, contact_id) "
+                "VALUES ('comm-sender-cid', 'alice@test.com', 'Alice', 'from', 'ct-alice')",
+            )
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        c = data["recent_communications"][0]
+        assert c["sender_contact_id"] == "ct-alice"
+
+    def test_preview_recipient_name_and_count(self, client):
+        _seed_conversation()
+        _seed_conv_communication(
+            "conv-preview-1", "comm-recip",
+            sender_address="alice@test.com",
+        )
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO communication_participants "
+                "(communication_id, address, name, role) "
+                "VALUES ('comm-recip', 'bob@test.com', 'Bob', 'to')",
+            )
+            conn.execute(
+                "INSERT INTO communication_participants "
+                "(communication_id, address, name, role) "
+                "VALUES ('comm-recip', 'carol@test.com', 'Carol', 'to')",
+            )
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        c = data["recent_communications"][0]
+        assert c["recipient_name"] is not None
+        assert c["recipient_count"] == 2
+
+    def test_preview_attachment_count(self, client):
+        _seed_conversation()
+        _seed_conv_communication("conv-preview-1", "comm-attach")
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO attachments (id, communication_id, filename, created_at) "
+                "VALUES ('att-1', 'comm-attach', 'file.pdf', ?)",
+                (_NOW,),
+            )
+            conn.execute(
+                "INSERT INTO attachments (id, communication_id, filename, created_at) "
+                "VALUES ('att-2', 'comm-attach', 'doc.docx', ?)",
+                (_NOW,),
+            )
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        c = data["recent_communications"][0]
+        assert c["attachment_count"] == 2
+
+    def test_preview_channel_breakdown(self, client):
+        _seed_conversation()
+        _seed_conv_communication("conv-preview-1", "comm-ch-1", channel="email")
+        _seed_conv_communication("conv-preview-1", "comm-ch-2", channel="email")
+        _seed_conv_communication("conv-preview-1", "comm-ch-3", channel="phone")
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        bd = data["channel_breakdown"]
+        assert bd["email"] == 2
+        assert bd["phone"] == 1
+
+    def test_preview_account_owner_email(self, client):
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO provider_accounts "
+                "(id, customer_id, provider, email_address, is_active, created_at, updated_at) "
+                "VALUES ('pa-owner', ?, 'gmail', 'owner@company.com', 1, ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+        _seed_conversation(account_id="pa-owner")
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["account_owner_email"] == "owner@company.com"
+
+    def test_preview_account_owner_email_null(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["account_owner_email"] is None
+
+    def test_full_cleaned_html(self, client):
+        _seed_conversation()
+        _seed_conv_communication(
+            "conv-preview-1", "comm-full-html",
+            cleaned_html="<p>Full view HTML</p>",
+        )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        c = data["communications"][0]
+        assert c["cleaned_html"] == "<p>Full view HTML</p>"
+
+    def test_full_channel_breakdown(self, client):
+        _seed_conversation()
+        _seed_conv_communication("conv-preview-1", "comm-fch-1", channel="email")
+        _seed_conv_communication("conv-preview-1", "comm-fch-2", channel="sms")
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        bd = data["channel_breakdown"]
+        assert bd["email"] == 1
+        assert bd["sms"] == 1
+
+    def test_full_account_owner_email(self, client):
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO provider_accounts "
+                "(id, customer_id, provider, email_address, is_active, created_at, updated_at) "
+                "VALUES ('pa-full-owner', ?, 'gmail', 'full@company.com', 1, ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+        _seed_conversation(account_id="pa-full-owner")
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["account_owner_email"] == "full@company.com"
 
 
 # ===========================================================================

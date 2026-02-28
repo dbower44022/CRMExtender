@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useConversationFull } from '../../api/conversationFull.ts'
+import { buildParticipantColorMap } from '../../lib/participantColors.ts'
 import { ConversationIdentityCard } from './ConversationIdentityCard.tsx'
 import { ConversationTimelineCard } from './ConversationTimelineCard.tsx'
 import { ConversationParticipantsCard } from './ConversationParticipantsCard.tsx'
@@ -11,32 +12,40 @@ import { TriageCard } from './TriageCard.tsx'
 import { ConversationNotesCard } from './ConversationNotesCard.tsx'
 import { ConversationMetadataCard } from './ConversationMetadataCard.tsx'
 import { FullViewSkeleton } from './FullViewSkeleton.tsx'
-import type { ConversationFullData } from '../../types/api.ts'
 
 interface ConversationFullViewProps {
   convId: string
   onNavigateAway: () => void
 }
 
-const TWO_COLUMN_MIN_WIDTH = 900
+const TWO_COLUMN_MIN_WIDTH = 700
+const SPLITTER_MIN_RIGHT = 280
+const SPLITTER_KEY_PREFIX = 'conv-splitter-'
+const DEFAULT_RIGHT_WIDTH = 360
 
-/** Count visible CRM cards (Metadata excluded — collapsed by default) */
-function countVisibleCards(data: ConversationFullData): number {
-  let count = 0
-  if (data.participants.length > 0) count++
-  if (data.ai_summary || data.ai_action_items || data.ai_topics) count++
-  count++ // Project card always visible
-  if (data.events.length > 0) count++
-  if (data.tags.length > 0) count++
-  if (data.triage_result) count++
-  if (data.notes.length > 0) count++
-  return count
+function getSplitterWidth(convId: string): number {
+  try {
+    const stored = localStorage.getItem(SPLITTER_KEY_PREFIX + convId)
+    if (stored) return Math.max(SPLITTER_MIN_RIGHT, parseInt(stored, 10))
+  } catch { /* ignore */ }
+  return DEFAULT_RIGHT_WIDTH
+}
+
+function setSplitterWidth(convId: string, width: number) {
+  try {
+    localStorage.setItem(SPLITTER_KEY_PREFIX + convId, String(Math.round(width)))
+  } catch { /* ignore */ }
 }
 
 export function ConversationFullView({ convId, onNavigateAway }: ConversationFullViewProps) {
   const { data, isLoading, error } = useConversationFull(convId)
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
+  const [rightWidth, setRightWidth] = useState(() => getSplitterWidth(convId))
+
+  useEffect(() => {
+    setRightWidth(getSplitterWidth(convId))
+  }, [convId])
 
   useEffect(() => {
     const el = containerRef.current
@@ -50,14 +59,49 @@ export function ConversationFullView({ convId, onNavigateAway }: ConversationFul
     return () => observer.disconnect()
   }, [])
 
-  const useTwoColumn = data
-    ? containerWidth >= TWO_COLUMN_MIN_WIDTH && countVisibleCards(data) >= 2
-    : false
+  const useTwoColumn = containerWidth >= TWO_COLUMN_MIN_WIDTH
+
+  // Clamp right width: min 280, max 60% of container
+  const clampedRight = Math.max(SPLITTER_MIN_RIGHT, Math.min(rightWidth, containerWidth * 0.6))
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = clampedRight
+
+    const onMove = (ev: MouseEvent) => {
+      const delta = startX - ev.clientX
+      const newWidth = Math.max(SPLITTER_MIN_RIGHT, Math.min(startWidth + delta, containerWidth * 0.6))
+      setRightWidth(newWidth)
+    }
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      // Persist on drop
+      setSplitterWidth(convId, rightWidth)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [clampedRight, containerWidth, convId, rightWidth])
+
+  // Persist when rightWidth changes (debounced via mouseup above)
+  useEffect(() => {
+    setSplitterWidth(convId, rightWidth)
+  }, [convId, rightWidth])
+
+  const colorMap = data
+    ? buildParticipantColorMap(
+        data.participants.map((p) => ({ address: p.address, contact_id: p.contact_id })),
+        data.account_owner_email,
+      )
+    : null
 
   const crmCards = data ? (
     <div className="space-y-3">
       <ConversationParticipantsCard
         participants={data.participants}
+        colorMap={colorMap!}
+        accountOwnerEmail={data.account_owner_email}
         onNavigateAway={onNavigateAway}
       />
       <ConversationSummaryCard data={data} />
@@ -89,13 +133,23 @@ export function ConversationFullView({ convId, onNavigateAway }: ConversationFul
 
           {useTwoColumn ? (
             <div className="flex min-h-0 flex-1">
-              <div className="flex flex-[3] flex-col overflow-y-auto">
+              <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
                 <ConversationTimelineCard
                   communications={data.communications}
+                  colorMap={colorMap!}
                   onNavigateAway={onNavigateAway}
                 />
               </div>
-              <div className="flex-[2] overflow-y-auto border-l border-surface-200 bg-surface-50 p-4">
+              {/* Drag handle */}
+              <div
+                className="flex w-1.5 shrink-0 cursor-col-resize items-center justify-center bg-surface-200 hover:bg-primary-300 active:bg-primary-400"
+                onMouseDown={handleDragStart}
+                title="Drag to resize"
+              />
+              <div
+                className="shrink-0 overflow-y-auto border-l border-surface-200 bg-surface-50 p-4"
+                style={{ width: clampedRight }}
+              >
                 {crmCards}
               </div>
             </div>
@@ -103,6 +157,7 @@ export function ConversationFullView({ convId, onNavigateAway }: ConversationFul
             <div className="flex-1 overflow-y-auto">
               <ConversationTimelineCard
                 communications={data.communications}
+                colorMap={colorMap!}
                 onNavigateAway={onNavigateAway}
               />
               <div className="p-4">

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useAccounts, useUpdateAccount, useToggleAccount, useReferenceData } from '../../api/settings.ts'
 
@@ -11,8 +11,6 @@ export function AccountsSettings() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
 
-<<<<<<< Updated upstream
-=======
   // Show success toast if redirected back from OAuth
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -24,7 +22,6 @@ export function AccountsSettings() {
     }
   }, [])
 
->>>>>>> Stashed changes
   if (isLoading) {
     return <div className="text-sm text-surface-500">Loading...</div>
   }

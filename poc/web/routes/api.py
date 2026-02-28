@@ -2679,8 +2679,6 @@ async def settings_calendars_save(request: Request, account_id: str):
 
     cal_key = f"cal_sync_calendars_{account_id}"
     set_setting(cid, cal_key, json.dumps(value), scope="user", user_id=uid)
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 
     return {"ok": True}
 
@@ -2771,10 +2769,6 @@ def settings_roles_delete(request: Request, role_id: str):
         delete_role(role_id)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
     return {"ok": True}
 

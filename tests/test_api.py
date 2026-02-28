@@ -1328,8 +1328,6 @@ class TestSettingsCalendars:
         assert len(acct["selected_calendars"]) == 1
         assert acct["selected_calendars"][0]["id"] == "cal-2"
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 
 # ---------------------------------------------------------------------------
 # Settings: Roles
@@ -1426,10 +1424,6 @@ class TestSettingsRoles:
         assert resp.status_code == 400
         assert "system role" in resp.json()["error"].lower()
 
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
 # ---------------------------------------------------------------------------
 # Settings: Reference Data

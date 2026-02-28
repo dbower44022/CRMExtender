@@ -99,7 +99,7 @@ def _insert_communication(conn, comm_id, account_id="acct-1",
                            subject="Test", timestamp=None):
     conn.execute(
         "INSERT OR IGNORE INTO communications "
-        "(id, account_id, channel, timestamp, content, sender_address, subject, "
+        "(id, account_id, channel, timestamp, original_text, sender_address, subject, "
         "created_at, updated_at) "
         "VALUES (?, ?, 'email', ?, ?, ?, ?, ?, ?)",
         (comm_id, account_id, timestamp or _NOW, content, sender, subject,

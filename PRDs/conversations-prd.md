@@ -9,9 +9,10 @@
 
 > **V4.0 (2026-02-22):**
 > Terminology standardization pass: Mojibake encoding cleanup. Cross-PRD links updated to current versions (Custom Objects V2, Views & Grid V5, Contact Management V5, Projects V3). Master Glossary V3 cross-reference added to glossary section.
->
+> 
 > **V2.0 (2026-02-19):**
 > Major architectural restructuring:
+> 
 > - **Topic eliminated as a separate system object type.** Topic's role absorbed into Conversation via `is_aggregate` flag. The `top_` prefix is retired. Aggregate Conversations group child Conversations the same way Document Folders group Documents.
 > - **Conversation membership is many-to-many** via `conversation_members` junction table, mirroring the Documents `document_folder_members` pattern. A child Conversation can belong to multiple aggregate Conversations simultaneously. Aggregate Conversations can hold both direct Communications AND child Conversations.
 > - **Conversations attach to any entity via Relation Types** — no FK columns. `topic_id` and `project_id` removed from the Conversations table. System Relation Types (Conversation↔Project, Conversation↔Company, Conversation↔Contact, Conversation↔Event) ship out of the box. No inheritance — entity links are independent of parent aggregate links.
@@ -19,7 +20,7 @@
 > - **Conversation timeline references Published Summaries** from the [Communications PRD](communications-prd.md) Section 7. The Conversation is a presentation container that assembles summary references — it does not copy or store Communication content.
 > - **AI classification updated** to suggest aggregate Conversation placement (replacing Topic assignment).
 > - **Sub-Conversation nesting is unlimited** with application-level acyclic enforcement, same pattern as Document folder nesting.
->
+> 
 > **V1.0 (2026-02-18):**
 > This document is one of two sibling PRDs extracted from the monolithic Communication & Conversation Intelligence PRD v2.0 (2026-02-07). That document has been decomposed into:
 > 
@@ -142,7 +143,7 @@ The Conversations subsystem addresses this by providing a flexible organizationa
 | Metric                                | Target                                                                    | Measurement                                                    |
 | ------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | Conversation auto-assignment accuracy | >85% of communications assigned to the correct conversation               | User correction rate as inverse proxy                          |
-| Aggregate placement accuracy           | >75% of conversations placed in the correct aggregate conversation                       | User correction rate as inverse proxy                          |
+| Aggregate placement accuracy          | >75% of conversations placed in the correct aggregate conversation        | User correction rate as inverse proxy                          |
 | AI summarization coverage             | 100% of non-triaged, substantive conversations summarized                 | DB query: eligible conversations with `ai_summary IS NOT NULL` |
 | Action item extraction recall         | >80% of genuine action items captured                                     | Human evaluation of 100 conversation summaries                 |
 | Cross-channel stitching accuracy      | >90% of related cross-channel communications in the same conversation     | Human evaluation of 100 multi-channel conversations            |
@@ -198,23 +199,23 @@ The Conversations subsystem addresses this by providing a flexible organizationa
 
 ### 5.1 Object Type Registration
 
-| Attribute               | Value                                                                                                                            |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                  | Conversation                                                                                                                     |
-| `slug`                  | `conversations`                                                                                                                  |
-| `type_prefix`           | `cvr_`                                                                                                                           |
-| `is_system`             | `true`                                                                                                                           |
-| `display_name_field_id` | → `subject` field                                                                                                                |
+| Attribute               | Value                                                                                                                                                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                  | Conversation                                                                                                                                                                                                                |
+| `slug`                  | `conversations`                                                                                                                                                                                                             |
+| `type_prefix`           | `cvr_`                                                                                                                                                                                                                      |
+| `is_system`             | `true`                                                                                                                                                                                                                      |
+| `display_name_field_id` | → `subject` field                                                                                                                                                                                                           |
 | `description`           | A logical grouping of related communications between specific participants about a specific subject. Can span multiple channels. When `is_aggregate = true`, serves as an organizational container for child Conversations. |
 
 ### 5.2 Registered Behaviors
 
-| Behavior                     | Source PRD | Trigger                               |
-| ---------------------------- | ---------- | ------------------------------------- |
-| AI status detection          | This PRD   | On new communication added            |
-| Summarization                | This PRD   | On new communication added, on demand |
-| Action item extraction       | This PRD   | On new communication added            |
-| Aggregate roll-up            | This PRD   | On child conversation membership change, on child content change |
+| Behavior               | Source PRD | Trigger                                                          |
+| ---------------------- | ---------- | ---------------------------------------------------------------- |
+| AI status detection    | This PRD   | On new communication added                                       |
+| Summarization          | This PRD   | On new communication added, on demand                            |
+| Action item extraction | This PRD   | On new communication added                                       |
+| Aggregate roll-up      | This PRD   | On child conversation membership change, on child content change |
 
 ### 5.3 Conversation Field Registry
 
@@ -222,24 +223,24 @@ The Conversations subsystem addresses this by providing a flexible organizationa
 
 **Core system fields** (`is_system = true`, protected):
 
-| Field                | Column                 | Type                | Required | Description                                                                          |
-| -------------------- | ---------------------- | ------------------- | -------- | ------------------------------------------------------------------------------------ |
-| Subject              | `subject`              | Text (single-line)  | NO       | Derived from email subject, or user-defined. Display name field.                     |
-| Is Aggregate         | `is_aggregate`         | Checkbox            | YES      | `true` = organizational container for child Conversations. `false` = standard. **Immutable after creation.** Default: `false`. |
-| Description          | `description`          | Text (multi-line)   | NO       | Optional description of the Conversation's scope. Primarily useful for aggregate Conversations. |
-| System Status        | `system_status`        | Select              | YES      | Time-based, auto-managed: `active`, `stale`, `closed`. Default: `active`.            |
-| AI Status            | `ai_status`            | Select              | NO       | Semantic, from AI analysis: `open`, `closed`, `uncertain`. NULL until AI processes.  |
-| AI Summary           | `ai_summary`           | Text (multi-line)   | NO       | AI-generated 2–4 sentence narrative of conversation state.                           |
-| AI Action Items      | `ai_action_items`      | Text (multi-line)   | NO       | JSON-encoded list of extracted action items with assignee and deadline.              |
-| AI Key Topics        | `ai_key_topics`        | Text (multi-line)   | NO       | JSON-encoded list of 2–5 short topic phrases.                                        |
-| AI Confidence        | `ai_confidence`        | Number (decimal)    | NO       | Confidence score for the AI's conversation assignment (0.0–1.0).                     |
-| AI Last Processed At | `ai_last_processed_at` | Datetime            | NO       | When AI last analyzed this conversation.                                             |
-| Communication Count  | `communication_count`  | Number (integer)    | NO       | Denormalized count of communications. Updated on add/remove.                         |
-| Channel Breakdown    | `channel_breakdown`    | Text (single-line)  | NO       | JSON-encoded count by channel (e.g., `{"email": 5, "sms": 2, "phone_recorded": 1}`). |
-| First Activity At    | `first_activity_at`    | Datetime            | NO       | Timestamp of the earliest communication.                                             |
-| Last Activity At     | `last_activity_at`     | Datetime            | NO       | Timestamp of the most recent communication. Drives `system_status` transitions.      |
-| Stale After Days     | `stale_after_days`     | Number (integer)    | NO       | Configurable threshold for stale detection. Default: 14.                             |
-| Closed After Days    | `closed_after_days`    | Number (integer)    | NO       | Configurable threshold for auto-close. Default: 30.                                  |
+| Field                | Column                 | Type               | Required | Description                                                                                                                    |
+| -------------------- | ---------------------- | ------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Subject              | `subject`              | Text (single-line) | NO       | Derived from email subject, or user-defined. Display name field.                                                               |
+| Is Aggregate         | `is_aggregate`         | Checkbox           | YES      | `true` = organizational container for child Conversations. `false` = standard. **Immutable after creation.** Default: `false`. |
+| Description          | `description`          | Text (multi-line)  | NO       | Optional description of the Conversation's scope. Primarily useful for aggregate Conversations.                                |
+| System Status        | `system_status`        | Select             | YES      | Time-based, auto-managed: `active`, `stale`, `closed`. Default: `active`.                                                      |
+| AI Status            | `ai_status`            | Select             | NO       | Semantic, from AI analysis: `open`, `closed`, `uncertain`. NULL until AI processes.                                            |
+| AI Summary           | `ai_summary`           | Text (multi-line)  | NO       | AI-generated 2–4 sentence narrative of conversation state.                                                                     |
+| AI Action Items      | `ai_action_items`      | Text (multi-line)  | NO       | JSON-encoded list of extracted action items with assignee and deadline.                                                        |
+| AI Key Topics        | `ai_key_topics`        | Text (multi-line)  | NO       | JSON-encoded list of 2–5 short topic phrases.                                                                                  |
+| AI Confidence        | `ai_confidence`        | Number (decimal)   | NO       | Confidence score for the AI's conversation assignment (0.0–1.0).                                                               |
+| AI Last Processed At | `ai_last_processed_at` | Datetime           | NO       | When AI last analyzed this conversation.                                                                                       |
+| Communication Count  | `communication_count`  | Number (integer)   | NO       | Denormalized count of communications. Updated on add/remove.                                                                   |
+| Channel Breakdown    | `channel_breakdown`    | Text (single-line) | NO       | JSON-encoded count by channel (e.g., `{"email": 5, "sms": 2, "phone_recorded": 1}`).                                           |
+| First Activity At    | `first_activity_at`    | Datetime           | NO       | Timestamp of the earliest communication.                                                                                       |
+| Last Activity At     | `last_activity_at`     | Datetime           | NO       | Timestamp of the most recent communication. Drives `system_status` transitions.                                                |
+| Stale After Days     | `stale_after_days`     | Number (integer)   | NO       | Configurable threshold for stale detection. Default: 14.                                                                       |
+| Closed After Days    | `closed_after_days`    | Number (integer)   | NO       | Configurable threshold for auto-close. Default: 30.                                                                            |
 
 ### 5.4 Read Model Table
 
@@ -310,14 +311,14 @@ Unlike Document Folders (which are pure containers that cannot hold file content
 
 ### 6.2 Aggregate vs. Standard Conversation
 
-| Aspect | Standard Conversation (`is_aggregate = false`) | Aggregate Conversation (`is_aggregate = true`) |
-|---|---|---|
-| Contains Communications | Yes — via `conversation_id` FK on Communications | Yes — can have its own direct Communications |
-| Contains child Conversations | No | Yes — via `conversation_members` junction table |
-| AI Summary | Synthesizes across its Communications' Published Summaries | Synthesizes across its own Communications PLUS all child Conversation summaries |
-| Communication Count | Count of direct Communications | Direct Communications + sum of all children's Communications |
-| Can be a child of an aggregate | Yes | Yes (aggregates can nest inside other aggregates) |
-| `is_aggregate` mutability | Immutable | Immutable |
+| Aspect                         | Standard Conversation (`is_aggregate = false`)             | Aggregate Conversation (`is_aggregate = true`)                                  |
+| ------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Contains Communications        | Yes — via `conversation_id` FK on Communications           | Yes — can have its own direct Communications                                    |
+| Contains child Conversations   | No                                                         | Yes — via `conversation_members` junction table                                 |
+| AI Summary                     | Synthesizes across its Communications' Published Summaries | Synthesizes across its own Communications PLUS all child Conversation summaries |
+| Communication Count            | Count of direct Communications                             | Direct Communications + sum of all children's Communications                    |
+| Can be a child of an aggregate | Yes                                                        | Yes (aggregates can nest inside other aggregates)                               |
+| `is_aggregate` mutability      | Immutable                                                  | Immutable                                                                       |
 
 ### 6.3 Aggregate Conversation Example
 
@@ -391,14 +392,14 @@ CREATE INDEX idx_cvr_members_parent ON conversation_members (parent_conversation
 
 ### 7.3 Membership Rules
 
-| Rule | Enforcement |
-|---|---|
-| Parent must have `is_aggregate = true` | CHECK constraint or application-level validation on insert |
-| Child can be standard or aggregate | No restriction — enables nesting |
-| A Conversation can belong to multiple parents | Many-to-many by design |
-| No self-membership | CHECK constraint: `parent_conversation_id != child_conversation_id` |
-| No circular references | Application-level acyclic check (Section 7.4) |
-| Membership does not imply inheritance | Child entity links are independent of parent's entity links |
+| Rule                                          | Enforcement                                                         |
+| --------------------------------------------- | ------------------------------------------------------------------- |
+| Parent must have `is_aggregate = true`        | CHECK constraint or application-level validation on insert          |
+| Child can be standard or aggregate            | No restriction — enables nesting                                    |
+| A Conversation can belong to multiple parents | Many-to-many by design                                              |
+| No self-membership                            | CHECK constraint: `parent_conversation_id != child_conversation_id` |
+| No circular references                        | Application-level acyclic check (Section 7.4)                       |
+| Membership does not imply inheritance         | Child entity links are independent of parent's entity links         |
 
 ### 7.4 Acyclic Enforcement
 
@@ -417,14 +418,15 @@ This is the same algorithm used for Document folder nesting (Documents PRD Secti
 
 Aggregate Conversations maintain denormalized counts that include both direct and child Communications:
 
-| Field | Calculation |
-|---|---|
+| Field                 | Calculation                                                                     |
+| --------------------- | ------------------------------------------------------------------------------- |
 | `communication_count` | Direct Communications + SUM of all children's `communication_count` (recursive) |
-| `channel_breakdown` | Merged JSON across direct + all children |
-| `first_activity_at` | MIN across direct + all children |
-| `last_activity_at` | MAX across direct + all children |
+| `channel_breakdown`   | Merged JSON across direct + all children                                        |
+| `first_activity_at`   | MIN across direct + all children                                                |
+| `last_activity_at`    | MAX across direct + all children                                                |
 
 These are updated when:
+
 - A Communication is added/removed from the aggregate or any child.
 - A child Conversation is added/removed from the aggregate.
 - A child's counts change (fans out to all parent aggregates).
@@ -450,12 +452,12 @@ Conversations attach to other entities exclusively through **system Relation Typ
 
 The following system Relation Types ship out of the box:
 
-| Relation Type | Slug | Source | Target | Cardinality | Notes |
-|---|---|---|---|---|---|
-| Conversation↔Project | `conversation_projects` | Conversation (`cvr_`) | Project (`prj_`) | Many-to-many | A Conversation can be associated with multiple Projects. |
-| Conversation↔Company | `conversation_companies` | Conversation (`cvr_`) | Company (`cmp_`) | Many-to-many | Direct company association. |
-| Conversation↔Contact | `conversation_contacts` | Conversation (`cvr_`) | Contact (`con_`) | Many-to-many | Explicit contact association (supplementing derived participants). |
-| Conversation↔Event | `conversation_events` | Conversation (`cvr_`) | Event (`evt_`) | Many-to-many | Links Conversations to calendar events. Mirrors the Event Management PRD's Event→Conversation relation. |
+| Relation Type        | Slug                     | Source                | Target           | Cardinality  | Notes                                                                                                   |
+| -------------------- | ------------------------ | --------------------- | ---------------- | ------------ | ------------------------------------------------------------------------------------------------------- |
+| Conversation↔Project | `conversation_projects`  | Conversation (`cvr_`) | Project (`prj_`) | Many-to-many | A Conversation can be associated with multiple Projects.                                                |
+| Conversation↔Company | `conversation_companies` | Conversation (`cvr_`) | Company (`cmp_`) | Many-to-many | Direct company association.                                                                             |
+| Conversation↔Contact | `conversation_contacts`  | Conversation (`cvr_`) | Contact (`con_`) | Many-to-many | Explicit contact association (supplementing derived participants).                                      |
+| Conversation↔Event   | `conversation_events`    | Conversation (`cvr_`) | Event (`evt_`)   | Many-to-many | Links Conversations to calendar events. Mirrors the Event Management PRD's Event→Conversation relation. |
 
 Additional Relation Types for custom object types can be created by users through the standard Custom Objects framework.
 
@@ -500,12 +502,12 @@ Project (defined in Projects PRD)
 
 ### 9.2 Hierarchy Rules
 
-| Entity | Must belong to a parent? | Can exist independently? |
-|---|---|---|
-| Communication | No — can be unassigned | Yes — marketing emails, unknown senders, one-offs |
-| Conversation (standard) | No — doesn't need an aggregate parent or entity links | Yes — an ongoing exchange with a colleague that isn't part of any organized group |
-| Conversation (aggregate) | No — doesn't need a parent aggregate or entity links | Yes — a top-level organizational container |
-| Project | No — top-level entity (defined in Projects PRD) | Yes — always independent |
+| Entity                   | Must belong to a parent?                              | Can exist independently?                                                          |
+| ------------------------ | ----------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Communication            | No — can be unassigned                                | Yes — marketing emails, unknown senders, one-offs                                 |
+| Conversation (standard)  | No — doesn't need an aggregate parent or entity links | Yes — an ongoing exchange with a colleague that isn't part of any organized group |
+| Conversation (aggregate) | No — doesn't need a parent aggregate or entity links  | Yes — a top-level organizational container                                        |
+| Project                  | No — top-level entity (defined in Projects PRD)       | Yes — always independent                                                          |
 
 ### 9.3 Aggregate Conversation vs. Conversation Distinction
 
@@ -534,6 +536,7 @@ An email thread automatically creates a Conversation. The `provider_thread_id` o
 Each Communication produces a **Published Summary** (Communications PRD Section 7) — a rich text representation that eliminates redundant or unnecessary information (quoted reply chains, email signatures, boilerplate). The Conversation timeline renders these summaries as an ordered sequence of reference cards. Each card shows the Communication's Published Summary and provides a link to the original Communication for full content review.
 
 The Communication owns its summary; the Conversation references it. This means:
+
 - Updating a Communication's Published Summary automatically updates how it appears in every Conversation that contains it.
 - The Conversation-level `ai_summary` is a higher-order synthesis across its Communications' Published Summaries, not a re-analysis of raw content.
 - Summary revision history (Communications PRD Section 7.6) enables audit trail reconstruction of what information was visible when decisions were made.
@@ -824,14 +827,14 @@ Conversation views operate through the Views & Grid PRD framework. All Conversat
 
 ### 17.2 Example Views
 
-| View                         | Description                                                                               |
-| ---------------------------- | ----------------------------------------------------------------------------------------- |
-| "My Open Action Items"       | All `ai_action_items` across all conversations where `ai_status = 'open'`, sorted by date |
-| "Stale Client Conversations" | Conversations with `system_status = 'stale'`, grouped by contact                          |
+| View                         | Description                                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| "My Open Action Items"       | All `ai_action_items` across all conversations where `ai_status = 'open'`, sorted by date                           |
+| "Stale Client Conversations" | Conversations with `system_status = 'stale'`, grouped by contact                                                    |
 | "Project X Status"           | All Conversations associated with Project X (via Relation Type), grouped by aggregate, sorted by `last_activity_at` |
-| "Unassigned This Week"       | Communications from the last 7 days with `conversation_id IS NULL`                        |
-| "All Comms with Bob"         | Communications where Bob is a participant, across all channels, chronological             |
-| "Pending Reviews"            | Auto-assigned communications with low `ai_confidence` scores                              |
+| "Unassigned This Week"       | Communications from the last 7 days with `conversation_id IS NULL`                                                  |
+| "All Comms with Bob"         | Communications where Bob is a participant, across all channels, chronological                                       |
+| "Pending Reviews"            | Auto-assigned communications with low `ai_confidence` scores                                                        |
 
 ### 17.3 Shareable Views
 
@@ -957,14 +960,14 @@ ORDER BY comm.timestamp DESC;
 
 ### 21.1 Conversation CRUD API
 
-| Endpoint                             | Method | Description                                                  |
-| ------------------------------------ | ------ | ------------------------------------------------------------ |
-| `/api/v1/conversations`              | GET    | List conversations (paginated, filterable, sortable)         |
-| `/api/v1/conversations`              | POST   | Create a conversation                                        |
-| `/api/v1/conversations/{id}`         | GET    | Get conversation with communications and participants        |
+| Endpoint                             | Method | Description                                                     |
+| ------------------------------------ | ------ | --------------------------------------------------------------- |
+| `/api/v1/conversations`              | GET    | List conversations (paginated, filterable, sortable)            |
+| `/api/v1/conversations`              | POST   | Create a conversation                                           |
+| `/api/v1/conversations/{id}`         | GET    | Get conversation with communications and participants           |
 | `/api/v1/conversations/{id}`         | PATCH  | Update conversation fields (subject, entity associations, etc.) |
-| `/api/v1/conversations/{id}/archive` | POST   | Archive a conversation                                       |
-| `/api/v1/conversations/{id}/history` | GET    | Get event history                                            |
+| `/api/v1/conversations/{id}/archive` | POST   | Archive a conversation                                          |
+| `/api/v1/conversations/{id}/history` | GET    | Get event history                                               |
 
 ### 21.2 Conversation Intelligence API
 
@@ -977,21 +980,21 @@ ORDER BY comm.timestamp DESC;
 
 ### 21.3 Conversation Membership API
 
-| Endpoint                                          | Method | Description                                                       |
-| ------------------------------------------------- | ------ | ----------------------------------------------------------------- |
-| `/api/v1/conversations/{id}/members`              | GET    | List child Conversations (aggregate only)                         |
-| `/api/v1/conversations/{id}/members`              | POST   | Add a child Conversation to this aggregate (acyclic check)        |
-| `/api/v1/conversations/{id}/members/{child_id}`   | DELETE | Remove a child Conversation from this aggregate                   |
-| `/api/v1/conversations/{id}/parents`              | GET    | List aggregate Conversations this Conversation belongs to         |
+| Endpoint                                        | Method | Description                                                |
+| ----------------------------------------------- | ------ | ---------------------------------------------------------- |
+| `/api/v1/conversations/{id}/members`            | GET    | List child Conversations (aggregate only)                  |
+| `/api/v1/conversations/{id}/members`            | POST   | Add a child Conversation to this aggregate (acyclic check) |
+| `/api/v1/conversations/{id}/members/{child_id}` | DELETE | Remove a child Conversation from this aggregate            |
+| `/api/v1/conversations/{id}/parents`            | GET    | List aggregate Conversations this Conversation belongs to  |
 
 ### 21.4 Conversation Entity Association API
 
-| Endpoint                                                | Method | Description                                                  |
-| ------------------------------------------------------- | ------ | ------------------------------------------------------------ |
-| `/api/v1/conversations/{id}/relations`                  | GET    | List all entity associations (Projects, Companies, etc.)     |
-| `/api/v1/conversations/{id}/relations/{relation_slug}`  | GET    | List associations for a specific Relation Type               |
-| `/api/v1/conversations/{id}/relations/{relation_slug}`  | POST   | Add an entity association                                    |
-| `/api/v1/conversations/{id}/relations/{relation_slug}/{target_id}` | DELETE | Remove an entity association               |
+| Endpoint                                                           | Method | Description                                              |
+| ------------------------------------------------------------------ | ------ | -------------------------------------------------------- |
+| `/api/v1/conversations/{id}/relations`                             | GET    | List all entity associations (Projects, Companies, etc.) |
+| `/api/v1/conversations/{id}/relations/{relation_slug}`             | GET    | List associations for a specific Relation Type           |
+| `/api/v1/conversations/{id}/relations/{relation_slug}`             | POST   | Add an entity association                                |
+| `/api/v1/conversations/{id}/relations/{relation_slug}/{target_id}` | DELETE | Remove an entity association                             |
 
 ### 21.5 Review Workflow API
 
@@ -1097,20 +1100,20 @@ The self-referential Relation Type on Project naturally supports any depth. In p
 
 ## 24. Dependencies & Related PRDs
 
-| PRD                                           | Relationship                                                                                                       | Dependency Direction                                                                                    |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| **Custom Objects PRD**                        | Conversation is a system object type. Aggregate Conversations use the same framework.                              | **Bidirectional.** This PRD defines behaviors; Custom Objects provides the framework.                   |
+| PRD                                           | Relationship                                                                                                                                                                                    | Dependency Direction                                                                                    |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Custom Objects PRD**                        | Conversation is a system object type. Aggregate Conversations use the same framework.                                                                                                           | **Bidirectional.** This PRD defines behaviors; Custom Objects provides the framework.                   |
 | **Communications PRD**                        | Communications are the atomic records Conversations group. `conversation_id` FK lives on the Communication entity. Communication Published Summaries are rendered in the Conversation timeline. | **Conversations depend on Communications** as the foundational data layer and summary source.           |
-| **Projects PRD**                              | Projects associate with Conversations via the Conversation↔Project system Relation Type.                           | **Projects PRD defines the Project entity;** this PRD defines Conversation-side behaviors.              |
-| **Contact Management PRD**                    | Conversation participants derived from Communication Participants. Explicit Conversation↔Contact Relation Type supplements derivation. | **Bidirectional.** Conversations consume contact data; conversation patterns feed relationship scoring. |
-| **Event Management PRD**                      | Events link to Conversations via Event→Conversation Relation Type.                                                 | **Events depend on Conversations** for meeting correlation.                                             |
-| **Notes PRD**                                 | Notes attach to Conversations (standard and aggregate). Communication Published Summaries share the same rich text content architecture. | **Notes depend on Conversations** as attachment targets. **Shared architecture** for rich text.         |
-| **Email Provider Sync PRD**                   | Email threading logic creates and populates Conversations.                                                         | **Email Sync contributes to Conversations** through `provider_thread_id`.                               |
-| **Documents PRD**                             | Established the folder-as-document pattern (`is_folder`) and many-to-many membership (`document_folder_members`) that Aggregate Conversations mirror. | **Architectural precedent.** No runtime dependency.                                                     |
-| **Data Sources PRD**                          | Virtual schema for Conversations.                                                                                  | **Data Sources depend on Custom Objects** (which governs Conversations).                                |
-| **Views & Grid PRD**                          | Conversation views and filters.                                                                                    | **Views depend on Custom Objects** (which governs Conversations).                                       |
-| **Permissions & Sharing PRD**                 | Access control on Conversations (standard and aggregate).                                                          | **Conversations depend on Permissions.**                                                                |
-| **AI Learning & Classification PRD** (future) | How the system learns from user corrections; classification algorithms; confidence scoring.                        | **This PRD establishes the requirement; AI PRD defines implementation.**                                |
+| **Projects PRD**                              | Projects associate with Conversations via the Conversation↔Project system Relation Type.                                                                                                        | **Projects PRD defines the Project entity;** this PRD defines Conversation-side behaviors.              |
+| **Contact Management PRD**                    | Conversation participants derived from Communication Participants. Explicit Conversation↔Contact Relation Type supplements derivation.                                                          | **Bidirectional.** Conversations consume contact data; conversation patterns feed relationship scoring. |
+| **Event Management PRD**                      | Events link to Conversations via Event→Conversation Relation Type.                                                                                                                              | **Events depend on Conversations** for meeting correlation.                                             |
+| **Notes PRD**                                 | Notes attach to Conversations (standard and aggregate). Communication Published Summaries share the same rich text content architecture.                                                        | **Notes depend on Conversations** as attachment targets. **Shared architecture** for rich text.         |
+| **Email Provider Sync PRD**                   | Email threading logic creates and populates Conversations.                                                                                                                                      | **Email Sync contributes to Conversations** through `provider_thread_id`.                               |
+| **Documents PRD**                             | Established the folder-as-document pattern (`is_folder`) and many-to-many membership (`document_folder_members`) that Aggregate Conversations mirror.                                           | **Architectural precedent.** No runtime dependency.                                                     |
+| **Data Sources PRD**                          | Virtual schema for Conversations.                                                                                                                                                               | **Data Sources depend on Custom Objects** (which governs Conversations).                                |
+| **Views & Grid PRD**                          | Conversation views and filters.                                                                                                                                                                 | **Views depend on Custom Objects** (which governs Conversations).                                       |
+| **Permissions & Sharing PRD**                 | Access control on Conversations (standard and aggregate).                                                                                                                                       | **Conversations depend on Permissions.**                                                                |
+| **AI Learning & Classification PRD** (future) | How the system learns from user corrections; classification algorithms; confidence scoring.                                                                                                     | **This PRD establishes the requirement; AI PRD defines implementation.**                                |
 
 ---
 
@@ -1150,21 +1153,21 @@ The self-referential Relation Type on Project naturally supports any depth. In p
 
 General platform terms (Entity Bar, Detail Panel, Card-Based Architecture, Attribute Card, etc.) are defined in the **[Master Glossary V3](glossary.md)**. The following terms are specific to this subsystem:
 
-| Term                        | Definition                                                                                                                                                                                                           |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Term                        | Definition                                                                                                                                                                                                                                                           |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Conversation**            | A logical grouping of related communications between specific participants about a specific subject. Can span multiple channels. When `is_aggregate = true`, serves as an organizational container for child Conversations. A system object type with prefix `cvr_`. |
-| **Aggregate Conversation**  | A Conversation with `is_aggregate = true`. Serves as an organizational container that groups related child Conversations and can hold its own direct Communications. Replaces the former Topic entity. Nesting is unlimited with acyclic enforcement. |
-| **Conversation Membership** | The many-to-many relationship between aggregate and child Conversations, stored in the `conversation_members` junction table. A child can belong to multiple aggregates simultaneously. |
-| **Published Summary**       | The rich text representation of a Communication's contribution to a Conversation's timeline. Defined in the Communications PRD Section 7. The Conversation references Published Summaries; it does not copy or store Communication content. |
-| **System Relation Type**    | A platform-provided Relation Type that ships out of the box. Conversation↔Project, Conversation↔Company, Conversation↔Contact, and Conversation↔Event are system Relation Types for entity attachment. |
-| **Segment**                 | A portion of a Communication assigned to a different Conversation than the primary. Created by user selection. Stored as a behavior-managed record. |
-| **Auto-organization**       | AI-driven classification and routing of Communications into Conversations and suggestion of aggregate Conversation placement, with user review and correction. |
-| **Confidence Score**        | A 0.0–1.0 value indicating the AI's certainty about a Conversation or aggregate Conversation assignment. Drives the review workflow. |
-| **System Status**           | Time-based Conversation lifecycle state: `active`, `stale`, `closed`. Managed automatically based on `last_activity_at` and configurable thresholds. |
-| **AI Status**               | Semantic Conversation state from AI analysis: `open`, `closed`, `uncertain`. |
-| **Review Workflow**         | The daily process where users review auto-assigned Communications, accept or correct assignments, and identify unknown contacts. |
-| **Cross-Channel Stitching** | The mechanism for maintaining Conversation continuity when Communications span multiple channels (email, SMS, phone, etc.). |
-| **Split/Reference Model**   | The approach for handling Communications that span multiple Conversations: primary assignment + segments with cross-references. |
+| **Aggregate Conversation**  | A Conversation with `is_aggregate = true`. Serves as an organizational container that groups related child Conversations and can hold its own direct Communications. Replaces the former Topic entity. Nesting is unlimited with acyclic enforcement.                |
+| **Conversation Membership** | The many-to-many relationship between aggregate and child Conversations, stored in the `conversation_members` junction table. A child can belong to multiple aggregates simultaneously.                                                                              |
+| **Published Summary**       | The rich text representation of a Communication's contribution to a Conversation's timeline. Defined in the Communications PRD Section 7. The Conversation references Published Summaries; it does not copy or store Communication content.                          |
+| **System Relation Type**    | A platform-provided Relation Type that ships out of the box. Conversation↔Project, Conversation↔Company, Conversation↔Contact, and Conversation↔Event are system Relation Types for entity attachment.                                                               |
+| **Segment**                 | A portion of a Communication assigned to a different Conversation than the primary. Created by user selection. Stored as a behavior-managed record.                                                                                                                  |
+| **Auto-organization**       | AI-driven classification and routing of Communications into Conversations and suggestion of aggregate Conversation placement, with user review and correction.                                                                                                       |
+| **Confidence Score**        | A 0.0–1.0 value indicating the AI's certainty about a Conversation or aggregate Conversation assignment. Drives the review workflow.                                                                                                                                 |
+| **System Status**           | Time-based Conversation lifecycle state: `active`, `stale`, `closed`. Managed automatically based on `last_activity_at` and configurable thresholds.                                                                                                                 |
+| **AI Status**               | Semantic Conversation state from AI analysis: `open`, `closed`, `uncertain`.                                                                                                                                                                                         |
+| **Review Workflow**         | The daily process where users review auto-assigned Communications, accept or correct assignments, and identify unknown contacts.                                                                                                                                     |
+| **Cross-Channel Stitching** | The mechanism for maintaining Conversation continuity when Communications span multiple channels (email, SMS, phone, etc.).                                                                                                                                          |
+| **Split/Reference Model**   | The approach for handling Communications that span multiple Conversations: primary assignment + segments with cross-references.                                                                                                                                      |
 
 ---
 

@@ -68,7 +68,7 @@ export function ParticipantsCard({ participants, providerAccount, senderName, se
                 ) : (
                   <span className="flex items-center gap-1.5 truncate text-sm text-surface-700">
                     <span className="truncate">{p.name || p.address}</span>
-                    <UserX size={12} className="shrink-0 text-surface-400" title="Unresolved contact" />
+                    <UserX size={12} className="shrink-0 text-surface-400" />
                   </span>
                 )}
                 {/* Address line — "via" for account owner, plain address for others */}

@@ -41,8 +41,6 @@ export function CommunicationPreviewCard({ entityId }: CommunicationPreviewCardP
   const isSms = data.channel === 'sms'
   const isPhoneRecorded = data.channel === 'phone'
   const isVideoRecorded = data.channel === 'video'
-  const isManualEntry = data.channel === 'phone_manual' || data.channel === 'video_manual' ||
-                        data.channel === 'in_person' || data.channel === 'note'
   const isPhoneLike = data.channel === 'phone' || data.channel === 'phone_manual' ||
                       data.channel === 'video' || data.channel === 'video_manual'
   const direction = directionLabel(data.direction, data.channel)

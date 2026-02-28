@@ -1,9 +1,9 @@
-import { useRef, useEffect, useState, useMemo } from 'react'
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import { CHANNEL_ICONS, CHANNEL_LABELS } from '../../lib/channelIcons.ts'
 import { formatTimestamp } from '../../lib/formatTimestamp.ts'
 import { sanitizeHtml } from '../../lib/sanitizeHtml.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
-import { ExternalLink, Paperclip, ArrowUpDown } from 'lucide-react'
+import { ExternalLink, Paperclip, ArrowUpDown, ChevronDown, ChevronRight } from 'lucide-react'
 import type { ConversationCommunication } from '../../types/api.ts'
 import type { ParticipantColorMap } from '../../lib/participantColors.ts'
 
@@ -27,6 +27,16 @@ export function ConversationTimelineCard({ communications, colorMap, onNavigateA
   const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [focusedCommId, setFocusedCommId] = useState<string | null>(null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  const toggleExpanded = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
 
   const sorted = useMemo(() => {
     if (sortDir === 'asc') return communications
@@ -73,6 +83,8 @@ export function ConversationTimelineCard({ communications, colorMap, onNavigateA
             const rowTint = colorMap.getRowTint(senderAddr)
             const recipient = recipientSuffix(c)
             const isFocused = focusedCommId === c.id
+            const isExpanded = expandedIds.has(c.id)
+            const hasHtml = !!c.cleaned_html
 
             return (
               <div
@@ -152,9 +164,9 @@ export function ConversationTimelineCard({ communications, colorMap, onNavigateA
                       </div>
                     )}
 
-                    {/* Content — cleaned HTML preferred, fallback to snippet/ai_summary */}
+                    {/* Content — snippet by default, full HTML on expand */}
                     <div className="mt-1 text-sm leading-relaxed text-surface-500">
-                      {c.cleaned_html ? (
+                      {isExpanded && c.cleaned_html ? (
                         <div
                           className="[&_*]:!text-sm [&_*]:!leading-relaxed [&_img]:max-w-full [&_img]:h-auto [&_table]:w-full [&_table]:text-sm"
                           dangerouslySetInnerHTML={{ __html: sanitizeHtml(c.cleaned_html) }}
@@ -166,27 +178,38 @@ export function ConversationTimelineCard({ communications, colorMap, onNavigateA
                       )}
                     </div>
 
-                    {/* Attachment indicator + metadata badges */}
-                    {(c.attachment_count > 0 || !c.is_primary || (c.assignment_source && c.assignment_source !== 'sync')) && (
-                      <div className="mt-1.5 flex items-center gap-2">
-                        {c.attachment_count > 0 && (
-                          <span className="flex items-center gap-1 text-xs text-surface-400">
-                            <Paperclip size={11} />
-                            {c.attachment_count} {c.attachment_count === 1 ? 'attachment' : 'attachments'}
-                          </span>
-                        )}
-                        {!c.is_primary && (
-                          <span className="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-600">
-                            secondary
-                          </span>
-                        )}
-                        {c.assignment_source && c.assignment_source !== 'sync' && (
-                          <span className="rounded bg-surface-100 px-1.5 py-0.5 text-xs text-surface-500">
-                            {c.assignment_source}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    {/* Expand/collapse toggle + attachment indicator + metadata badges */}
+                    <div className="mt-1.5 flex items-center gap-2">
+                      {hasHtml && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleExpanded(c.id)
+                          }}
+                          className="inline-flex items-center gap-0.5 text-xs text-primary-500 hover:text-primary-700"
+                        >
+                          {isExpanded
+                            ? <><ChevronDown size={12} /> Hide content</>
+                            : <><ChevronRight size={12} /> Show content</>}
+                        </button>
+                      )}
+                      {c.attachment_count > 0 && (
+                        <span className="flex items-center gap-1 text-xs text-surface-400">
+                          <Paperclip size={11} />
+                          {c.attachment_count} {c.attachment_count === 1 ? 'attachment' : 'attachments'}
+                        </span>
+                      )}
+                      {!c.is_primary && (
+                        <span className="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-600">
+                          secondary
+                        </span>
+                      )}
+                      {c.assignment_source && c.assignment_source !== 'sync' && (
+                        <span className="rounded bg-surface-100 px-1.5 py-0.5 text-xs text-surface-500">
+                          {c.assignment_source}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

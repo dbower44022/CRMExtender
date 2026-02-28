@@ -1,7 +1,6 @@
 import { useConversationPreview } from '../../api/conversationPreview.ts'
 import { CHANNEL_ICONS, CHANNEL_LABELS } from '../../lib/channelIcons.ts'
 import { formatPreviewTimestamp } from '../../lib/formatTimestamp.ts'
-import { sanitizeHtml } from '../../lib/sanitizeHtml.ts'
 import { buildParticipantColorMap } from '../../lib/participantColors.ts'
 import { ChannelBreakdown } from '../shared/ChannelBreakdown.tsx'
 import { useNavigationStore } from '../../stores/navigation.ts'
@@ -140,18 +139,11 @@ function PreviewCommEntry({
           </span>
         </div>
 
-        {/* Content — cleaned HTML or snippet, line-clamped */}
-        {(comm.cleaned_html || comm.snippet) && (
-          comm.cleaned_html ? (
-            <div
-              className="mt-0.5 line-clamp-4 text-xs leading-relaxed text-surface-500 [&_*]:!text-xs [&_*]:!leading-relaxed [&_img]:hidden [&_table]:hidden"
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(comm.cleaned_html) }}
-            />
-          ) : (
-            <div className="mt-0.5 line-clamp-4 text-xs leading-relaxed text-surface-500">
-              {comm.snippet}
-            </div>
-          )
+        {/* Content — snippet text only (HTML too expensive for preview list) */}
+        {comm.snippet && (
+          <div className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-surface-500">
+            {comm.snippet}
+          </div>
         )}
 
         {/* Attachment indicator */}

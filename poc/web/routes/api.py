@@ -41,6 +41,15 @@ from ... import config
 router = APIRouter()
 
 
+def _comm_html_col(conn) -> str:
+    """Return the column name for cleaned HTML content in communications.
+
+    v18+ schema uses 'cleaned_html'; pre-v18 uses 'body_html'.
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(communications)").fetchall()}
+    return "cleaned_html" if "cleaned_html" in cols else "body_html"
+
+
 # ------------------------------------------------------------------
 # Health
 # ------------------------------------------------------------------
@@ -1255,10 +1264,11 @@ def conversation_preview_api(request: Request, conversation_id: str):
         ]
 
         # All communications, DESC
+        html_col = _comm_html_col(conn)
         recent_comms = conn.execute(
             "SELECT comm.id, comm.channel, comm.subject, comm.sender_name, "
             "       comm.sender_address, comm.timestamp, comm.snippet, "
-            "       comm.direction, comm.cleaned_html, "
+            f"       comm.direction, comm.{html_col} AS cleaned_html, "
             "       (SELECT cp.contact_id FROM communication_participants cp "
             "        WHERE cp.communication_id = comm.id AND cp.role = 'from' "
             "        LIMIT 1) AS sender_contact_id, "
@@ -1409,10 +1419,11 @@ def conversation_full_api(request: Request, conversation_id: str):
 
         # ALL communications, chronological ASC
         # Subqueries: sender contact_id, primary recipient name/count, attachment count
+        html_col = _comm_html_col(conn)
         comms = conn.execute(
             "SELECT comm.id, comm.channel, comm.direction, comm.subject, "
             "       comm.sender_name, comm.sender_address, comm.timestamp, "
-            "       comm.snippet, comm.cleaned_html, comm.ai_summary, "
+            f"       comm.snippet, comm.{html_col} AS cleaned_html, comm.ai_summary, "
             "       cc.is_primary, cc.assignment_source, "
             "       (SELECT cp.contact_id FROM communication_participants cp "
             "        WHERE cp.communication_id = comm.id AND cp.role = 'from' "

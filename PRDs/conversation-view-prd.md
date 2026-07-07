@@ -1,11 +1,13 @@
 # Conversation — View Conversation Sub-PRD
 
-**Version:** 1.3
-**Last Updated:** 2026-02-27
-**Status:** Draft
+**Version:** 1.4
+**Last Updated:** 2026-07-07
+**Status:** Implemented (PoC) — read/display complete; write-path actions deferred
 **Entity Base PRD:** [conversation-entity-base-prd.md]
 **Referenced Entity PRDs:** [communication-entity-base-prd.md], [communication-published-summary-prd.md], [contact-entity-base-prd.md]
 **GUI Documents:** [gui-functional-requirements-prd.md], [gui-preview-card-amendment.md]
+
+> **V1.4 (2026-07-07): Implementation status.** Task/test checkboxes below were audited against the PoC implementation (schema v20; see `docs/conversation_view_implementation.md`). Checked = verified in code and/or covered by `tests/test_api.py`. Unchecked items are the deferred write path (Link/Add/Remove associations and children, note creation, AI summary Edit/Regenerate, editable thresholds), plus features whose infrastructure doesn't exist yet (segments, event history, global timeline-order preference, content-based column sizing, recursive aggregate communication roll-up). **Deviations for product-owner review:** (1) "Undocked Window" open actions are implemented as in-place navigation — no undocked-window system exists; (2) Preview Card timestamps use a compact 3-tier format, not the 5-tier standard (full View complies); (3) splitter position persists in browser localStorage, so "across sessions" holds per-browser, not per-account; (4) Section 8 reuses the CNVP-* IDs already used by Section 4 — IDs should be renamed (e.g. CNVR-*) on next revision.
 
 ---
 
@@ -260,29 +262,29 @@ Direct Communications within this group are sorted by receive date (most recent 
 
 **Tasks:**
 
-- [ ] CNVP-01: Implement standard Conversation Preview Card with header and timeline entries
-- [ ] CNVP-02: Implement aggregate Conversation Preview Card with child conversation entries
-- [ ] CNVP-03: Implement aggregate Direct Communications group at bottom
-- [ ] CNVP-04: Implement participant color coding system (8–10 palette, deterministic from contact ID)
-- [ ] CNVP-05: Implement fixed account owner color tint
+- [x] CNVP-01: Implement standard Conversation Preview Card with header and timeline entries
+- [x] CNVP-02: Implement aggregate Conversation Preview Card with child conversation entries
+- [x] CNVP-03: Implement aggregate Direct Communications group at bottom
+- [x] CNVP-04: Implement participant color coding system (8–10 palette, deterministic from contact ID)
+- [x] CNVP-05: Implement fixed account owner color tint
 - [ ] CNVP-06: Implement Date & Time Display Standards (GUI FR PRD Section 2.3) for all timestamps
 - [ ] CNVP-07: Preview Card renders within 200ms of focus change
 
 **Tests:**
 
-- [ ] CNVP-T01: Standard Preview Card shows header with subject, statuses, count, and channel breakdown
+- [x] CNVP-T01: Standard Preview Card shows header with subject, statuses, count, and channel breakdown
 - [ ] CNVP-T02: Standard Preview Card shows communication entries (cleaned_html) most-recent-first
 - [ ] CNVP-T03: Each timeline entry shows channel icon, sender name, timestamp, and cleaned_html content
-- [ ] CNVP-T04: Participant color coding assigns deterministic colors from contact ID
-- [ ] CNVP-T05: Account owner entries always use fixed color tint
-- [ ] CNVP-T06: Adjacent entries from different participants have visually distinct background tints
-- [ ] CNVP-T07: Aggregate Preview Card shows child conversations sorted by last activity descending
-- [ ] CNVP-T08: Each child entry shows subject, status, count, and most recent cleaned content
-- [ ] CNVP-T09: Aggregate Direct Communications render as separate bottom group
-- [ ] CNVP-T10: Nested aggregate children render identically to standard children
+- [x] CNVP-T04: Participant color coding assigns deterministic colors from contact ID
+- [x] CNVP-T05: Account owner entries always use fixed color tint
+- [x] CNVP-T06: Adjacent entries from different participants have visually distinct background tints
+- [x] CNVP-T07: Aggregate Preview Card shows child conversations sorted by last activity descending
+- [x] CNVP-T08: Each child entry shows subject, status, count, and most recent cleaned content
+- [x] CNVP-T09: Aggregate Direct Communications render as separate bottom group
+- [x] CNVP-T10: Nested aggregate children render identically to standard children
 - [ ] CNVP-T11: Timestamps format correctly per Date & Time Display Standards (5 tiers)
-- [ ] CNVP-T12: Preview Card scrolls when content exceeds available space
-- [ ] CNVP-T13: Preview Card shows no AI intelligence, action items, or entity associations
+- [x] CNVP-T12: Preview Card scrolls when content exceeds available space
+- [x] CNVP-T13: Preview Card shows no AI intelligence, action items, or entity associations
 
 ---
 
@@ -409,34 +411,34 @@ The stored position is subject to the same constraints — left column minimum 4
 
 **Tasks:**
 
-- [ ] CNVL-01: Implement two-column activation at ≥ 700px container width (no card-count condition)
+- [x] CNVL-01: Implement two-column activation at ≥ 700px container width (no card-count condition)
 - [ ] CNVL-02: Implement dynamic column sizing (right column claims ideal width, clamped between 280px and 60%)
-- [ ] CNVL-03: Implement single-column fallback layout
-- [ ] CNVL-04: Implement two-column layout with independent scrolling
+- [x] CNVL-03: Implement single-column fallback layout
+- [x] CNVL-04: Implement two-column layout with independent scrolling
 - [ ] CNVL-05: Layout re-evaluates on container resize and CRM content changes
-- [ ] CNVL-06: Implement CRM column visual treatment (subtle background tint + left border)
-- [ ] CNVL-07: Implement user-draggable splitter between timeline and CRM columns
-- [ ] CNVL-08: Persist splitter position per-conversation
-- [ ] CNVL-09: Load stored splitter position when viewing a conversation with a saved override
+- [x] CNVL-06: Implement CRM column visual treatment (subtle background tint + left border)
+- [x] CNVL-07: Implement user-draggable splitter between timeline and CRM columns
+- [x] CNVL-08: Persist splitter position per-conversation
+- [x] CNVL-09: Load stored splitter position when viewing a conversation with a saved override
 
 **Tests:**
 
-- [ ] CNVL-T01: Container 1200px wide → two-column with dynamic sizing
-- [ ] CNVL-T02: Container 500px wide → single-column
-- [ ] CNVL-T03: Container 700px wide → two-column (minimum threshold met)
-- [ ] CNVL-T04: Container 699px wide → single-column (just under threshold)
+- [x] CNVL-T01: Container 1200px wide → two-column with dynamic sizing
+- [x] CNVL-T02: Container 500px wide → single-column
+- [x] CNVL-T03: Container 700px wide → two-column (minimum threshold met)
+- [x] CNVL-T04: Container 699px wide → single-column (just under threshold)
 - [ ] CNVL-T05: Right column with minimal content (2 participants, no AI) claims narrow width
 - [ ] CNVL-T06: Right column with heavy content (20 participants, full AI) claims wider width up to 60%
-- [ ] CNVL-T07: Left column never shrinks below 40% of container
+- [x] CNVL-T07: Left column never shrinks below 40% of container
 - [ ] CNVL-T08: Resizing container transitions smoothly between layouts
-- [ ] CNVL-T09: Two-column layout columns scroll independently
+- [x] CNVL-T09: Two-column layout columns scroll independently
 - [ ] CNVL-T10: Layout re-evaluates when AI summary populates after initial load
-- [ ] CNVL-T11: Two-column layout right column has distinct background tint and left border
-- [ ] CNVL-T12: User can drag splitter to adjust column widths
-- [ ] CNVL-T13: Dragged splitter position persists for that conversation across sessions
-- [ ] CNVL-T14: Conversation with stored splitter position loads with that position
+- [x] CNVL-T11: Two-column layout right column has distinct background tint and left border
+- [x] CNVL-T12: User can drag splitter to adjust column widths
+- [x] CNVL-T13: Dragged splitter position persists for that conversation across sessions
+- [x] CNVL-T14: Conversation with stored splitter position loads with that position
 - [ ] CNVL-T15: Conversation without stored splitter position uses dynamic calculation
-- [ ] CNVL-T16: Stored position clamps to valid range when container is smaller than original
+- [x] CNVL-T16: Stored position clamps to valid range when container is smaller than original
 
 ---
 
@@ -489,19 +491,19 @@ The Conversation Identity Card renders at the top of the full View, above the Ti
 
 **Tasks:**
 
-- [ ] CNVI-01: Implement Conversation Identity Card with type icon, subject, statuses, and counts
+- [x] CNVI-01: Implement Conversation Identity Card with type icon, subject, statuses, and counts
 - [ ] CNVI-02: Implement aggregate variant with child count and rolled-up communication count
-- [ ] CNVI-03: Implement optional description line
-- [ ] CNVI-04: Implement channel breakdown display (suppressed for single-channel conversations)
+- [x] CNVI-03: Implement optional description line
+- [x] CNVI-04: Implement channel breakdown display (suppressed for single-channel conversations)
 
 **Tests:**
 
-- [ ] CNVI-T01: Standard Conversation shows 💬 icon, subject, statuses, communication count, channel breakdown
+- [x] CNVI-T01: Standard Conversation shows 💬 icon, subject, statuses, communication count, channel breakdown
 - [ ] CNVI-T02: Aggregate Conversation shows 📂 icon, subject, statuses, child count, communication count
-- [ ] CNVI-T03: AI status badge omitted when ai_status is NULL
-- [ ] CNVI-T04: Channel breakdown omitted for single-channel conversations
-- [ ] CNVI-T05: Description line renders when non-NULL
-- [ ] CNVI-T06: Identity Card renders within Identity Card fixed area (no scrolling)
+- [x] CNVI-T03: AI status badge omitted when ai_status is NULL
+- [x] CNVI-T04: Channel breakdown omitted for single-channel conversations
+- [x] CNVI-T05: Description line renders when non-NULL
+- [x] CNVI-T06: Identity Card renders within Identity Card fixed area (no scrolling)
 
 ---
 
@@ -579,42 +581,42 @@ Double-clicking a timeline entry opens the corresponding Communication record in
 
 **Tasks:**
 
-- [ ] CNVT-01: Implement Timeline Card with chronological communication entries displaying cleaned_html
+- [x] CNVT-01: Implement Timeline Card with chronological communication entries displaying cleaned_html
 - [ ] CNVT-02: Implement user preference for timeline order (oldest-first, newest-first)
-- [ ] CNVT-03: Implement inline toggle for temporary order reversal
-- [ ] CNVT-04: Implement timeline entry rendering (colored circle, channel icon, sender → recipient, timestamp, cleaned_html content)
-- [ ] CNVT-05: Implement participant color coding on timeline entries (colored circle + background tint)
-- [ ] CNVT-06: Implement attachment indicator on timeline entries
+- [x] CNVT-03: Implement inline toggle for temporary order reversal
+- [x] CNVT-04: Implement timeline entry rendering (colored circle, channel icon, sender → recipient, timestamp, cleaned_html content)
+- [x] CNVT-05: Implement participant color coding on timeline entries (colored circle + background tint)
+- [x] CNVT-06: Implement attachment indicator on timeline entries
 - [ ] CNVT-07: Implement segment indicator with navigation link
-- [ ] CNVT-08: Implement empty state for conversations with zero communications
-- [ ] CNVT-09: Implement sender name as clickable link to Contact record
-- [ ] CNVT-10: Implement sender → recipient display with overflow truncation (+N)
-- [ ] CNVT-11: Implement double-click on timeline entry opens Communication in Undocked Window
+- [x] CNVT-08: Implement empty state for conversations with zero communications
+- [x] CNVT-09: Implement sender name as clickable link to Contact record
+- [x] CNVT-10: Implement sender → recipient display with overflow truncation (+N)
+- [x] CNVT-11: Implement double-click on timeline entry opens Communication in Undocked Window
 - [ ] CNVT-12: Implement Undocked Window reuse (second double-click updates existing window)
-- [ ] CNVT-13: Implement single-click focus with visual highlight on timeline entries
-- [ ] CNVT-14: Implement Enter key on focused timeline entry opens Communication in Undocked Window
+- [x] CNVT-13: Implement single-click focus with visual highlight on timeline entries
+- [x] CNVT-14: Implement Enter key on focused timeline entry opens Communication in Undocked Window
 
 **Tests:**
 
 - [ ] CNVT-T01: Timeline renders entries in oldest-first order when user preference is oldest-first
 - [ ] CNVT-T02: Timeline renders entries in newest-first order when user preference is newest-first
-- [ ] CNVT-T03: Inline toggle reverses order temporarily without changing global preference
-- [ ] CNVT-T04: Toggle resets when navigating away and returning
-- [ ] CNVT-T05: Each entry shows colored circle, channel icon, sender → recipient, timestamp, and cleaned_html content
-- [ ] CNVT-T06: Timestamps follow Date & Time Display Standards (5 tiers)
-- [ ] CNVT-T07: Double-click on timeline entry opens Communication in Undocked Window
-- [ ] CNVT-T08: Participant color coding matches Preview Card colors for the same contacts
-- [ ] CNVT-T09: Account owner entries use fixed color tint
-- [ ] CNVT-T10: Attachment indicator shows for communications with attachments
+- [x] CNVT-T03: Inline toggle reverses order temporarily without changing global preference
+- [x] CNVT-T04: Toggle resets when navigating away and returning
+- [x] CNVT-T05: Each entry shows colored circle, channel icon, sender → recipient, timestamp, and cleaned_html content
+- [x] CNVT-T06: Timestamps follow Date & Time Display Standards (5 tiers)
+- [x] CNVT-T07: Double-click on timeline entry opens Communication in Undocked Window
+- [x] CNVT-T08: Participant color coding matches Preview Card colors for the same contacts
+- [x] CNVT-T09: Account owner entries use fixed color tint
+- [x] CNVT-T10: Attachment indicator shows for communications with attachments
 - [ ] CNVT-T11: Segment indicator shows with link to primary conversation
-- [ ] CNVT-T12: Empty conversation shows appropriate empty state
-- [ ] CNVT-T13: Sender name links to Contact record when resolved
-- [ ] CNVT-T14: Recipient overflow truncates with "+N" count
-- [ ] CNVT-T15: Communication content renders full cleaned_html with formatting preserved
+- [x] CNVT-T12: Empty conversation shows appropriate empty state
+- [x] CNVT-T13: Sender name links to Contact record when resolved
+- [x] CNVT-T14: Recipient overflow truncates with "+N" count
+- [x] CNVT-T15: Communication content renders full cleaned_html with formatting preserved
 - [ ] CNVT-T16: Second double-click on different entry updates existing Undocked Window (no second window)
-- [ ] CNVT-T17: Single-click focuses timeline entry with visual highlight without opening Communication
-- [ ] CNVT-T18: Arrow keys navigate focus between timeline entries
-- [ ] CNVT-T19: Enter key on focused entry opens Communication in Undocked Window
+- [x] CNVT-T17: Single-click focuses timeline entry with visual highlight without opening Communication
+- [x] CNVT-T18: Arrow keys navigate focus between timeline entries
+- [x] CNVT-T19: Enter key on focused entry opens Communication in Undocked Window
 - [ ] CNVT-T20: Closing the Undocked Window does not affect the Conversation full View
 
 ---
@@ -672,25 +674,25 @@ The Participants Card is suppressed only if the Conversation has zero Communicat
 
 **Tasks:**
 
-- [ ] CNVP-01: Implement Participants Card with derived participant roster
-- [ ] CNVP-02: Implement per-participant communication count
-- [ ] CNVP-03: Implement participant ordering (account owner first, then by count descending)
-- [ ] CNVP-04: Implement overflow with "+N Others" expandable link
-- [ ] CNVP-05: Implement color swatch matching timeline entry colors
-- [ ] CNVP-06: Implement Contact record navigation from participant name
+- [x] CNVP-01: Implement Participants Card with derived participant roster
+- [x] CNVP-02: Implement per-participant communication count
+- [x] CNVP-03: Implement participant ordering (account owner first, then by count descending)
+- [x] CNVP-04: Implement overflow with "+N Others" expandable link
+- [x] CNVP-05: Implement color swatch matching timeline entry colors
+- [x] CNVP-06: Implement Contact record navigation from participant name
 
 **Tests:**
 
-- [ ] CNVP-T01: Participants Card shows all derived participants with names, titles, companies
+- [x] CNVP-T01: Participants Card shows all derived participants with names, titles, companies
 - [ ] CNVP-T02: Communication count per participant is accurate
-- [ ] CNVP-T03: Account owner listed first with "(You)" badge
-- [ ] CNVP-T04: Participants ordered by communication count descending after account owner
-- [ ] CNVP-T05: Overflow at > 6 participants shows "+N Others" link
-- [ ] CNVP-T06: Expanding "+N Others" shows full participant list
-- [ ] CNVP-T07: Color swatch matches timeline entry background tint
-- [ ] CNVP-T08: Explicitly associated contacts do NOT appear in Participants Card (shown in Entity Associations Card)
-- [ ] CNVP-T09: Participant names link to Contact records
-- [ ] CNVP-T10: Participants Card suppressed for empty Conversation with no associations
+- [x] CNVP-T03: Account owner listed first with "(You)" badge
+- [x] CNVP-T04: Participants ordered by communication count descending after account owner
+- [x] CNVP-T05: Overflow at > 6 participants shows "+N Others" link
+- [x] CNVP-T06: Expanding "+N Others" shows full participant list
+- [x] CNVP-T07: Color swatch matches timeline entry background tint
+- [x] CNVP-T08: Explicitly associated contacts do NOT appear in Participants Card (shown in Entity Associations Card)
+- [x] CNVP-T09: Participant names link to Contact records
+- [x] CNVP-T10: Participants Card suppressed for empty Conversation with no associations
 
 ---
 
@@ -758,23 +760,23 @@ Both workflows are defined in detail in the AI Intelligence & Review Sub-PRD. Th
 
 **Tasks:**
 
-- [ ] CNVA-01: Implement AI Intelligence Card with summary, action items, key topics
-- [ ] CNVA-02: Implement AI card visual distinction (tinted background and border)
+- [x] CNVA-01: Implement AI Intelligence Card with summary, action items, key topics
+- [x] CNVA-02: Implement AI card visual distinction (tinted background and border)
 - [ ] CNVA-03: Implement action item rendering with assignee links
-- [ ] CNVA-04: Implement key topics rendering as inline tags
+- [x] CNVA-04: Implement key topics rendering as inline tags
 - [ ] CNVA-05: Implement edit action (transition to rich text editor)
 - [ ] CNVA-06: Implement regenerate action with loading state
-- [ ] CNVA-07: Implement confidence and last processed display
+- [x] CNVA-07: Implement confidence and last processed display
 
 **Tests:**
 
-- [ ] CNVA-T01: AI Intelligence Card renders summary, action items, and key topics
-- [ ] CNVA-T02: Card has visually distinct tinted background
+- [x] CNVA-T01: AI Intelligence Card renders summary, action items, and key topics
+- [x] CNVA-T02: Card has visually distinct tinted background
 - [ ] CNVA-T03: Action item assignee names link to Contact records
 - [ ] CNVA-T04: Edit action opens rich text editor with current summary
 - [ ] CNVA-T05: Regenerate action triggers AI pipeline and updates card on completion
-- [ ] CNVA-T06: Card suppressed when all AI fields are NULL
-- [ ] CNVA-T07: Confidence and last processed timestamp display correctly
+- [x] CNVA-T06: Card suppressed when all AI fields are NULL
+- [x] CNVA-T07: Confidence and last processed timestamp display correctly
 
 ---
 
@@ -825,19 +827,19 @@ The Entity Associations Card is suppressed when the Conversation has zero Relati
 
 **Tasks:**
 
-- [ ] CNVE-01: Implement Entity Associations Card with grouped association types
+- [x] CNVE-01: Implement Entity Associations Card with grouped association types
 - [ ] CNVE-02: Implement "+ Link" action with entity picker
-- [ ] CNVE-03: Implement entity name navigation links
+- [x] CNVE-03: Implement entity name navigation links
 - [ ] CNVE-04: Implement remove association action (per association)
 
 **Tests:**
 
-- [ ] CNVE-T01: Card renders Projects, Companies, Contacts, and Events in grouped sections
-- [ ] CNVE-T02: Empty association groups are omitted
-- [ ] CNVE-T03: Entity names link to their respective records
+- [x] CNVE-T01: Card renders Projects, Companies, Contacts, and Events in grouped sections
+- [x] CNVE-T02: Empty association groups are omitted
+- [x] CNVE-T03: Entity names link to their respective records
 - [ ] CNVE-T04: "+ Link" action opens entity picker for adding associations
-- [ ] CNVE-T05: Card suppressed when no associations exist
-- [ ] CNVE-T06: Explicit Contact associations show name, title, and company
+- [x] CNVE-T05: Card suppressed when no associations exist
+- [x] CNVE-T06: Explicit Contact associations show name, title, and company
 - [ ] CNVE-T07: Explicit Contact associations do NOT include derived participants (only non-participant contacts)
 
 ---
@@ -888,20 +890,20 @@ The Children Card is suppressed for standard Conversations (is_aggregate = false
 
 **Tasks:**
 
-- [ ] CNVC-01: Implement Children Card with child conversation entries
+- [x] CNVC-01: Implement Children Card with child conversation entries
 - [ ] CNVC-02: Implement "+ Add" action (conversation picker / create new child)
-- [ ] CNVC-03: Implement child navigation ("→ Open" link)
+- [x] CNVC-03: Implement child navigation ("→ Open" link)
 - [ ] CNVC-04: Implement remove child action
 - [ ] CNVC-05: Implement empty state for aggregates with no children
 
 **Tests:**
 
-- [ ] CNVC-T01: Children Card renders for aggregate Conversations
-- [ ] CNVC-T02: Children Card suppressed for standard Conversations
-- [ ] CNVC-T03: Children sorted by last_activity_at descending
-- [ ] CNVC-T04: Each child shows type icon, subject, status, count, last activity
-- [ ] CNVC-T05: Nested aggregate children show child count instead of last activity
-- [ ] CNVC-T06: "→ Open" navigates to child Conversation record
+- [x] CNVC-T01: Children Card renders for aggregate Conversations
+- [x] CNVC-T02: Children Card suppressed for standard Conversations
+- [x] CNVC-T03: Children sorted by last_activity_at descending
+- [x] CNVC-T04: Each child shows type icon, subject, status, count, last activity
+- [x] CNVC-T05: Nested aggregate children show child count instead of last activity
+- [x] CNVC-T06: "→ Open" navigates to child Conversation record
 - [ ] CNVC-T07: "+ Add" opens conversation picker
 - [ ] CNVC-T08: Empty aggregate shows empty state with "+ Add" action
 
@@ -944,7 +946,7 @@ The Notes Card is suppressed when no notes are attached to the Conversation.
 
 **Tasks:**
 
-- [ ] CNVN-01: Implement Notes Card rendering with attached note entries
+- [x] CNVN-01: Implement Notes Card rendering with attached note entries
 - [ ] CNVN-02: Implement "+ Add" action for creating a new note
 - [ ] CNVN-03: Implement note entry click to open full Note record
 
@@ -953,8 +955,8 @@ The Notes Card is suppressed when no notes are attached to the Conversation.
 - [ ] CNVN-T01: Notes Card renders attached notes with author, timestamp, content preview
 - [ ] CNVN-T02: "+ Add" action creates a new note attached to the Conversation
 - [ ] CNVN-T03: Note entry click opens full Note record
-- [ ] CNVN-T04: Notes Card suppressed when no notes are attached
-- [ ] CNVN-T05: Timestamps follow Date & Time Display Standards
+- [x] CNVN-T04: Notes Card suppressed when no notes are attached
+- [x] CNVN-T05: Timestamps follow Date & Time Display Standards
 
 ---
 
@@ -1005,18 +1007,18 @@ The Metadata Card is never suppressed — every Conversation has metadata. But i
 
 **Tasks:**
 
-- [ ] CNVM-01: Implement Metadata Card with field rendering
-- [ ] CNVM-02: Implement collapsed default state
+- [x] CNVM-01: Implement Metadata Card with field rendering
+- [x] CNVM-02: Implement collapsed default state
 - [ ] CNVM-03: Implement Event History collapsible section
 - [ ] CNVM-04: Implement editable stale_after_days and closed_after_days fields
 
 **Tests:**
 
-- [ ] CNVM-T01: Metadata Card renders all fields correctly
-- [ ] CNVM-T02: Metadata Card renders collapsed by default
+- [x] CNVM-T01: Metadata Card renders all fields correctly
+- [x] CNVM-T02: Metadata Card renders collapsed by default
 - [ ] CNVM-T03: Event History expands to show event records
 - [ ] CNVM-T04: Stale/closed thresholds are editable
-- [ ] CNVM-T05: Timestamps follow Date & Time Display Standards
+- [x] CNVM-T05: Timestamps follow Date & Time Display Standards
 
 ---
 

@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 20.0
-**Last Updated:** 2026-02-27
+**Version:** 21.0
+**Last Updated:** 2026-07-07
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V21.0 (2026-07-07):** Conversation View Sub-PRD implemented in the PoC (schema v20, preview + full view, aggregate children, entity associations; Link/Add mutation actions deferred). Task/test checklists in `conversation-view-prd.md` updated to reflect implementation status; implementation decisions written back to the Conversation Entity TDD. Repaired merge-conflict damage in this index, `communication-view-prd.md`, and `conversation-entity-base-prd.md` (stale stash committed in 1702bd7).
 
 > **V20.0 (2026-02-27):** Added Conversation View Sub-PRD (`conversation-view-prd.md`) — Preview Card and full View rendering for standard and aggregate Conversations. Updated Conversation Entity Base PRD action catalog to reference the new sub-PRD.
 
@@ -58,10 +60,10 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | └ Triage & Intelligent Filtering | 1.0 | `communication-triage-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Conversations | 4.0 | `conversations-prd.md` | Superseded — decomposed into Entity Base + 3 Sub-PRDs + TDD | 2026-02-23 |
 | └ Conversation Entity Base | 1.0 | `conversation-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
-| &nbsp;&nbsp;└ Conversation Entity TDD | 1.0 | `conversation-entity-tdd.md` | Draft — Living document, 8 sections | 2026-02-23 |
+| &nbsp;&nbsp;└ Conversation Entity TDD | 1.1 | `conversation-entity-tdd.md` | Draft — Living document, 9 sections (PoC write-back added) | 2026-07-07 |
 | └ Formation & Stitching | 1.0 | `conversation-formation-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | └ AI Intelligence & Review | 1.0 | `conversation-ai-intelligence-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
-| └ View Conversation | 1.1 | `conversation-view-prd.md` | Draft — Preview Card + full View, task/test plan | 2026-02-27 |
+| └ View Conversation | 1.3 | `conversation-view-prd.md` | Implemented (PoC) — read/display complete; Link/Add association actions deferred | 2026-07-07 |
 | └ Views & Alerts | 1.0 | `conversation-views-alerts-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Contact Management | 5.0 | `contact-management-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | └ Contact Entity Base | 9.0 | `contact-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |

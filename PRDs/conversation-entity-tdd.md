@@ -1,8 +1,8 @@
 # Conversation Entity — TDD
 
-**Version:** 1.0
-**Last Updated:** 2026-02-23
-**Status:** Draft
+**Version:** 1.1
+**Last Updated:** 2026-07-07
+**Status:** Draft — Section 9 added (PoC implementation write-back, schema v20)
 **Scope:** Entity
 **Parent Document:** [conversation-entity-base-prd.md]
 **Product TDD:** [product-tdd.md]
@@ -273,3 +273,47 @@ ORDER BY comm.timestamp DESC;
 - **system_status transition mechanism:** Scheduled job vs. on-access lazy evaluation for stale/closed detection.
 - **Segment offset stability:** How character offsets are handled when content_clean is re-processed (offsets may shift).
 - **conversation_members vs. Relation Type:** Whether to migrate the junction table to a standard Relation Type in a future refactor.
+
+---
+
+## 9. PoC Implementation Decisions (Schema v20, 2026-07-07)
+
+Write-back from the Conversation View implementation (`docs/conversation_view_implementation.md`, migration `poc/migrate_to_v20.py`). The PoC runs on SQLite; sections 2–7 above describe the target PostgreSQL design and are unchanged. This section records what the PoC actually built and where it diverges, so future sessions implement against reality.
+
+### 9.1 conversation_members (implemented, differs from §3)
+
+**Decision:** `(parent_conversation_id, child_conversation_id, position, created_at)` with composite PK, self-reference CHECK, and a single index on `child_conversation_id` (`idx_cm_child`).
+
+**Rationale:** Parent-side lookups are served by the PK's leading column, so the §3 parent index is unnecessary in SQLite. `position` supports manual child ordering; `added_by` from §3 was dropped — no write endpoint exists yet, so attribution has nothing to record. Revisit when membership mutations land.
+
+### 9.2 Entity associations use generic relationships tables (differs from §6.2)
+
+**Decision:** No dedicated `conversation_projects`-style join tables. Associations ride the existing `relationships`/`relationship_types` tables, with four seeded system types: `CONVERSATION_PROJECT`, `CONVERSATION_COMPANY`, `CONVERSATION_CONTACT`, `CONVERSATION_EVENT` (ids `rt-conv-*`). The v20 migration widened the `relationship_types` CHECK constraints to admit `conversation` as a from-type and `conversation`/`project`/`event` as to-types.
+
+**Rationale:** Reuses the established relationship engine and its UI instead of four new tables; the read path dispatches on `relationship_types.name` (`poc/web/routes/api.py`, association block of `conversation_full_api`). This partially answers §8's "conversation_members vs. Relation Type" question: associations went the Relation Type route; parent/child membership stayed a junction table because ordering (`position`) and aggregate semantics don't fit the relationship model.
+
+### 9.3 Read API is two composite endpoints (differs from §7)
+
+**Decision:** The PoC exposes read-only `GET /api/v1/conversations/{id}/preview` and `GET /api/v1/conversations/{id}/full` composites (plus the legacy `GET /conversations/{id}`), each returning the entire card payload — children, associations, participants, timeline — in one response. The §7 CRUD/membership/segment/history surface is not implemented.
+
+**Rationale:** The view feature only needs reads, and one round-trip per card render beats the chatty per-resource API for the SQLite PoC. `child_count` per child is a correlated subquery on `conversation_members`; each child's `latest_communication` is a per-child `LIMIT 1` query — acceptable at PoC scale, revisit before production.
+
+### 9.4 Column-name and model divergences from §2
+
+Implemented `conversations` uses `status` (not `system_status`), `ai_topics` (not `ai_key_topics`), `ai_summarized_at` (not `ai_last_processed_at`), `customer_id` (not `tenant_id`), `ai_confidence REAL` (not NUMERIC(3,2)); no `archived_at`. It also carries PoC-only columns (`triage_result`, `dismissed*`, `message_count`, `topic_id`, both `title` and `subject`). Communication membership is the `conversation_communications` junction (`is_primary`, `assignment_source`), not a `communications.conversation_id` FK. Naming hazard: the pre-existing `event_conversations` table is calendar-event linkage, unrelated to §5 event sourcing.
+
+### 9.5 HTML column compatibility fallback
+
+**Decision:** `_comm_html_col()` (`poc/web/routes/api.py`) probes `PRAGMA table_info(communications)` per request and selects `cleaned_html` (v18+) or `body_html` (pre-v18) for timeline content.
+
+**Rationale:** Lets one build serve both pre- and post-v18 production databases during rollout; cheap (single PRAGMA on an open connection).
+
+### 9.6 Splitter persistence is client-side
+
+**Decision:** Per-conversation splitter position is stored in browser `localStorage` (`conv-splitter-{id}`), not server-side user settings.
+
+**Constraint:** "Persists across sessions" holds per-browser, not per-account. Migrate to user settings if cross-device continuity is required.
+
+### 9.7 Not implemented (unchanged open items)
+
+Segments (§4), event sourcing (§5), virtual schema (§6.1), all §7 write endpoints, and the §8 decisions on count roll-up, acyclic checking, fan-out batching, and stale/closed transitions — the last is moot until something mutates `stale_after_days`/`closed_after_days`, which are display-only in the PoC.

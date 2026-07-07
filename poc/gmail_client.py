@@ -16,6 +16,7 @@ from email import encoders
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from . import config
 from .models import ParsedEmail
@@ -268,6 +269,15 @@ def get_history_id(creds: Credentials) -> str:
     return str(profile["historyId"])
 
 
+class HistoryExpiredError(Exception):
+    """The stored Gmail history cursor is too old for the history API.
+
+    Gmail only retains history for a limited period (typically about a
+    week) and returns 404 for older historyIds. Callers must backfill by
+    query instead of advancing the cursor, or the gap is silently lost.
+    """
+
+
 def fetch_history(
     creds: Credentials,
     start_history_id: str,
@@ -276,6 +286,10 @@ def fetch_history(
     """Fetch Gmail history changes since start_history_id.
 
     Returns (added_message_ids, deleted_message_ids).
+
+    Raises HistoryExpiredError when the cursor is too old (Gmail 404),
+    and propagates other API errors so the caller aborts without
+    advancing its cursor.
     """
     service = build("gmail", "v1", credentials=creds)
     added: list[str] = []
@@ -296,9 +310,16 @@ def fetch_history(
                 params["pageToken"] = page_token
 
             result = service.users().history().list(**params).execute()
-        except Exception as exc:
+        except HttpError as exc:
+            status = getattr(exc, "status_code", None) or getattr(
+                getattr(exc, "resp", None), "status", None
+            )
+            if int(status or 0) == 404:
+                raise HistoryExpiredError(
+                    f"Gmail history cursor {start_history_id} has expired"
+                ) from exc
             log.warning("History fetch failed (historyId=%s): %s", start_history_id, exc)
-            break
+            raise
 
         for record in result.get("history", []):
             for msg_added in record.get("messagesAdded", []):

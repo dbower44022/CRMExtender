@@ -13,6 +13,7 @@ from .contacts_client import fetch_contact_groups, fetch_contacts
 from .database import get_connection
 from .email_parser import strip_quotes
 from .gmail_client import (
+    HistoryExpiredError,
     fetch_history,
     fetch_messages,
     fetch_threads,
@@ -1059,10 +1060,32 @@ def incremental_sync(
 
     contact_index = load_contact_index()
 
-    # Fetch history changes
-    added_ids, deleted_ids = fetch_history(
-        creds, cursor_before, rate_limiter=rate_limiter,
-    )
+    # Fetch history changes. An expired cursor means Gmail can no longer
+    # tell us what changed — backfill by query from the last stored
+    # message instead of advancing the cursor over the gap. Any other
+    # error aborts the sync with the cursor untouched, so the next run
+    # retries the same window.
+    try:
+        added_ids, deleted_ids = fetch_history(
+            creds, cursor_before, rate_limiter=rate_limiter,
+        )
+    except HistoryExpiredError:
+        log.warning(
+            "Sync cursor %s expired for account %s — backfilling by query",
+            cursor_before, account_email,
+        )
+        return _backfill_sync(
+            account_id, account_email, creds, sync_id, cursor_before,
+            contact_index, rate_limiter=rate_limiter,
+            customer_id=customer_id, user_id=user_id,
+        )
+    except Exception:
+        with get_connection() as conn:
+            conn.execute(
+                "UPDATE sync_log SET status = 'failed', completed_at = ? WHERE id = ?",
+                (_now_iso(), sync_id),
+            )
+        raise
 
     messages_fetched = len(added_ids)
     messages_stored = 0
@@ -1161,6 +1184,113 @@ def incremental_sync(
         "history_id": history_id,
     }
     log.info("Incremental sync complete: %s", result)
+    return result
+
+
+def _backfill_sync(
+    account_id: str,
+    account_email: str,
+    creds: Credentials,
+    sync_id: str,
+    cursor_before: str,
+    contact_index: dict,
+    rate_limiter: RateLimiter | None = None,
+    *,
+    customer_id: str | None = None,
+    user_id: str | None = None,
+) -> dict:
+    """Recover from an expired history cursor by re-fetching threads by query.
+
+    Fetches everything since the newest stored message for the account
+    (with a one-day overlap; the provider_message_id upsert dedupes), or
+    the account's backfill query if nothing is stored. Deletions in the
+    gap cannot be detected without history and are skipped.
+    """
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT MAX(timestamp) AS ts FROM communications WHERE account_id = ?",
+            (account_id,),
+        ).fetchone()
+        last_ts = row["ts"] if row else None
+        acct = conn.execute(
+            "SELECT backfill_query FROM provider_accounts WHERE id = ?",
+            (account_id,),
+        ).fetchone()
+
+    if last_ts:
+        epoch = int(datetime.fromisoformat(last_ts).timestamp()) - 86400
+        query = f"after:{epoch}"
+    else:
+        query = (acct["backfill_query"] if acct else None) or config.GMAIL_QUERY
+
+    log.info("Backfill for %s using query %r", account_email, query)
+
+    messages_fetched = 0
+    messages_stored = 0
+    conversations_created = 0
+    conversations_updated = 0
+    page_token: str | None = None
+
+    while True:
+        threads, page_token = fetch_threads(
+            creds,
+            query=query,
+            max_threads=config.GMAIL_MAX_THREADS,
+            rate_limiter=rate_limiter,
+            page_token=page_token,
+        )
+        if not threads:
+            break
+
+        with get_connection() as conn:
+            for thread_emails in threads:
+                messages_fetched += len(thread_emails)
+                created, updated = _store_thread(
+                    conn, account_id, account_email, thread_emails, contact_index,
+                    customer_id=customer_id, created_by=user_id,
+                )
+                if created:
+                    conversations_created += 1
+                if updated:
+                    conversations_updated += 1
+                messages_stored += len(thread_emails)
+
+        if not page_token:
+            break
+
+    history_id = get_history_id(creds)
+    now = _now_iso()
+
+    with get_connection() as conn:
+        conn.execute(
+            """UPDATE provider_accounts
+               SET sync_cursor = ?, last_synced_at = ?, updated_at = ?
+               WHERE id = ?""",
+            (history_id, now, now, account_id),
+        )
+        conn.execute(
+            """UPDATE sync_log
+               SET status = 'completed', completed_at = ?,
+                   messages_fetched = ?, messages_stored = ?,
+                   conversations_created = ?, conversations_updated = ?,
+                   cursor_after = ?
+               WHERE id = ?""",
+            (now, messages_fetched, messages_stored,
+             conversations_created, conversations_updated,
+             history_id, sync_id),
+        )
+
+    result = {
+        "sync_id": sync_id,
+        "sync_mode": "backfill",
+        "messages_fetched": messages_fetched,
+        "messages_stored": messages_stored,
+        "conversations_created": conversations_created,
+        "conversations_updated": conversations_updated,
+        "cursor_before": cursor_before,
+        "history_id": history_id,
+    }
+    log.info("Backfill sync complete: %s", result)
     return result
 
 

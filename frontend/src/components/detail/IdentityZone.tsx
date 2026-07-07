@@ -8,6 +8,7 @@ import {
   Phone,
   MapPin,
 } from 'lucide-react'
+import { useNavigationStore } from '../../stores/navigation.ts'
 
 const ENTITY_ICONS: Record<string, typeof User> = {
   contact: User,
@@ -23,6 +24,8 @@ interface IdentityZoneProps {
 }
 
 export function IdentityZone({ data, entityType, entityId }: IdentityZoneProps) {
+  const setActiveEntityType = useNavigationStore((s) => s.setActiveEntityType)
+  const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
   const Icon = ENTITY_ICONS[entityType] ?? User
   const name = String(data.name ?? data.title ?? 'Untitled')
   const subtitle = data.subtitle ? String(data.subtitle) : null
@@ -65,13 +68,16 @@ export function IdentityZone({ data, entityType, entityId }: IdentityZoneProps) 
       </div>
 
       {company && (
-        <a
-          href={`/companies/${company.id}`}
+        <button
+          onClick={() => {
+            setActiveEntityType('company')
+            setSelectedRow(company.id, -1)
+          }}
           className="mb-2 inline-flex items-center gap-1 text-sm text-primary-600 hover:underline"
         >
           <Building2 size={12} />
           {company.name}
-        </a>
+        </button>
       )}
 
       <div className="space-y-1">

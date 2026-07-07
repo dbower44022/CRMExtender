@@ -4,8 +4,8 @@ import { formatPreviewTimestamp } from '../../lib/formatTimestamp.ts'
 import { buildParticipantColorMap } from '../../lib/participantColors.ts'
 import { ChannelBreakdown } from '../shared/ChannelBreakdown.tsx'
 import { useNavigationStore } from '../../stores/navigation.ts'
-import { MessageSquare, Paperclip } from 'lucide-react'
-import type { ConversationPreviewCommunication } from '../../types/api.ts'
+import { MessageSquare, FolderOpen, Paperclip } from 'lucide-react'
+import type { ConversationPreviewCommunication, ConversationChildPreview } from '../../types/api.ts'
 import type { ParticipantColorMap } from '../../lib/participantColors.ts'
 
 interface ConversationPreviewCardProps {
@@ -32,12 +32,14 @@ export function ConversationPreviewCard({ entityId }: ConversationPreviewCardPro
     data.account_owner_email,
   )
 
+  const TypeIcon = data.is_aggregate ? FolderOpen : MessageSquare
+
   return (
     <div className="flex h-full flex-col">
-      {/* Header — 2 lines */}
+      {/* Header — 2 lines + optional description */}
       <div className="shrink-0 border-b border-surface-200 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <MessageSquare size={14} className="shrink-0 text-surface-400" />
+          <TypeIcon size={14} className="shrink-0 text-surface-400" />
           <span className="truncate text-sm font-semibold text-surface-900">
             {data.title || 'Untitled Conversation'}
           </span>
@@ -57,33 +59,74 @@ export function ConversationPreviewCard({ entityId }: ConversationPreviewCardPro
               AI: {data.ai_status}
             </span>
           )}
-          <span>{data.communication_count} comm{data.communication_count !== 1 ? 's' : ''}</span>
-          <ChannelBreakdown breakdown={data.channel_breakdown} className="text-surface-400" />
+          {data.is_aggregate ? (
+            <span>{data.children.length} conversation{data.children.length !== 1 ? 's' : ''}</span>
+          ) : (
+            <>
+              <span>{data.communication_count} comm{data.communication_count !== 1 ? 's' : ''}</span>
+              <ChannelBreakdown breakdown={data.channel_breakdown} className="text-surface-400" />
+            </>
+          )}
         </div>
-      </div>
-
-      {/* Scrollable timeline — all communications, most-recent-first */}
-      <div className="flex-1 overflow-y-auto">
-        {data.recent_communications.length === 0 ? (
-          <div className="flex items-center justify-center p-8 text-sm text-surface-400">
-            No communications yet.
-          </div>
-        ) : (
-          <div className="divide-y divide-surface-100">
-            {data.recent_communications.map((c) => (
-              <PreviewCommEntry
-                key={c.id}
-                comm={c}
-                colorMap={colorMap}
-                onClick={() => {
-                  setActiveEntityType('communication')
-                  setSelectedRow(c.id, -1)
-                }}
-              />
-            ))}
+        {data.description && (
+          <div className="mt-1 text-xs text-surface-400">
+            {data.description}
           </div>
         )}
       </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        {data.is_aggregate ? (
+          <AggregatePreviewContent
+            children={data.children}
+            communications={data.recent_communications}
+            colorMap={colorMap}
+          />
+        ) : (
+          <StandardPreviewContent
+            communications={data.recent_communications}
+            colorMap={colorMap}
+            onCommClick={(commId) => {
+              setActiveEntityType('communication')
+              setSelectedRow(commId, -1)
+            }}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* --- Standard Conversation Preview --- */
+
+function StandardPreviewContent({
+  communications,
+  colorMap,
+  onCommClick,
+}: {
+  communications: ConversationPreviewCommunication[]
+  colorMap: ParticipantColorMap
+  onCommClick: (id: string) => void
+}) {
+  if (communications.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8 text-sm text-surface-400">
+        No communications yet.
+      </div>
+    )
+  }
+
+  return (
+    <div className="divide-y divide-surface-100">
+      {communications.map((c) => (
+        <PreviewCommEntry
+          key={c.id}
+          comm={c}
+          colorMap={colorMap}
+          onClick={() => onCommClick(c.id)}
+        />
+      ))}
     </div>
   )
 }
@@ -101,6 +144,7 @@ function PreviewCommEntry({
   const senderLabel = comm.sender_name || comm.sender_address || CHANNEL_LABELS[comm.channel] || comm.channel
   const senderAddr = comm.sender_address || senderLabel
   const circleStyle = colorMap.getCircleStyle(senderAddr)
+  const rowTint = colorMap.getRowTint(senderAddr)
 
   // Recipient suffix
   let recipientText: string | null = null
@@ -109,10 +153,14 @@ function PreviewCommEntry({
     recipientText = extra > 0 ? `${comm.recipient_name} +${extra}` : comm.recipient_name
   }
 
+  // Use snippet as content (cleaned_html stripped to text for preview)
+  const contentText = comm.snippet || ''
+
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-surface-50"
+      className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:brightness-95"
+      style={{ backgroundColor: rowTint }}
     >
       {/* Colored circle */}
       <div
@@ -134,15 +182,16 @@ function PreviewCommEntry({
               → {recipientText}
             </span>
           )}
-          <span className="ml-auto shrink-0 text-xs text-surface-400">
-            {formatPreviewTimestamp(comm.timestamp)}
-          </span>
+        </div>
+        {/* Timestamp on second line */}
+        <div className="mt-0.5 text-xs text-surface-400">
+          {formatPreviewTimestamp(comm.timestamp)}
         </div>
 
-        {/* Content — snippet text only (HTML too expensive for preview list) */}
-        {comm.snippet && (
-          <div className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-surface-500">
-            {comm.snippet}
+        {/* Content — snippet text */}
+        {contentText && (
+          <div className="mt-1 text-xs leading-relaxed text-surface-600">
+            {contentText}
           </div>
         )}
 
@@ -150,11 +199,98 @@ function PreviewCommEntry({
         {comm.attachment_count > 0 && (
           <div className="mt-1 flex items-center gap-1 text-xs text-surface-400">
             <Paperclip size={10} />
-            <span>{comm.attachment_count}</span>
+            <span>{comm.attachment_count} attachment{comm.attachment_count !== 1 ? 's' : ''}</span>
           </div>
         )}
       </div>
     </button>
+  )
+}
+
+/* --- Aggregate Conversation Preview --- */
+
+function AggregatePreviewContent({
+  children,
+  communications,
+  colorMap,
+}: {
+  children: ConversationChildPreview[]
+  communications: ConversationPreviewCommunication[]
+  colorMap: ParticipantColorMap
+}) {
+  return (
+    <div>
+      {/* Child conversation entries */}
+      {children.length === 0 && communications.length === 0 && (
+        <div className="flex items-center justify-center p-8 text-sm text-surface-400">
+          No conversations or communications yet.
+        </div>
+      )}
+      {children.length > 0 && (
+        <div className="divide-y divide-surface-100">
+          {children.map((child) => (
+            <ChildConversationEntry key={child.id} child={child} />
+          ))}
+        </div>
+      )}
+
+      {/* Direct Communications group */}
+      {communications.length > 0 && (
+        <>
+          <div className="border-t border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-500">
+            Direct Communications ({communications.length})
+          </div>
+          <div className="divide-y divide-surface-100">
+            {communications.map((c) => (
+              <PreviewCommEntry
+                key={c.id}
+                comm={c}
+                colorMap={colorMap}
+                onClick={() => {}}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function ChildConversationEntry({ child }: { child: ConversationChildPreview }) {
+  const ChildIcon = child.is_aggregate ? FolderOpen : MessageSquare
+
+  return (
+    <div className="px-3 py-2.5">
+      {/* Subject line */}
+      <div className="flex items-center gap-1.5">
+        <ChildIcon size={12} className="shrink-0 text-surface-400" />
+        <span className="truncate text-xs font-medium text-surface-700">
+          {child.title || 'Untitled'}
+        </span>
+      </div>
+      {/* Status line */}
+      <div className="mt-0.5 flex items-center gap-2 text-xs text-surface-400">
+        {child.status && (
+          <span className="rounded bg-surface-100 px-1 py-0.5 capitalize text-surface-500">
+            {child.status}
+          </span>
+        )}
+        <span>{child.communication_count} comm{child.communication_count !== 1 ? 's' : ''}</span>
+      </div>
+      {/* Most recent activity */}
+      {child.latest_communication && (
+        <div className="mt-1 text-xs text-surface-400">
+          <span>Last: {child.latest_communication.sender_name || 'Unknown'}</span>
+          <span className="mx-1">·</span>
+          <span>{formatPreviewTimestamp(child.latest_communication.timestamp)}</span>
+          {child.latest_communication.snippet && (
+            <div className="mt-0.5 text-surface-500">
+              {child.latest_communication.snippet}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

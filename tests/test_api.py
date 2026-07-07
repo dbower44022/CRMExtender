@@ -1870,6 +1870,7 @@ def _seed_conversation(
     ai_action_items=None,
     ai_topics=None,
     ai_summarized_at=None,
+    ai_confidence=None,
     triage_result=None,
     dismissed=0,
     dismissed_reason=None,
@@ -1885,6 +1886,10 @@ def _seed_conversation(
     last_message_at=None,
     created_by=None,
     updated_by=None,
+    is_aggregate=0,
+    description=None,
+    stale_after_days=14,
+    closed_after_days=30,
 ):
     """Seed a conversation for preview/full tests."""
     with get_connection() as conn:
@@ -1893,15 +1898,17 @@ def _seed_conversation(
             "(id, customer_id, account_id, topic_id, title, status, "
             "communication_count, participant_count, message_count, "
             "first_activity_at, last_activity_at, first_message_at, last_message_at, "
-            "ai_summary, ai_status, ai_action_items, ai_topics, ai_summarized_at, "
+            "ai_summary, ai_status, ai_action_items, ai_topics, ai_summarized_at, ai_confidence, "
             "triage_result, dismissed, dismissed_reason, dismissed_at, "
+            "is_aggregate, description, stale_after_days, closed_after_days, "
             "created_by, updated_by, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (conv_id, CUST_ID, account_id, topic_id, title, status,
              communication_count, participant_count, message_count,
              first_activity_at, last_activity_at, first_message_at, last_message_at,
-             ai_summary, ai_status, ai_action_items, ai_topics, ai_summarized_at,
+             ai_summary, ai_status, ai_action_items, ai_topics, ai_summarized_at, ai_confidence,
              triage_result, dismissed, dismissed_reason, dismissed_at,
+             is_aggregate, description, stale_after_days, closed_after_days,
              created_by, updated_by, _NOW, _NOW),
         )
 
@@ -2797,3 +2804,303 @@ class TestSignatureAPI:
             "body_html": "",
         })
         assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Phase 1: Conversation View — New fields, aggregates, associations
+# ---------------------------------------------------------------------------
+
+class TestConversationViewNewFields:
+    """Tests for is_aggregate, description, stale/closed thresholds, ai_confidence."""
+
+    def test_preview_is_aggregate_false(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["is_aggregate"] is False
+
+    def test_preview_is_aggregate_true(self, client):
+        _seed_conversation(is_aggregate=1)
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["is_aggregate"] is True
+
+    def test_preview_description(self, client):
+        _seed_conversation(description="Multi-thread lease negotiation")
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["description"] == "Multi-thread lease negotiation"
+
+    def test_preview_description_null(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["description"] is None
+
+    def test_preview_children_empty_for_standard(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["children"] == []
+
+    def test_full_is_aggregate_and_description(self, client):
+        _seed_conversation(
+            is_aggregate=1,
+            description="All lease-related threads",
+        )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["is_aggregate"] is True
+        assert data["description"] == "All lease-related threads"
+
+    def test_full_ai_confidence(self, client):
+        _seed_conversation(ai_confidence=0.92)
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["ai_confidence"] == 0.92
+
+    def test_full_ai_confidence_null(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["ai_confidence"] is None
+
+    def test_full_stale_closed_defaults(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["stale_after_days"] == 14
+        assert data["closed_after_days"] == 30
+
+    def test_full_stale_closed_custom(self, client):
+        _seed_conversation(stale_after_days=7, closed_after_days=60)
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["stale_after_days"] == 7
+        assert data["closed_after_days"] == 60
+
+
+class TestConversationChildren:
+    """Tests for aggregate conversation parent-child relationships."""
+
+    def test_preview_aggregate_with_children(self, client):
+        _seed_conversation(conv_id="conv-parent", is_aggregate=1)
+        _seed_conversation(
+            conv_id="conv-child-1", title="With Lawyer",
+            status="active", communication_count=8,
+            last_activity_at="2025-01-15T10:00:00Z",
+        )
+        _seed_conversation(
+            conv_id="conv-child-2", title="With Accountant",
+            status="active", communication_count=5,
+            last_activity_at="2025-01-14T10:00:00Z",
+        )
+        _seed_conv_communication(
+            "conv-child-1", "comm-child-1", channel="email",
+            sender_name="Jane Smith", timestamp="2025-01-15T10:00:00Z",
+            snippet="Clause 5 revisions look acceptable",
+        )
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO conversation_members "
+                "(parent_conversation_id, child_conversation_id, position, created_at) "
+                "VALUES ('conv-parent', 'conv-child-1', 0, ?)",
+                (_NOW,),
+            )
+            conn.execute(
+                "INSERT INTO conversation_members "
+                "(parent_conversation_id, child_conversation_id, position, created_at) "
+                "VALUES ('conv-parent', 'conv-child-2', 1, ?)",
+                (_NOW,),
+            )
+        data = client.get("/api/v1/conversations/conv-parent/preview").json()
+        assert data["is_aggregate"] is True
+        assert len(data["children"]) == 2
+        # Sorted by last_activity_at DESC
+        assert data["children"][0]["title"] == "With Lawyer"
+        assert data["children"][0]["communication_count"] == 8
+        assert data["children"][0]["is_aggregate"] is False
+        assert data["children"][0]["latest_communication"]["sender_name"] == "Jane Smith"
+        assert data["children"][1]["title"] == "With Accountant"
+
+    def test_preview_standard_no_children(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/preview").json()
+        assert data["is_aggregate"] is False
+        assert data["children"] == []
+
+    def test_full_aggregate_with_children(self, client):
+        _seed_conversation(conv_id="conv-parent-f", is_aggregate=1)
+        _seed_conversation(
+            conv_id="conv-child-f1", title="Sub Thread 1",
+            status="active", communication_count=3,
+            last_activity_at="2025-01-10T10:00:00Z",
+        )
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO conversation_members "
+                "(parent_conversation_id, child_conversation_id, position, created_at) "
+                "VALUES ('conv-parent-f', 'conv-child-f1', 0, ?)",
+                (_NOW,),
+            )
+        data = client.get("/api/v1/conversations/conv-parent-f/full").json()
+        assert data["is_aggregate"] is True
+        assert len(data["children"]) == 1
+        assert data["children"][0]["title"] == "Sub Thread 1"
+
+    def test_full_aggregate_nested(self, client):
+        """Nested aggregate child shows child_count."""
+        _seed_conversation(conv_id="conv-grandparent", is_aggregate=1)
+        _seed_conversation(
+            conv_id="conv-sub-agg", title="Sub Negotiations",
+            is_aggregate=1, last_activity_at="2025-01-10T10:00:00Z",
+        )
+        _seed_conversation(
+            conv_id="conv-leaf", title="Leaf Thread",
+            last_activity_at="2025-01-09T10:00:00Z",
+        )
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO conversation_members "
+                "(parent_conversation_id, child_conversation_id, position, created_at) "
+                "VALUES ('conv-grandparent', 'conv-sub-agg', 0, ?)",
+                (_NOW,),
+            )
+            conn.execute(
+                "INSERT INTO conversation_members "
+                "(parent_conversation_id, child_conversation_id, position, created_at) "
+                "VALUES ('conv-sub-agg', 'conv-leaf', 0, ?)",
+                (_NOW,),
+            )
+        data = client.get("/api/v1/conversations/conv-grandparent/full").json()
+        assert len(data["children"]) == 1
+        child = data["children"][0]
+        assert child["is_aggregate"] is True
+        assert child["child_count"] == 1
+
+
+class TestConversationAssociations:
+    """Tests for entity associations via relationship types."""
+
+    def test_full_associations_empty(self, client):
+        _seed_conversation()
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert data["associations"]["projects"] == []
+        assert data["associations"]["companies"] == []
+        assert data["associations"]["contacts"] == []
+        assert data["associations"]["events"] == []
+
+    def test_full_association_project(self, client):
+        _seed_conversation()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO projects (id, customer_id, name, status, created_at, updated_at) "
+                "VALUES ('proj-assoc-1', ?, 'Expansion Plan', 'active', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO relationships "
+                "(id, relationship_type_id, from_entity_type, from_entity_id, "
+                "to_entity_type, to_entity_id, source, created_at, updated_at) "
+                "VALUES ('rel-conv-proj', 'rt-conv-project', 'conversation', 'conv-preview-1', "
+                "'project', 'proj-assoc-1', 'manual', ?, ?)",
+                (_NOW, _NOW),
+            )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert len(data["associations"]["projects"]) == 1
+        p = data["associations"]["projects"][0]
+        assert p["id"] == "proj-assoc-1"
+        assert p["name"] == "Expansion Plan"
+        assert p["status"] == "active"
+        assert p["relationship_id"] == "rel-conv-proj"
+
+    def test_full_association_company(self, client):
+        _seed_conversation()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO companies (id, customer_id, name, domain, created_at, updated_at) "
+                "VALUES ('co-assoc-1', ?, 'Acme Corp', 'acme.com', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO relationships "
+                "(id, relationship_type_id, from_entity_type, from_entity_id, "
+                "to_entity_type, to_entity_id, source, created_at, updated_at) "
+                "VALUES ('rel-conv-co', 'rt-conv-company', 'conversation', 'conv-preview-1', "
+                "'company', 'co-assoc-1', 'manual', ?, ?)",
+                (_NOW, _NOW),
+            )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert len(data["associations"]["companies"]) == 1
+        c = data["associations"]["companies"][0]
+        assert c["id"] == "co-assoc-1"
+        assert c["name"] == "Acme Corp"
+
+    def test_full_association_contact(self, client):
+        _seed_conversation()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO contacts (id, customer_id, name, source, status, created_at, updated_at) "
+                "VALUES ('ct-assoc-1', ?, 'Mike Johnson', 'manual', 'active', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO relationships "
+                "(id, relationship_type_id, from_entity_type, from_entity_id, "
+                "to_entity_type, to_entity_id, source, created_at, updated_at) "
+                "VALUES ('rel-conv-ct', 'rt-conv-contact', 'conversation', 'conv-preview-1', "
+                "'contact', 'ct-assoc-1', 'manual', ?, ?)",
+                (_NOW, _NOW),
+            )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert len(data["associations"]["contacts"]) == 1
+        c = data["associations"]["contacts"][0]
+        assert c["id"] == "ct-assoc-1"
+        assert c["name"] == "Mike Johnson"
+
+    def test_full_association_event(self, client):
+        _seed_conversation()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO events (id, title, event_type, start_datetime, status, source, created_at, updated_at) "
+                "VALUES ('evt-assoc-1', 'Lease Review', 'meeting', '2025-02-18T14:00:00Z', 'confirmed', 'google', ?, ?)",
+                (_NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO relationships "
+                "(id, relationship_type_id, from_entity_type, from_entity_id, "
+                "to_entity_type, to_entity_id, source, created_at, updated_at) "
+                "VALUES ('rel-conv-evt', 'rt-conv-event', 'conversation', 'conv-preview-1', "
+                "'event', 'evt-assoc-1', 'manual', ?, ?)",
+                (_NOW, _NOW),
+            )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert len(data["associations"]["events"]) == 1
+        e = data["associations"]["events"][0]
+        assert e["id"] == "evt-assoc-1"
+        assert e["title"] == "Lease Review"
+        assert e["event_type"] == "meeting"
+
+    def test_full_association_multiple_types(self, client):
+        """Multiple association types on same conversation."""
+        _seed_conversation()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO projects (id, customer_id, name, status, created_at, updated_at) "
+                "VALUES ('proj-multi', ?, 'Multi Project', 'active', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO companies (id, customer_id, name, domain, created_at, updated_at) "
+                "VALUES ('co-multi', ?, 'Multi Corp', 'multi.com', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO relationships "
+                "(id, relationship_type_id, from_entity_type, from_entity_id, "
+                "to_entity_type, to_entity_id, source, created_at, updated_at) "
+                "VALUES ('rel-m-proj', 'rt-conv-project', 'conversation', 'conv-preview-1', "
+                "'project', 'proj-multi', 'manual', ?, ?)",
+                (_NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO relationships "
+                "(id, relationship_type_id, from_entity_type, from_entity_id, "
+                "to_entity_type, to_entity_id, source, created_at, updated_at) "
+                "VALUES ('rel-m-co', 'rt-conv-company', 'conversation', 'conv-preview-1', "
+                "'company', 'co-multi', 'manual', ?, ?)",
+                (_NOW, _NOW),
+            )
+        data = client.get("/api/v1/conversations/conv-preview-1/full").json()
+        assert len(data["associations"]["projects"]) == 1
+        assert len(data["associations"]["companies"]) == 1

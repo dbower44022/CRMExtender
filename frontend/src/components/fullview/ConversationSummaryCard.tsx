@@ -6,28 +6,22 @@ interface ConversationSummaryCardProps {
   data: ConversationFullData
 }
 
-const AI_STATUS_COLORS: Record<string, string> = {
-  open: 'bg-green-50 text-green-700',
-  closed: 'bg-surface-100 text-surface-500',
-  uncertain: 'bg-amber-50 text-amber-700',
-}
-
 export function ConversationSummaryCard({ data }: ConversationSummaryCardProps) {
+  // Suppressed when all AI fields are NULL (PRD Section 9.4)
   if (!data.ai_summary && !data.ai_action_items && !data.ai_topics) return null
 
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50">
+      {/* Header with source badge and actions */}
       <div className="flex items-center justify-between border-b border-blue-200 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <Bot size={14} className="text-surface-400" />
-          <span className="text-xs font-semibold uppercase text-surface-500">AI Summary</span>
+          <Bot size={14} className="text-blue-500" />
+          <span className="text-xs font-semibold uppercase text-surface-500">AI Intelligence</span>
         </div>
         <div className="flex items-center gap-2">
-          {data.ai_status && (
-            <span className={`rounded px-1.5 py-0.5 text-xs capitalize ${AI_STATUS_COLORS[data.ai_status] ?? 'bg-surface-100 text-surface-500'}`}>
-              {data.ai_status}
-            </span>
-          )}
+          <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+            AI Generated
+          </span>
           <button
             disabled
             className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-surface-300"
@@ -44,15 +38,19 @@ export function ConversationSummaryCard({ data }: ConversationSummaryCardProps) 
           </button>
         </div>
       </div>
-      <div className="px-4 py-3 space-y-3">
+
+      <div className="space-y-3 px-4 py-3">
         {/* Summary text */}
         {data.ai_summary && (
-          <div className="whitespace-pre-wrap text-sm leading-relaxed text-surface-700">
-            {data.ai_summary}
+          <div>
+            <div className="mb-1 text-xs font-medium text-surface-400">Summary</div>
+            <div className="whitespace-pre-wrap text-sm leading-relaxed text-surface-700">
+              {data.ai_summary}
+            </div>
           </div>
         )}
 
-        {/* Action items */}
+        {/* Action items — read-only list with assignee names */}
         {data.ai_action_items && (
           <div>
             <div className="mb-1 text-xs font-medium text-surface-400">Action Items</div>
@@ -67,10 +65,10 @@ export function ConversationSummaryCard({ data }: ConversationSummaryCardProps) 
           </div>
         )}
 
-        {/* Topics */}
+        {/* Key topics — inline tags/chips */}
         {data.ai_topics && (
           <div>
-            <div className="mb-1 text-xs font-medium text-surface-400">Topics</div>
+            <div className="mb-1 text-xs font-medium text-surface-400">Key Topics</div>
             <div className="flex flex-wrap gap-1.5">
               {data.ai_topics.split(',').map((t, i) => (
                 <span
@@ -84,12 +82,15 @@ export function ConversationSummaryCard({ data }: ConversationSummaryCardProps) 
           </div>
         )}
 
-        {/* Last analyzed */}
-        {data.ai_summarized_at && (
-          <div className="text-xs text-surface-400">
-            Last analyzed {formatTimestamp(data.ai_summarized_at)}
-          </div>
-        )}
+        {/* Confidence + last processed */}
+        <div className="flex flex-wrap items-center gap-3 text-xs text-surface-400">
+          {data.ai_confidence != null && (
+            <span>Confidence: {data.ai_confidence.toFixed(2)}</span>
+          )}
+          {data.ai_summarized_at && (
+            <span>Last processed: {formatTimestamp(data.ai_summarized_at)}</span>
+          )}
+        </div>
       </div>
     </div>
   )

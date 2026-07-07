@@ -1,10 +1,18 @@
 import { Building2, Link2, Tag } from 'lucide-react'
+import { useNavigationStore } from '../../stores/navigation.ts'
 
 interface ContextZoneProps {
   data: Record<string, unknown>
 }
 
 export function ContextZone({ data }: ContextZoneProps) {
+  const setActiveEntityType = useNavigationStore((s) => s.setActiveEntityType)
+  const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
+
+  const navigateTo = (entityType: string, entityId: string) => {
+    setActiveEntityType(entityType)
+    setSelectedRow(entityId, -1)
+  }
   const affiliations = (data.affiliations as Array<{
     company_name: string
     company_id: string
@@ -38,12 +46,12 @@ export function ContextZone({ data }: ContextZoneProps) {
           <div className="space-y-1">
             {affiliations.map((a, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
-                <a
-                  href={`/companies/${a.company_id}`}
+                <button
+                  onClick={() => navigateTo('company', a.company_id)}
                   className="text-primary-600 hover:underline"
                 >
                   {a.company_name}
-                </a>
+                </button>
                 <span className="text-xs text-surface-400">
                   {a.title || a.role_name}
                   {a.is_current === false && ' (former)'}
@@ -63,12 +71,12 @@ export function ContextZone({ data }: ContextZoneProps) {
           <div className="space-y-1">
             {relationships.map((r, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
-                <a
-                  href={`/${r.other_entity_type}s/${r.other_id}`}
+                <button
+                  onClick={() => navigateTo(r.other_entity_type, r.other_id)}
                   className="text-primary-600 hover:underline"
                 >
                   {r.other_name}
-                </a>
+                </button>
                 <span className="text-xs text-surface-400">{r.label}</span>
               </div>
             ))}

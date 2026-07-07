@@ -449,10 +449,29 @@ export interface ConversationTag {
   confidence?: number
 }
 
+export interface ConversationChildPreview {
+  id: string
+  title: string | null
+  status: string | null
+  is_aggregate: boolean
+  communication_count: number
+  child_count: number
+  last_activity_at: string | null
+  latest_communication: {
+    channel: string
+    sender_name: string | null
+    timestamp: string | null
+    cleaned_html: string | null
+    snippet: string | null
+  } | null
+}
+
 export interface ConversationPreviewData {
   id: string
   title: string | null
   status: string | null
+  is_aggregate: boolean
+  description: string | null
   communication_count: number
   participant_count: number
   first_activity_at: string | null
@@ -466,6 +485,7 @@ export interface ConversationPreviewData {
   participants: ConversationPreviewParticipant[]
   recent_communications: ConversationPreviewCommunication[]
   tags: ConversationTag[]
+  children: ConversationChildPreview[]
 }
 
 // --- Conversation Full View types ---
@@ -530,10 +550,41 @@ export interface ConversationProviderAccount {
   email_address: string
 }
 
+export interface ConversationAssociations {
+  projects: Array<{
+    relationship_id: string
+    id: string
+    name: string
+    status: string | null
+  }>
+  companies: Array<{
+    relationship_id: string
+    id: string
+    name: string
+  }>
+  contacts: Array<{
+    relationship_id: string
+    id: string
+    name: string
+    company_name: string | null
+    title: string | null
+  }>
+  events: Array<{
+    relationship_id: string
+    id: string
+    title: string | null
+    event_type: string | null
+    start_datetime: string | null
+    status: string | null
+  }>
+}
+
 export interface ConversationFullData {
   id: string
   title: string | null
   status: string | null
+  is_aggregate: boolean
+  description: string | null
   communication_count: number
   participant_count: number
   message_count: number
@@ -546,10 +597,13 @@ export interface ConversationFullData {
   ai_action_items: string | null
   ai_topics: string | null
   ai_summarized_at: string | null
+  ai_confidence: number | null
   triage_result: string | null
   dismissed: boolean
   dismissed_reason: string | null
   dismissed_at: string | null
+  stale_after_days: number | null
+  closed_after_days: number | null
   channel_breakdown: Record<string, number>
   account_owner_email: string | null
   participants: ConversationFullParticipant[]
@@ -557,6 +611,8 @@ export interface ConversationFullData {
   tags: ConversationTag[]
   events: ConversationEvent[]
   notes: ConversationNote[]
+  children: ConversationChildPreview[]
+  associations: ConversationAssociations
   provider_account: ConversationProviderAccount | null
   topic: ConversationTopic | null
   created_at: string

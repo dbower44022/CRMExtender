@@ -22,6 +22,7 @@ export function ConversationMetadataCard({ data }: ConversationMetadataCardProps
       {expanded && (
         <div className="border-t border-surface-200 px-4 py-3">
           <dl className="space-y-2 text-sm">
+            <MetadataRow label="Type" value={data.is_aggregate ? 'Aggregate Conversation' : 'Standard Conversation'} />
             <MetadataRow label="First Activity" value={formatTimestamp(data.first_activity_at)} />
             <MetadataRow label="Last Activity" value={formatTimestamp(data.last_activity_at)} />
             {data.provider_account && (
@@ -37,6 +38,12 @@ export function ConversationMetadataCard({ data }: ConversationMetadataCardProps
                   <MetadataRow label="Project" value={data.topic.project_name} />
                 )}
               </>
+            )}
+            {data.stale_after_days != null && (
+              <MetadataRow label="Stale After" value={`${data.stale_after_days} days`} />
+            )}
+            {data.closed_after_days != null && (
+              <MetadataRow label="Auto-Close After" value={`${data.closed_after_days} days`} />
             )}
             <MetadataRow label="Created" value={formatTimestamp(data.created_at)} />
             <MetadataRow label="Updated" value={formatTimestamp(data.updated_at)} />

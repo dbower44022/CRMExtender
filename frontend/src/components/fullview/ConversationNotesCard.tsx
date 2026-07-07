@@ -7,6 +7,9 @@ interface ConversationNotesCardProps {
 }
 
 export function ConversationNotesCard({ notes }: ConversationNotesCardProps) {
+  // Suppressed when no notes attached (PRD Section 12)
+  if (notes.length === 0) return null
+
   return (
     <div className="rounded-lg border border-surface-200 bg-white">
       <div className="flex items-center justify-between border-b border-surface-200 px-4 py-2.5">
@@ -22,12 +25,7 @@ export function ConversationNotesCard({ notes }: ConversationNotesCardProps) {
           Add
         </button>
       </div>
-      {notes.length === 0 ? (
-        <div className="px-4 py-4 text-center text-xs text-surface-400">
-          No notes yet.
-        </div>
-      ) : (
-        <div className="divide-y divide-surface-100">
+      <div className="divide-y divide-surface-100">
           {notes.map((n) => (
             <div key={n.id} className="px-4 py-2.5">
               <div className="flex items-center gap-2">
@@ -47,7 +45,6 @@ export function ConversationNotesCard({ notes }: ConversationNotesCardProps) {
             </div>
           ))}
         </div>
-      )}
     </div>
   )
 }

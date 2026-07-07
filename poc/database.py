@@ -205,11 +205,16 @@ CREATE TABLE IF NOT EXISTS conversations (
     ai_action_items     TEXT,
     ai_topics           TEXT,
     ai_summarized_at    TEXT,
+    ai_confidence       REAL,
     triage_result       TEXT,
     dismissed           INTEGER DEFAULT 0,
     dismissed_reason    TEXT,
     dismissed_at        TEXT,
     dismissed_by        TEXT REFERENCES users(id) ON DELETE SET NULL,
+    is_aggregate        INTEGER NOT NULL DEFAULT 0,
+    description         TEXT,
+    stale_after_days    INTEGER DEFAULT 14,
+    closed_after_days   INTEGER DEFAULT 30,
     created_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at          TEXT NOT NULL,
@@ -229,6 +234,17 @@ CREATE TABLE IF NOT EXISTS conversation_participants (
     PRIMARY KEY (conversation_id, address),
     UNIQUE (conversation_id, email_address)
 );
+
+-- Conversation members (aggregate parent-child relationships)
+CREATE TABLE IF NOT EXISTS conversation_members (
+    parent_conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    child_conversation_id  TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    position               INTEGER NOT NULL DEFAULT 0,
+    created_at             TEXT NOT NULL,
+    PRIMARY KEY (parent_conversation_id, child_conversation_id),
+    CHECK (parent_conversation_id != child_conversation_id)
+);
+CREATE INDEX IF NOT EXISTS idx_cm_child ON conversation_members(child_conversation_id);
 
 -- Communications (polymorphic, all channel types)
 CREATE TABLE IF NOT EXISTS communications (
@@ -410,8 +426,8 @@ CREATE TABLE IF NOT EXISTS relationship_types (
     updated_by       TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at       TEXT NOT NULL,
     updated_at       TEXT NOT NULL,
-    CHECK (from_entity_type IN ('contact', 'company')),
-    CHECK (to_entity_type IN ('contact', 'company'))
+    CHECK (from_entity_type IN ('contact', 'company', 'conversation')),
+    CHECK (to_entity_type IN ('contact', 'company', 'conversation', 'project', 'event'))
 );
 
 -- Relationships between entities
@@ -1196,7 +1212,11 @@ VALUES
     ('rt-parent-of',  'PARENT_OF',       'contact', 'contact', 'Parent of',       'Child of',         0, 0, 'Parent / child',                    '{now}', '{now}'),
     ('rt-spouse-of',  'SPOUSE_OF',       'contact', 'contact', 'Spouse of',       'Spouse of',        0, 1, 'Spousal relationship',              '{now}', '{now}'),
     ('rt-sibling-of', 'SIBLING_OF',      'contact', 'contact', 'Sibling of',      'Sibling of',       0, 1, 'Sibling relationship',              '{now}', '{now}'),
-    ('rt-uncle-aunt', 'UNCLE_AUNT_OF',   'contact', 'contact', 'Uncle/Aunt of',   'Nephew/Niece of',  0, 0, 'Uncle-aunt / nephew-niece',         '{now}', '{now}');
+    ('rt-uncle-aunt', 'UNCLE_AUNT_OF',   'contact', 'contact', 'Uncle/Aunt of',   'Nephew/Niece of',  0, 0, 'Uncle-aunt / nephew-niece',         '{now}', '{now}'),
+    ('rt-conv-project', 'CONVERSATION_PROJECT', 'conversation', 'project', 'Related to project', 'Has conversations', 1, 0, 'System: conversation-project link', '{now}', '{now}'),
+    ('rt-conv-company', 'CONVERSATION_COMPANY', 'conversation', 'company', 'Related to company', 'Has conversations', 1, 0, 'System: conversation-company link', '{now}', '{now}'),
+    ('rt-conv-contact', 'CONVERSATION_CONTACT', 'conversation', 'contact', 'Associated with contact', 'Associated with conversation', 1, 0, 'System: conversation-contact link', '{now}', '{now}'),
+    ('rt-conv-event',   'CONVERSATION_EVENT',   'conversation', 'event',   'Related to event',   'Has conversations', 1, 0, 'System: conversation-event link',   '{now}', '{now}');
 """
 
 _SEED_CONTACT_COMPANY_ROLES = [

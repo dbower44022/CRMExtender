@@ -1345,10 +1345,55 @@ def conversation_preview_api(request: Request, conversation_id: str):
             ).fetchall()
         ]
 
+        # Children (for aggregate conversations)
+        children = []
+        is_aggregate = bool(conv.get("is_aggregate"))
+        if is_aggregate:
+            children_rows = conn.execute(
+                "SELECT c.id, c.title, c.status, c.is_aggregate, "
+                "       c.communication_count, c.last_activity_at, "
+                "       (SELECT COUNT(*) FROM conversation_members cm2 "
+                "        WHERE cm2.parent_conversation_id = c.id) AS child_count "
+                "FROM conversation_members cm "
+                "JOIN conversations c ON c.id = cm.child_conversation_id "
+                "WHERE cm.parent_conversation_id = ? "
+                "ORDER BY c.last_activity_at DESC",
+                (conversation_id,),
+            ).fetchall()
+            for ch in children_rows:
+                # Get most recent communication for each child
+                latest_comm = conn.execute(
+                    "SELECT comm.channel, comm.sender_name, comm.timestamp, "
+                    f"       comm.{html_col} AS cleaned_html, comm.snippet "
+                    "FROM communications comm "
+                    "JOIN conversation_communications cc ON cc.communication_id = comm.id "
+                    "WHERE cc.conversation_id = ? "
+                    "ORDER BY comm.timestamp DESC LIMIT 1",
+                    (ch["id"],),
+                ).fetchone()
+                children.append({
+                    "id": ch["id"],
+                    "title": ch["title"],
+                    "status": ch["status"],
+                    "is_aggregate": bool(ch["is_aggregate"]),
+                    "communication_count": ch["communication_count"] or 0,
+                    "child_count": ch["child_count"] or 0,
+                    "last_activity_at": ch["last_activity_at"],
+                    "latest_communication": {
+                        "channel": latest_comm["channel"],
+                        "sender_name": latest_comm["sender_name"],
+                        "timestamp": latest_comm["timestamp"],
+                        "cleaned_html": latest_comm["cleaned_html"],
+                        "snippet": latest_comm["snippet"],
+                    } if latest_comm else None,
+                })
+
     return {
         "id": conv["id"],
         "title": conv.get("title"),
         "status": conv.get("status"),
+        "is_aggregate": is_aggregate,
+        "description": conv.get("description"),
         "communication_count": conv.get("communication_count") or 0,
         "participant_count": conv.get("participant_count") or 0,
         "first_activity_at": conv.get("first_activity_at"),
@@ -1362,6 +1407,7 @@ def conversation_preview_api(request: Request, conversation_id: str):
         "participants": participants,
         "recent_communications": recent_communications,
         "tags": tags,
+        "children": children,
     }
 
 
@@ -1589,10 +1635,127 @@ def conversation_full_api(request: Request, conversation_id: str):
             if u:
                 updated_by_name = u["name"]
 
+        # Children (for aggregate conversations)
+        children = []
+        is_aggregate = bool(conv.get("is_aggregate"))
+        if is_aggregate:
+            children_rows = conn.execute(
+                "SELECT c.id, c.title, c.status, c.is_aggregate, "
+                "       c.communication_count, c.last_activity_at, "
+                "       (SELECT COUNT(*) FROM conversation_members cm2 "
+                "        WHERE cm2.parent_conversation_id = c.id) AS child_count "
+                "FROM conversation_members cm "
+                "JOIN conversations c ON c.id = cm.child_conversation_id "
+                "WHERE cm.parent_conversation_id = ? "
+                "ORDER BY c.last_activity_at DESC",
+                (conversation_id,),
+            ).fetchall()
+            for ch in children_rows:
+                latest_comm = conn.execute(
+                    "SELECT comm.channel, comm.sender_name, comm.timestamp, "
+                    f"       comm.{html_col} AS cleaned_html, comm.snippet "
+                    "FROM communications comm "
+                    "JOIN conversation_communications cc ON cc.communication_id = comm.id "
+                    "WHERE cc.conversation_id = ? "
+                    "ORDER BY comm.timestamp DESC LIMIT 1",
+                    (ch["id"],),
+                ).fetchone()
+                children.append({
+                    "id": ch["id"],
+                    "title": ch["title"],
+                    "status": ch["status"],
+                    "is_aggregate": bool(ch["is_aggregate"]),
+                    "communication_count": ch["communication_count"] or 0,
+                    "child_count": ch["child_count"] or 0,
+                    "last_activity_at": ch["last_activity_at"],
+                    "latest_communication": {
+                        "channel": latest_comm["channel"],
+                        "sender_name": latest_comm["sender_name"],
+                        "timestamp": latest_comm["timestamp"],
+                        "cleaned_html": latest_comm["cleaned_html"],
+                        "snippet": latest_comm["snippet"],
+                    } if latest_comm else None,
+                })
+
+        # Entity associations via relationship types
+        associations = {"projects": [], "companies": [], "contacts": [], "events": []}
+        assoc_rows = conn.execute(
+            "SELECT r.id AS rel_id, r.to_entity_type, r.to_entity_id, "
+            "       rt.name AS rt_name "
+            "FROM relationships r "
+            "JOIN relationship_types rt ON rt.id = r.relationship_type_id "
+            "WHERE r.from_entity_type = 'conversation' "
+            "  AND r.from_entity_id = ? "
+            "ORDER BY r.created_at DESC",
+            (conversation_id,),
+        ).fetchall()
+        for ar in assoc_rows:
+            rt_name = ar["rt_name"]
+            entity_id = ar["to_entity_id"]
+            if rt_name == "CONVERSATION_PROJECT":
+                proj = conn.execute(
+                    "SELECT id, name, status FROM projects WHERE id = ?",
+                    (entity_id,),
+                ).fetchone()
+                if proj:
+                    associations["projects"].append({
+                        "relationship_id": ar["rel_id"],
+                        "id": proj["id"], "name": proj["name"],
+                        "status": proj["status"],
+                    })
+            elif rt_name == "CONVERSATION_COMPANY":
+                comp = conn.execute(
+                    "SELECT id, name FROM companies WHERE id = ?",
+                    (entity_id,),
+                ).fetchone()
+                if comp:
+                    associations["companies"].append({
+                        "relationship_id": ar["rel_id"],
+                        "id": comp["id"], "name": comp["name"],
+                    })
+            elif rt_name == "CONVERSATION_CONTACT":
+                cont = conn.execute(
+                    "SELECT c.id, c.name, "
+                    "       (SELECT co.name FROM companies co "
+                    "        JOIN contact_companies cc ON cc.company_id = co.id "
+                    "        WHERE cc.contact_id = c.id "
+                    "          AND cc.is_primary = 1 AND cc.is_current = 1 "
+                    "        LIMIT 1) AS company_name, "
+                    "       (SELECT cc2.title FROM contact_companies cc2 "
+                    "        WHERE cc2.contact_id = c.id "
+                    "          AND cc2.is_primary = 1 AND cc2.is_current = 1 "
+                    "        LIMIT 1) AS title "
+                    "FROM contacts c WHERE c.id = ?",
+                    (entity_id,),
+                ).fetchone()
+                if cont:
+                    associations["contacts"].append({
+                        "relationship_id": ar["rel_id"],
+                        "id": cont["id"], "name": cont["name"],
+                        "company_name": cont["company_name"],
+                        "title": cont["title"],
+                    })
+            elif rt_name == "CONVERSATION_EVENT":
+                evt = conn.execute(
+                    "SELECT id, title, event_type, start_datetime, status "
+                    "FROM events WHERE id = ?",
+                    (entity_id,),
+                ).fetchone()
+                if evt:
+                    associations["events"].append({
+                        "relationship_id": ar["rel_id"],
+                        "id": evt["id"], "title": evt["title"],
+                        "event_type": evt["event_type"],
+                        "start_datetime": evt["start_datetime"],
+                        "status": evt["status"],
+                    })
+
     return {
         "id": conv["id"],
         "title": conv.get("title"),
         "status": conv.get("status"),
+        "is_aggregate": is_aggregate,
+        "description": conv.get("description"),
         "communication_count": conv.get("communication_count") or 0,
         "participant_count": conv.get("participant_count") or 0,
         "message_count": conv.get("message_count") or 0,
@@ -1605,10 +1768,13 @@ def conversation_full_api(request: Request, conversation_id: str):
         "ai_action_items": conv.get("ai_action_items"),
         "ai_topics": conv.get("ai_topics"),
         "ai_summarized_at": conv.get("ai_summarized_at"),
+        "ai_confidence": conv.get("ai_confidence"),
         "triage_result": conv.get("triage_result"),
         "dismissed": bool(conv.get("dismissed")),
         "dismissed_reason": conv.get("dismissed_reason"),
         "dismissed_at": conv.get("dismissed_at"),
+        "stale_after_days": conv.get("stale_after_days"),
+        "closed_after_days": conv.get("closed_after_days"),
         "channel_breakdown": channel_breakdown,
         "account_owner_email": provider_account["email_address"] if provider_account else None,
         "participants": participants,
@@ -1616,6 +1782,8 @@ def conversation_full_api(request: Request, conversation_id: str):
         "tags": tags,
         "events": events,
         "notes": notes,
+        "children": children,
+        "associations": associations,
         "provider_account": provider_account,
         "topic": topic,
         "created_at": conv.get("created_at"),

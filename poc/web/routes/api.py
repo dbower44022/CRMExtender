@@ -50,6 +50,50 @@ def _comm_html_col(conn) -> str:
     return "cleaned_html" if "cleaned_html" in cols else "body_html"
 
 
+def _conversation_children(conn, conversation_id: str, html_col: str) -> list[dict]:
+    """Child conversations of an aggregate, newest activity first, each with
+    its nested child count and most recent communication."""
+    children = []
+    children_rows = conn.execute(
+        "SELECT c.id, c.title, c.status, c.is_aggregate, "
+        "       c.communication_count, c.last_activity_at, "
+        "       (SELECT COUNT(*) FROM conversation_members cm2 "
+        "        WHERE cm2.parent_conversation_id = c.id) AS child_count "
+        "FROM conversation_members cm "
+        "JOIN conversations c ON c.id = cm.child_conversation_id "
+        "WHERE cm.parent_conversation_id = ? "
+        "ORDER BY c.last_activity_at DESC",
+        (conversation_id,),
+    ).fetchall()
+    for ch in children_rows:
+        latest_comm = conn.execute(
+            "SELECT comm.channel, comm.sender_name, comm.timestamp, "
+            f"       comm.{html_col} AS cleaned_html, comm.snippet "
+            "FROM communications comm "
+            "JOIN conversation_communications cc ON cc.communication_id = comm.id "
+            "WHERE cc.conversation_id = ? "
+            "ORDER BY comm.timestamp DESC LIMIT 1",
+            (ch["id"],),
+        ).fetchone()
+        children.append({
+            "id": ch["id"],
+            "title": ch["title"],
+            "status": ch["status"],
+            "is_aggregate": bool(ch["is_aggregate"]),
+            "communication_count": ch["communication_count"] or 0,
+            "child_count": ch["child_count"] or 0,
+            "last_activity_at": ch["last_activity_at"],
+            "latest_communication": {
+                "channel": latest_comm["channel"],
+                "sender_name": latest_comm["sender_name"],
+                "timestamp": latest_comm["timestamp"],
+                "cleaned_html": latest_comm["cleaned_html"],
+                "snippet": latest_comm["snippet"],
+            } if latest_comm else None,
+        })
+    return children
+
+
 # ------------------------------------------------------------------
 # Health
 # ------------------------------------------------------------------
@@ -1346,47 +1390,11 @@ def conversation_preview_api(request: Request, conversation_id: str):
         ]
 
         # Children (for aggregate conversations)
-        children = []
         is_aggregate = bool(conv.get("is_aggregate"))
-        if is_aggregate:
-            children_rows = conn.execute(
-                "SELECT c.id, c.title, c.status, c.is_aggregate, "
-                "       c.communication_count, c.last_activity_at, "
-                "       (SELECT COUNT(*) FROM conversation_members cm2 "
-                "        WHERE cm2.parent_conversation_id = c.id) AS child_count "
-                "FROM conversation_members cm "
-                "JOIN conversations c ON c.id = cm.child_conversation_id "
-                "WHERE cm.parent_conversation_id = ? "
-                "ORDER BY c.last_activity_at DESC",
-                (conversation_id,),
-            ).fetchall()
-            for ch in children_rows:
-                # Get most recent communication for each child
-                latest_comm = conn.execute(
-                    "SELECT comm.channel, comm.sender_name, comm.timestamp, "
-                    f"       comm.{html_col} AS cleaned_html, comm.snippet "
-                    "FROM communications comm "
-                    "JOIN conversation_communications cc ON cc.communication_id = comm.id "
-                    "WHERE cc.conversation_id = ? "
-                    "ORDER BY comm.timestamp DESC LIMIT 1",
-                    (ch["id"],),
-                ).fetchone()
-                children.append({
-                    "id": ch["id"],
-                    "title": ch["title"],
-                    "status": ch["status"],
-                    "is_aggregate": bool(ch["is_aggregate"]),
-                    "communication_count": ch["communication_count"] or 0,
-                    "child_count": ch["child_count"] or 0,
-                    "last_activity_at": ch["last_activity_at"],
-                    "latest_communication": {
-                        "channel": latest_comm["channel"],
-                        "sender_name": latest_comm["sender_name"],
-                        "timestamp": latest_comm["timestamp"],
-                        "cleaned_html": latest_comm["cleaned_html"],
-                        "snippet": latest_comm["snippet"],
-                    } if latest_comm else None,
-                })
+        children = (
+            _conversation_children(conn, conversation_id, html_col)
+            if is_aggregate else []
+        )
 
     return {
         "id": conv["id"],
@@ -1636,46 +1644,11 @@ def conversation_full_api(request: Request, conversation_id: str):
                 updated_by_name = u["name"]
 
         # Children (for aggregate conversations)
-        children = []
         is_aggregate = bool(conv.get("is_aggregate"))
-        if is_aggregate:
-            children_rows = conn.execute(
-                "SELECT c.id, c.title, c.status, c.is_aggregate, "
-                "       c.communication_count, c.last_activity_at, "
-                "       (SELECT COUNT(*) FROM conversation_members cm2 "
-                "        WHERE cm2.parent_conversation_id = c.id) AS child_count "
-                "FROM conversation_members cm "
-                "JOIN conversations c ON c.id = cm.child_conversation_id "
-                "WHERE cm.parent_conversation_id = ? "
-                "ORDER BY c.last_activity_at DESC",
-                (conversation_id,),
-            ).fetchall()
-            for ch in children_rows:
-                latest_comm = conn.execute(
-                    "SELECT comm.channel, comm.sender_name, comm.timestamp, "
-                    f"       comm.{html_col} AS cleaned_html, comm.snippet "
-                    "FROM communications comm "
-                    "JOIN conversation_communications cc ON cc.communication_id = comm.id "
-                    "WHERE cc.conversation_id = ? "
-                    "ORDER BY comm.timestamp DESC LIMIT 1",
-                    (ch["id"],),
-                ).fetchone()
-                children.append({
-                    "id": ch["id"],
-                    "title": ch["title"],
-                    "status": ch["status"],
-                    "is_aggregate": bool(ch["is_aggregate"]),
-                    "communication_count": ch["communication_count"] or 0,
-                    "child_count": ch["child_count"] or 0,
-                    "last_activity_at": ch["last_activity_at"],
-                    "latest_communication": {
-                        "channel": latest_comm["channel"],
-                        "sender_name": latest_comm["sender_name"],
-                        "timestamp": latest_comm["timestamp"],
-                        "cleaned_html": latest_comm["cleaned_html"],
-                        "snippet": latest_comm["snippet"],
-                    } if latest_comm else None,
-                })
+        children = (
+            _conversation_children(conn, conversation_id, html_col)
+            if is_aggregate else []
+        )
 
         # Entity associations via relationship types
         associations = {"projects": [], "companies": [], "contacts": [], "events": []}

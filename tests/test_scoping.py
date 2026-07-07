@@ -463,10 +463,10 @@ class TestSyncScoping:
                          company="", status="active"),
         ]
 
-        with patch("poc.sync.fetch_contacts", return_value=mock_contacts):
-            mock_creds = MagicMock()
+        with patch("poc.sync.fetch_contacts", return_value=mock_contacts), \
+             patch("poc.sync.fetch_contact_groups", return_value={}):
             count = sync_contacts(
-                mock_creds, customer_id=CUST_A, user_id=USER_A1,
+                MagicMock(), customer_id=CUST_A, user_id=USER_A1,
             )
 
         assert count == 1
@@ -499,9 +499,9 @@ class TestSyncScoping:
                          company="New Corp", status="active"),
         ]
 
-        with patch("poc.sync.fetch_contacts", return_value=mock_contacts):
-            mock_creds = MagicMock()
-            sync_contacts(mock_creds, customer_id=CUST_A, user_id=USER_A1)
+        with patch("poc.sync.fetch_contacts", return_value=mock_contacts), \
+             patch("poc.sync.fetch_contact_groups", return_value={}):
+            sync_contacts(MagicMock(), customer_id=CUST_A, user_id=USER_A1)
 
         with get_connection() as conn:
             company = conn.execute(

@@ -3,12 +3,13 @@ import {
   Building2,
   MessageSquare,
   Calendar,
-  ExternalLink,
+  Maximize2,
   Mail,
   Phone,
   MapPin,
 } from 'lucide-react'
 import { useNavigationStore } from '../../stores/navigation.ts'
+import { useLayoutStore } from '../../stores/layout.ts'
 
 const ENTITY_ICONS: Record<string, typeof User> = {
   contact: User,
@@ -23,7 +24,7 @@ interface IdentityZoneProps {
   entityId: string
 }
 
-export function IdentityZone({ data, entityType, entityId }: IdentityZoneProps) {
+export function IdentityZone({ data, entityType }: IdentityZoneProps) {
   const setActiveEntityType = useNavigationStore((s) => s.setActiveEntityType)
   const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
   const Icon = ENTITY_ICONS[entityType] ?? User
@@ -36,13 +37,7 @@ export function IdentityZone({ data, entityType, entityId }: IdentityZoneProps) 
     | { name: string; id: string }
     | undefined
 
-  const htmxDetailUrl = entityType === 'conversation'
-    ? `/conversations/${entityId}`
-    : entityType === 'event'
-      ? `/events/${entityId}`
-      : entityType === 'company'
-        ? `/companies/${entityId}`
-        : `/contacts/${entityId}`
+  const expandDetailPanel = useLayoutStore((s) => s.expandDetailPanel)
 
   return (
     <div className="border-b border-surface-200 p-4">
@@ -58,13 +53,13 @@ export function IdentityZone({ data, entityType, entityId }: IdentityZoneProps) 
             <p className="truncate text-sm text-surface-500">{subtitle}</p>
           )}
         </div>
-        <a
-          href={htmxDetailUrl}
-          title="Open full detail"
+        <button
+          onClick={expandDetailPanel}
+          title="Open full view"
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-surface-400 transition-colors hover:bg-surface-100 hover:text-surface-600"
         >
-          <ExternalLink size={14} />
-        </a>
+          <Maximize2 size={14} />
+        </button>
       </div>
 
       {company && (

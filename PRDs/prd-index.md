@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 21.0
+**Version:** 22.0
 **Last Updated:** 2026-07-07
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V22.0 (2026-07-07):** Added Legacy UI Migration Functional Area PRD (`legacy-ui-migration-prd.md`) — phased plan to bring the React SPA to parity with the legacy HTMX UI and decommission it, per Product TDD §2.3. Based on a full audit of ~157 legacy routes vs. SPA/API coverage. Phase 0 (URL routing + removing legacy escape-hatch links) approved.
 
 > **V21.0 (2026-07-07):** Conversation View Sub-PRD implemented in the PoC (schema v20, preview + full view, aggregate children, entity associations; Link/Add mutation actions deferred). Task/test checklists in `conversation-view-prd.md` updated to reflect implementation status; implementation decisions written back to the Conversation Entity TDD. Repaired merge-conflict damage in this index, `communication-view-prd.md`, and `conversation-entity-base-prd.md` (stale stash committed in 1702bd7).
 
@@ -46,6 +48,7 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | PRD Methodology Guide | 2.0 | `prd-methodology-guide.md` | Updated — Key Processes, field metadata, † convention | 2026-02-23 |
 | Product TDD | 1.0 | `product-tdd.md` | Draft — 13 sections, living document | 2026-02-23 |
 | GUI Functional Requirements | 2.0 | `gui-functional-requirements-prd.md` | Draft — Terminology standardized | 2026-02-21 |
+| Legacy UI Migration | 1.0 | `legacy-ui-migration-prd.md` | Draft — Functional area, 6 phases; Phase 0 approved | 2026-07-07 |
 | Custom Objects | 2.0 | `custom-objects-prd.md` | Superseded — decomposed into Framework PRD + 2 Sub-PRDs + TDD | 2026-02-23 |
 | └ Custom Objects Framework | 1.0 | `custom-objects-framework-prd.md` | Draft — V2 methodology (Key Processes) | 2026-02-23 |
 | &nbsp;&nbsp;└ Custom Objects TDD | 1.0 | `custom-objects-tdd.md` | Draft — Living document, 7 sections | 2026-02-23 |

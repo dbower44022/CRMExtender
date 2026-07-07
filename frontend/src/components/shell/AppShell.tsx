@@ -18,6 +18,7 @@ import { DetailPanel } from './DetailPanel.tsx'
 import { GlobalSearchModal } from '../search/GlobalSearchModal.tsx'
 import { ComposePanel } from '../compose/ComposePanel.tsx'
 import { useDefaultView } from '../../hooks/useDefaultView.ts'
+import { useUrlSync } from '../../hooks/useUrlSync.ts'
 
 const PREVIEW_PANEL_SIZE_MAP: Record<string, string> = {
   none: '0%',
@@ -38,6 +39,7 @@ export function AppShell() {
   const { data: viewConfig } = useViewConfig(activeViewId)
 
   useDefaultView()
+  useUrlSync()
 
   // If redirected back from OAuth connect, open Settings > Accounts
   const openSettings = useNavigationStore((s) => s.openSettings)

@@ -1,5 +1,7 @@
 import { format, parseISO } from 'date-fns'
 import type { FieldDef } from '../../types/api.ts'
+import { useNavigationStore } from '../../stores/navigation.ts'
+import { buildAppPath, parseLegacyEntityHref } from '../../lib/appRoutes.ts'
 
 interface CellRendererProps {
   value: unknown
@@ -19,15 +21,29 @@ export function CellRenderer({
     return <span className="text-surface-300">&mdash;</span>
   }
 
-  // Link cells
+  // Link cells — entity links navigate in-app; href stays a working deep
+  // link for middle-click / open-in-new-tab
   if (fieldDef.link) {
     const href = resolveLink(fieldDef.link, row)
     if (href) {
+      const route = parseLegacyEntityHref(href)
       return (
         <a
-          href={href}
+          href={route ? buildAppPath(route.entityType, route.entityId) : href}
           onClick={(e) => {
             e.stopPropagation()
+            if (route && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+              e.preventDefault()
+              const nav = useNavigationStore.getState()
+              if (nav.activeEntityType !== route.entityType) {
+                // Cross-entity: switch grids (resets grid state by design)
+                nav.setActiveEntityType(route.entityType)
+              }
+              nav.setPendingNavigation({
+                entityType: route.entityType,
+                entityId: route.entityId!,
+              })
+            }
           }}
           className="text-primary-600 hover:text-primary-700 hover:underline"
         >

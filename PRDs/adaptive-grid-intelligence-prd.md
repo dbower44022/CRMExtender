@@ -529,8 +529,9 @@ The alignment engine evaluates columns in the following order, with the first ma
 
 | Condition | Alignment | Rationale |
 |---|---|---|
-| Median content width ≤ 40% of column width | Center | Values are compact relative to column — centering prevents a left-hugging cluster with empty right space. |
-| Median content width > 40% of column width | Left | Standard text reading direction. |
+| All text content | Left | Standard text reading direction. Identity fields (names, subjects, emails, companies) must share a common left edge for vertical scanning. |
+
+> **Revised 2026-07-07 (product owner):** the original compact-text centering condition (median ≤ 40% of column width) caused subject/title/company/email columns to center, breaking scanability. Text now always left-aligns; numeric/temporal/categorical rules are unchanged.
 
 ### 11.3 Header Alignment
 

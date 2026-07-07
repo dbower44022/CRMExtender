@@ -19,6 +19,8 @@ import { GlobalSearchModal } from '../search/GlobalSearchModal.tsx'
 import { ComposePanel } from '../compose/ComposePanel.tsx'
 import { useDefaultView } from '../../hooks/useDefaultView.ts'
 import { useUrlSync } from '../../hooks/useUrlSync.ts'
+import { useProfile } from '../../api/settings.ts'
+import { setDatePrefs } from '../../lib/datePrefs.ts'
 
 const PREVIEW_PANEL_SIZE_MAP: Record<string, string> = {
   none: '0%',
@@ -40,6 +42,12 @@ export function AppShell() {
 
   useDefaultView()
   useUrlSync()
+
+  // Date rendering follows profile preferences (timezone + date format)
+  const { data: profileData } = useProfile()
+  if (profileData) {
+    setDatePrefs({ timeZone: profileData.timezone, dateFormat: profileData.date_format ?? undefined })
+  }
 
   // If redirected back from OAuth connect, open Settings > Accounts
   const openSettings = useNavigationStore((s) => s.openSettings)

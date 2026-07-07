@@ -1,4 +1,5 @@
-import { format, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
+import { formatDate } from '../../lib/formatTimestamp.ts'
 import type { FieldDef } from '../../types/api.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { buildAppPath, parseLegacyEntityHref } from '../../lib/appRoutes.ts'
@@ -73,7 +74,8 @@ function DateTimeCell({ value }: { value: unknown }) {
   const str = String(value)
   try {
     const date = parseISO(str)
-    const formatted = format(date, 'MMM d, yyyy')
+    if (isNaN(date.getTime())) throw new Error('invalid')
+    const formatted = formatDate(str)
     return (
       <span title={str} className="text-surface-600">
         {formatted}

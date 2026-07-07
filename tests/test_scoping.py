@@ -516,6 +516,37 @@ class TestSyncScoping:
             ).fetchone()
             assert uco is not None
 
+    def test_repeat_sync_does_not_duplicate_affiliations(self, scoped_db):
+        """Two syncs of the same contact create exactly one affiliation,
+        even when the Employee role lookup result differs between runs
+        (NULLs are distinct under the UNIQUE constraint)."""
+        from unittest.mock import patch, MagicMock
+        from poc.models import KnownContact
+        from poc.sync import sync_contacts
+
+        mock_contacts = [
+            KnownContact(email="emp@dupcorp.com", name="Employee",
+                         company="Dup Corp", status="active"),
+        ]
+
+        with patch("poc.sync.fetch_contacts", return_value=mock_contacts), \
+             patch("poc.sync.fetch_contact_groups", return_value={}):
+            sync_contacts(MagicMock(), customer_id=CUST_A, user_id=USER_A1)
+            # Second run with the role missing → role_id would be NULL
+            with get_connection() as conn:
+                conn.execute(
+                    "DELETE FROM contact_company_roles WHERE name = 'Employee'"
+                )
+            sync_contacts(MagicMock(), customer_id=CUST_A, user_id=USER_A1)
+
+        with get_connection() as conn:
+            n = conn.execute(
+                """SELECT COUNT(*) AS c FROM contact_companies cc
+                   JOIN companies co ON co.id = cc.company_id
+                   WHERE co.name = 'dupcorp.com' AND cc.is_current = 1"""
+            ).fetchone()["c"]
+        assert n == 1
+
 
 # ---------------------------------------------------------------------------
 # Project Scoping

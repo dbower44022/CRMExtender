@@ -15,9 +15,9 @@ export function ProfileSettings() {
   const changePassword = useChangePassword()
 
   const [name, setName] = useState('')
-  const [timezone, setTimezone] = useState('UTC')
+  const [timezone, setTimezone] = useState('')
   const [startOfWeek, setStartOfWeek] = useState('monday')
-  const [dateFormat, setDateFormat] = useState('ISO')
+  const [dateFormat, setDateFormat] = useState('')
 
   const [showPwSection, setShowPwSection] = useState(false)
   const [currentPw, setCurrentPw] = useState('')
@@ -27,9 +27,9 @@ export function ProfileSettings() {
   useEffect(() => {
     if (profile) {
       setName(profile.name)
-      setTimezone(profile.timezone)
+      setTimezone(profile.timezone ?? '')
       setStartOfWeek(profile.start_of_week)
-      setDateFormat(profile.date_format)
+      setDateFormat(profile.date_format ?? '')
     }
   }, [profile])
 
@@ -39,7 +39,12 @@ export function ProfileSettings() {
 
   const handleSave = () => {
     updateProfile.mutate(
-      { name, timezone, start_of_week: startOfWeek, date_format: dateFormat },
+      {
+        name,
+        timezone: timezone || null,
+        start_of_week: startOfWeek,
+        date_format: dateFormat || null,
+      },
       {
         onSuccess: () => toast.success('Profile updated'),
         onError: (err) => toast.error(err.message),
@@ -103,6 +108,7 @@ export function ProfileSettings() {
             onChange={(e) => setTimezone(e.target.value)}
             className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
           >
+            <option value="">Browser default</option>
             {timezones.map((tz) => (
               <option key={tz} value={tz}>
                 {tz}
@@ -135,6 +141,7 @@ export function ProfileSettings() {
             onChange={(e) => setDateFormat(e.target.value)}
             className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
           >
+            <option value="">Default (Mar 01)</option>
             <option value="ISO">ISO (2026-02-23)</option>
             <option value="US">US (02/23/2026)</option>
             <option value="EU">EU (23/02/2026)</option>

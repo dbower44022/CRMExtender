@@ -68,6 +68,18 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 editable=True,
                 db_column="name",
             ),
+            # Last word of the name — rtrim(name, name-without-spaces)
+            # yields everything up to and including the last space
+            "last_name": FieldDef(
+                label="Last Name",
+                sql=(
+                    "TRIM(SUBSTR(c.name, "
+                    "LENGTH(RTRIM(c.name, REPLACE(c.name, ' ', ''))) + 1))"
+                ),
+                type="text",
+                sortable=True,
+                filterable=True,
+            ),
             "email": FieldDef(
                 label="Email",
                 sql=(
@@ -122,7 +134,7 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                     "WHERE pn.entity_type = 'contact' AND pn.entity_id = c.id "
                     "AND pn.is_current = 1 ORDER BY pn.created_at ASC LIMIT 1)"
                 ),
-                type="text",
+                type="phone",
             ),
             "address": FieldDef(
                 label="Address",
@@ -331,7 +343,7 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                     "WHERE pn.entity_type = 'company' AND pn.entity_id = co.id "
                     "AND pn.is_current = 1 ORDER BY pn.created_at ASC LIMIT 1)"
                 ),
-                type="text",
+                type="phone",
             ),
             "address": FieldDef(
                 label="Address",

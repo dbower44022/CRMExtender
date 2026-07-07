@@ -8,9 +8,9 @@ interface Profile {
   name: string
   email: string
   role: string
-  timezone: string
+  timezone: string | null
   start_of_week: string
-  date_format: string
+  date_format: string | null
 }
 
 interface SystemSettings {

@@ -192,11 +192,28 @@ def execute_view(
     data_params = params + [per_page, offset]
     rows = conn.execute(data_sql, data_params).fetchall()
 
+    # Phone-typed fields are stored E.164; format for display using the
+    # system default country (per-row address cascade is detail-view only)
+    phone_keys = [
+        k for k in select_keys
+        if (fd := entity_def.fields.get(k)) and fd.type == "phone"
+    ]
+    country = "US"
+    if phone_keys and customer_id:
+        from ..settings import get_setting
+
+        country = get_setting(customer_id, "default_phone_country") or "US"
+
     result = []
     for row in rows:
         d = {"id": row["id"]}
         for key in select_keys:
             d[key] = row[key]
+        for key in phone_keys:
+            if d.get(key):
+                from ..phone_utils import format_phone
+
+                d[key] = format_phone(d[key], country)
         result.append(d)
 
     return result, total

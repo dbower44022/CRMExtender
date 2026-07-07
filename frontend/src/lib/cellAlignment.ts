@@ -16,7 +16,7 @@ import type { FieldDef } from '../types/api.ts'
 export function computeAlignment(
   metrics: ColumnMetrics,
   fieldDef: FieldDef,
-  columnWidth: number,
+  _columnWidth: number,
 ): CellAlignment {
   // Rule 1: Numeric
   if (fieldDef.type === 'number' && metrics.digitCountRange) {
@@ -41,12 +41,8 @@ export function computeAlignment(
     return 'left'
   }
 
-  // Rule 4: Text alignment
-  if (columnWidth > 0 && metrics.medianContentWidth > 0) {
-    // Compact values relative to column → center
-    if (metrics.medianContentWidth <= columnWidth * 0.4) return 'center'
-  }
-
-  // Rule 5: Default
+  // Rule 4/5: Text is always left-aligned — identity fields (names,
+  // subjects, emails) must share a common left edge for scanning
+  // (PRD §11.2 Rule 5, revised 2026-07-07)
   return 'left'
 }

@@ -1,6 +1,6 @@
 export interface FieldDef {
   label: string
-  type: 'text' | 'number' | 'datetime' | 'select' | 'hidden'
+  type: 'text' | 'number' | 'datetime' | 'select' | 'phone' | 'hidden'
   sortable: boolean
   filterable: boolean
   link: string | null

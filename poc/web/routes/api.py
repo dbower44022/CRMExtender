@@ -34,6 +34,7 @@ from ...views.layout_overrides import (
     upsert_layout_override,
 )
 from ...views.registry import ENTITY_TYPES
+from ...phone_utils import format_phone, resolve_country_code
 from ...contact_merge import get_contact_merge_preview, merge_contacts
 from ...company_merge import merge_companies
 from ... import config
@@ -929,7 +930,8 @@ def contact_detail_api(request: Request, contact_id: str):
             "ORDER BY is_primary DESC, created_at ASC",
             (contact_id,),
         ).fetchall()
-        phones = [r["number"] for r in phones_raw]
+        _country = resolve_country_code("contact", contact_id, customer_id=cid)
+        phones = [format_phone(r["number"], _country) for r in phones_raw]
 
         # Addresses
         addrs_raw = conn.execute(
@@ -1107,7 +1109,8 @@ def company_detail_api(request: Request, company_id: str):
             "ORDER BY is_primary DESC",
             (company_id,),
         ).fetchall()
-        phones = [r["number"] for r in phones_raw]
+        _country = resolve_country_code("company", company_id, customer_id=cid)
+        phones = [format_phone(r["number"], _country) for r in phones_raw]
 
         # Emails
         emails_raw = conn.execute(
@@ -2432,9 +2435,10 @@ def settings_profile(request: Request):
         "name": fresh.get("name", ""),
         "email": fresh.get("email", ""),
         "role": fresh.get("role", "user"),
-        "timezone": get_setting(cid, "timezone", user_id=uid) or "UTC",
+        # None = user never chose — clients fall back to browser/PRD defaults
+        "timezone": get_setting(cid, "timezone", user_id=uid) or None,
         "start_of_week": get_setting(cid, "start_of_week", user_id=uid) or "monday",
-        "date_format": get_setting(cid, "date_format", user_id=uid) or "ISO",
+        "date_format": get_setting(cid, "date_format", user_id=uid) or None,
     }
 
 

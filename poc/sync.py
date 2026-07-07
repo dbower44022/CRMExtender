@@ -335,13 +335,23 @@ def sync_contacts(
                     (customer_id,),
                 ).fetchone()
                 emp_role_id = emp_role["id"] if emp_role else None
-                conn.execute(
-                    """INSERT OR IGNORE INTO contact_companies
-                       (id, contact_id, company_id, role_id, is_primary, is_current,
-                        source, created_at, updated_at)
-                       VALUES (?, ?, ?, ?, 1, 1, 'sync', ?, ?)""",
-                    (str(uuid.uuid4()), contact_id, company_id, emp_role_id, now, now),
-                )
+                # Explicit existence check — the UNIQUE constraint includes
+                # nullable role_id/started_at, and SQLite treats NULLs as
+                # distinct, so INSERT OR IGNORE alone duplicates affiliations
+                # whenever the role lookup result differs between syncs.
+                existing_aff = conn.execute(
+                    "SELECT 1 FROM contact_companies "
+                    "WHERE contact_id = ? AND company_id = ? AND is_current = 1",
+                    (contact_id, company_id),
+                ).fetchone()
+                if not existing_aff:
+                    conn.execute(
+                        """INSERT INTO contact_companies
+                           (id, contact_id, company_id, role_id, is_primary, is_current,
+                            source, created_at, updated_at)
+                           VALUES (?, ?, ?, ?, 1, 1, 'sync', ?, ?)""",
+                        (str(uuid.uuid4()), contact_id, company_id, emp_role_id, now, now),
+                    )
 
                 # Update title on affiliation if provided and not already set
                 if kc.title:

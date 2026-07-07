@@ -3200,3 +3200,56 @@ class TestSyncApi:
         while time.monotonic() < deadline and sync_service.sync_status()["running"]:
             time.sleep(0.05)
         assert sync_service.sync_status()["running"] is False
+
+
+class TestPhoneDisplayFormatting:
+    def test_contact_detail_formats_phone(self, client, tmp_db):
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO contacts (id, customer_id, name, created_at, updated_at) "
+                "VALUES ('ct-ph1', ?, 'Phone Person', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO phone_numbers "
+                "(id, entity_type, entity_id, phone_type, number, is_primary, "
+                " is_current, source, created_at, updated_at) "
+                "VALUES ('ph-1', 'contact', 'ct-ph1', 'mobile', '+13302421961', "
+                "1, 1, 'manual', ?, ?)",
+                (_NOW, _NOW),
+            )
+        data = client.get("/api/v1/contacts/ct-ph1").json()
+        assert data["identity"]["phones"] == ["(330) 242-1961"]
+
+    def test_view_grid_formats_phone_column(self, client, tmp_db):
+        from poc.views.engine import execute_view
+        from poc.database import get_connection as gc
+
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO contacts (id, customer_id, name, created_at, updated_at) "
+                "VALUES ('ct-ph2', ?, 'Grid Phone', ?, ?)",
+                (CUST_ID, _NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO phone_numbers "
+                "(id, entity_type, entity_id, phone_type, number, is_primary, "
+                " is_current, source, created_at, updated_at) "
+                "VALUES ('ph-2', 'contact', 'ct-ph2', 'mobile', '+14402474563', "
+                "1, 1, 'manual', ?, ?)",
+                (_NOW, _NOW),
+            )
+            conn.execute(
+                "INSERT INTO user_contacts (id, user_id, contact_id, visibility, "
+                " is_owner, created_at, updated_at) "
+                "VALUES ('uc-ph2', ?, 'ct-ph2', 'public', 1, ?, ?)",
+                (USER_ID, _NOW, _NOW),
+            )
+        with gc() as conn:
+            rows, _total = execute_view(
+                conn, entity_type="contact",
+                columns=[{"field_key": "name"}, {"field_key": "phone"}],
+                filters=[], customer_id=CUST_ID, user_id=USER_ID,
+            )
+        by_name = {r["name"]: r for r in rows}
+        assert by_name["Grid Phone"]["phone"] == "(440) 247-4563"

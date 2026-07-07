@@ -23,7 +23,13 @@
           <br><small>{{ r.role }}: {{ r.name or r.address }}</small>
         {% endfor %}
       </div>
-      <div class="body">{{ msg.cleaned_html or msg.original_text or msg.snippet or '(no content)' }}</div>
+      <div class="body">
+        {%- if msg.display_html -%}
+          {{ msg.display_html | safe }}
+        {%- else -%}
+          {{ msg.original_text or msg.snippet or '(no content)' }}
+        {%- endif -%}
+      </div>
     </div>
     {% endfor %}
 

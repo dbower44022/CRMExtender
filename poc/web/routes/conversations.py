@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...database import get_connection
 from ...hierarchy import get_addresses, add_address, remove_address
+from ...html_sanitize import sanitize_email_html
 
 router = APIRouter()
 
@@ -204,6 +205,11 @@ def conversation_detail(request: Request, conversation_id: str):
                 (cd["id"],),
             ).fetchall()
             cd["recipients"] = [dict(r) for r in recips]
+            # Sanitized HTML for |safe rendering (autoescaping the stored
+            # HTML would display raw markup)
+            cd["display_html"] = sanitize_email_html(
+                cd.get("cleaned_html") or cd.get("original_html")
+            )
             communications.append(cd)
 
         # Participants

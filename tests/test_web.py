@@ -292,6 +292,29 @@ class TestConversations:
         assert "Important Discussion" in resp.text
         assert "Hello team" in resp.text
 
+    def test_detail_renders_cleaned_html(self, client, tmp_db):
+        """Stored email HTML must render as markup, not escaped source."""
+        with get_connection() as conn:
+            _insert_account(conn)
+            _insert_conversation(conn, "conv-1", "HTML Thread")
+            _insert_communication(conn, "msg-1", content="plain fallback")
+            conn.execute(
+                "UPDATE communications SET cleaned_html = ? WHERE id = 'msg-1'",
+                ("<html><head><title>t</title><style>.x{color:red}</style></head>"
+                 "<body><p>Rendered <strong>content</strong></p>"
+                 "<script>alert('xss')</script></body></html>",),
+            )
+            _link_comm_to_conv(conn, "conv-1", "msg-1")
+
+        resp = client.get("/conversations/conv-1")
+        assert resp.status_code == 200
+        # Formatting markup passes through unescaped
+        assert "<strong>content</strong>" in resp.text
+        assert "&lt;p&gt;" not in resp.text
+        # Script and style bodies are removed entirely, not just de-tagged
+        assert "alert(" not in resp.text
+        assert "color:red" not in resp.text
+
     def test_detail_shows_participants(self, client, tmp_db):
         with get_connection() as conn:
             _insert_conversation(conn, "conv-1", "Thread")

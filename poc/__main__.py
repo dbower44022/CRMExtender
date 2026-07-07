@@ -1411,11 +1411,25 @@ def cmd_serve(args: argparse.Namespace) -> None:
     """Launch the web UI."""
     import uvicorn
 
-    from .web.app import create_app
-
-    app = create_app()
     console.print(f"\n[bold]Starting web UI at http://{args.host}:{args.port}[/bold]")
-    uvicorn.run(app, host=args.host, port=args.port)
+    if args.reload:
+        # Reload needs an import string; watch only backend sources so
+        # data/ and frontend churn don't trigger restarts. Poll instead of
+        # inotify — Dropbox/IDE watchers exhaust the per-user inotify
+        # instance limit, and polling ~60 files is negligible.
+        import os
+
+        os.environ.setdefault("WATCHFILES_FORCE_POLLING", "true")
+        console.print("[dim]Auto-reload enabled (watching poc/)[/dim]")
+        uvicorn.run(
+            "poc.web.app:create_app", factory=True,
+            host=args.host, port=args.port,
+            reload=True, reload_dirs=["poc"],
+        )
+    else:
+        from .web.app import create_app
+
+        uvicorn.run(create_app(), host=args.host, port=args.port)
 
 
 # ---------------------------------------------------------------------------
@@ -1449,6 +1463,8 @@ def build_parser() -> argparse.ArgumentParser:
     sv = sub.add_parser("serve", help="Launch web UI")
     sv.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
     sv.add_argument("--port", type=int, default=8000, help="Port (default: 8000)")
+    sv.add_argument("--reload", action="store_true",
+                    help="Auto-restart when backend code changes (development)")
 
     # add-account
     sub.add_parser("add-account", help="Add a new Gmail account")

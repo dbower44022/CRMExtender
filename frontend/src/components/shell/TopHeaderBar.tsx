@@ -20,6 +20,7 @@ export function TopHeaderBar() {
   const activeViewId = useNavigationStore((s) => s.activeViewId)
   const settingsMode = useNavigationStore((s) => s.settingsMode)
   const settingsTab = useNavigationStore((s) => s.settingsTab)
+  const dashboardMode = useNavigationStore((s) => s.dashboardMode)
   const openSearchModal = useLayoutStore((s) => s.openSearchModal)
   const openCompose = useComposeStore((s) => s.openCompose)
   const { data: registry } = useEntityRegistry()
@@ -31,7 +32,9 @@ export function TopHeaderBar() {
   return (
     <header className="flex h-[48px] items-center border-b border-surface-200 bg-surface-0 px-4">
       <nav className="flex items-center gap-1.5 text-sm">
-        {settingsMode ? (
+        {dashboardMode ? (
+          <span className="font-medium text-surface-700">Dashboard</span>
+        ) : settingsMode ? (
           <>
             <span className="font-medium text-surface-700">Settings</span>
             <span className="text-surface-400">/</span>

@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Last Updated:** 2026-07-07
-**Status:** Draft — Phase 0 implemented 2026-07-07 (UIMIG-T01–T03 verified by manual browser testing; T04 automation pending)
+**Status:** Draft — Phases 0–1 implemented 2026-07-07 (T01–T03, T05 UI verified by manual browser testing; T04 automation pending)
 **Parent Documents:** [product-tdd.md] §2.3 (Dual UI Architecture), [gui-functional-requirements-prd.md]
 **Related:** [prd-index.md]
 
@@ -132,10 +132,10 @@ SPA mutations surface API errors via the existing toast pattern (sonner). Redire
 - [x] UIMIG-06: Frontend dist rebuilt and committed in sync
 
 ### Phase 1 — Dashboard & Quick Wins
-- [ ] UIMIG-10: `GET /api/v1/dashboard` (counts, recent conversations, top companies/contacts)
-- [ ] UIMIG-11: `POST /api/v1/sync` (async trigger + status surface)
-- [ ] UIMIG-12: SPA Dashboard screen; IconRail Home switches to it
-- [ ] UIMIG-13: Wire delete row-action where API exists
+- [x] UIMIG-10: `GET /api/v1/dashboard` (counts, recent conversations, top companies/contacts)
+- [x] UIMIG-11: `POST /api/v1/sync` (async trigger + status surface)
+- [x] UIMIG-12: SPA Dashboard screen; IconRail Home switches to it
+- [x] UIMIG-13: ~~Wire delete row-action where API exists~~ Re-scoped: audit found no entity DELETE endpoints in the JSON API (the inventory's "delete" was the legacy route). Entity deletes move to Phases 2/4 with their APIs.
 
 ### Phase 2 — Entity Editing Parity
 - [ ] UIMIG-20: Generic sub-resource API router (identifiers/phones/emails/addresses/affiliations/hierarchy)
@@ -167,7 +167,7 @@ SPA mutations surface API errors via the existing toast pattern (sonner). Redire
 - [x] UIMIG-T02: Back/forward walks navigation history without full reloads
 - [x] UIMIG-T03: Grid subject link click stays in SPA; middle-click opens working deep link
 - [ ] UIMIG-T04: No `<a>` in the SPA resolves to a legacy page route (automated link audit), excluding auth/OAuth
-- [ ] UIMIG-T05: Dashboard endpoint returns counts matching legacy dashboard queries
+- [x] UIMIG-T05: Dashboard endpoint returns counts matching legacy dashboard queries
 - [ ] UIMIG-T06: Sub-resource API round-trip per type (add → edit → set-primary → delete)
 - [ ] UIMIG-T07: Notes round-trip incl. revision created on edit, attachment upload/download
 - [ ] UIMIG-T08: Decommission — legacy page URLs 308 to SPA equivalents; action routes return 404

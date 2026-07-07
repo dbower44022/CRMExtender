@@ -18,6 +18,7 @@ interface NavigationState {
   pendingNavigation: { entityType: string; entityId: string } | null
   settingsMode: boolean
   settingsTab: string
+  dashboardMode: boolean
 
   setActiveEntityType: (entityType: string) => void
   setActiveViewId: (viewId: string | null) => void
@@ -36,6 +37,8 @@ interface NavigationState {
   setPendingNavigation: (nav: { entityType: string; entityId: string } | null) => void
   openSettings: () => void
   closeSettings: () => void
+  openDashboard: () => void
+  closeDashboard: () => void
   setSettingsTab: (tab: string) => void
   reset: () => void
 }
@@ -57,6 +60,7 @@ const DEFAULTS = {
   pendingNavigation: null as { entityType: string; entityId: string } | null,
   settingsMode: false,
   settingsTab: 'profile',
+  dashboardMode: false,
 }
 
 export const useNavigationStore = create<NavigationState>()((set) => ({
@@ -77,6 +81,7 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
       quickFilters: [],
       searchFilters: [],
       settingsMode: false,
+      dashboardMode: false,
     }),
 
   setActiveViewId: (viewId) =>
@@ -175,13 +180,19 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
   setPendingNavigation: (nav) => set({ pendingNavigation: nav }),
 
   openSettings: () =>
-    set({ settingsMode: true }),
+    set({ settingsMode: true, dashboardMode: false }),
 
   closeSettings: () =>
     set({ settingsMode: false }),
 
   setSettingsTab: (tab) =>
     set({ settingsTab: tab }),
+
+  openDashboard: () =>
+    set({ dashboardMode: true, settingsMode: false }),
+
+  closeDashboard: () =>
+    set({ dashboardMode: false }),
 
   reset: () => set(DEFAULTS),
 }))

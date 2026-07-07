@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
@@ -127,130 +126,29 @@ def dashboard(request: Request):
 @router.post("/sync", response_class=HTMLResponse)
 def sync_now(request: Request):
     """Run the full sync pipeline for the current user's accounts."""
-    from ...auth import get_credentials_for_account
-    from ...gmail_client import get_user_email
-    from ...rate_limiter import RateLimiter
-    from ...sync import (
-        incremental_sync,
-        initial_sync,
-        process_conversations,
-        sync_contacts,
-    )
-    from ... import config
+    from ...sync_service import run_full_sync
 
     user = request.state.user
-    uid = user["id"]
-    cid = request.state.customer_id
+    result = run_full_sync(
+        customer_id=request.state.customer_id, user_id=user["id"],
+    )
 
-    # Only sync accounts the user has access to
-    with get_connection() as conn:
-        rows = conn.execute(
-            """SELECT pa.* FROM provider_accounts pa
-               JOIN user_provider_accounts upa ON upa.account_id = pa.id
-               WHERE upa.user_id = ? AND pa.is_active = 1
-               ORDER BY pa.created_at""",
-            (uid,),
-        ).fetchall()
-        accounts = [dict(a) for a in rows]
-
-    if not accounts:
-        # Fallback: if no user_provider_accounts rows, use customer's accounts
-        with get_connection() as conn:
-            rows = conn.execute(
-                "SELECT * FROM provider_accounts WHERE customer_id = ? AND is_active = 1 ORDER BY created_at",
-                (cid,),
-            ).fetchall()
-            accounts = [dict(a) for a in rows]
-
-    if not accounts:
+    if result["accounts"] == 0:
         return HTMLResponse("No accounts registered.")
 
-    gmail_limiter = RateLimiter(rate=config.GMAIL_RATE_LIMIT)
-    claude_limiter = RateLimiter(rate=config.CLAUDE_RATE_LIMIT)
-
-    total_contacts = 0
-    total_fetched = 0
-    total_triaged = 0
-    total_summarized = 0
-    errors: list[str] = []
-
-    for account in accounts:
-        account_id = account["id"]
-        email_addr = account["email_address"]
-
-        token_path = Path(account["auth_token_path"])
-        try:
-            creds = get_credentials_for_account(token_path)
-        except Exception as exc:
-            log.warning("Auth failed for %s: %s", email_addr, exc)
-            errors.append(f"{email_addr}: auth failed ({exc})")
-            continue
-
-        user_email = get_user_email(creds)
-
-        # Sync contacts
-        try:
-            total_contacts += sync_contacts(
-                creds, rate_limiter=gmail_limiter,
-                customer_id=cid, user_id=uid,
-            )
-        except Exception as exc:
-            log.warning("Contact sync failed for %s: %s", email_addr, exc)
-            errors.append(f"{email_addr}: contact sync failed ({exc})")
-
-        # Sync emails
-        try:
-            if account["initial_sync_done"]:
-                result = incremental_sync(
-                    account_id, creds, rate_limiter=gmail_limiter,
-                    customer_id=cid, user_id=uid,
-                )
-                total_fetched += result.get("messages_fetched", 0)
-            else:
-                result = initial_sync(
-                    account_id, creds, rate_limiter=gmail_limiter,
-                    customer_id=cid, user_id=uid,
-                )
-                total_fetched += result.get("messages_fetched", 0)
-        except Exception as exc:
-            log.warning("Email sync failed for %s: %s", email_addr, exc)
-            errors.append(f"{email_addr}: email sync failed ({exc})")
-
-        # Process conversations
-        try:
-            triaged, summarized, _topics = process_conversations(
-                account_id, creds, user_email,
-                rate_limiter=gmail_limiter,
-                claude_limiter=claude_limiter,
-            )
-            total_triaged += triaged
-            total_summarized += summarized
-        except Exception as exc:
-            log.warning("Processing failed for %s: %s", email_addr, exc)
-            errors.append(f"{email_addr}: processing failed ({exc})")
-
-    # Batch-enrich companies that have a domain but no completed enrichment run
-    total_enriched = 0
-    try:
-        from ...enrichment_pipeline import enrich_new_companies
-        enrich_result = enrich_new_companies()
-        total_enriched = enrich_result.get("enriched", 0)
-    except Exception as exc:
-        errors.append(f"batch enrichment failed ({exc})")
-
     parts = [
-        f"Synced {len(accounts)} account(s):",
-        f"{total_contacts} contacts,",
-        f"{total_fetched} emails fetched,",
-        f"{total_triaged} triaged,",
-        f"{total_summarized} summarized.",
+        f"Synced {result['accounts']} account(s):",
+        f"{result['contacts']} contacts,",
+        f"{result['emails_fetched']} emails fetched,",
+        f"{result['triaged']} triaged,",
+        f"{result['summarized']} summarized.",
     ]
-    if total_enriched:
-        parts.append(f"{total_enriched} companies enriched.")
+    if result["enriched"]:
+        parts.append(f"{result['enriched']} companies enriched.")
     summary = " ".join(parts)
 
-    if errors:
-        error_html = "<br>".join(f"Error: {e}" for e in errors)
+    if result["errors"]:
+        error_html = "<br>".join(f"Error: {e}" for e in result["errors"])
         return HTMLResponse(f"<strong>{summary}</strong><br>{error_html}")
 
     return HTMLResponse(f"<strong>{summary}</strong>")

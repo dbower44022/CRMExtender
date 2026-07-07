@@ -13,6 +13,7 @@ import { buildAppPath, parseAppPath } from '../lib/appRoutes.ts'
 export function useUrlSync() {
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)
   const selectedRowId = useNavigationStore((s) => s.selectedRowId)
+  const dashboardMode = useNavigationStore((s) => s.dashboardMode)
   // True while we are applying a URL to the store (boot/popstate), so the
   // store→URL effect doesn't push a duplicate history entry.
   const applyingUrl = useRef(false)
@@ -20,10 +21,19 @@ export function useUrlSync() {
   // URL → store, on boot and on back/forward
   useEffect(() => {
     const applyUrl = () => {
+      const nav = useNavigationStore.getState()
+      if (window.location.pathname === '/app/dashboard') {
+        applyingUrl.current = true
+        if (!nav.dashboardMode) nav.openDashboard()
+        queueMicrotask(() => {
+          applyingUrl.current = false
+        })
+        return
+      }
       const route = parseAppPath(window.location.pathname)
       if (!route) return
       applyingUrl.current = true
-      const nav = useNavigationStore.getState()
+      if (nav.dashboardMode) nav.closeDashboard()
       if (nav.activeEntityType !== route.entityType) {
         nav.setActiveEntityType(route.entityType)
       }
@@ -49,16 +59,18 @@ export function useUrlSync() {
   // Store → URL
   useEffect(() => {
     if (applyingUrl.current) return
-    const path = buildAppPath(activeEntityType, selectedRowId)
+    const path = dashboardMode
+      ? '/app/dashboard'
+      : buildAppPath(activeEntityType, selectedRowId)
     if (window.location.pathname === path) return
     // Selecting a row within the same entity replaces (arrow-key browsing
     // shouldn't flood history); switching entity type pushes.
     const current = parseAppPath(window.location.pathname)
-    const sameEntity = current?.entityType === activeEntityType
+    const sameEntity = !dashboardMode && current?.entityType === activeEntityType
     if (sameEntity && current?.entityId && selectedRowId) {
       window.history.replaceState({}, '', path)
     } else {
       window.history.pushState({}, '', path)
     }
-  }, [activeEntityType, selectedRowId])
+  }, [activeEntityType, selectedRowId, dashboardMode])
 }

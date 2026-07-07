@@ -3104,3 +3104,99 @@ class TestConversationAssociations:
         data = client.get("/api/v1/conversations/conv-preview-1/full").json()
         assert len(data["associations"]["projects"]) == 1
         assert len(data["associations"]["companies"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# Dashboard & Sync API (Legacy UI Migration PRD, Phase 1)
+# ---------------------------------------------------------------------------
+
+class TestDashboardApi:
+    def test_dashboard_counts_and_lists(self, client, tmp_db):
+        _seed_conversation(conv_id="conv-dash-1", title="Dash Conv")
+        resp = client.get("/api/v1/dashboard")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["counts"]["conversations_total"] == 1
+        assert data["counts"]["contacts"] == 0
+        assert isinstance(data["counts"]["events"], int)
+        assert [c["id"] for c in data["recent_conversations"]] == ["conv-dash-1"]
+        assert data["top_companies"] == []
+        assert data["top_contacts"] == []
+
+    def test_recent_conversations_capped_and_ordered(self, client, tmp_db):
+        for i in range(12):
+            _seed_conversation(
+                conv_id=f"conv-dash-{i:02d}", title=f"C{i}",
+                last_activity_at=f"2026-01-{i + 1:02d}T00:00:00+00:00",
+            )
+        data = client.get("/api/v1/dashboard").json()
+        recents = data["recent_conversations"]
+        assert len(recents) == 10
+        assert recents[0]["id"] == "conv-dash-11"
+
+
+class TestSyncApi:
+    def test_trigger_returns_started(self, client, tmp_db, monkeypatch):
+        import poc.sync_service as sync_service
+        monkeypatch.setattr(
+            sync_service, "start_background_sync", lambda **kw: True,
+        )
+        resp = client.post("/api/v1/sync")
+        assert resp.status_code == 200
+        assert resp.json() == {"status": "started"}
+
+    def test_trigger_conflict_while_running(self, client, tmp_db, monkeypatch):
+        import poc.sync_service as sync_service
+        monkeypatch.setattr(
+            sync_service, "start_background_sync", lambda **kw: False,
+        )
+        resp = client.post("/api/v1/sync")
+        assert resp.status_code == 409
+
+    def test_background_run_records_result(self, tmp_db, monkeypatch):
+        import time
+        import poc.sync_service as sync_service
+
+        monkeypatch.setattr(
+            sync_service, "run_full_sync",
+            lambda **kw: {"accounts": 1, "contacts": 5, "emails_fetched": 2,
+                          "triaged": 0, "summarized": 0, "enriched": 0,
+                          "errors": []},
+        )
+        assert sync_service.start_background_sync(
+            customer_id=CUST_ID, user_id=USER_ID,
+        )
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            status = sync_service.sync_status()
+            if not status["running"]:
+                break
+            time.sleep(0.05)
+        assert status["running"] is False
+        assert status["result"]["contacts"] == 5
+        assert status["error"] is None
+
+    def test_second_start_rejected_while_running(self, tmp_db, monkeypatch):
+        import threading
+        import time
+        import poc.sync_service as sync_service
+
+        gate = threading.Event()
+        monkeypatch.setattr(
+            sync_service, "run_full_sync",
+            lambda **kw: (gate.wait(5), {"accounts": 0, "contacts": 0,
+                                         "emails_fetched": 0, "triaged": 0,
+                                         "summarized": 0, "enriched": 0,
+                                         "errors": []})[1],
+        )
+        assert sync_service.start_background_sync(
+            customer_id=CUST_ID, user_id=USER_ID,
+        )
+        assert sync_service.start_background_sync(
+            customer_id=CUST_ID, user_id=USER_ID,
+        ) is False
+        gate.set()
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and sync_service.sync_status()["running"]:
+            time.sleep(0.05)
+        assert sync_service.sync_status()["running"] is False

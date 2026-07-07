@@ -3411,3 +3411,127 @@ def _resolve_entity_name(
         f"SELECT {col} FROM {table} WHERE id = ?", (entity_id,)
     ).fetchone()
     return row[col] if row else entity_id[:8]
+
+
+# ------------------------------------------------------------------
+# Dashboard & Sync (Legacy UI Migration PRD, Phase 1)
+# ------------------------------------------------------------------
+
+@router.get("/dashboard")
+def dashboard_api(request: Request):
+    """Overview counts, recent conversations, and top-scored entities."""
+    cid = request.state.customer_id
+
+    with get_connection() as conn:
+        counts = {
+            "conversations_total": conn.execute(
+                "SELECT COUNT(*) AS c FROM conversations WHERE customer_id = ?",
+                (cid,),
+            ).fetchone()["c"],
+            "conversations_open": conn.execute(
+                "SELECT COUNT(*) AS c FROM conversations "
+                "WHERE customer_id = ? AND triage_result IS NULL AND dismissed = 0",
+                (cid,),
+            ).fetchone()["c"],
+            "conversations_closed": conn.execute(
+                "SELECT COUNT(*) AS c FROM conversations "
+                "WHERE customer_id = ? AND dismissed = 1",
+                (cid,),
+            ).fetchone()["c"],
+            "contacts": conn.execute(
+                "SELECT COUNT(*) AS c FROM contacts WHERE customer_id = ?",
+                (cid,),
+            ).fetchone()["c"],
+            "companies": conn.execute(
+                "SELECT COUNT(*) AS c FROM companies "
+                "WHERE customer_id = ? AND status = 'active'",
+                (cid,),
+            ).fetchone()["c"],
+            "projects": conn.execute(
+                "SELECT COUNT(*) AS c FROM projects "
+                "WHERE customer_id = ? AND status = 'active'",
+                (cid,),
+            ).fetchone()["c"],
+            "events": conn.execute(
+                "SELECT COUNT(*) AS c FROM events"
+            ).fetchone()["c"],
+        }
+
+        recent_conversations = [
+            {
+                "id": r["id"],
+                "title": r["title"],
+                "status": r["status"],
+                "communication_count": r["communication_count"] or 0,
+                "participant_count": r["participant_count"] or 0,
+                "last_activity_at": r["last_activity_at"],
+            }
+            for r in conn.execute(
+                "SELECT id, title, status, communication_count, "
+                "       participant_count, last_activity_at "
+                "FROM conversations WHERE customer_id = ? "
+                "ORDER BY last_activity_at DESC LIMIT 10",
+                (cid,),
+            ).fetchall()
+        ]
+
+        top_companies = [dict(r) for r in conn.execute(
+            """SELECT c.id, c.name, c.domain, es.score_value AS score
+               FROM entity_scores es
+               JOIN companies c ON c.id = es.entity_id
+               WHERE es.entity_type = 'company'
+                 AND es.score_type = 'relationship_strength'
+                 AND c.customer_id = ?
+               ORDER BY es.score_value DESC
+               LIMIT 5""",
+            (cid,),
+        ).fetchall()]
+
+        top_contacts = [dict(r) for r in conn.execute(
+            """SELECT ct.id, ct.name, ci.value AS email,
+                      co.name AS company_name, es.score_value AS score
+               FROM entity_scores es
+               JOIN contacts ct ON ct.id = es.entity_id
+               LEFT JOIN contact_identifiers ci
+                 ON ci.contact_id = ct.id AND ci.type = 'email'
+               LEFT JOIN contact_companies ccx
+                 ON ccx.contact_id = ct.id AND ccx.is_primary = 1 AND ccx.is_current = 1
+               LEFT JOIN companies co ON co.id = ccx.company_id
+               WHERE es.entity_type = 'contact'
+                 AND es.score_type = 'relationship_strength'
+                 AND ct.customer_id = ?
+               ORDER BY es.score_value DESC
+               LIMIT 5""",
+            (cid,),
+        ).fetchall()]
+
+    return {
+        "counts": counts,
+        "recent_conversations": recent_conversations,
+        "top_companies": top_companies,
+        "top_contacts": top_contacts,
+    }
+
+
+@router.post("/sync")
+def sync_trigger_api(request: Request):
+    """Start a background full sync; 409 if one is already running."""
+    from ...sync_service import start_background_sync
+
+    uid = request.state.user["id"] if request.state.user else ""
+    started = start_background_sync(
+        customer_id=request.state.customer_id, user_id=uid,
+    )
+    if not started:
+        return JSONResponse(
+            {"error": "A sync is already running"}, status_code=409,
+        )
+    return {"status": "started"}
+
+
+@router.get("/sync/status")
+def sync_status_api(request: Request):
+    """Status of the current/most recent background sync."""
+    from ...sync_service import sync_status
+
+    return sync_status()

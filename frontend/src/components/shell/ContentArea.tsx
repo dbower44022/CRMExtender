@@ -1,3 +1,4 @@
+import { DashboardView } from '../dashboard/DashboardView.tsx'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { DataGrid } from '../grid/DataGrid.tsx'
 import { GridToolbar } from '../grid/GridToolbar.tsx'
@@ -22,6 +23,11 @@ const SETTINGS_COMPONENTS: Record<string, React.FC> = {
 export function ContentArea() {
   const settingsMode = useNavigationStore((s) => s.settingsMode)
   const settingsTab = useNavigationStore((s) => s.settingsTab)
+  const dashboardMode = useNavigationStore((s) => s.dashboardMode)
+
+  if (dashboardMode) {
+    return <DashboardView />
+  }
 
   if (settingsMode) {
     const Component = SETTINGS_COMPONENTS[settingsTab] ?? ProfileSettings

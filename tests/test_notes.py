@@ -473,43 +473,8 @@ class TestAttachments:
 # Web routes
 # ===================================================================
 
-class TestNotesWebList:
-    def test_list_notes_for_entity(self, client, tmp_db):
-        create_note(CUST_ID, "contact", "ct-1", title="Web Note",
-                    content_html="<p>body</p>", created_by=USER_ID)
-        resp = client.get("/notes?entity_type=contact&entity_id=ct-1")
-        assert resp.status_code == 200
-        assert "Web Note" in resp.text
-
-    def test_list_empty(self, client, tmp_db):
-        resp = client.get("/notes?entity_type=contact&entity_id=ct-1")
-        assert resp.status_code == 200
-        assert "No notes yet" in resp.text
-
-
-class TestNotesWebCreate:
-    def test_create_note_via_post(self, client, tmp_db):
-        resp = client.post("/notes", data={
-            "entity_type": "contact",
-            "entity_id": "ct-1",
-            "title": "New Note",
-            "content_html": "<p>Created via web</p>",
-        })
-        assert resp.status_code == 200
-        assert "New Note" in resp.text
-
-    def test_create_note_missing_entity(self, client, tmp_db):
-        resp = client.post("/notes", data={"title": "Bad"})
-        assert resp.status_code == 400
-
 
 class TestNotesWebEdit:
-    def test_get_edit_form(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1", title="Edit Me",
-                           content_html="<p>original</p>", created_by=USER_ID)
-        resp = client.get(f"/notes/{note['id']}/edit")
-        assert resp.status_code == 200
-        assert "Edit Me" in resp.text
 
     def test_edit_nonexistent(self, client, tmp_db):
         resp = client.get("/notes/no-such-id/edit")
@@ -517,15 +482,6 @@ class TestNotesWebEdit:
 
 
 class TestNotesWebUpdate:
-    def test_update_note(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1", title="V1",
-                           content_html="<p>V1</p>", created_by=USER_ID)
-        resp = client.put(f"/notes/{note['id']}", data={
-            "title": "V2",
-            "content_html": "<p>V2</p>",
-        })
-        assert resp.status_code == 200
-        assert "V2" in resp.text
 
     def test_update_nonexistent(self, client, tmp_db):
         resp = client.put("/notes/no-such-id", data={"title": "X"})
@@ -533,12 +489,6 @@ class TestNotesWebUpdate:
 
 
 class TestNotesWebDelete:
-    def test_delete_note(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1",
-                           content_html="<p>bye</p>", created_by=USER_ID)
-        resp = client.delete(f"/notes/{note['id']}")
-        assert resp.status_code == 200
-        assert get_note(note["id"]) is None
 
     def test_delete_nonexistent(self, client, tmp_db):
         resp = client.delete("/notes/no-such-id")
@@ -546,20 +496,7 @@ class TestNotesWebDelete:
 
 
 class TestNotesWebPin:
-    def test_pin_toggle(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1",
-                           content_html="<p>pin</p>", created_by=USER_ID)
-        resp = client.post(f"/notes/{note['id']}/pin?entity_type=contact&entity_id=ct-1")
-        assert resp.status_code == 200
-        assert "Unpin" in resp.text
 
-    def test_pin_toggle_without_entity_params(self, client, tmp_db):
-        """Falls back to first entity when no entity params given."""
-        note = create_note(CUST_ID, "contact", "ct-1",
-                           content_html="<p>pin</p>", created_by=USER_ID)
-        resp = client.post(f"/notes/{note['id']}/pin")
-        assert resp.status_code == 200
-        assert "Unpin" in resp.text
 
     def test_pin_nonexistent(self, client, tmp_db):
         resp = client.post("/notes/no-such-id/pin")
@@ -567,22 +504,7 @@ class TestNotesWebPin:
 
 
 class TestNotesWebRevisions:
-    def test_revisions_list(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1",
-                           content_html="<p>r1</p>", created_by=USER_ID)
-        update_note(note["id"], content_html="<p>r2</p>", updated_by=USER_ID)
-        resp = client.get(f"/notes/{note['id']}/revisions")
-        assert resp.status_code == 200
-        assert "v2" in resp.text
-        assert "v1" in resp.text
 
-    def test_revision_detail(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1",
-                           content_html="<p>original</p>", created_by=USER_ID)
-        rev_id = note["current_revision_id"]
-        resp = client.get(f"/notes/{note['id']}/revisions/{rev_id}")
-        assert resp.status_code == 200
-        assert "original" in resp.text
 
     def test_revision_nonexistent(self, client, tmp_db):
         note = create_note(CUST_ID, "contact", "ct-1",
@@ -591,129 +513,9 @@ class TestNotesWebRevisions:
         assert resp.status_code == 404
 
 
-class TestNotesWebUpload:
-    def test_upload_image(self, client, tmp_db):
-        data = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
-        resp = client.post("/notes/upload",
-                           files={"file": ("test.png", data, "image/png")})
-        assert resp.status_code == 200
-        body = resp.json()
-        assert "url" in body
-        assert body["original_name"] == "test.png"
-
-    def test_upload_disallowed_type(self, client, tmp_db):
-        resp = client.post("/notes/upload",
-                           files={"file": ("test.exe", b"MZ", "application/x-msdownload")})
-        assert resp.status_code == 400
-
-    def test_upload_too_large(self, client, tmp_db, monkeypatch):
-        monkeypatch.setattr("poc.config.MAX_UPLOAD_SIZE_MB", 0)  # 0 MB limit
-        data = b"\x00" * 1024
-        resp = client.post("/notes/upload",
-                           files={"file": ("big.png", data, "image/png")})
-        assert resp.status_code == 400
-
-    def test_serve_uploaded_file(self, client, tmp_db):
-        data = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
-        resp = client.post("/notes/upload",
-                           files={"file": ("serve.png", data, "image/png")})
-        assert resp.status_code == 200
-        url = resp.json()["url"]
-        resp2 = client.get(url)
-        assert resp2.status_code == 200
-
-
-class TestNotesWebMentions:
-    def test_mention_autocomplete(self, client, tmp_db):
-        resp = client.get("/notes/mentions?q=Admin&type=user")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert isinstance(data, list)
-        assert any("Admin" in item.get("name", "") for item in data)
-
-    def test_mention_empty_query(self, client, tmp_db):
-        resp = client.get("/notes/mentions?q=&type=user")
-        assert resp.status_code == 200
-        assert resp.json() == []
-
-
-class TestNotesWebSearch:
-    def test_search_page(self, client, tmp_db):
-        create_note(CUST_ID, "contact", "ct-1", title="Searchable",
-                    content_html="<p>Find this text</p>", created_by=USER_ID)
-        resp = client.get("/notes/search?q=searchable")
-        assert resp.status_code == 200
-        assert "Searchable" in resp.text
-
-    def test_search_empty(self, client, tmp_db):
-        resp = client.get("/notes/search")
-        assert resp.status_code == 200
-        assert "Search notes" in resp.text
-
-
 # ===================================================================
 # Entity detail page integration
 # ===================================================================
-
-class TestEntityIntegration:
-    def test_contact_detail_shows_notes(self, client, tmp_db):
-        create_note(CUST_ID, "contact", "ct-1", title="Contact Note",
-                    content_html="<p>body</p>", created_by=USER_ID)
-        # Need user_contacts visibility row
-        with get_connection() as conn:
-            conn.execute(
-                "INSERT INTO user_contacts (id, user_id, contact_id, visibility, is_owner, created_at, updated_at) "
-                "VALUES (?, ?, 'ct-1', 'public', 1, ?, ?)",
-                (str(uuid.uuid4()), USER_ID, _NOW, _NOW),
-            )
-        resp = client.get("/contacts/ct-1")
-        assert resp.status_code == 200
-        assert "Contact Note" in resp.text
-        assert "Notes" in resp.text
-
-    def test_company_detail_shows_notes(self, client, tmp_db):
-        create_note(CUST_ID, "company", "co-1", title="Company Note",
-                    content_html="<p>body</p>", created_by=USER_ID)
-        with get_connection() as conn:
-            conn.execute(
-                "INSERT INTO user_companies (id, user_id, company_id, visibility, is_owner, created_at, updated_at) "
-                "VALUES (?, ?, 'co-1', 'public', 1, ?, ?)",
-                (str(uuid.uuid4()), USER_ID, _NOW, _NOW),
-            )
-        resp = client.get("/companies/co-1")
-        assert resp.status_code == 200
-        assert "Company Note" in resp.text
-
-    def test_conversation_detail_shows_notes(self, client, tmp_db):
-        create_note(CUST_ID, "conversation", "conv-1", title="Conv Note",
-                    content_html="<p>body</p>", created_by=USER_ID)
-        resp = client.get("/conversations/conv-1")
-        assert resp.status_code == 200
-        assert "Conv Note" in resp.text
-
-
-class TestSanitization:
-    def test_script_tag_stripped(self, client, tmp_db):
-        resp = client.post("/notes", data={
-            "entity_type": "contact",
-            "entity_id": "ct-1",
-            "content_html": '<p>Hello</p><script>alert("xss")</script>',
-        })
-        assert resp.status_code == 200
-        # Script should be stripped
-        note = get_notes_for_entity("contact", "ct-1", customer_id=CUST_ID)[0]
-        assert "<script>" not in (note["content_html"] or "")
-
-    def test_allowed_tags_preserved(self, client, tmp_db):
-        html = "<p>A <strong>bold</strong> <em>italic</em> word</p>"
-        resp = client.post("/notes", data={
-            "entity_type": "contact",
-            "entity_id": "ct-1",
-            "content_html": html,
-        })
-        assert resp.status_code == 200
-        note = get_notes_for_entity("contact", "ct-1", customer_id=CUST_ID)[0]
-        assert "<strong>bold</strong>" in (note["content_html"] or "")
 
 
 # ===================================================================
@@ -849,47 +651,6 @@ class TestNoteEntities:
         delete_note(note["id"])
         assert get_note_entities(note["id"]) == []
 
-    def test_web_pin_with_entity_params(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1",
-                           content_html="<p>x</p>", created_by=USER_ID)
-        resp = client.post(f"/notes/{note['id']}/pin?entity_type=contact&entity_id=ct-1")
-        assert resp.status_code == 200
-        assert "Unpin" in resp.text
-
-    def test_web_edit_with_entity_params(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1",
-                           title="Edit Me", content_html="<p>x</p>",
-                           created_by=USER_ID)
-        resp = client.get(f"/notes/{note['id']}/edit?entity_type=contact&entity_id=ct-1")
-        assert resp.status_code == 200
-        assert "Edit Me" in resp.text
-
-    def test_web_add_entity(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1",
-                           content_html="<p>x</p>", created_by=USER_ID)
-        resp = client.post(f"/notes/{note['id']}/entities", data={
-            "entity_type": "company",
-            "entity_id": "co-1",
-        })
-        assert resp.status_code == 200
-        entities = get_note_entities(note["id"])
-        assert len(entities) == 2
-
-    def test_web_remove_entity(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1",
-                           content_html="<p>x</p>", created_by=USER_ID)
-        add_note_entity(note["id"], "company", "co-1")
-        resp = client.delete(f"/notes/{note['id']}/entities/contact/ct-1")
-        assert resp.status_code == 200
-        entities = get_note_entities(note["id"])
-        assert len(entities) == 1
-
-    def test_web_remove_last_entity_rejected(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1",
-                           content_html="<p>x</p>", created_by=USER_ID)
-        resp = client.delete(f"/notes/{note['id']}/entities/contact/ct-1")
-        assert resp.status_code == 400
-
 
 # ===================================================================
 # Migration v13
@@ -1008,166 +769,9 @@ class TestMigrationV13:
 class TestNotesBrowser:
     """Tests for the global notes browser (master-detail layout)."""
 
-    def test_browser_layout_renders(self, client, tmp_db):
-        resp = client.get("/notes/search")
-        assert resp.status_code == 200
-        assert "notes-browser" in resp.text
-        assert "notes-list" in resp.text
-        assert "notes-viewer" in resp.text
-        assert "Select a note to view" in resp.text
-
-    def test_recent_notes_in_list(self, client, tmp_db):
-        create_note(CUST_ID, "contact", "ct-1", title="Alpha Note",
-                    content_html="<p>alpha body</p>", created_by=USER_ID)
-        resp = client.get("/notes/search")
-        assert resp.status_code == 200
-        assert "Alpha Note" in resp.text
-        assert "notes-grid" in resp.text
-
-    def test_search_list_partial(self, client, tmp_db):
-        create_note(CUST_ID, "contact", "ct-1", title="Gamma",
-                    content_html="<p>gamma</p>", created_by=USER_ID)
-        resp = client.get("/notes/search/list")
-        assert resp.status_code == 200
-        assert "Gamma" in resp.text
-        assert "notes-grid" in resp.text
-
-    def test_search_list_has_table_headers(self, client, tmp_db):
-        resp = client.get("/notes/search/list")
-        assert resp.status_code == 200
-        assert "<th>" in resp.text
-        assert "Name" in resp.text
-        assert "Created" in resp.text
-        assert "Updated" in resp.text
-        assert "Author" in resp.text
-        assert "Entity" in resp.text
-
-    def test_search_list_filters(self, client, tmp_db):
-        create_note(CUST_ID, "contact", "ct-1", title="Alpha",
-                    content_html="<p>alpha body</p>", created_by=USER_ID)
-        create_note(CUST_ID, "company", "co-1", title="Beta",
-                    content_html="<p>beta body</p>", created_by=USER_ID)
-        resp = client.get("/notes/search/list?q=alpha")
-        assert resp.status_code == 200
-        assert "Alpha" in resp.text
-        assert "Beta" not in resp.text
-
-    def test_view_note(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1", title="View Me",
-                           content_html="<p>full content here</p>",
-                           created_by=USER_ID)
-        resp = client.get(f"/notes/{note['id']}/view")
-        assert resp.status_code == 200
-        assert "View Me" in resp.text
-        assert "full content here" in resp.text
-        assert "notes-viewer-header" in resp.text
-
-    def test_view_shows_entity_names(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1", title="Entity Test",
-                           content_html="<p>x</p>", created_by=USER_ID)
-        resp = client.get(f"/notes/{note['id']}/view")
-        assert resp.status_code == 200
-        assert "Alice" in resp.text  # contact name from fixture
 
     def test_view_nonexistent_note(self, client, tmp_db):
         resp = client.get("/notes/no-such-id/view")
         assert resp.status_code == 404
 
-    def test_edit_with_source_browser(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1", title="Edit Browser",
-                           content_html="<p>x</p>", created_by=USER_ID)
-        resp = client.get(f"/notes/{note['id']}/edit?source=browser")
-        assert resp.status_code == 200
-        assert "Edit Browser" in resp.text
-        assert "source=browser" in resp.text  # form action contains source
 
-    def test_update_with_source_browser(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1", title="Old Title",
-                           content_html="<p>old</p>", created_by=USER_ID)
-        resp = client.put(f"/notes/{note['id']}?source=browser", data={
-            "title": "New Title",
-            "content_html": "<p>new</p>",
-        })
-        assert resp.status_code == 200
-        assert "New Title" in resp.text
-        assert "notes-viewer-header" in resp.text
-        assert resp.headers.get("HX-Trigger") == "noteUpdated"
-
-    def test_delete_with_source_browser(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1", title="Delete Me",
-                           content_html="<p>x</p>", created_by=USER_ID)
-        resp = client.delete(f"/notes/{note['id']}?source=browser")
-        assert resp.status_code == 200
-        assert "Note deleted" in resp.text
-        assert resp.headers.get("HX-Trigger") == "noteDeleted"
-
-    def test_pin_with_source_browser(self, client, tmp_db):
-        note = create_note(CUST_ID, "contact", "ct-1", title="Pin Me",
-                           content_html="<p>x</p>", created_by=USER_ID)
-        resp = client.post(f"/notes/{note['id']}/pin?source=browser")
-        assert resp.status_code == 200
-        assert "notes-viewer-header" in resp.text
-        assert resp.headers.get("HX-Trigger") == "notePinned"
-
-    def test_list_shows_entity_names(self, client, tmp_db):
-        create_note(CUST_ID, "contact", "ct-1", title="Contact Note",
-                    content_html="<p>x</p>", created_by=USER_ID)
-        create_note(CUST_ID, "company", "co-1", title="Company Note",
-                    content_html="<p>x</p>", created_by=USER_ID)
-        resp = client.get("/notes/search/list")
-        assert resp.status_code == 200
-        assert "Alice" in resp.text
-        assert "Acme Inc" in resp.text
-
-    def test_list_shows_author_name(self, client, tmp_db):
-        create_note(CUST_ID, "contact", "ct-1", title="Authored Note",
-                    content_html="<p>x</p>", created_by=USER_ID)
-        resp = client.get("/notes/search/list")
-        assert resp.status_code == 200
-        assert "Admin User" in resp.text
-
-    def test_default_sort_is_updated_desc(self, client, tmp_db):
-        """Default sort is -updated (most recently updated first)."""
-        import time
-        n1 = create_note(CUST_ID, "contact", "ct-1", title="Older Note",
-                         content_html="<p>old</p>", created_by=USER_ID)
-        time.sleep(0.05)
-        n2 = create_note(CUST_ID, "contact", "ct-1", title="Newer Note",
-                         content_html="<p>new</p>", created_by=USER_ID)
-        resp = client.get("/notes/search/list")
-        assert resp.status_code == 200
-        text = resp.text
-        # Newer should appear before older
-        assert text.index("Newer Note") < text.index("Older Note")
-
-    def test_sort_by_name_ascending(self, client, tmp_db):
-        create_note(CUST_ID, "contact", "ct-1", title="Zebra",
-                    content_html="<p>z</p>", created_by=USER_ID)
-        create_note(CUST_ID, "contact", "ct-1", title="Alpha",
-                    content_html="<p>a</p>", created_by=USER_ID)
-        resp = client.get("/notes/search/list?sort=name")
-        assert resp.status_code == 200
-        text = resp.text
-        assert text.index("Alpha") < text.index("Zebra")
-
-    def test_sort_by_name_descending(self, client, tmp_db):
-        create_note(CUST_ID, "contact", "ct-1", title="Zebra",
-                    content_html="<p>z</p>", created_by=USER_ID)
-        create_note(CUST_ID, "contact", "ct-1", title="Alpha",
-                    content_html="<p>a</p>", created_by=USER_ID)
-        resp = client.get("/notes/search/list?sort=-name")
-        assert resp.status_code == 200
-        text = resp.text
-        assert text.index("Zebra") < text.index("Alpha")
-
-    def test_sort_by_created(self, client, tmp_db):
-        import time
-        create_note(CUST_ID, "contact", "ct-1", title="First Created",
-                    content_html="<p>x</p>", created_by=USER_ID)
-        time.sleep(0.05)
-        create_note(CUST_ID, "contact", "ct-1", title="Second Created",
-                    content_html="<p>x</p>", created_by=USER_ID)
-        resp = client.get("/notes/search/list?sort=created")
-        assert resp.status_code == 200
-        text = resp.text
-        assert text.index("First Created") < text.index("Second Created")

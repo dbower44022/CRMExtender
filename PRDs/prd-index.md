@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 22.0
-**Last Updated:** 2026-07-07
+**Version:** 23.0
+**Last Updated:** 2026-07-08
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V23.0 (2026-07-08):** Legacy UI Migration COMPLETE — all six phases done. The HTMX/Jinja UI is decommissioned: ~130 legacy routes and their templates deleted; page URLs 308-redirect into the SPA; auth, the OAuth connect flow, and note-attachment serving remain server-side. Product TDD §2.3 revised to record the single-UI architecture. Conversation View PRD's V1.4 deviation (1) is moot — the legacy detail pages no longer exist.
 
 > **V22.0 (2026-07-07):** Added Legacy UI Migration Functional Area PRD (`legacy-ui-migration-prd.md`) — phased plan to bring the React SPA to parity with the legacy HTMX UI and decommission it, per Product TDD §2.3. Based on a full audit of ~157 legacy routes vs. SPA/API coverage. Phase 0 (URL routing + removing legacy escape-hatch links) approved.
 
@@ -48,7 +50,7 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | PRD Methodology Guide | 2.0 | `prd-methodology-guide.md` | Updated — Key Processes, field metadata, † convention | 2026-02-23 |
 | Product TDD | 1.0 | `product-tdd.md` | Draft — 13 sections, living document | 2026-02-23 |
 | GUI Functional Requirements | 2.0 | `gui-functional-requirements-prd.md` | Draft — Terminology standardized | 2026-02-21 |
-| Legacy UI Migration | 1.0 | `legacy-ui-migration-prd.md` | Draft — Functional area, 6 phases; Phase 0 approved | 2026-07-07 |
+| Legacy UI Migration | 1.0 | `legacy-ui-migration-prd.md` | Complete — all 6 phases implemented; legacy UI decommissioned | 2026-07-08 |
 | Custom Objects | 2.0 | `custom-objects-prd.md` | Superseded — decomposed into Framework PRD + 2 Sub-PRDs + TDD | 2026-02-23 |
 | └ Custom Objects Framework | 1.0 | `custom-objects-framework-prd.md` | Draft — V2 methodology (Key Processes) | 2026-02-23 |
 | &nbsp;&nbsp;└ Custom Objects TDD | 1.0 | `custom-objects-tdd.md` | Draft — Living document, 7 sections | 2026-02-23 |

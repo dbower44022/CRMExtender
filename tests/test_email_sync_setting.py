@@ -163,53 +163,6 @@ class TestHistoryWindowToQuery:
             assert value in _VALID_WINDOWS
 
 
-class TestSystemSettingsPage:
-    def test_system_page_shows_email_history_dropdown(self, client):
-        """System settings GET includes the email history dropdown."""
-        resp = client.get("/settings/system")
-        assert resp.status_code == 200
-        assert "email_history_window" in resp.text
-        assert "Email history to retrieve" in resp.text
-        assert "90 Days" in resp.text
-        assert "All Time" in resp.text
-
-    def test_system_page_post_saves_email_history(self, client):
-        """System settings POST saves the email_history_window value."""
-        resp = client.post("/settings/system", data={
-            "company_name": "Test",
-            "default_timezone": "UTC",
-            "default_phone_country": "US",
-            "sync_enabled": "true",
-            "email_history_window": "365d",
-        }, follow_redirects=False)
-        assert resp.status_code == 303
-
-        val = get_setting(CUST_ID, "email_history_window")
-        assert val == "365d"
-
-    def test_system_page_post_saves_all(self, client):
-        """System settings POST saves 'all' correctly."""
-        resp = client.post("/settings/system", data={
-            "company_name": "Test",
-            "default_timezone": "UTC",
-            "default_phone_country": "US",
-            "email_history_window": "all",
-        }, follow_redirects=False)
-        assert resp.status_code == 303
-
-        val = get_setting(CUST_ID, "email_history_window")
-        assert val == "all"
-
-    def test_system_page_selected_option(self, tmp_db, monkeypatch):
-        """Dropdown shows the current saved value as selected."""
-        set_setting(CUST_ID, "email_history_window", "730d", scope="system")
-        client = _make_client(monkeypatch)
-        resp = client.get("/settings/system")
-        assert resp.status_code == 200
-        # The 730d option should be selected
-        assert 'value="730d" selected' in resp.text
-
-
 # ===========================================================================
 # Part 2: Contact Sync Tests
 # ===========================================================================
@@ -313,31 +266,7 @@ class TestSyncContactEmail:
 
 
 class TestContactSyncRoute:
-    def test_sync_email_returns_conversations(self, client):
-        """POST /contacts/{id}/sync-email returns updated conversations."""
-        cid = _create_contact("Test User", "test@example.com")
-        _insert_account()
 
-        mock_creds = MagicMock()
-        with patch("poc.sync.fetch_threads", return_value=([], None)), \
-             patch("poc.auth.get_credentials_for_account", return_value=mock_creds):
-            resp = client.post(
-                f"/contacts/{cid}/sync-email",
-                data={"window": "90d"},
-            )
-
-        assert resp.status_code == 200
-        assert "Sync complete" in resp.text
-        assert "0 messages fetched" in resp.text
-
-    def test_sync_email_invalid_window(self, client):
-        """POST with invalid window returns 400."""
-        cid = _create_contact("Test", "test@example.com")
-        resp = client.post(
-            f"/contacts/{cid}/sync-email",
-            data={"window": "invalid"},
-        )
-        assert resp.status_code == 400
 
     def test_sync_email_contact_not_found(self, client):
         """POST for nonexistent contact returns 404."""
@@ -347,14 +276,3 @@ class TestContactSyncRoute:
         )
         assert resp.status_code == 404
 
-    def test_sync_email_form_visible_on_detail(self, client):
-        """Contact detail page shows the sync email form."""
-        cid = _create_contact("Test User", "test@example.com")
-        resp = client.get(f"/contacts/{cid}")
-        assert resp.status_code == 200
-        assert "sync-email" in resp.text
-        assert "Sync Email" in resp.text
-        assert "email_history_options" not in resp.text  # template variable, not literal
-        # Check that the dropdown options are rendered
-        assert "90 Days" in resp.text
-        assert "All Time" in resp.text

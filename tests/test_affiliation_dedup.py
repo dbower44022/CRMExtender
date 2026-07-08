@@ -261,66 +261,6 @@ class TestNullSafeUniqueIndex:
 # Tests: Contacts list query returns unique rows
 # ---------------------------------------------------------------------------
 
-class TestContactsListDedup:
-    """Contacts list should show each contact once even with multiple affiliations."""
-
-    def test_contact_with_multiple_affiliations_appears_once(self, client, tmp_db):
-        cid = _create_contact("Multi-Aff Alice", "alice@test.com")
-        co1 = _create_company("Company A")
-        co2 = _create_company("Company B")
-
-        with get_connection() as conn:
-            for co_id in (co1, co2):
-                conn.execute(
-                    "INSERT INTO contact_companies "
-                    "(id, contact_id, company_id, is_primary, is_current, source, created_at, updated_at) "
-                    "VALUES (?, ?, ?, 1, 1, 'test', ?, ?)",
-                    (str(uuid.uuid4()), cid, co_id, _NOW, _NOW),
-                )
-
-        resp = client.get("/contacts?q=Multi-Aff")
-        assert resp.status_code == 200
-        # The contact name should appear exactly once in the table
-        assert resp.text.count("Multi-Aff Alice") == 1
-
-    def test_search_returns_unique_rows(self, client, tmp_db):
-        cid = _create_contact("Search Dedup Bob", "bob@test.com")
-        co1 = _create_company("Corp X")
-        co2 = _create_company("Corp Y")
-        co3 = _create_company("Corp Z")
-
-        with get_connection() as conn:
-            for co_id in (co1, co2, co3):
-                conn.execute(
-                    "INSERT INTO contact_companies "
-                    "(id, contact_id, company_id, is_primary, is_current, source, created_at, updated_at) "
-                    "VALUES (?, ?, ?, 1, 1, 'test', ?, ?)",
-                    (str(uuid.uuid4()), cid, co_id, _NOW, _NOW),
-                )
-
-        resp = client.get("/contacts/search?q=Search+Dedup")
-        assert resp.status_code == 200
-        assert resp.text.count("Search Dedup Bob") == 1
-
-    def test_total_count_correct_with_multiple_affiliations(self, client, tmp_db):
-        cid = _create_contact("Count Test Carol", "carol@test.com")
-        co1 = _create_company("CountCo 1")
-        co2 = _create_company("CountCo 2")
-
-        with get_connection() as conn:
-            for co_id in (co1, co2):
-                conn.execute(
-                    "INSERT INTO contact_companies "
-                    "(id, contact_id, company_id, is_primary, is_current, source, created_at, updated_at) "
-                    "VALUES (?, ?, ?, 1, 1, 'test', ?, ?)",
-                    (str(uuid.uuid4()), cid, co_id, _NOW, _NOW),
-                )
-
-        resp = client.get("/contacts?q=Count+Test")
-        assert resp.status_code == 200
-        # Total should be 1, not 2
-        assert "(1)" in resp.text
-
 
 # ---------------------------------------------------------------------------
 # Tests: Migration v11 dedup logic

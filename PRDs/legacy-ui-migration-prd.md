@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Last Updated:** 2026-07-07
-**Status:** Draft — Phases 0–4 implemented 2026-07-08 (T01–T03, T05 UI verified by manual browser testing; T04 automation pending). Phase 2 deliberate improvements over legacy: ownership + parent-match checks on all sub-resource routes; exclusive set-primary for every type; hierarchy self-link/duplicate/cycle protection; contact email normalization; contact delete (new capability — legacy had none). Phase 3 fixes recorded here: attachment orphans adopted via attachment_ids (legacy never linked them, making its cleanup job unsafe); note deletion removes attachment files (legacy leaked them); mentions recorded server-side (legacy editor never set mentionType, so note_mentions was always empty); exact-segment attachment tenant check; FTS/entity-type errors return 400 not 500. The notes card renders with an empty state instead of suppress-when-empty, superseding the pre-creation-era rule. Phase 4 notes: contact import is vCard (path-based), not CSV — UIMIG-44 amended accordingly; manual conversation creation has no legacy equivalent and stays out of scope; per-contact email sync and company enrichment run synchronously (network-bound, UI warns); calendar sync uses the background single-slot pattern. Improvements over legacy recorded in the api_workflows.py docstring: tenant checks on all workflow mutations (legacy had none on assign/archive/delete/project/topic/event), surfaced errors instead of silent swallows, customer-scoped relationship types, impact counts returned, event CHECK pre-validation, hierarchy-free duplicates report retained. Deferred pieces of Phase 4 scope: companies duplicate-checked create flow in AddCompanyModal (check endpoint exists; modal wiring pending) and per-contact sync-email UI (endpoint exists).
+**Status:** COMPLETE — all six phases implemented (Phase 5 decommission 2026-07-08) (T01–T03, T05 UI verified by manual browser testing; T04 automation pending). Phase 2 deliberate improvements over legacy: ownership + parent-match checks on all sub-resource routes; exclusive set-primary for every type; hierarchy self-link/duplicate/cycle protection; contact email normalization; contact delete (new capability — legacy had none). Phase 3 fixes recorded here: attachment orphans adopted via attachment_ids (legacy never linked them, making its cleanup job unsafe); note deletion removes attachment files (legacy leaked them); mentions recorded server-side (legacy editor never set mentionType, so note_mentions was always empty); exact-segment attachment tenant check; FTS/entity-type errors return 400 not 500. The notes card renders with an empty state instead of suppress-when-empty, superseding the pre-creation-era rule. Phase 4 notes: contact import is vCard (path-based), not CSV — UIMIG-44 amended accordingly; manual conversation creation has no legacy equivalent and stays out of scope; per-contact email sync and company enrichment run synchronously (network-bound, UI warns); calendar sync uses the background single-slot pattern. Improvements over legacy recorded in the api_workflows.py docstring: tenant checks on all workflow mutations (legacy had none on assign/archive/delete/project/topic/event), surfaced errors instead of silent swallows, customer-scoped relationship types, impact counts returned, event CHECK pre-validation, hierarchy-free duplicates report retained. Deferred pieces of Phase 4 scope: companies duplicate-checked create flow in AddCompanyModal (check endpoint exists; modal wiring pending) and per-contact sync-email UI (endpoint exists).
 **Parent Documents:** [product-tdd.md] §2.3 (Dual UI Architecture), [gui-functional-requirements-prd.md]
 **Related:** [prd-index.md]
 
@@ -157,9 +157,9 @@ SPA mutations surface API errors via the existing toast pattern (sonner). Redire
 - [x] UIMIG-45: Companies enrich / duplicates report / resolve-domains / confirm flow
 
 ### Phase 5 — Decommission
-- [ ] UIMIG-50: 308 redirects for legacy page routes → SPA equivalents
-- [ ] UIMIG-51: Delete legacy templates + route modules (retain auth, OAuth connect)
-- [ ] UIMIG-52: Product TDD §2.3 updated; PRD index updated; deployment guide reviewed
+- [x] UIMIG-50: 308 redirects for legacy page routes → SPA equivalents
+- [x] UIMIG-51: Delete legacy templates + route modules (retain auth, OAuth connect)
+- [x] UIMIG-52: Product TDD §2.3 updated; PRD index updated; deployment guide reviewed
 
 ## 8. Test Plan
 
@@ -170,4 +170,4 @@ SPA mutations surface API errors via the existing toast pattern (sonner). Redire
 - [x] UIMIG-T05: Dashboard endpoint returns counts matching legacy dashboard queries
 - [x] UIMIG-T06: Sub-resource API round-trip per type (add → edit → set-primary → delete)
 - [x] UIMIG-T07: Notes round-trip incl. revision created on edit, attachment upload/download
-- [ ] UIMIG-T08: Decommission — legacy page URLs 308 to SPA equivalents; action routes return 404
+- [x] UIMIG-T08: Decommission — legacy page URLs 308 to SPA equivalents; action routes return 404

@@ -363,68 +363,9 @@ class TestAffiliationCRUD:
 # ======================================================================
 
 
-class TestRolesSettingsUI:
-
-    def test_roles_page_loads(self, client, tmp_db):
-        resp = client.get("/settings/roles")
-        assert resp.status_code == 200
-        assert "Affiliation Roles" in resp.text
-
-    def test_roles_page_requires_admin(self, regular_client, tmp_db):
-        resp = regular_client.get("/settings/roles")
-        assert resp.status_code == 403
-
-    def test_create_role_via_ui(self, client, tmp_db):
-        resp = client.post("/settings/roles", data={
-            "name": "Consultant", "sort_order": "50",
-        })
-        assert resp.status_code == 200
-        assert "Consultant" in resp.text
-
-    def test_create_duplicate_role_shows_error(self, client, tmp_db):
-        client.post("/settings/roles", data={"name": "X", "sort_order": "0"})
-        resp = client.post("/settings/roles", data={"name": "X", "sort_order": "0"})
-        assert resp.status_code == 200
-        assert "already exists" in resp.text
-
-    def test_edit_role_via_ui(self, client, tmp_db):
-        from poc.contact_company_roles import create_role
-        role = create_role("EditMe", customer_id=CUST_ID)
-        resp = client.post(f"/settings/roles/{role['id']}/edit", data={
-            "name": "Edited", "sort_order": "10",
-        })
-        assert resp.status_code == 200
-        assert "Edited" in resp.text
-
-    def test_delete_role_via_ui(self, client, tmp_db):
-        from poc.contact_company_roles import create_role, get_role
-        role = create_role("DeleteMe", customer_id=CUST_ID)
-        resp = client.delete(f"/settings/roles/{role['id']}")
-        assert resp.status_code == 200
-        assert get_role(role["id"]) is None
-
-
 # ======================================================================
 # Web Routes: Contact list shows primary company
 # ======================================================================
-
-
-class TestContactListCompanyColumn:
-
-    def test_contact_list_shows_primary_company(self, client, tmp_db):
-        from poc.contact_companies import add_affiliation
-        cid = _create_contact("Jane")
-        co_id = _create_company("Widgets Inc", "widgets.com")
-        add_affiliation(cid, co_id, is_primary=True)
-        resp = client.get("/contacts")
-        assert resp.status_code == 200
-        assert "Widgets Inc" in resp.text
-
-    def test_contact_list_no_company(self, client, tmp_db):
-        _create_contact("Loner")
-        resp = client.get("/contacts")
-        assert resp.status_code == 200
-        assert "Loner" in resp.text
 
 
 # ======================================================================
@@ -432,108 +373,9 @@ class TestContactListCompanyColumn:
 # ======================================================================
 
 
-class TestContactDetailAffiliations:
-
-    def test_detail_shows_affiliations(self, client, tmp_db):
-        from poc.contact_companies import add_affiliation
-        cid = _create_contact("Alice")
-        co_id = _create_company("BigCo", "big.com")
-        add_affiliation(cid, co_id, is_primary=True, title="VP")
-        resp = client.get(f"/contacts/{cid}")
-        assert resp.status_code == 200
-        assert "BigCo" in resp.text
-        assert "Company Affiliations" in resp.text
-
-    def test_detail_shows_no_affiliations_message(self, client, tmp_db):
-        cid = _create_contact("Alone")
-        resp = client.get(f"/contacts/{cid}")
-        assert resp.status_code == 200
-        assert "No company affiliations" in resp.text
-
-    def test_add_affiliation_via_route(self, client, tmp_db):
-        cid = _create_contact("Bob")
-        co_id = _create_company("NewCo", "newco.com")
-        resp = client.post(
-            f"/contacts/{cid}/affiliations",
-            data={
-                "company_id": co_id,
-                "role_id": "",
-                "title": "Dev",
-                "department": "Eng",
-                "is_primary": "1",
-                "is_current": "1",
-                "started_at": "",
-                "ended_at": "",
-                "notes": "",
-            },
-        )
-        assert resp.status_code == 200
-        assert "NewCo" in resp.text
-
-    def test_delete_affiliation_via_route(self, client, tmp_db):
-        from poc.contact_companies import add_affiliation
-        cid = _create_contact("Carol")
-        co_id = _create_company("TmpCo", "tmp.com")
-        aff = add_affiliation(cid, co_id)
-        resp = client.delete(f"/contacts/{cid}/affiliations/{aff['id']}")
-        assert resp.status_code == 200
-        assert "No company affiliations" in resp.text
-
-    def test_set_primary_via_route(self, client, tmp_db):
-        from poc.contact_companies import add_affiliation, get_affiliation
-        cid = _create_contact("Dan")
-        co1 = _create_company("Co1", "co1.com")
-        co2 = _create_company("Co2", "co2.com")
-        aff1 = add_affiliation(cid, co1, is_primary=True)
-        aff2 = add_affiliation(cid, co2, is_primary=False)
-        resp = client.post(f"/contacts/{cid}/affiliations/{aff2['id']}/primary")
-        assert resp.status_code == 200
-        assert get_affiliation(aff1["id"])["is_primary"] == 0
-        assert get_affiliation(aff2["id"])["is_primary"] == 1
-
-    def test_edit_affiliation_via_route(self, client, tmp_db):
-        from poc.contact_companies import add_affiliation, get_affiliation
-        cid = _create_contact("Eve")
-        co_id = _create_company("EveCo", "eveco.com")
-        aff = add_affiliation(cid, co_id, title="Junior")
-        resp = client.post(
-            f"/contacts/{cid}/affiliations/{aff['id']}/edit",
-            data={
-                "role_id": "",
-                "title": "Senior",
-                "department": "",
-                "is_primary": "",
-                "is_current": "1",
-                "started_at": "",
-                "ended_at": "",
-                "notes": "",
-            },
-        )
-        assert resp.status_code == 200
-        updated = get_affiliation(aff["id"])
-        assert updated["title"] == "Senior"
-
-
 # ======================================================================
 # Web Routes: Contact edit — no company dropdown
 # ======================================================================
-
-
-class TestContactEdit:
-
-    def test_edit_form_no_company_dropdown(self, client, tmp_db):
-        cid = _create_contact("Editable")
-        resp = client.get(f"/contacts/{cid}/edit")
-        assert resp.status_code == 200
-        assert "company_id" not in resp.text
-
-    def test_edit_post_no_company(self, client, tmp_db):
-        cid = _create_contact("Updatable")
-        resp = client.post(
-            f"/contacts/{cid}/edit",
-            data={"name": "Updated", "source": "manual", "status": "active"},
-        )
-        assert resp.status_code in (200, 303, 307)
 
 
 # ======================================================================
@@ -541,64 +383,9 @@ class TestContactEdit:
 # ======================================================================
 
 
-class TestCompanyDetailContacts:
-
-    def test_company_detail_shows_affiliated_contacts(self, client, tmp_db):
-        from poc.contact_company_roles import get_role_by_name
-        from poc.contact_companies import add_affiliation
-        co_id = _create_company("DetailCo", "detailco.com")
-        cid = _create_contact("Frank")
-        role = get_role_by_name("Advisor", customer_id=CUST_ID)
-        add_affiliation(cid, co_id, role_id=role["id"], title="Chief Advisor", is_primary=True)
-        resp = client.get(f"/companies/{co_id}")
-        assert resp.status_code == 200
-        assert "Frank" in resp.text
-        assert "Advisor" in resp.text
-        assert "Chief Advisor" in resp.text
-
-    def test_company_detail_shows_current_and_former(self, client, tmp_db):
-        from poc.contact_companies import add_affiliation
-        co_id = _create_company("HistoryCo", "history.com")
-        c1 = _create_contact("Current")
-        c2 = _create_contact("Former")
-        add_affiliation(c1, co_id, is_current=True)
-        add_affiliation(c2, co_id, is_current=False)
-        resp = client.get(f"/companies/{co_id}")
-        assert resp.status_code == 200
-        assert "Current" in resp.text
-        assert "Former" in resp.text
-
-    def test_company_detail_no_contacts(self, client, tmp_db):
-        co_id = _create_company("EmptyCo", "empty.com")
-        resp = client.get(f"/companies/{co_id}")
-        assert resp.status_code == 200
-        assert "No contacts linked" in resp.text
-
-
 # ======================================================================
 # Web Routes: Company confirm auto-link creates affiliations
 # ======================================================================
-
-
-class TestCompanyConfirmAutoLink:
-
-    def test_confirm_creates_affiliations(self, client, tmp_db):
-        """Creating a company with auto-link should create affiliations, not set company_id."""
-        from poc.contact_companies import list_affiliations_for_contact
-        cid = _create_contact("Linkable", email="linkable@autolink.com")
-        resp = client.post("/companies/confirm", data={
-            "name": "AutoLink Corp",
-            "domain": "autolink.com",
-            "industry": "",
-            "description": "",
-            "website": "",
-            "headquarters_location": "",
-            "link": "true",
-        })
-        assert resp.status_code in (200, 303, 307)
-        affs = list_affiliations_for_contact(cid)
-        assert len(affs) == 1
-        assert affs[0]["source"] == "domain_link"
 
 
 # ======================================================================

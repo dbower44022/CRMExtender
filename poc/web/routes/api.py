@@ -2991,7 +2991,7 @@ def settings_roles_delete(request: Request, role_id: str):
 @router.get("/settings/reference-data")
 def settings_reference_data(request: Request):
     """Return shared reference data for settings forms."""
-    from ..routes.settings_routes import COMMON_COUNTRIES, COMMON_TIMEZONES
+    from ..reference_data import COMMON_COUNTRIES, COMMON_TIMEZONES
     from ...sync import EMAIL_HISTORY_OPTIONS
 
     with get_connection() as conn:

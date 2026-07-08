@@ -706,61 +706,6 @@ def client(tmp_db):
     return TestClient(app, raise_server_exceptions=False)
 
 
-class TestMergeWebRoutes:
-    def test_merge_page_loads(self, client, tmp_db):
-        with get_connection() as conn:
-            _insert_company(conn, "c1", "Acme Corp", "acme.com")
-        resp = client.get("/companies/c1/merge")
-        assert resp.status_code == 200
-        assert "Acme Corp" in resp.text
-
-    def test_merge_preview_shows_impact(self, client, tmp_db):
-        with get_connection() as conn:
-            _insert_company(conn, "c1", "Acme Corp", "acme.com")
-            _insert_company(conn, "c2", "Acme Inc", "acme.com")
-            _insert_contact(conn, "ct1")
-            _link_contact(conn, "ct1", "c2")
-        resp = client.post("/companies/c1/merge", data={"target_id": "c2"})
-        assert resp.status_code == 200
-        assert "contact" in resp.text.lower()
-
-    def test_merge_execute_redirects(self, client, tmp_db):
-        with get_connection() as conn:
-            _insert_company(conn, "c1", "Acme Corp", "acme.com")
-            _insert_company(conn, "c2", "Acme Inc", "acme2.com")
-        resp = client.post(
-            "/companies/c1/merge/confirm",
-            data={
-                "surviving_id": "c1",
-                "company_a": "c1",
-                "company_b": "c2",
-            },
-            follow_redirects=False,
-        )
-        assert resp.status_code == 303
-        assert "/companies/c1" in resp.headers["location"]
-
-    def test_duplicates_scan_page(self, client, tmp_db):
-        with get_connection() as conn:
-            _insert_company(conn, "c1", "Acme Corp", "acme.com")
-            _insert_company(conn, "c2", "Acme Inc", "acme.com")
-        resp = client.get("/companies/duplicates")
-        assert resp.status_code == 200
-        assert "acme.com" in resp.text
-
-    def test_create_shows_duplicate_warning(self, client, tmp_db):
-        with get_connection() as conn:
-            _insert_company(conn, "c1", "Acme Corp", "acme.com")
-            _insert_identifier(conn, "c1", "acme.com")
-        resp = client.post(
-            "/companies",
-            data={"name": "Acme New", "domain": "acme.com"},
-        )
-        assert resp.status_code == 200
-        # Should show a warning about existing company
-        assert "Acme Corp" in resp.text or "already" in resp.text.lower() or "existing" in resp.text.lower()
-
-
 # ---------------------------------------------------------------------------
 # Sync duplicate detection (domain-aware _resolve_company_id)
 # ---------------------------------------------------------------------------

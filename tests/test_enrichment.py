@@ -575,10 +575,6 @@ class TestWebEnrich:
         from fastapi.testclient import TestClient
         return TestClient(app)
 
-    def test_detail_page_shows_enrich_button(self, client, sample_company):
-        resp = client.get(f"/companies/{sample_company['id']}")
-        assert resp.status_code == 200
-        assert "Enrich" in resp.text
 
     def test_detail_page_no_enrich_without_domain(self, client, tmp_db):
         company = create_company("No Domain Corp")
@@ -588,20 +584,6 @@ class TestWebEnrich:
         assert resp.status_code == 200
         # The button is conditionally rendered only if domain or website exists
         assert 'hx-post' not in resp.text or 'enrich' not in resp.text
-
-    def test_enrich_post_redirects(self, client, sample_company):
-        """POST to enrich should redirect back to detail (with mocked enrichment)."""
-        with patch("poc.enrichment_pipeline.execute_enrichment") as mock_enrich:
-            mock_enrich.return_value = {
-                "run_id": "test-run", "status": "completed",
-                "fields_discovered": 0, "fields_applied": 0, "error": None,
-            }
-            resp = client.post(
-                f"/companies/{sample_company['id']}/enrich",
-                follow_redirects=False,
-            )
-            assert resp.status_code == 303
-            assert f"/companies/{sample_company['id']}" in resp.headers.get("location", "")
 
 
 # ===========================================================================

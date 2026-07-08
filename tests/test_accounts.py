@@ -83,22 +83,7 @@ def _insert_account(account_id="acct-1", email="sync@example.com",
 # ---------------------------------------------------------------------------
 
 class TestAccountsList:
-    def test_accounts_page_loads(self, client):
-        resp = client.get("/settings/accounts")
-        assert resp.status_code == 200
-        assert "Connected Accounts" in resp.text
 
-    def test_accounts_page_shows_accounts(self, client):
-        _insert_account()
-        resp = client.get("/settings/accounts")
-        assert resp.status_code == 200
-        assert "sync@example.com" in resp.text
-        assert "Active" in resp.text
-
-    def test_accounts_page_empty(self, client):
-        resp = client.get("/settings/accounts")
-        assert resp.status_code == 200
-        assert "No accounts connected" in resp.text
 
     def test_accounts_connect_redirects_to_google(self, client, monkeypatch):
         monkeypatch.setattr("poc.config.GOOGLE_OAUTH_CLIENT_ID", "test-client-id")
@@ -116,88 +101,15 @@ class TestAccountsList:
         # Should set oauth_purpose cookie
         assert resp.cookies.get("oauth_purpose") == "add-account"
 
-    def test_accounts_connect_no_oauth_configured(self, client, monkeypatch):
-        monkeypatch.setattr("poc.config.GOOGLE_OAUTH_CLIENT_ID", "")
-        resp = client.get("/settings/accounts/connect", follow_redirects=False)
-        assert resp.status_code == 302
-        assert "/settings/accounts" in resp.headers["location"]
-        assert "not+configured" in resp.headers["location"]
-
 
 # ---------------------------------------------------------------------------
 # Edit
 # ---------------------------------------------------------------------------
 
-class TestAccountsEdit:
-    def test_edit_form_loads(self, client):
-        _insert_account()
-        resp = client.get("/settings/accounts/acct-1/edit")
-        assert resp.status_code == 200
-        assert "Edit Account" in resp.text
-        assert "sync@example.com" in resp.text
-
-    def test_edit_saves_display_name(self, client):
-        _insert_account()
-        resp = client.post(
-            "/settings/accounts/acct-1/edit",
-            data={"display_name": "My Gmail"},
-            follow_redirects=False,
-        )
-        assert resp.status_code == 303
-        assert "/settings/accounts" in resp.headers["location"]
-
-        # Verify in DB
-        with get_connection() as conn:
-            row = conn.execute(
-                "SELECT display_name FROM provider_accounts WHERE id = 'acct-1'",
-            ).fetchone()
-        assert row["display_name"] == "My Gmail"
-
-    def test_edit_nonexistent_redirects(self, client):
-        resp = client.get("/settings/accounts/nonexistent/edit", follow_redirects=False)
-        assert resp.status_code == 303
-        assert "/settings/accounts" in resp.headers["location"]
-
 
 # ---------------------------------------------------------------------------
 # Toggle active
 # ---------------------------------------------------------------------------
-
-class TestAccountsToggleActive:
-    def test_toggle_deactivates_account(self, client):
-        _insert_account()
-        resp = client.post(
-            "/settings/accounts/acct-1/toggle-active",
-            follow_redirects=False,
-        )
-        assert resp.status_code == 303
-
-        with get_connection() as conn:
-            row = conn.execute(
-                "SELECT is_active FROM provider_accounts WHERE id = 'acct-1'",
-            ).fetchone()
-        assert row["is_active"] == 0
-
-    def test_toggle_reactivates_account(self, client):
-        _insert_account(is_active=0)
-        resp = client.post(
-            "/settings/accounts/acct-1/toggle-active",
-            follow_redirects=False,
-        )
-        assert resp.status_code == 303
-
-        with get_connection() as conn:
-            row = conn.execute(
-                "SELECT is_active FROM provider_accounts WHERE id = 'acct-1'",
-            ).fetchone()
-        assert row["is_active"] == 1
-
-    def test_toggle_nonexistent_redirects(self, client):
-        resp = client.post(
-            "/settings/accounts/nonexistent/toggle-active",
-            follow_redirects=False,
-        )
-        assert resp.status_code == 303
 
 
 # ---------------------------------------------------------------------------
@@ -370,9 +282,3 @@ class TestActiveFiltering:
         # Inactive account should not be listed
         assert "sync@example.com" not in resp.text
 
-    def test_active_account_shown_in_calendar_settings(self, client):
-        """Active accounts should appear in calendar settings."""
-        _insert_account(is_active=1)
-        resp = client.get("/settings/calendars")
-        assert resp.status_code == 200
-        assert "sync@example.com" in resp.text

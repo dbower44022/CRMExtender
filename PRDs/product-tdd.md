@@ -52,13 +52,13 @@ This is a living document. Decisions are recorded here as they are made — both
 | sonner 2.0 | Toast notifications |
 | date-fns 4.1 | Date formatting and manipulation |
 
-### 2.3 Dual UI Architecture
+### 2.3 UI Architecture (revised 2026-07-08 — dual-UI era closed)
 
-**Decision:** Two UI frontends are served from the same FastAPI instance: an HTMX/Jinja2 server-rendered UI on `/` routes and a React SPA on `/app/`.
+**Decision:** The React SPA at `/app/` is the sole application UI. Server-rendered pages remain only for the auth flow (`/login`, `/register`, Google OAuth) and two compatibility routes (`/settings/accounts/connect` OAuth redirect, `/notes/files/*` attachment serving for URLs embedded in stored note HTML). All other legacy page URLs 308-redirect into the SPA; legacy action routes are gone.
 
-**Rationale:** The HTMX UI was built first during PoC development and provides full CRUD for all entity types. The React SPA was introduced for the adaptive grid intelligence and richer interaction model. Both share the same backend, database, and authentication middleware.
+**History:** The original decision (V1.0) ran an HTMX/Jinja2 UI on `/` alongside the SPA during PoC development, to be deprecated at feature parity. Parity was reached and the HTMX UI decommissioned in the Legacy UI Migration (see `PRDs/legacy-ui-migration-prd.md`, Phases 0–5, completed 2026-07-08): ~130 legacy routes and their templates were deleted, with capabilities ported to `/api/v1` (api_subresources, api_notes, api_workflows modules).
 
-**Constraints/Tradeoffs:** Maintaining two UIs is temporary. The React SPA is the target production UI. The HTMX UI will be deprecated once the React SPA achieves feature parity. During the transition, new features are built in React only.
+**Constraints/Tradeoffs:** Auth stays server-rendered by design — the SPA depends on it from outside the session. Stored note HTML references legacy attachment URLs, so that serving path is permanent until a content migration rewrites them.
 
 ---
 

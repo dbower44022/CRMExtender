@@ -214,36 +214,6 @@ def _add_comm_and_link(conn, conv_id, account_id, sender="x@test.com"):
 class TestContactScoping:
     """Contacts visible to user A1 should not include customer B data."""
 
-    def test_contact_list_shows_own_customer(self, client_a, scoped_db):
-        with get_connection() as conn:
-            _add_contact(conn, "Alice", "alice@a.com", CUST_A, USER_A1)
-            _add_contact(conn, "Bob", "bob@b.com", CUST_B, USER_B1)
-
-        resp = client_a.get("/contacts")
-        assert resp.status_code == 200
-        assert "Alice" in resp.text
-        assert "Bob" not in resp.text
-
-    def test_contact_mine_scope(self, client_a, scoped_db):
-        """scope=mine shows only user's own contacts."""
-        with get_connection() as conn:
-            _add_contact(conn, "Alice", "alice@a.com", CUST_A, USER_A1)
-            _add_contact(conn, "Carol", "carol@a.com", CUST_A, USER_A2)
-
-        resp = client_a.get("/contacts?scope=mine")
-        assert "Alice" in resp.text
-        assert "Carol" not in resp.text
-
-    def test_contact_all_scope_shows_public(self, client_a, scoped_db):
-        """scope=all shows contacts from same customer with public visibility."""
-        with get_connection() as conn:
-            _add_contact(conn, "Alice", "alice@a.com", CUST_A, USER_A1)
-            _add_contact(conn, "Carol", "carol@a.com", CUST_A, USER_A2,
-                         visibility="public")
-
-        resp = client_a.get("/contacts?scope=all")
-        assert "Alice" in resp.text
-        assert "Carol" in resp.text
 
     def test_contact_private_not_visible_to_others(self, client_a, scoped_db):
         """Private contacts from another user are not visible."""
@@ -254,57 +224,10 @@ class TestContactScoping:
         resp = client_a.get("/contacts?scope=all")
         assert "Secret" not in resp.text
 
-    def test_contact_detail_cross_customer_404(self, client_a, scoped_db):
-        """Detail page returns 404 for contacts in another customer."""
-        with get_connection() as conn:
-            cid = _add_contact(conn, "Bob", "bob@b.com", CUST_B, USER_B1)
-
-        resp = client_a.get(f"/contacts/{cid}")
-        assert resp.status_code == 404
-
 
 # ---------------------------------------------------------------------------
 # Company Scoping
 # ---------------------------------------------------------------------------
-
-class TestCompanyScoping:
-    """Companies visible to user A1 should not include customer B data."""
-
-    def test_company_list_shows_own_customer(self, client_a, scoped_db):
-        with get_connection() as conn:
-            _add_company(conn, "Alpha Inc", CUST_A, USER_A1, domain="alpha.com")
-            _add_company(conn, "Beta LLC", CUST_B, USER_B1, domain="beta.com")
-
-        resp = client_a.get("/companies")
-        assert resp.status_code == 200
-        assert "Alpha Inc" in resp.text
-        assert "Beta LLC" not in resp.text
-
-    def test_company_mine_scope(self, client_a, scoped_db):
-        with get_connection() as conn:
-            _add_company(conn, "Alpha Inc", CUST_A, USER_A1)
-            _add_company(conn, "Gamma Ltd", CUST_A, USER_A2)
-
-        resp = client_a.get("/companies?scope=mine")
-        assert "Alpha Inc" in resp.text
-        assert "Gamma Ltd" not in resp.text
-
-    def test_company_all_scope_shows_public(self, client_a, scoped_db):
-        with get_connection() as conn:
-            _add_company(conn, "Alpha Inc", CUST_A, USER_A1)
-            _add_company(conn, "Gamma Ltd", CUST_A, USER_A2,
-                         visibility="public")
-
-        resp = client_a.get("/companies?scope=all")
-        assert "Alpha Inc" in resp.text
-        assert "Gamma Ltd" in resp.text
-
-    def test_company_detail_cross_customer_404(self, client_a, scoped_db):
-        with get_connection() as conn:
-            coid = _add_company(conn, "Beta LLC", CUST_B, USER_B1)
-
-        resp = client_a.get(f"/companies/{coid}")
-        assert resp.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -314,24 +237,6 @@ class TestCompanyScoping:
 class TestConversationScoping:
     """Conversations visible via account access or explicit share."""
 
-    def test_conversation_via_account_access(self, client_a, scoped_db):
-        """Conversations are visible when user has account access."""
-        with get_connection() as conn:
-            acct_id = _add_account(conn, "a1@test.com", CUST_A, USER_A1)
-            conv_id = _add_conversation(conn, "Thread A", CUST_A)
-            _add_comm_and_link(conn, conv_id, acct_id)
-
-        resp = client_a.get("/conversations")
-        assert "Thread A" in resp.text
-
-    def test_conversation_via_share(self, client_a, scoped_db):
-        """Explicitly shared conversations are visible."""
-        with get_connection() as conn:
-            conv_id = _add_conversation(conn, "Shared Thread", CUST_A,
-                                        share_with=USER_A1)
-
-        resp = client_a.get("/conversations")
-        assert "Shared Thread" in resp.text
 
     def test_conversation_not_visible_without_access(self, client_a, scoped_db):
         """Conversations without account access or share are invisible."""
@@ -353,14 +258,6 @@ class TestConversationScoping:
 
         resp = client_a.get("/conversations")
         assert "Other Org Thread" not in resp.text
-
-    def test_conversation_detail_cross_customer_404(self, client_a, scoped_db):
-        with get_connection() as conn:
-            conv_id = _add_conversation(conn, "B Thread", CUST_B,
-                                        share_with=USER_B1)
-
-        resp = client_a.get(f"/conversations/{conv_id}")
-        assert resp.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -390,59 +287,10 @@ class TestDashboardScoping:
         assert "Bob" not in resp.text
         assert "Beta" not in resp.text
 
-    def test_dashboard_shows_recent_conversations(self, client_a, scoped_db):
-        with get_connection() as conn:
-            _add_conversation(conn, "My Thread", CUST_A, share_with=USER_A1)
-            _add_conversation(conn, "Other Thread", CUST_B, share_with=USER_B1)
-
-        resp = client_a.get("/")
-        assert "My Thread" in resp.text
-        assert "Other Thread" not in resp.text
-
 
 # ---------------------------------------------------------------------------
 # Detail Access Check
 # ---------------------------------------------------------------------------
-
-class TestDetailAccessCheck:
-    """Detail pages return 404 for entities in another customer."""
-
-    def test_contact_detail_other_customer(self, client_a, scoped_db):
-        with get_connection() as conn:
-            cid = _add_contact(conn, "Stranger", "s@b.com", CUST_B, USER_B1)
-        resp = client_a.get(f"/contacts/{cid}")
-        assert resp.status_code == 404
-
-    def test_company_detail_other_customer(self, client_a, scoped_db):
-        with get_connection() as conn:
-            coid = _add_company(conn, "Other Corp", CUST_B, USER_B1)
-        resp = client_a.get(f"/companies/{coid}")
-        assert resp.status_code == 404
-
-    def test_conversation_detail_other_customer(self, client_a, scoped_db):
-        with get_connection() as conn:
-            conv_id = _add_conversation(conn, "Secret", CUST_B,
-                                        share_with=USER_B1)
-        resp = client_a.get(f"/conversations/{conv_id}")
-        assert resp.status_code == 404
-
-    def test_client_b_sees_own_data(self, client_b, scoped_db):
-        """Sanity check: client B can see customer B's data."""
-        with get_connection() as conn:
-            cid = _add_contact(conn, "Bob", "bob@b.com", CUST_B, USER_B1)
-            coid = _add_company(conn, "Beta LLC", CUST_B, USER_B1)
-
-        resp = client_b.get("/contacts")
-        assert "Bob" in resp.text
-
-        resp = client_b.get("/companies")
-        assert "Beta LLC" in resp.text
-
-        resp = client_b.get(f"/contacts/{cid}")
-        assert resp.status_code == 200
-
-        resp = client_b.get(f"/companies/{coid}")
-        assert resp.status_code == 200
 
 
 # ---------------------------------------------------------------------------
@@ -552,36 +400,3 @@ class TestSyncScoping:
 # Project Scoping
 # ---------------------------------------------------------------------------
 
-class TestProjectScoping:
-    """Projects are scoped by customer_id."""
-
-    def test_project_create_sets_customer_id(self, client_a, scoped_db):
-        resp = client_a.post("/projects", data={
-            "name": "Test Project", "description": "",
-        })
-        assert resp.status_code in (200, 303)
-
-        with get_connection() as conn:
-            proj = conn.execute(
-                "SELECT * FROM projects WHERE name = 'Test Project'"
-            ).fetchone()
-            assert proj is not None
-            assert proj["customer_id"] == CUST_A
-            assert proj["created_by"] == USER_A1
-
-    def test_project_list_shows_own_customer(self, client_a, scoped_db):
-        with get_connection() as conn:
-            conn.execute(
-                "INSERT INTO projects (id, name, status, customer_id, "
-                "created_at, updated_at) VALUES (?, ?, 'active', ?, ?, ?)",
-                ("p-a", "Project A", CUST_A, _NOW, _NOW),
-            )
-            conn.execute(
-                "INSERT INTO projects (id, name, status, customer_id, "
-                "created_at, updated_at) VALUES (?, ?, 'active', ?, ?, ?)",
-                ("p-b", "Project B", CUST_B, _NOW, _NOW),
-            )
-
-        resp = client_a.get("/projects")
-        assert "Project A" in resp.text
-        assert "Project B" not in resp.text

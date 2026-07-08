@@ -72,18 +72,7 @@ def create_app() -> FastAPI:
         api_subresources,
         api_workflows,
         auth_routes,
-        communications,
-        companies,
-        contact_company_roles,
-        contacts,
-        conversations,
-        dashboard,
-        events,
-        notes,
-        projects,
-        relationships,
-        settings_routes,
-        views,
+        legacy_compat,
     )
 
     # JSON API for React frontend
@@ -96,19 +85,11 @@ def create_app() -> FastAPI:
     app.include_router(api.router, prefix="/api/v1")
     app.include_router(api_subresources.router, prefix="/api/v1")
 
+    # Auth stays server-rendered; legacy_compat keeps the OAuth connect
+    # flow + note-attachment serving and 308-redirects old page URLs into
+    # the SPA (Legacy UI Migration PRD, Phase 5)
     app.include_router(auth_routes.router)
-    app.include_router(dashboard.router)
-    app.include_router(communications.router, prefix="/communications")
-    app.include_router(conversations.router, prefix="/conversations")
-    app.include_router(contacts.router, prefix="/contacts")
-    app.include_router(companies.router, prefix="/companies")
-    app.include_router(projects.router, prefix="/projects")
-    app.include_router(relationships.router, prefix="/relationships")
-    app.include_router(events.router, prefix="/events")
-    app.include_router(notes.router, prefix="/notes")
-    app.include_router(views.router, prefix="/views")
-    app.include_router(contact_company_roles.router)
-    app.include_router(settings_routes.router)
+    app.include_router(legacy_compat.router)
 
     # Serve React frontend at /app/
     _FRONTEND_DIST = _HERE.parent.parent / "frontend" / "dist"

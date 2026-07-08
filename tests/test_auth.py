@@ -195,46 +195,16 @@ class TestMiddleware:
         resp = auth_client.get("/static/style.css")
         assert resp.status_code == 200
 
-    def test_valid_session_allows_access(self, auth_client):
-        # Login
-        auth_client.post("/login", data={
-            "email": "admin@example.com",
-            "password": "secret123",
-        })
-        resp = auth_client.get("/")
-        assert resp.status_code == 200
-        assert "Dashboard" in resp.text
 
     def test_invalid_cookie_redirects(self, auth_client):
         auth_client.cookies.set("crm_session", "bogus-session-id")
         resp = auth_client.get("/", follow_redirects=False)
         assert resp.status_code == 302
 
-    def test_user_name_in_nav(self, auth_client):
-        auth_client.post("/login", data={
-            "email": "admin@example.com",
-            "password": "secret123",
-        })
-        resp = auth_client.get("/")
-        assert "Admin" in resp.text
-        assert "Logout" in resp.text
-
 
 # ---------------------------------------------------------------------------
 # Auth Bypass
 # ---------------------------------------------------------------------------
-
-class TestAuthBypass:
-    def test_bypass_allows_access_without_login(self, bypass_client):
-        resp = bypass_client.get("/")
-        assert resp.status_code == 200
-        assert "Dashboard" in resp.text
-
-    def test_bypass_sets_user_context(self, bypass_client):
-        resp = bypass_client.get("/")
-        assert resp.status_code == 200
-        # User name should appear in nav
-        assert "Logout" in resp.text
 
 
 # ---------------------------------------------------------------------------

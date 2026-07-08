@@ -940,3 +940,91 @@ def events_sync_status_api(request: Request):
     from ...sync_service import calendar_sync_status
 
     return calendar_sync_status()
+
+
+# ---------------------------------------------------------------------------
+# Identity resolution: duplicate scan + review queue
+# (Identity Resolution Sub-PRD §7/§9)
+# ---------------------------------------------------------------------------
+
+@router.post("/contacts/duplicate-scan")
+def contacts_duplicate_scan_api(request: Request):
+    """Scan existing contacts pairwise and queue review candidates."""
+    from ...identity_resolution import scan_existing_contacts
+
+    return scan_existing_contacts(customer_id=request.state.customer_id)
+
+
+@router.get("/contacts/review-queue")
+def review_queue_list_api(request: Request, sort: str = "confidence"):
+    import json as _json
+
+    cid = request.state.customer_id
+    order = {
+        "confidence": "mc.confidence DESC",
+        "date": "mc.created_at DESC",
+        "source": "mc.source, mc.confidence DESC",
+    }.get(sort, "mc.confidence DESC")
+
+    with get_connection() as conn:
+        rows = conn.execute(
+            f"""SELECT mc.*, ca.name AS name_a, cb.name AS name_b,
+                       (SELECT value FROM contact_identifiers
+                        WHERE contact_id = mc.contact_a_id AND type = 'email'
+                        LIMIT 1) AS email_a,
+                       (SELECT value FROM contact_identifiers
+                        WHERE contact_id = mc.contact_b_id AND type = 'email'
+                        LIMIT 1) AS email_b
+                FROM match_candidates mc
+                JOIN contacts ca ON ca.id = mc.contact_a_id
+                JOIN contacts cb ON cb.id = mc.contact_b_id
+                WHERE mc.status = 'pending'
+                  AND (mc.customer_id IS NULL OR mc.customer_id = ?)
+                ORDER BY {order}""",
+            (cid,),
+        ).fetchall()
+
+    candidates = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["signals"] = _json.loads(d["signals"] or "[]")
+        except ValueError:
+            d["signals"] = []
+        candidates.append(d)
+    return {"candidates": candidates, "pending_count": len(candidates)}
+
+
+@router.post("/contacts/review-queue/{candidate_id}/reject")
+def review_queue_reject_api(request: Request, candidate_id: str):
+    """Not a match — rejected pairs are never re-queued (IDENT-26)."""
+    now = _now()
+    with get_connection() as conn:
+        cur = conn.execute(
+            "UPDATE match_candidates SET status = 'rejected', "
+            "reviewed_by = ?, reviewed_at = ?, updated_at = ? "
+            "WHERE id = ? AND status = 'pending' "
+            "AND (customer_id IS NULL OR customer_id = ?)",
+            (_uid(request), now, now, candidate_id,
+             request.state.customer_id),
+        )
+        if not cur.rowcount:
+            return _err("Not found", 404)
+    return {"status": "rejected"}
+
+
+@router.post("/contacts/review-queue/{candidate_id}/restore")
+def review_queue_restore_api(request: Request, candidate_id: str):
+    """Undo a rejection (IDENT-28)."""
+    now = _now()
+    with get_connection() as conn:
+        cur = conn.execute(
+            "UPDATE match_candidates SET status = 'pending', "
+            "reviewed_by = NULL, reviewed_at = NULL, updated_at = ? "
+            "WHERE id = ? AND status = 'rejected' "
+            "AND (customer_id IS NULL OR customer_id = ?)",
+            (now, candidate_id, request.state.customer_id),
+        )
+        if not cur.rowcount:
+            return _err("Not found", 404)
+    return {"status": "pending"}

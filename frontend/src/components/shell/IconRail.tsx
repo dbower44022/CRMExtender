@@ -1,6 +1,8 @@
-import { Home, Settings } from 'lucide-react'
+import { Home, Settings, Users } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { useLayoutStore } from '../../stores/layout.ts'
+import { identity } from '../../api/workflows.ts'
 import { ENTITY_ICONS, ENTITY_LABELS } from '../../lib/entityIcons.ts'
 
 const NAV_ITEMS = Object.entries(ENTITY_ICONS).map(([key, icon]) => ({
@@ -16,11 +18,19 @@ export function IconRail() {
   const openSettings = useNavigationStore((s) => s.openSettings)
   const dashboardMode = useNavigationStore((s) => s.dashboardMode)
   const openDashboard = useNavigationStore((s) => s.openDashboard)
+  const reviewMode = useNavigationStore((s) => s.reviewMode)
+  const openReview = useNavigationStore((s) => s.openReview)
+  const { data: reviewData } = useQuery({
+    queryKey: ['review-count'],
+    queryFn: () => identity.reviewQueue(),
+    staleTime: 30_000,
+  })
+  const pendingCount = reviewData?.pending_count ?? 0
   const actionPanelVisible = useLayoutStore((s) => s.actionPanelVisible)
   const toggleActionPanel = useLayoutStore((s) => s.toggleActionPanel)
 
   const handleClick = (key: string) => {
-    if (key === activeEntityType && !settingsMode && !dashboardMode) {
+    if (key === activeEntityType && !settingsMode && !dashboardMode && !reviewMode) {
       toggleActionPanel()
     } else {
       setActiveEntityType(key)
@@ -69,6 +79,23 @@ export function IconRail() {
             </button>
           )
         })}
+        <div className="mx-auto my-1 h-px w-6 bg-surface-200" />
+        <button
+          onClick={openReview}
+          title="Duplicate Review"
+          className={`relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+            reviewMode
+              ? 'bg-primary-100 text-primary-700'
+              : 'text-surface-500 hover:bg-surface-100 hover:text-surface-700'
+          }`}
+        >
+          <Users size={20} strokeWidth={reviewMode ? 2.2 : 1.8} />
+          {pendingCount > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
+              {pendingCount > 99 ? '99+' : pendingCount}
+            </span>
+          )}
+        </button>
       </div>
       <div className="mt-auto pb-2">
         <button

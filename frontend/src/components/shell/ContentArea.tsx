@@ -1,5 +1,6 @@
 import { DashboardView } from '../dashboard/DashboardView.tsx'
 import { RelationshipTypesSettings } from '../settings/RelationshipTypesSettings.tsx'
+import { ReviewQueue } from '../review/ReviewQueue.tsx'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { DataGrid } from '../grid/DataGrid.tsx'
 import { GridToolbar } from '../grid/GridToolbar.tsx'
@@ -26,9 +27,14 @@ export function ContentArea() {
   const settingsMode = useNavigationStore((s) => s.settingsMode)
   const settingsTab = useNavigationStore((s) => s.settingsTab)
   const dashboardMode = useNavigationStore((s) => s.dashboardMode)
+  const reviewMode = useNavigationStore((s) => s.reviewMode)
 
   if (dashboardMode) {
     return <DashboardView />
+  }
+
+  if (reviewMode) {
+    return <ReviewQueue />
   }
 
   if (settingsMode) {

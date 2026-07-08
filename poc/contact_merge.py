@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 
 from .database import get_connection
+
+log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -533,6 +536,13 @@ def merge_contacts(
             )
             existing_company_ids.add(company["id"])
             affiliations_created += 1
+
+    # Match candidates touching an absorbed contact are removed by the
+    # ON DELETE CASCADE on match_candidates when the absorbed contact
+    # row is deleted above — the pending candidate for the merged pair
+    # therefore auto-resolves out of the review queue (Identity
+    # Resolution Sub-PRD, IDENT-27). Candidates between the survivor and
+    # an unrelated third contact are unaffected and stay pending.
 
     return {
         "merge_ids": merge_ids,

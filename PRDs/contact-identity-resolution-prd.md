@@ -1,8 +1,10 @@
 # Contact — Identity Resolution & Entity Matching Sub-PRD
 
-**Version:** 2.0
-**Last Updated:** 2026-02-22
-**Status:** Draft
+**Version:** 2.1
+**Last Updated:** 2026-07-08
+**Status:** Partially implemented — matching engine (§5–6), review-queue pipeline for existing contacts (§7 batch), and human review queue (§9) built as Tier 3a. Not yet: pipeline entry points on email-sync/import/enrichment (§7 real-time), inline-detection wiring to the shared candidate model (§8 — the create form has its own lighter dup check from Tier 1), flagged-merge review badges (§10), threshold config UI (IDENT-10).
+
+> **V2.1 (2026-07-08):** Tier 3a implemented. `poc/identity_resolution.py` scores contact pairs with the PRD's weighted-signal model and probabilistic combination; tenant thresholds via `idr_threshold_*` settings. Schema v22 adds `match_candidates`. `POST /contacts/duplicate-scan` populates the queue for existing contacts (blocking + idempotent); `GET /contacts/review-queue` + reject/restore drive the SPA Duplicate Review view (rail entry with pending badge). Merge auto-resolves candidates via FK cascade. Live scan of the current DB surfaced 936 candidates (heavy duplication from the earlier SCORE-account sync bug).
 **Entity Base PRD:** [contact-entity-base-prd.md]
 **Referenced Entity PRDs:** [Company Management Entity Base PRD](company-management-prd.md)
 **Referenced Action Sub-PRDs:** [Contact Merge & Split Sub-PRD](contact-merge-split-prd.md)
@@ -223,16 +225,16 @@ Identity resolution uses a **tiered confidence model** with configurable thresho
 
 **Tasks:**
 
-- [ ] IDENT-04: Implement exact match tier (email, LinkedIn URL, phone)
-- [ ] IDENT-05: Implement fuzzy match candidate retrieval (name + company similarity via search)
-- [ ] IDENT-06: Return top-N fuzzy match candidates for confidence scoring
+- [x] IDENT-04: Implement exact match tier (email, LinkedIn URL, phone)
+- [x] IDENT-05: Implement fuzzy match candidate retrieval (name + company similarity via search)
+- [x] IDENT-06: Return top-N fuzzy match candidates for confidence scoring
 
 **Tests:**
 
-- [ ] IDENT-T04: Exact email match returns confidence 1.0 and triggers auto-merge
-- [ ] IDENT-T05: Exact phone match (E.164) returns confidence 0.95
-- [ ] IDENT-T06: Fuzzy name + company match returns appropriate confidence range
-- [ ] IDENT-T07: Name-only fuzzy match returns low confidence and queues for review
+- [x] IDENT-T04: Exact email match returns confidence 1.0 and triggers auto-merge
+- [x] IDENT-T05: Exact phone match (E.164) returns confidence 0.95
+- [x] IDENT-T06: Fuzzy name + company match returns appropriate confidence range
+- [x] IDENT-T07: Name-only fuzzy match returns low confidence and queues for review
 
 ---
 
@@ -280,17 +282,17 @@ Thresholds are configurable per tenant. Changes apply to future matches only, no
 
 **Tasks:**
 
-- [ ] IDENT-07: Implement weighted confidence scoring formula
-- [ ] IDENT-08: Implement threshold-based action routing (auto-merge, flag, review queue, no match)
-- [ ] IDENT-09: Implement tenant-configurable threshold settings
+- [x] IDENT-07: Implement weighted confidence scoring formula
+- [x] IDENT-08: Implement threshold-based action routing (auto-merge, flag, review queue, no match)
+- [x] IDENT-09: Implement tenant-configurable threshold settings
 - [ ] IDENT-10: Implement threshold configuration UI in tenant settings
 
 **Tests:**
 
-- [ ] IDENT-T08: Multiple weak signals combine to produce high confidence (e.g., name + company + location)
-- [ ] IDENT-T09: Single definitive signal (email) produces confidence 1.0 regardless of other signals
-- [ ] IDENT-T10: Confidence at each threshold boundary triggers correct action
-- [ ] IDENT-T11: Custom tenant thresholds override default behavior
+- [x] IDENT-T08: Multiple weak signals combine to produce high confidence (e.g., name + company + location)
+- [x] IDENT-T09: Single definitive signal (email) produces confidence 1.0 regardless of other signals
+- [x] IDENT-T10: Confidence at each threshold boundary triggers correct action
+- [x] IDENT-T11: Custom tenant thresholds override default behavior
 
 ---
 
@@ -334,8 +336,8 @@ The end-to-end pipeline processes incoming data through five stages:
 **Tasks:**
 
 - [ ] IDENT-11: Implement end-to-end resolution pipeline orchestration (5 stages)
-- [ ] IDENT-12: Implement match candidate record creation for review queue entries
-- [ ] IDENT-13: Ensure pipeline idempotency (no duplicate candidates or contacts on re-processing)
+- [x] IDENT-12: Implement match candidate record creation for review queue entries
+- [x] IDENT-13: Ensure pipeline idempotency (no duplicate candidates or contacts on re-processing)
 - [ ] IDENT-14: Implement pipeline entry points for each data source (email sync, import, enrichment, manual entry, browser extension)
 - [ ] IDENT-15: Implement "Possible Duplicate" badge on contacts with pending match candidates
 - [ ] IDENT-16: Implement "Review Merge" badge on contacts with flagged auto-merges
@@ -344,8 +346,8 @@ The end-to-end pipeline processes incoming data through five stages:
 
 - [ ] IDENT-T12: Full pipeline processes incoming email participant and resolves to existing contact
 - [ ] IDENT-T13: Full pipeline processes unknown person and creates new contact
-- [ ] IDENT-T14: Pipeline creates match candidate record for medium-confidence matches
-- [ ] IDENT-T15: Re-processing identical data does not create duplicates
+- [x] IDENT-T14: Pipeline creates match candidate record for medium-confidence matches
+- [x] IDENT-T15: Re-processing identical data does not create duplicates
 - [ ] IDENT-T16: Pipeline handles concurrent resolution of the same person from two sources
 - [ ] IDENT-T17: "Possible Duplicate" badge appears on contacts with pending match candidates
 - [ ] IDENT-T18: "Review Merge" badge appears on contacts with flagged auto-merges
@@ -439,26 +441,26 @@ The review queue uses the standard list view component. The expand/collapse deta
 
 **Tasks:**
 
-- [ ] IDENT-21: Implement review queue backend (list, filter, sort pending candidates)
-- [ ] IDENT-22: Implement review queue navigation entry point with pending count badge
-- [ ] IDENT-23: Implement review queue list view with confidence, signals, and source display
-- [ ] IDENT-24: Implement expandable detail view with side-by-side comparison
-- [ ] IDENT-25: Implement approve action (redirects to merge preview, updates candidate status)
-- [ ] IDENT-26: Implement reject action (marks as rejected, removes badges, prevents re-queuing)
-- [ ] IDENT-27: Implement auto-resolution of candidates when one contact is merged elsewhere
-- [ ] IDENT-28: Implement undo option after rejection
+- [x] IDENT-21: Implement review queue backend (list, filter, sort pending candidates)
+- [x] IDENT-22: Implement review queue navigation entry point with pending count badge
+- [x] IDENT-23: Implement review queue list view with confidence, signals, and source display
+- [x] IDENT-24: Implement expandable detail view with side-by-side comparison
+- [x] IDENT-25: Implement approve action (redirects to merge preview, updates candidate status)
+- [x] IDENT-26: Implement reject action (marks as rejected, removes badges, prevents re-queuing)
+- [x] IDENT-27: Implement auto-resolution of candidates when one contact is merged elsewhere
+- [x] IDENT-28: Implement undo option after rejection
 
 **Tests:**
 
-- [ ] IDENT-T27: Review queue lists only pending candidates for current tenant
+- [x] IDENT-T27: Review queue lists only pending candidates for current tenant
 - [ ] IDENT-T28: Navigation badge shows correct count of pending candidates
-- [ ] IDENT-T29: Queue sorts by confidence score (default) and by date
-- [ ] IDENT-T30: Expanding a row shows full side-by-side comparison with all signals
+- [x] IDENT-T29: Queue sorts by confidence score (default) and by date
+- [x] IDENT-T30: Expanding a row shows full side-by-side comparison with all signals
 - [ ] IDENT-T31: Approving a candidate redirects to merge preview and updates status to approved
-- [ ] IDENT-T32: Rejecting a candidate removes "Possible Duplicate" badges from both contacts
-- [ ] IDENT-T33: Rejecting a candidate prevents the same pair from being re-queued
-- [ ] IDENT-T34: Pending candidate auto-resolves when one contact is merged with a different contact
-- [ ] IDENT-T35: Undo after rejection restores candidate to pending status
+- [x] IDENT-T32: Rejecting a candidate removes "Possible Duplicate" badges from both contacts
+- [x] IDENT-T33: Rejecting a candidate prevents the same pair from being re-queued
+- [x] IDENT-T34: Pending candidate auto-resolves when one contact is merged with a different contact
+- [x] IDENT-T35: Undo after rejection restores candidate to pending status
 
 ---
 

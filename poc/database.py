@@ -103,6 +103,25 @@ CREATE TABLE IF NOT EXISTS contacts (
     updated_at TEXT NOT NULL
 );
 
+-- Identity resolution match candidates (Identity Resolution Sub-PRD)
+CREATE TABLE IF NOT EXISTS match_candidates (
+    id           TEXT PRIMARY KEY,
+    customer_id  TEXT REFERENCES customers(id) ON DELETE CASCADE,
+    contact_a_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    contact_b_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    confidence   REAL NOT NULL,
+    signals      TEXT,
+    status       TEXT NOT NULL DEFAULT 'pending'
+                 CHECK (status IN ('pending', 'approved', 'rejected', 'auto_merged')),
+    source       TEXT,
+    reviewed_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
+    reviewed_at  TEXT,
+    created_at   TEXT NOT NULL,
+    updated_at   TEXT NOT NULL,
+    CHECK (contact_a_id < contact_b_id),
+    UNIQUE (contact_a_id, contact_b_id)
+);
+
 -- Contact-company affiliation roles (user-editable lookup)
 CREATE TABLE IF NOT EXISTS contact_company_roles (
     id          TEXT PRIMARY KEY,
@@ -1111,6 +1130,8 @@ CREATE INDEX IF NOT EXISTS idx_csp_platform          ON company_social_profiles(
 
 -- Contact social profiles
 CREATE INDEX IF NOT EXISTS idx_ctsp_contact          ON contact_social_profiles(contact_id);
+CREATE INDEX IF NOT EXISTS idx_mc_status             ON match_candidates(status, confidence);
+CREATE INDEX IF NOT EXISTS idx_mc_contacts           ON match_candidates(contact_a_id, contact_b_id);
 CREATE INDEX IF NOT EXISTS idx_ctsp_platform         ON contact_social_profiles(platform);
 
 -- Enrichment

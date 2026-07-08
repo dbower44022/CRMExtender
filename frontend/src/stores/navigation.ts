@@ -19,6 +19,7 @@ interface NavigationState {
   settingsMode: boolean
   settingsTab: string
   dashboardMode: boolean
+  reviewMode: boolean
 
   setActiveEntityType: (entityType: string) => void
   setActiveViewId: (viewId: string | null) => void
@@ -39,6 +40,8 @@ interface NavigationState {
   closeSettings: () => void
   openDashboard: () => void
   closeDashboard: () => void
+  openReview: () => void
+  closeReview: () => void
   setSettingsTab: (tab: string) => void
   reset: () => void
 }
@@ -61,6 +64,7 @@ const DEFAULTS = {
   settingsMode: false,
   settingsTab: 'profile',
   dashboardMode: false,
+  reviewMode: false,
 }
 
 export const useNavigationStore = create<NavigationState>()((set) => ({
@@ -82,6 +86,7 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
       searchFilters: [],
       settingsMode: false,
       dashboardMode: false,
+      reviewMode: false,
     }),
 
   setActiveViewId: (viewId) =>
@@ -180,7 +185,7 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
   setPendingNavigation: (nav) => set({ pendingNavigation: nav }),
 
   openSettings: () =>
-    set({ settingsMode: true, dashboardMode: false }),
+    set({ settingsMode: true, dashboardMode: false, reviewMode: false }),
 
   closeSettings: () =>
     set({ settingsMode: false }),
@@ -189,10 +194,16 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
     set({ settingsTab: tab }),
 
   openDashboard: () =>
-    set({ dashboardMode: true, settingsMode: false }),
+    set({ dashboardMode: true, settingsMode: false, reviewMode: false }),
 
   closeDashboard: () =>
     set({ dashboardMode: false }),
+
+  openReview: () =>
+    set({ reviewMode: true, settingsMode: false, dashboardMode: false }),
+
+  closeReview: () =>
+    set({ reviewMode: false }),
 
   reset: () => set(DEFAULTS),
 }))

@@ -105,3 +105,36 @@ export const workflows = {
     post<{ status: string; fields_discovered: number; fields_applied: number }>(
       `/companies/${companyId}/enrich`, {}),
 }
+
+export interface MatchSignal {
+  name: string
+  weight: number
+  value_a: string
+  value_b: string
+}
+
+export interface MatchCandidate {
+  id: string
+  contact_a_id: string
+  contact_b_id: string
+  name_a: string
+  name_b: string
+  email_a: string | null
+  email_b: string | null
+  confidence: number
+  signals: MatchSignal[]
+  source: string | null
+}
+
+export const identity = {
+  scan: () =>
+    post<{ contacts: number; pairs_scored: number; candidates_created: number }>(
+      '/contacts/duplicate-scan', {}),
+  reviewQueue: (sort = 'confidence') =>
+    get<{ candidates: MatchCandidate[]; pending_count: number }>(
+      `/contacts/review-queue?sort=${sort}`),
+  reject: (candidateId: string) =>
+    post<{ status: string }>(`/contacts/review-queue/${candidateId}/reject`, {}),
+  restore: (candidateId: string) =>
+    post<{ status: string }>(`/contacts/review-queue/${candidateId}/restore`, {}),
+}

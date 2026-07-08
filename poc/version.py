@@ -1,10 +1,16 @@
-"""Application version — the git commit the running code is on.
+"""Application version.
 
-The commit SHA is the release identity: each push is CI-verified, so
-matching the SHA shown here against the pushed commit confirms you are
-running the exact released version. Read at runtime from the working
-tree (cached); falls back to a committed VERSION file, then "unknown"
-when neither git nor the file is available (e.g. a stripped container).
+Two identifiers, for two purposes:
+
+- **version** — a human, monotonically increasing release number from the
+  ``VERSION`` file at the repo root (e.g. ``10.1``). This is the headline:
+  higher = newer, trivial to compare. Bump it on every release (edit
+  ``VERSION`` in the same commit).
+- **sha** — the git commit the running code is on, for exact forensic
+  matching. Read at runtime from the working tree (cached).
+
+Both are shown in Settings → System. ``version`` answers "am I on the
+latest?"; ``sha`` answers "is this the exact build you pushed?".
 """
 
 from __future__ import annotations
@@ -29,34 +35,36 @@ def _git(*args: str) -> str | None:
     return None
 
 
+def _read_version_file() -> str:
+    version_file = _ROOT / "VERSION"
+    try:
+        text = version_file.read_text().strip()
+        if text:
+            return text
+    except OSError:
+        pass
+    return "dev"
+
+
 @lru_cache(maxsize=1)
 def get_version() -> dict:
-    """Return {sha, short_sha, committed_at, message, source}."""
+    """Return {version, sha, short_sha, committed_at, message, sha_source}."""
+    version = _read_version_file()
     sha = _git("rev-parse", "HEAD")
     if sha:
         return {
+            "version": version,
             "sha": sha,
             "short_sha": sha[:7],
             "committed_at": _git("log", "-1", "--format=%cI"),
             "message": _git("log", "-1", "--format=%s"),
-            "source": "git",
+            "sha_source": "git",
         }
-
-    version_file = _ROOT / "VERSION"
-    if version_file.exists():
-        text = version_file.read_text().strip()
-        return {
-            "sha": text,
-            "short_sha": text[:7],
-            "committed_at": None,
-            "message": None,
-            "source": "file",
-        }
-
     return {
-        "sha": "unknown",
-        "short_sha": "unknown",
+        "version": version,
+        "sha": None,
+        "short_sha": None,
         "committed_at": None,
         "message": None,
-        "source": "unknown",
+        "sha_source": "unavailable",
     }

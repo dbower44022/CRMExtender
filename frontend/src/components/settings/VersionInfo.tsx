@@ -5,15 +5,16 @@ import { get } from '../../api/client.ts'
 import { formatTimestamp } from '../../lib/formatTimestamp.ts'
 
 interface Version {
-  sha: string
-  short_sha: string
+  version: string
+  sha: string | null
+  short_sha: string | null
   committed_at: string | null
   message: string | null
-  source: string
+  sha_source: string
 }
 
-/** Running application version — the git commit, for verifying you are on
- * the released build. */
+/** Running application version. The version number (from VERSION) is the
+ * headline — higher is newer; the commit hash is exact-match detail. */
 export function VersionInfo() {
   const [version, setVersion] = useState<Version | null>(null)
 
@@ -26,34 +27,41 @@ export function VersionInfo() {
   return (
     <div className="mt-8 border-t border-surface-200 pt-6">
       <h2 className="mb-1 text-base font-semibold text-surface-800">Version</h2>
-      <div className="flex items-center gap-2">
-        <code className="rounded bg-surface-100 px-2 py-1 font-mono text-sm text-surface-800">
-          {version.short_sha}
-        </code>
+      <div className="flex items-baseline gap-3">
+        <span className="text-2xl font-semibold tabular-nums text-surface-900">
+          v{version.version}
+        </span>
         {version.committed_at && (
           <span className="text-sm text-surface-500">
-            {formatTimestamp(version.committed_at)}
+            released {formatTimestamp(version.committed_at)}
           </span>
         )}
-        <button
-          onClick={() => {
-            navigator.clipboard?.writeText(version.sha)
-            toast.success('Full commit hash copied')
-          }}
-          title="Copy full commit hash"
-          className="rounded p-1 text-surface-400 hover:bg-surface-100 hover:text-surface-600"
-        >
-          <Copy size={13} />
-        </button>
       </div>
-      {version.message && (
-        <p className="mt-1 truncate text-xs text-surface-400">
-          {version.message}
-        </p>
+      {version.short_sha && (
+        <div className="mt-1 flex items-center gap-2">
+          <code className="rounded bg-surface-100 px-1.5 py-0.5 font-mono text-xs text-surface-500">
+            {version.short_sha}
+          </code>
+          <button
+            onClick={() => {
+              navigator.clipboard?.writeText(version.sha ?? '')
+              toast.success('Full commit hash copied')
+            }}
+            title="Copy full commit hash"
+            className="rounded p-0.5 text-surface-400 hover:bg-surface-100 hover:text-surface-600"
+          >
+            <Copy size={12} />
+          </button>
+          {version.message && (
+            <span className="truncate text-xs text-surface-400">
+              {version.message}
+            </span>
+          )}
+        </div>
       )}
-      {version.source !== 'git' && (
-        <p className="mt-1 text-xs text-amber-600">
-          Version read from {version.source} — git unavailable at runtime.
+      {version.sha_source !== 'git' && !version.short_sha && (
+        <p className="mt-1 text-xs text-surface-400">
+          Commit hash unavailable at runtime.
         </p>
       )}
     </div>

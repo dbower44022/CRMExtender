@@ -113,7 +113,7 @@ def _conversation_children(conn, conversation_id: str, html_col: str) -> list[di
 @router.get("/health")
 def health():
     from ...version import get_version
-    return {"status": "ok", "version": get_version()["short_sha"]}
+    return {"status": "ok", "version": get_version()["version"]}
 
 
 @router.get("/version")

@@ -661,3 +661,103 @@ def company_score_api(request: Request, company_id: str):
                 result["score"], result["factors"], triggered_by="web",
             )
     return {"score": get_entity_score("company", company_id)}
+
+
+# ---------------------------------------------------------------------------
+# Contact core fields + duplicate pre-check (Contact Entity Base PRD KP-1)
+# ---------------------------------------------------------------------------
+
+@router.put("/contacts/{contact_id}")
+async def contact_update_api(request: Request, contact_id: str):
+    """Update core contact fields (name, status, source)."""
+    from ...hierarchy import update_contact
+
+    if not _owned_entity(request, "contact", contact_id):
+        return _err("Not found", 404)
+    body = await request.json()
+    fields = {}
+    if "name" in body:
+        name = (body.get("name") or "").strip()
+        if not name:
+            return _err("name cannot be empty")
+        fields["name"] = name
+    if "status" in body:
+        if body["status"] not in ("active", "incomplete", "archived"):
+            return _err("Invalid status")
+        fields["status"] = body["status"]
+    if "source" in body:
+        fields["source"] = (body.get("source") or "").strip()
+    if not fields:
+        return _err("No editable fields provided")
+    row = update_contact(contact_id, **fields)
+    return row or {"ok": True}
+
+
+@router.post("/contacts/check")
+async def contacts_check_api(request: Request):
+    """Inline duplicate detection for the create form (KP-1 step 2).
+
+    Matches by exact email identifier, normalized phone number, or
+    case-insensitive exact name within the customer. Returns matches
+    with what they matched on.
+    """
+    from ...phone_utils import normalize_phone
+
+    cid = request.state.customer_id
+    body = await request.json()
+    email = (body.get("email") or "").strip().lower()
+    phone = (body.get("phone") or "").strip()
+    name = (body.get("name") or "").strip()
+
+    matches: dict[str, dict] = {}
+
+    with get_connection() as conn:
+        if email:
+            for r in conn.execute(
+                """SELECT c.id, c.name, ci.value AS email FROM contact_identifiers ci
+                   JOIN contacts c ON c.id = ci.contact_id
+                   WHERE ci.type = 'email' AND ci.value = ?""",
+                (email,),
+            ).fetchall():
+                matches.setdefault(r["id"], {
+                    "id": r["id"], "name": r["name"], "email": r["email"],
+                    "match_on": [],
+                })["match_on"].append("email")
+
+        if phone:
+            normalized = normalize_phone(phone)
+            if normalized:
+                for r in conn.execute(
+                    """SELECT c.id, c.name,
+                              (SELECT ci.value FROM contact_identifiers ci
+                               WHERE ci.contact_id = c.id AND ci.type = 'email'
+                               LIMIT 1) AS email
+                       FROM phone_numbers pn
+                       JOIN contacts c ON c.id = pn.entity_id
+                       WHERE pn.entity_type = 'contact' AND pn.number = ?
+                         AND (c.customer_id IS NULL OR c.customer_id = ?)""",
+                    (normalized, cid),
+                ).fetchall():
+                    matches.setdefault(r["id"], {
+                        "id": r["id"], "name": r["name"], "email": r["email"],
+                        "match_on": [],
+                    })["match_on"].append("phone")
+
+        if name:
+            for r in conn.execute(
+                """SELECT c.id, c.name,
+                          (SELECT ci.value FROM contact_identifiers ci
+                           WHERE ci.contact_id = c.id AND ci.type = 'email'
+                           LIMIT 1) AS email
+                   FROM contacts c
+                   WHERE c.name = ? COLLATE NOCASE
+                     AND (c.customer_id IS NULL OR c.customer_id = ?)
+                     AND c.status != 'merged'""",
+                (name, cid),
+            ).fetchall():
+                matches.setdefault(r["id"], {
+                    "id": r["id"], "name": r["name"], "email": r["email"],
+                    "match_on": [],
+                })["match_on"].append("name")
+
+    return {"matches": list(matches.values())}

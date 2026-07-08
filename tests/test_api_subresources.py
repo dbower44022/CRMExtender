@@ -345,3 +345,64 @@ class TestScoreRecompute:
         r = client.post("/api/v1/contacts/ct-1/score")
         assert r.status_code == 200
         assert r.json()["score"] is None
+
+
+class TestContactCreateAndCheck:
+    """Tier 1 contact management (Contact Entity Base PRD KP-1)."""
+
+    def test_rich_create(self, client, tmp_db):
+        with get_connection() as conn:
+            _company(conn, "co-rich", "Rich Co")
+        r = client.post("/api/v1/contacts", json={
+            "name": "Rich Contact", "email": "Rich@New.com",
+            "phone": "330-242-1961", "company_id": "co-rich",
+            "title": "CTO", "social_url": "https://linkedin.com/in/rich"})
+        assert r.status_code == 200, r.text
+        cid = r.json()["id"]
+        subs = client.get(f"/api/v1/contacts/{cid}/subresources").json()
+        assert subs["identifiers"][0]["value"] == "rich@new.com"
+        assert subs["phones"][0]["number"] == "+13302421961"
+        aff = subs["affiliations"][0]
+        assert (aff["company_name"], aff["title"], aff["is_primary"]) == (
+            "Rich Co", "CTO", 1)
+        with get_connection() as conn:
+            sp = conn.execute(
+                "SELECT platform, profile_url FROM contact_social_profiles "
+                "WHERE contact_id = ?", (cid,)).fetchone()
+        assert sp["platform"] == "linkedin"
+
+    def test_create_duplicate_email_409(self, client, tmp_db):
+        client.post("/api/v1/contacts", json={
+            "name": "First", "email": "dup@x.com"})
+        r = client.post("/api/v1/contacts", json={
+            "name": "Second", "email": "DUP@x.com"})
+        assert r.status_code == 409
+        assert r.json()["other_contact_name"] == "First"
+        # No orphan contact row was created
+        with get_connection() as conn:
+            n = conn.execute(
+                "SELECT COUNT(*) FROM contacts WHERE name = 'Second'"
+            ).fetchone()[0]
+        assert n == 0
+
+    def test_check_matches_email_phone_name(self, client, tmp_db):
+        client.post("/api/v1/contacts", json={
+            "name": "Known Person", "email": "known@x.com",
+            "phone": "(440) 247-4563"})
+        r = client.post("/api/v1/contacts/check", json={
+            "name": "known person", "email": "known@x.com",
+            "phone": "440.247.4563"})
+        matches = r.json()["matches"]
+        assert len(matches) == 1
+        assert sorted(matches[0]["match_on"]) == ["email", "name", "phone"]
+        r = client.post("/api/v1/contacts/check", json={"name": "Nobody"})
+        assert r.json()["matches"] == []
+
+    def test_core_field_update(self, client, tmp_db):
+        c = client.post("/api/v1/contacts", json={"name": "Rename Me"}).json()
+        r = client.put(f"/api/v1/contacts/{c['id']}",
+                       json={"name": "Renamed", "status": "archived"})
+        assert r.json()["name"] == "Renamed"
+        assert r.json()["status"] == "archived"
+        assert client.put(f"/api/v1/contacts/{c['id']}",
+                          json={"status": "bogus"}).status_code == 400

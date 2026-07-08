@@ -191,6 +191,10 @@ export interface LayoutOverride {
 export interface CreateContactRequest {
   name: string
   email?: string
+  phone?: string
+  company_id?: string
+  title?: string
+  social_url?: string
   source?: string
 }
 

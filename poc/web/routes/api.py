@@ -816,17 +816,66 @@ async def create_contact_api(request: Request):
     if not name:
         return JSONResponse({"error": "name is required"}, status_code=400)
 
-    email = (body.get("email") or "").strip()
+    email = (body.get("email") or "").strip().lower()
+    phone = (body.get("phone") or "").strip()
+    company_id = (body.get("company_id") or "").strip()
+    title = (body.get("title") or "").strip()
+    social_url = (body.get("social_url") or "").strip()
     source = (body.get("source") or "manual").strip()
+
+    # Duplicate email pre-check — the identifier UNIQUE(type, value) would
+    # otherwise 500 after the contact row already exists
+    if email:
+        with get_connection() as conn:
+            other = conn.execute(
+                "SELECT ci.contact_id, c.name FROM contact_identifiers ci "
+                "JOIN contacts c ON c.id = ci.contact_id "
+                "WHERE ci.type = 'email' AND ci.value = ?",
+                (email,),
+            ).fetchone()
+        if other:
+            return JSONResponse(
+                {"error": "A contact with this email already exists",
+                 "other_contact_id": other["contact_id"],
+                 "other_contact_name": other["name"]},
+                status_code=409,
+            )
 
     contact = create_contact(
         name, source=source, created_by=uid, customer_id=cid,
     )
     contact_id = contact["id"]
 
-    # Add email identifier if provided
     if email:
         add_contact_identifier(contact_id, "email", email, is_primary=True, source=source)
+
+    if phone:
+        from ...hierarchy import add_phone_number
+        add_phone_number("contact", contact_id, phone, customer_id=cid)
+
+    if company_id:
+        from ...contact_companies import add_affiliation
+        with get_connection() as conn:
+            co = conn.execute(
+                "SELECT customer_id FROM companies WHERE id = ?", (company_id,)
+            ).fetchone()
+        if co and (not co["customer_id"] or co["customer_id"] == cid):
+            add_affiliation(
+                contact_id, company_id, title=title,
+                is_primary=True, is_current=True, created_by=uid,
+            )
+
+    if social_url:
+        now_iso = contact["created_at"]
+        platform = "linkedin" if "linkedin" in social_url.lower() else "other"
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO contact_social_profiles "
+                "(id, contact_id, platform, profile_url, source, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, 'manual', ?, ?)",
+                (str(__import__("uuid").uuid4()), contact_id, platform,
+                 social_url, now_iso, now_iso),
+            )
 
     # Create visibility row
     now = contact["created_at"]

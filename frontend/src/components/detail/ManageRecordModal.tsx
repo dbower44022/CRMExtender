@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Loader2, Plus, Star, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { get } from '../../api/client.ts'
+import { get, put } from '../../api/client.ts'
 import {
   sub,
   useInvalidateRecord,
@@ -71,7 +71,7 @@ export function ManageRecordModal({
               <Loader2 size={16} className="animate-spin" /> Loading…
             </div>
           ) : entityType === 'contact' ? (
-            <ContactSections data={data} entityId={entityId} run={run} />
+            <ContactSections data={data} entityId={entityId} entityName={entityName} run={run} />
           ) : (
             <CompanySections data={data} entityId={entityId} run={run} />
           )}
@@ -86,15 +86,51 @@ type Run = (label: string, fn: () => Promise<unknown>) => Promise<void>
 
 /* ------------------------------------------------------------------ */
 
-function ContactSections({ data, entityId, run }: {
+function CoreFieldsSection({ entityId, initialName, run }: {
+  entityId: string
+  initialName: string
+  run: Run
+}) {
+  const [name, setName] = useState(initialName)
+  const [dirty, setDirty] = useState(false)
+
+  const save = () => run('Save details', async () => {
+    await put(`/contacts/${entityId}`, { name })
+    setDirty(false)
+  })
+
+  return (
+    <Section title="Details">
+      <div className="flex gap-2">
+        <input
+          value={name}
+          onChange={(e) => { setName(e.target.value); setDirty(true) }}
+          className="flex-1 rounded-md border border-surface-300 px-2 py-1 text-sm focus:border-primary-400 focus:outline-none"
+        />
+        <button
+          onClick={save}
+          disabled={!dirty || !name.trim()}
+          className="rounded-md bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+        >
+          Save
+        </button>
+      </div>
+    </Section>
+  )
+}
+
+
+function ContactSections({ data, entityId, entityName, run }: {
   data: Subresources
   entityId: string
+  entityName: string
   run: Run
 }) {
   const emails = data.identifiers.filter((i) => i.type === 'email')
   const otherIds = data.identifiers.filter((i) => i.type !== 'email')
   return (
     <>
+      <CoreFieldsSection entityId={entityId} initialName={entityName} run={run} />
       <Section title="Emails">
         <RowList
           rows={emails.map((e) => ({

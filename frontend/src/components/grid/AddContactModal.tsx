@@ -32,7 +32,8 @@ const labelCls = 'mb-1 block text-sm font-medium text-surface-700'
 export function AddContactModal({ onClose }: AddContactModalProps) {
   const create = useCreateContact()
 
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [title, setTitle] = useState('')
@@ -47,14 +48,15 @@ export function AddContactModal({ onClose }: AddContactModalProps) {
   // identifying fields
   useEffect(() => {
     const t = setTimeout(async () => {
-      if (!name.trim() && !email.trim() && !phone.trim()) {
+      const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
+      if (!fullName && !email.trim() && !phone.trim()) {
         setDuplicates([])
         return
       }
       try {
         const res = await post<{ matches: DuplicateMatch[] }>(
           '/contacts/check',
-          { name: name.trim(), email: email.trim(), phone: phone.trim() },
+          { name: fullName, email: email.trim(), phone: phone.trim() },
         )
         setDuplicates(res.matches)
       } catch {
@@ -62,7 +64,7 @@ export function AddContactModal({ onClose }: AddContactModalProps) {
       }
     }, 350)
     return () => clearTimeout(t)
-  }, [name, email, phone])
+  }, [firstName, lastName, email, phone])
 
   // Company picker search
   useEffect(() => {
@@ -97,13 +99,14 @@ export function AddContactModal({ onClose }: AddContactModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (!name.trim()) {
-      setError('Name is required')
+    if (!firstName.trim() && !lastName.trim()) {
+      setError('First or last name is required')
       return
     }
     create.mutate(
       {
-        name: name.trim(),
+        first_name: firstName.trim() || undefined,
+        last_name: lastName.trim() || undefined,
         email: email.trim() || undefined,
         phone: phone.trim() || undefined,
         company_id: company?.id,
@@ -192,12 +195,19 @@ export function AddContactModal({ onClose }: AddContactModalProps) {
           )}
 
           <div className="space-y-3">
-            <div>
-              <label className={labelCls}>
-                Name <span className="text-red-500">*</span>
-              </label>
-              <input className={inputCls} value={name} autoFocus
-                onChange={(e) => setName(e.target.value)} />
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className={labelCls}>
+                  First Name <span className="text-red-500">*</span>
+                </label>
+                <input className={inputCls} value={firstName} autoFocus
+                  onChange={(e) => setFirstName(e.target.value)} />
+              </div>
+              <div className="flex-1">
+                <label className={labelCls}>Last Name</label>
+                <input className={inputCls} value={lastName}
+                  onChange={(e) => setLastName(e.target.value)} />
+              </div>
             </div>
             <div className="flex gap-2">
               <div className="flex-1">

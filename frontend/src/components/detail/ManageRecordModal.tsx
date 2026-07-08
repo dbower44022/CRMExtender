@@ -8,6 +8,7 @@ import {
   useInvalidateRecord,
   useSubresources,
   type AddressRow,
+  type ContactCore,
   type Subresources,
 } from '../../api/subresources.ts'
 
@@ -71,7 +72,7 @@ export function ManageRecordModal({
               <Loader2 size={16} className="animate-spin" /> Loading…
             </div>
           ) : entityType === 'contact' ? (
-            <ContactSections data={data} entityId={entityId} entityName={entityName} run={run} />
+            <ContactSections data={data} entityId={entityId} run={run} />
           ) : (
             <CompanySections data={data} entityId={entityId} run={run} />
           )}
@@ -86,51 +87,93 @@ type Run = (label: string, fn: () => Promise<unknown>) => Promise<void>
 
 /* ------------------------------------------------------------------ */
 
-function CoreFieldsSection({ entityId, initialName, run }: {
+const LEAD_STATUSES = ['new', 'contacted', 'qualified', 'nurturing',
+                       'customer', 'lost', 'inactive']
+
+function CoreFieldsSection({ entityId, core, run }: {
   entityId: string
-  initialName: string
+  core: ContactCore
   run: Run
 }) {
-  const [name, setName] = useState(initialName)
+  const [first, setFirst] = useState(core.first_name ?? '')
+  const [last, setLast] = useState(core.last_name ?? '')
+  const [name, setName] = useState(core.name ?? '')
+  const [leadStatus, setLeadStatus] = useState(core.lead_status ?? 'new')
   const [dirty, setDirty] = useState(false)
 
+  const inputCls =
+    'w-full rounded-md border border-surface-300 px-2 py-1 text-sm focus:border-primary-400 focus:outline-none'
+  const computed = [first.trim(), last.trim()].filter(Boolean).join(' ')
+  const overridden = name.trim() !== '' && name.trim() !== computed
+
   const save = () => run('Save details', async () => {
-    await put(`/contacts/${entityId}`, { name })
+    const body: Record<string, unknown> = {
+      first_name: first,
+      last_name: last,
+      lead_status: leadStatus,
+    }
+    // Only send name when the user has overridden the computed value —
+    // otherwise the backend recomputes it from first/last
+    if (overridden) body.name = name.trim()
+    await put(`/contacts/${entityId}`, body)
     setDirty(false)
   })
 
   return (
     <Section title="Details">
-      <div className="flex gap-2">
-        <input
-          value={name}
-          onChange={(e) => { setName(e.target.value); setDirty(true) }}
-          className="flex-1 rounded-md border border-surface-300 px-2 py-1 text-sm focus:border-primary-400 focus:outline-none"
-        />
-        <button
-          onClick={save}
-          disabled={!dirty || !name.trim()}
-          className="rounded-md bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-        >
-          Save
-        </button>
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <input value={first} placeholder="First name"
+            onChange={(e) => { setFirst(e.target.value); setDirty(true) }}
+            className={inputCls} />
+          <input value={last} placeholder="Last name"
+            onChange={(e) => { setLast(e.target.value); setDirty(true) }}
+            className={inputCls} />
+        </div>
+        <div>
+          <input value={name} placeholder={computed || 'Display name'}
+            onChange={(e) => { setName(e.target.value); setDirty(true) }}
+            className={inputCls} />
+          <div className="mt-0.5 text-xs text-surface-400">
+            {overridden
+              ? 'Display name is overridden'
+              : 'Display name follows first + last'}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <select value={leadStatus}
+            onChange={(e) => { setLeadStatus(e.target.value); setDirty(true) }}
+            className="flex-1 rounded-md border border-surface-300 px-2 py-1 text-sm">
+            {LEAD_STATUSES.map((v) => (
+              <option key={v} value={v}>Lead: {v}</option>
+            ))}
+          </select>
+          <button
+            onClick={save}
+            disabled={!dirty || (!first.trim() && !last.trim() && !name.trim())}
+            className="rounded-md bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+          >
+            Save
+          </button>
+        </div>
       </div>
     </Section>
   )
 }
 
 
-function ContactSections({ data, entityId, entityName, run }: {
+function ContactSections({ data, entityId, run }: {
   data: Subresources
   entityId: string
-  entityName: string
   run: Run
 }) {
   const emails = data.identifiers.filter((i) => i.type === 'email')
   const otherIds = data.identifiers.filter((i) => i.type !== 'email')
   return (
     <>
-      <CoreFieldsSection entityId={entityId} initialName={entityName} run={run} />
+      {data.core && (
+        <CoreFieldsSection entityId={entityId} core={data.core} run={run} />
+      )}
       <Section title="Emails">
         <RowList
           rows={emails.map((e) => ({

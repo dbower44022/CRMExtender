@@ -52,7 +52,18 @@ export interface HierarchyRow {
   child_name?: string
 }
 
+export interface ContactCore {
+  name: string | null
+  first_name: string | null
+  last_name: string | null
+  lead_status: string | null
+  lead_source: string | null
+  status: string
+  source: string | null
+}
+
 export interface Subresources {
+  core?: ContactCore | null
   phones: PhoneRow[]
   addresses: AddressRow[]
   identifiers: IdentifierRow[]

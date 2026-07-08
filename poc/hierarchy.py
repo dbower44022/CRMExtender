@@ -523,9 +523,18 @@ def remove_company_hierarchy(hierarchy_id: str) -> None:
 # Contacts
 # ---------------------------------------------------------------------------
 
+def computed_display_name(first_name: str | None, last_name: str | None) -> str:
+    """Display name per Contact Entity Base PRD: first + last."""
+    return " ".join(p for p in (first_name, last_name) if p).strip()
+
+
 def create_contact(
     name: str,
     *,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    lead_status: str = "new",
+    lead_source: str | None = None,
     source: str = "manual",
     status: str = "active",
     created_by: str | None = None,
@@ -536,6 +545,10 @@ def create_contact(
     row = {
         "id": str(uuid.uuid4()),
         "name": name,
+        "first_name": first_name,
+        "last_name": last_name,
+        "lead_status": lead_status,
+        "lead_source": lead_source,
         "source": source,
         "status": status,
         "customer_id": customer_id,
@@ -546,9 +559,11 @@ def create_contact(
     }
     with get_connection() as conn:
         conn.execute(
-            "INSERT INTO contacts (id, name, source, status, customer_id, "
+            "INSERT INTO contacts (id, name, first_name, last_name, "
+            "lead_status, lead_source, source, status, customer_id, "
             "created_by, updated_by, created_at, updated_at) "
-            "VALUES (:id, :name, :source, :status, :customer_id, "
+            "VALUES (:id, :name, :first_name, :last_name, "
+            ":lead_status, :lead_source, :source, :status, :customer_id, "
             ":created_by, :updated_by, :created_at, :updated_at)",
             row,
         )
@@ -556,11 +571,36 @@ def create_contact(
 
 
 def update_contact(contact_id: str, **fields) -> dict | None:
-    """Update a contact's fields. Returns updated row dict or None."""
-    allowed = {"name", "source", "status"}
+    """Update a contact's fields. Returns updated row dict or None.
+
+    Display-name rule (PRD "Override" semantics): when first/last name
+    change and the caller does not set name explicitly, name is
+    recomputed — unless it was previously overridden (differs from the
+    computed value of the old first/last).
+    """
+    allowed = {"name", "first_name", "last_name", "lead_status",
+               "lead_source", "source", "status"}
     updates = {k: v for k, v in fields.items() if k in allowed}
     if not updates:
         return None
+
+    if ("first_name" in updates or "last_name" in updates) and "name" not in updates:
+        with get_connection() as conn:
+            cur = conn.execute(
+                "SELECT name, first_name, last_name FROM contacts WHERE id = ?",
+                (contact_id,),
+            ).fetchone()
+        if cur:
+            old_computed = computed_display_name(
+                cur["first_name"], cur["last_name"])
+            overridden = bool(cur["name"]) and cur["name"] != old_computed
+            if not overridden:
+                new_computed = computed_display_name(
+                    updates.get("first_name", cur["first_name"]),
+                    updates.get("last_name", cur["last_name"]),
+                )
+                if new_computed:
+                    updates["name"] = new_computed
     now = datetime.now(timezone.utc).isoformat()
     updates["updated_at"] = now
     set_clause = ", ".join(f"{k} = ?" for k in updates)

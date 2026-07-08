@@ -189,7 +189,9 @@ export interface LayoutOverride {
 // --- Create Contact / Company types ---
 
 export interface CreateContactRequest {
-  name: string
+  name?: string
+  first_name?: string
+  last_name?: string
   email?: string
   phone?: string
   company_id?: string

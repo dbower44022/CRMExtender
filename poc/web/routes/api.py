@@ -812,9 +812,15 @@ async def create_contact_api(request: Request):
     except Exception:
         return JSONResponse({"error": "Invalid JSON"}, status_code=400)
 
-    name = (body.get("name") or "").strip()
+    from ...hierarchy import computed_display_name
+
+    first_name = (body.get("first_name") or "").strip() or None
+    last_name = (body.get("last_name") or "").strip() or None
+    name = (body.get("name") or "").strip() or computed_display_name(first_name, last_name)
     if not name:
-        return JSONResponse({"error": "name is required"}, status_code=400)
+        return JSONResponse(
+            {"error": "A name (or first/last name) is required"},
+            status_code=400)
 
     email = (body.get("email") or "").strip().lower()
     phone = (body.get("phone") or "").strip()
@@ -842,7 +848,9 @@ async def create_contact_api(request: Request):
             )
 
     contact = create_contact(
-        name, source=source, created_by=uid, customer_id=cid,
+        name, first_name=first_name, last_name=last_name,
+        lead_source=(body.get("lead_source") or "").strip() or source,
+        source=source, created_by=uid, customer_id=cid,
     )
     contact_id = contact["id"]
 

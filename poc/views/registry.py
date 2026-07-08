@@ -68,17 +68,46 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 editable=True,
                 db_column="name",
             ),
-            # Last word of the name — rtrim(name, name-without-spaces)
-            # yields everything up to and including the last space
-            "last_name": FieldDef(
-                label="Last Name",
-                sql=(
-                    "TRIM(SUBSTR(c.name, "
-                    "LENGTH(RTRIM(c.name, REPLACE(c.name, ' ', ''))) + 1))"
-                ),
+            "first_name": FieldDef(
+                label="First Name",
+                sql="c.first_name",
                 type="text",
                 sortable=True,
                 filterable=True,
+                editable=True,
+                db_column="first_name",
+            ),
+            "last_name": FieldDef(
+                label="Last Name",
+                sql="c.last_name",
+                type="text",
+                sortable=True,
+                filterable=True,
+                editable=True,
+                db_column="last_name",
+            ),
+            "lead_status": FieldDef(
+                label="Lead Status",
+                sql="c.lead_status",
+                type="text",
+                sortable=True,
+                filterable=True,
+                editable=True,
+                db_column="lead_status",
+                select_options=["new", "contacted", "qualified", "nurturing",
+                                "customer", "lost", "inactive"],
+            ),
+            "lead_source": FieldDef(
+                label="Lead Source",
+                sql="c.lead_source",
+                type="text",
+                sortable=True,
+                filterable=True,
+                editable=True,
+                db_column="lead_source",
+                select_options=["email_sync", "google_contacts", "csv_import",
+                                "vcard_import", "linkedin_capture", "manual",
+                                "enrichment", "referral"],
             ),
             "email": FieldDef(
                 label="Email",

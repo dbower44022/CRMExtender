@@ -143,6 +143,13 @@ def subresources_api(request: Request, entity_plural: str, entity_id: str):
         "addresses": get_addresses(entity_type, entity_id),
     }
     if entity_type == "contact":
+        with get_connection() as conn:
+            core = conn.execute(
+                "SELECT name, first_name, last_name, lead_status, "
+                "       lead_source, status, source "
+                "FROM contacts WHERE id = ?", (entity_id,),
+            ).fetchone()
+        out["core"] = dict(core) if core else None
         out["identifiers"] = get_contact_identifiers(entity_id)
         out["affiliations"] = list_affiliations_for_contact(entity_id)
     else:
@@ -681,6 +688,18 @@ async def contact_update_api(request: Request, contact_id: str):
         if not name:
             return _err("name cannot be empty")
         fields["name"] = name
+    for k in ("first_name", "last_name"):
+        if k in body:
+            fields[k] = (body.get(k) or "").strip() or None
+    if "lead_status" in body:
+        if body["lead_status"] not in (
+            "new", "contacted", "qualified", "nurturing",
+            "customer", "lost", "inactive",
+        ):
+            return _err("Invalid lead_status")
+        fields["lead_status"] = body["lead_status"]
+    if "lead_source" in body:
+        fields["lead_source"] = (body.get("lead_source") or "").strip() or None
     if "status" in body:
         if body["status"] not in ("active", "incomplete", "archived"):
             return _err("Invalid status")

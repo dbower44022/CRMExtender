@@ -896,8 +896,8 @@ def cmd_migrate(args: argparse.Namespace) -> None:
     import importlib
     import sqlite3 as _sqlite3
 
-    LATEST_VERSION = 20
-    MIGRATIONS = list(range(2, LATEST_VERSION + 1))  # [2, 3, ..., 20]
+    LATEST_VERSION = 21
+    MIGRATIONS = list(range(2, LATEST_VERSION + 1))  # [2, 3, ..., 21]
 
     db_path = args.db
     if not db_path:
@@ -914,20 +914,17 @@ def cmd_migrate(args: argparse.Namespace) -> None:
         conn.close()
 
     # Fresh databases (created by init_db) have user_version=0 but already
-    # have the latest schema.  Detect this by checking for a table that only
-    # exists in v20+.
+    # have the latest schema.  Detect this by checking for a column that
+    # only exists in v21+.
     if current == 0:
         conn = _sqlite3.connect(str(db_path))
         try:
-            tables = {
-                r[0]
-                for r in conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table'"
-                )
+            contact_cols = {
+                r[1] for r in conn.execute("PRAGMA table_info(contacts)")
             }
         finally:
             conn.close()
-        if "conversation_members" in tables:
+        if "lead_status" in contact_cols:
             console.print(
                 f"[green]Database is already at the latest schema (v{LATEST_VERSION}).[/green]"
             )

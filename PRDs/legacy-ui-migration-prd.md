@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Last Updated:** 2026-07-07
-**Status:** Draft — Phases 0–3 implemented 2026-07-08 (T01–T03, T05 UI verified by manual browser testing; T04 automation pending). Phase 2 deliberate improvements over legacy: ownership + parent-match checks on all sub-resource routes; exclusive set-primary for every type; hierarchy self-link/duplicate/cycle protection; contact email normalization; contact delete (new capability — legacy had none). Phase 3 fixes recorded here: attachment orphans adopted via attachment_ids (legacy never linked them, making its cleanup job unsafe); note deletion removes attachment files (legacy leaked them); mentions recorded server-side (legacy editor never set mentionType, so note_mentions was always empty); exact-segment attachment tenant check; FTS/entity-type errors return 400 not 500. The notes card renders with an empty state instead of suppress-when-empty, superseding the pre-creation-era rule.
+**Status:** Draft — Phases 0–4 implemented 2026-07-08 (T01–T03, T05 UI verified by manual browser testing; T04 automation pending). Phase 2 deliberate improvements over legacy: ownership + parent-match checks on all sub-resource routes; exclusive set-primary for every type; hierarchy self-link/duplicate/cycle protection; contact email normalization; contact delete (new capability — legacy had none). Phase 3 fixes recorded here: attachment orphans adopted via attachment_ids (legacy never linked them, making its cleanup job unsafe); note deletion removes attachment files (legacy leaked them); mentions recorded server-side (legacy editor never set mentionType, so note_mentions was always empty); exact-segment attachment tenant check; FTS/entity-type errors return 400 not 500. The notes card renders with an empty state instead of suppress-when-empty, superseding the pre-creation-era rule. Phase 4 notes: contact import is vCard (path-based), not CSV — UIMIG-44 amended accordingly; manual conversation creation has no legacy equivalent and stays out of scope; per-contact email sync and company enrichment run synchronously (network-bound, UI warns); calendar sync uses the background single-slot pattern. Improvements over legacy recorded in the api_workflows.py docstring: tenant checks on all workflow mutations (legacy had none on assign/archive/delete/project/topic/event), surfaced errors instead of silent swallows, customer-scoped relationship types, impact counts returned, event CHECK pre-validation, hierarchy-free duplicates report retained. Deferred pieces of Phase 4 scope: companies duplicate-checked create flow in AddCompanyModal (check endpoint exists; modal wiring pending) and per-contact sync-email UI (endpoint exists).
 **Parent Documents:** [product-tdd.md] §2.3 (Dual UI Architecture), [gui-functional-requirements-prd.md]
 **Related:** [prd-index.md]
 
@@ -149,12 +149,12 @@ SPA mutations surface API errors via the existing toast pattern (sonner). Redire
 - [x] UIMIG-32: Notes cards in entity views gain create/edit/pin
 
 ### Phase 4 — Workflows
-- [ ] UIMIG-40: Create forms — events, projects, notes, conversations
-- [ ] UIMIG-41: Topic & conversation assignment (incl. communications bulk assign/archive)
-- [ ] UIMIG-42: Projects/topics management + auto-assign preview/apply
-- [ ] UIMIG-43: Relationships — create/delete/infer + relationship-type admin
-- [ ] UIMIG-44: Contacts CSV import + relate wizard
-- [ ] UIMIG-45: Companies enrich / duplicates report / resolve-domains / confirm flow
+- [x] UIMIG-40: Create forms — events, projects, notes, conversations
+- [x] UIMIG-41: Topic & conversation assignment (incl. communications bulk assign/archive)
+- [x] UIMIG-42: Projects/topics management + auto-assign preview/apply
+- [x] UIMIG-43: Relationships — create/delete/infer + relationship-type admin
+- [x] UIMIG-44: Contacts CSV import + relate wizard
+- [x] UIMIG-45: Companies enrich / duplicates report / resolve-domains / confirm flow
 
 ### Phase 5 — Decommission
 - [ ] UIMIG-50: 308 redirects for legacy page routes → SPA equivalents

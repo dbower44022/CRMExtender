@@ -169,3 +169,112 @@ def start_background_sync(*, customer_id: str, user_id: str) -> bool:
 def sync_status() -> dict:
     with _state_lock:
         return dict(_state)
+
+
+# ---------------------------------------------------------------------------
+# Calendar sync (same single-slot background pattern as the email sync)
+# ---------------------------------------------------------------------------
+
+def run_calendar_sync(*, customer_id: str, user_id: str) -> dict:
+    """Sync calendar events for every active account the user can access."""
+    from . import config
+    from .auth import get_credentials_for_account
+    from .calendar_client import CalendarScopeError
+    from .calendar_sync import sync_all_calendars
+    from .rate_limiter import RateLimiter
+
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT pa.* FROM provider_accounts pa
+               JOIN user_provider_accounts upa ON upa.account_id = pa.id
+               WHERE upa.user_id = ? AND pa.is_active = 1
+               ORDER BY pa.created_at""",
+            (user_id,),
+        ).fetchall()
+        accounts = [dict(a) for a in rows]
+
+    if not accounts:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM provider_accounts WHERE customer_id = ? AND is_active = 1 ORDER BY created_at",
+                (customer_id,),
+            ).fetchall()
+            accounts = [dict(a) for a in rows]
+
+    result = {
+        "accounts": len(accounts),
+        "events_created": 0,
+        "events_updated": 0,
+        "attendees_matched": 0,
+        "errors": [],
+    }
+    if not accounts:
+        result["errors"].append("No accounts registered.")
+        return result
+
+    rate_limiter = RateLimiter(rate=config.GMAIL_RATE_LIMIT)
+    for account in accounts:
+        email_addr = account["email_address"]
+        token_path = Path(account["auth_token_path"])
+        try:
+            creds = get_credentials_for_account(token_path)
+        except Exception as exc:
+            log.warning("Auth failed for %s: %s", email_addr, exc)
+            result["errors"].append(f"{email_addr}: auth failed ({exc})")
+            continue
+        try:
+            acct_result = sync_all_calendars(
+                account["id"], creds,
+                rate_limiter=rate_limiter,
+                customer_id=customer_id,
+                user_id=user_id,
+            )
+        except CalendarScopeError as exc:
+            result["errors"].append(f"{email_addr}: {exc}")
+            continue
+        except Exception as exc:
+            log.warning("Calendar sync failed for %s: %s", email_addr, exc)
+            result["errors"].append(f"{email_addr}: sync failed ({exc})")
+            continue
+        if acct_result.get("error"):
+            result["errors"].append(f"{email_addr}: {acct_result['error']}")
+            continue
+        result["events_created"] += acct_result.get("events_created", 0)
+        result["events_updated"] += acct_result.get("events_updated", 0)
+        result["attendees_matched"] += acct_result.get("attendees_matched", 0)
+
+    return result
+
+
+_cal_state_lock = threading.Lock()
+_cal_state: dict = {"running": False, "started_at": None, "completed_at": None,
+                    "result": None, "error": None}
+
+
+def start_background_calendar_sync(*, customer_id: str, user_id: str) -> bool:
+    """Start a background calendar sync. False if one is already running."""
+    with _cal_state_lock:
+        if _cal_state["running"]:
+            return False
+        _cal_state.update(running=True, started_at=_now_iso(),
+                          completed_at=None, result=None, error=None)
+
+    def _run() -> None:
+        try:
+            result = run_calendar_sync(customer_id=customer_id, user_id=user_id)
+            with _cal_state_lock:
+                _cal_state.update(running=False, completed_at=_now_iso(),
+                                  result=result)
+        except Exception as exc:
+            log.exception("Background calendar sync failed")
+            with _cal_state_lock:
+                _cal_state.update(running=False, completed_at=_now_iso(),
+                                  error=str(exc))
+
+    threading.Thread(target=_run, name="crm-calendar-sync", daemon=True).start()
+    return True
+
+
+def calendar_sync_status() -> dict:
+    with _cal_state_lock:
+        return dict(_cal_state)

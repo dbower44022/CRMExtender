@@ -70,6 +70,7 @@ def create_app() -> FastAPI:
         api,
         api_notes,
         api_subresources,
+        api_workflows,
         auth_routes,
         communications,
         companies,
@@ -89,6 +90,9 @@ def create_app() -> FastAPI:
     # api_notes first: its literal /notes/* paths must match before
     # api.py's GET /notes/{note_id}
     app.include_router(api_notes.router, prefix="/api/v1")
+    # api_workflows also precedes api.py: /topics, /communications/assign-targets
+    # etc. must not be swallowed by api.py's /{param} routes
+    app.include_router(api_workflows.router, prefix="/api/v1")
     app.include_router(api.router, prefix="/api/v1")
     app.include_router(api_subresources.router, prefix="/api/v1")
 

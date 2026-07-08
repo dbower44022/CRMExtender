@@ -19,6 +19,7 @@ def create_relationship_type(
     is_bidirectional: bool = False,
     description: str = "",
     created_by: str | None = None,
+    customer_id: str | None = None,
 ) -> dict:
     """Create a relationship type. Returns the new row as a dict.
 
@@ -46,12 +47,15 @@ def create_relationship_type(
             description=description,
         )
         row = rt.to_row(created_by=created_by, updated_by=created_by)
+        # Scope custom types to their customer (the legacy path left
+        # customer_id NULL, making every user-created type system-shared)
+        row["customer_id"] = customer_id
         conn.execute(
             "INSERT INTO relationship_types "
-            "(id, name, from_entity_type, to_entity_type, forward_label, "
-            "reverse_label, is_system, is_bidirectional, description, "
-            "created_by, updated_by, created_at, updated_at) "
-            "VALUES (:id, :name, :from_entity_type, :to_entity_type, "
+            "(id, customer_id, name, from_entity_type, to_entity_type, "
+            "forward_label, reverse_label, is_system, is_bidirectional, "
+            "description, created_by, updated_by, created_at, updated_at) "
+            "VALUES (:id, :customer_id, :name, :from_entity_type, :to_entity_type, "
             ":forward_label, :reverse_label, :is_system, :is_bidirectional, "
             ":description, :created_by, :updated_by, :created_at, :updated_at)",
             row,

@@ -30,6 +30,7 @@ const SETTINGS_TABS = [
   { key: 'signatures', label: 'Signatures', icon: FileSignature, adminOnly: false },
   { key: 'system', label: 'System', icon: Sliders, adminOnly: true },
   { key: 'roles', label: 'Roles', icon: Shield, adminOnly: true },
+  { key: 'relationship-types', label: 'Relationship Types', icon: Shield, adminOnly: true },
   { key: 'users', label: 'Users', icon: Users, adminOnly: true },
 ]
 

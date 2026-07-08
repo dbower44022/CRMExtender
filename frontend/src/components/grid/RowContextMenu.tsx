@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { deleteEntity, recomputeScore } from '../../api/subresources.ts'
+import { workflows } from '../../api/workflows.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
 
 interface RowContextMenuProps {
@@ -171,6 +172,27 @@ export function RowContextMenu({
             <button onClick={handleScore} className={menuItemClass}>
               <Download size={12} className="rotate-180" />
               Recompute Score
+            </button>
+          )}
+          {entityType === 'company' && (
+            <button
+              onClick={() => {
+                onClose()
+                toast.info('Enriching from website — this can take up to a minute…')
+                workflows.enrichCompany(rowId)
+                  .then((res) => {
+                    toast.success(
+                      `Enrichment: ${res.fields_discovered} fields found, ${res.fields_applied} applied`)
+                    queryClient.invalidateQueries({ queryKey: ['view-data'] })
+                    queryClient.invalidateQueries({ queryKey: ['entity-detail'] })
+                  })
+                  .catch((err) => toast.error(
+                    err instanceof Error ? err.message : 'Enrichment failed'))
+              }}
+              className={menuItemClass}
+            >
+              <Download size={12} />
+              Enrich from Website
             </button>
           )}
           <div className="my-1 border-t border-surface-200" />

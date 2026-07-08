@@ -41,6 +41,16 @@ import { AddContactModal } from './AddContactModal.tsx'
 import { AddCompanyModal } from './AddCompanyModal.tsx'
 import { GridDisplaySettings } from './GridDisplaySettings.tsx'
 import { ToolbarContextMenu } from './ToolbarContextMenu.tsx'
+import {
+  AddEventModal,
+  AddProjectModal,
+  AddRelationshipModal,
+  AssignCommunicationsModal,
+  CompanyDuplicatesModal,
+  ImportVcardsModal,
+} from '../workflows/WorkflowModals.tsx'
+import { workflows } from '../../api/workflows.ts'
+import { useQueryClient } from '@tanstack/react-query'
 import type { AutocompleteSuggestion } from '../../lib/searchParser.ts'
 
 interface EntityActionConfig {
@@ -67,7 +77,8 @@ const ENTITY_ACTIONS: Record<string, EntityActionConfig> = {
     ],
     other: [
       { label: 'Export', icon: Download },
-      { label: 'Enrich All', icon: Sparkles },
+      { label: 'Find Duplicates', icon: Merge },
+      { label: 'Resolve Domains', icon: Sparkles },
       { label: 'Bulk Edit', icon: Pencil },
     ],
   },
@@ -116,6 +127,15 @@ const ENTITY_ACTIONS: Record<string, EntityActionConfig> = {
     other: [
       { label: 'Export', icon: Download },
       { label: 'Archive', icon: Archive },
+    ],
+  },
+  relationship: {
+    primary: [
+      { label: 'Add Relationship', icon: Plus },
+    ],
+    other: [
+      { label: 'Infer Relationships', icon: Sparkles },
+      { label: 'Export', icon: Download },
     ],
   },
 }
@@ -318,6 +338,8 @@ function EntityActions() {
   const [showOther, setShowOther] = useState(false)
   const [showMergeModal, setShowMergeModal] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [workflowModal, setWorkflowModal] = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const otherRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -344,6 +366,64 @@ function EntityActions() {
   const handleActionClick = (label: string) => {
     if (label === 'Add Contact' || label === 'Add Company') {
       setShowAddModal(true)
+    } else if (label === 'Add Event' || label === 'Add Project' ||
+               label === 'Add Relationship') {
+      setWorkflowModal(label)
+    } else if (label === 'Import' && activeEntityType === 'contact') {
+      setWorkflowModal('Import')
+    } else if (label === 'Sync Calendars') {
+      handleCalendarSync()
+    } else {
+      comingSoon()
+    }
+  }
+
+  const handleCalendarSync = async () => {
+    try {
+      await workflows.calendarSync()
+      toast.info('Calendar sync started')
+      const poll = async () => {
+        const status = await workflows.calendarSyncStatus()
+        if (status.running) {
+          setTimeout(poll, 2000)
+          return
+        }
+        if (status.error) {
+          toast.error(`Calendar sync failed: ${status.error}`)
+        } else if (status.result) {
+          const r = status.result as Record<string, number>
+          toast.success(
+            `Calendar sync: ${r.events_created ?? 0} created, ` +
+            `${r.events_updated ?? 0} updated, ` +
+            `${r.attendees_matched ?? 0} attendees matched`)
+        }
+        queryClient.invalidateQueries({ queryKey: ['view-data'] })
+      }
+      setTimeout(poll, 2000)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not start sync')
+    }
+  }
+
+  const handleOtherAction = (label: string) => {
+    if (label === 'Find Duplicates') {
+      setWorkflowModal('Find Duplicates')
+    } else if (label === 'Resolve Domains') {
+      workflows.resolveDomains()
+        .then((res) => {
+          toast.success(
+            `${res.contacts_linked} of ${res.contacts_checked} unlinked contacts matched to companies`)
+          queryClient.invalidateQueries({ queryKey: ['view-data'] })
+        })
+        .catch(() => toast.error('Domain resolution failed'))
+    } else if (label === 'Infer Relationships') {
+      toast.info('Inferring relationships…')
+      workflows.inferRelationships()
+        .then((res) => {
+          toast.success(`${res.count} relationship(s) inferred`)
+          queryClient.invalidateQueries({ queryKey: ['view-data'] })
+        })
+        .catch(() => toast.error('Inference failed'))
     } else {
       comingSoon()
     }
@@ -364,8 +444,33 @@ function EntityActions() {
 
   // Selection active — bulk action buttons
   if (selectedCount > 0) {
+    const handleBulkArchive = () => {
+      workflows.archiveCommunications(Array.from(selectedRowIds))
+        .then((res) => {
+          toast.success(
+            `${res.archived} archived` +
+            (res.conversations_dismissed
+              ? `, ${res.conversations_dismissed} empty conversation(s) dismissed`
+              : ''))
+          useNavigationStore.getState().deselectAllRows()
+          queryClient.invalidateQueries({ queryKey: ['view-data'] })
+        })
+        .catch(() => toast.error('Archive failed'))
+    }
     return (
       <div className="flex items-center gap-2">
+        {activeEntityType === 'communication' && (
+          <>
+            <button onClick={handleBulkArchive} className={btnClass}>
+              <Archive size={14} />
+              Archive ({selectedCount})
+            </button>
+            <button onClick={() => setWorkflowModal('Assign Communications')} className={btnClass}>
+              <UserCheck size={14} />
+              Assign ({selectedCount})
+            </button>
+          </>
+        )}
         <button onClick={comingSoon} className={btnClass}>
           <Pencil size={14} />
           Bulk Edit ({selectedCount})
@@ -409,6 +514,12 @@ function EntityActions() {
             onClose={() => setShowMergeModal(false)}
           />
         )}
+        {workflowModal === 'Assign Communications' && (
+          <AssignCommunicationsModal
+            ids={Array.from(selectedRowIds)}
+            onClose={() => setWorkflowModal(null)}
+          />
+        )}
       </div>
     )
   }
@@ -448,7 +559,7 @@ function EntityActions() {
             {config.other.map((action) => (
               <button
                 key={action.label}
-                onClick={() => { comingSoon(); setShowOther(false) }}
+                onClick={() => { handleOtherAction(action.label); setShowOther(false) }}
                 className={dropdownItemClass}
               >
                 <action.icon size={12} /> {action.label}
@@ -466,6 +577,21 @@ function EntityActions() {
         )}
       </div>
 
+      {workflowModal === 'Add Event' && (
+        <AddEventModal onClose={() => setWorkflowModal(null)} />
+      )}
+      {workflowModal === 'Add Project' && (
+        <AddProjectModal onClose={() => setWorkflowModal(null)} />
+      )}
+      {workflowModal === 'Add Relationship' && (
+        <AddRelationshipModal fromIds={[]} onClose={() => setWorkflowModal(null)} />
+      )}
+      {workflowModal === 'Import' && (
+        <ImportVcardsModal onClose={() => setWorkflowModal(null)} />
+      )}
+      {workflowModal === 'Find Duplicates' && (
+        <CompanyDuplicatesModal onClose={() => setWorkflowModal(null)} />
+      )}
       {showAddModal && activeEntityType === 'contact' && (
         <AddContactModal onClose={() => setShowAddModal(false)} />
       )}

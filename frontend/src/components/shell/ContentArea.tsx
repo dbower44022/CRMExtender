@@ -1,4 +1,5 @@
 import { DashboardView } from '../dashboard/DashboardView.tsx'
+import { RelationshipTypesSettings } from '../settings/RelationshipTypesSettings.tsx'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { DataGrid } from '../grid/DataGrid.tsx'
 import { GridToolbar } from '../grid/GridToolbar.tsx'
@@ -18,6 +19,7 @@ const SETTINGS_COMPONENTS: Record<string, React.FC> = {
   calendars: CalendarsSettings,
   roles: RolesSettings,
   signatures: SignatureSettings,
+  'relationship-types': RelationshipTypesSettings,
 }
 
 export function ContentArea() {

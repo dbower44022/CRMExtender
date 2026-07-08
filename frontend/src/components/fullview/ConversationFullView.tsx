@@ -133,7 +133,7 @@ export function ConversationFullView({ convId, onNavigateAway }: ConversationFul
       {data.is_aggregate && (
         <ConversationChildrenCard children={data.children} onNavigateAway={onNavigateAway} />
       )}
-      <ConversationProjectCard topic={data.topic} />
+      <ConversationProjectCard topic={data.topic} conversationId={convId} />
       <ConversationEventsCard events={data.events} onNavigateAway={onNavigateAway} />
       <ConversationTagsCard tags={data.tags} />
       {data.triage_result && (

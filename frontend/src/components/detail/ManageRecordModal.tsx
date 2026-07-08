@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Loader2, Plus, Star, Trash2, X } from 'lucide-react'
+import { Loader2, Pencil, Plus, Star, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { get, put } from '../../api/client.ts'
 import {
@@ -8,6 +8,8 @@ import {
   useInvalidateRecord,
   useSubresources,
   type AddressRow,
+  type AffiliationRow,
+  type ContactCompanyRole,
   type ContactCore,
   type Subresources,
 } from '../../api/subresources.ts'
@@ -167,6 +169,12 @@ function ContactSections({ data, entityId, run }: {
   entityId: string
   run: Run
 }) {
+  const [roles, setRoles] = useState<ContactCompanyRole[]>([])
+  useEffect(() => {
+    get<ContactCompanyRole[]>('/settings/roles')
+      .then(setRoles)
+      .catch(() => setRoles([]))
+  }, [])
   const emails = data.identifiers.filter((i) => i.type === 'email')
   const otherIds = data.identifiers.filter((i) => i.type !== 'email')
   return (
@@ -196,19 +204,16 @@ function ContactSections({ data, entityId, run }: {
       <AddressSection entityType="contact" entityId={entityId} data={data} run={run} />
 
       <Section title="Affiliations">
-        <RowList
-          rows={(data.affiliations ?? []).map((a) => ({
-            id: a.id,
-            label: a.company_name,
-            sub: [a.title, a.role_name].filter(Boolean).join(' · ') || null,
-            isPrimary: !!a.is_primary,
-            muted: !a.is_current,
-          }))}
-          onPrimary={(id) => run('Set primary', () =>
-            sub.update('contact', entityId, 'affiliations', id, { is_primary: true }))}
-          onDelete={(id) => run('Delete', () =>
-            sub.remove('contact', entityId, 'affiliations', id))}
-        />
+        {(data.affiliations ?? []).length === 0 ? (
+          <div className="py-1 text-sm italic text-surface-300">None</div>
+        ) : (
+          <ul className="divide-y divide-surface-100 rounded-md border border-surface-200">
+            {(data.affiliations ?? []).map((a) => (
+              <EditableAffiliation
+                key={a.id} aff={a} entityId={entityId} roles={roles} run={run} />
+            ))}
+          </ul>
+        )}
         <AffiliationAdd entityId={entityId} run={run} />
       </Section>
 
@@ -376,6 +381,142 @@ function AddressSection({ entityType, entityId, data, run }: {
         <AddButton label="Add address" onClick={() => setAdding(true)} />
       )}
     </Section>
+  )
+}
+
+function EditableAffiliation({ aff, entityId, roles, run }: {
+  aff: AffiliationRow
+  entityId: string
+  roles: ContactCompanyRole[]
+  run: Run
+}) {
+  const [editing, setEditing] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [changingCompany, setChangingCompany] = useState(false)
+  const [title, setTitle] = useState(aff.title ?? '')
+  const [department, setDepartment] = useState(aff.department ?? '')
+  const [roleId, setRoleId] = useState(aff.role_id ?? '')
+  const [isCurrent, setIsCurrent] = useState(!!aff.is_current)
+
+  const inputCls =
+    'rounded-md border border-surface-300 px-2 py-1 text-sm focus:border-primary-400 focus:outline-none'
+
+  const save = async () => {
+    await run('Save affiliation', () =>
+      sub.update('contact', entityId, 'affiliations', aff.id, {
+        title: title || null,
+        department: department || null,
+        role_id: roleId || null,
+        is_current: isCurrent,
+      }))
+    setEditing(false)
+  }
+
+  const relink = async (newCompanyId: string) => {
+    // Company is part of the affiliation's identity — changing it is a
+    // delete + re-add that preserves the title/role
+    await run('Change company', async () => {
+      await sub.add('contact', entityId, 'affiliations', {
+        company_id: newCompanyId,
+        title: aff.title || undefined,
+        role_id: aff.role_id || undefined,
+        is_primary: !!aff.is_primary,
+      })
+      await sub.remove('contact', entityId, 'affiliations', aff.id)
+    })
+    setChangingCompany(false)
+  }
+
+  return (
+    <li className={`px-3 py-2 ${!aff.is_current ? 'opacity-50' : ''}`}>
+      {editing ? (
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-surface-800">
+            {aff.company_name}
+          </div>
+          <div className="flex gap-2">
+            <input value={title} placeholder="Job title"
+              onChange={(e) => setTitle(e.target.value)}
+              className={`flex-1 ${inputCls}`} />
+            <input value={department} placeholder="Department"
+              onChange={(e) => setDepartment(e.target.value)}
+              className={`w-28 ${inputCls}`} />
+          </div>
+          <div className="flex items-center gap-2">
+            <select value={roleId} onChange={(e) => setRoleId(e.target.value)}
+              className={`flex-1 ${inputCls}`}>
+              <option value="">No role</option>
+              {roles.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+            <label className="flex items-center gap-1 text-xs text-surface-600">
+              <input type="checkbox" checked={isCurrent}
+                onChange={(e) => setIsCurrent(e.target.checked)} />
+              Current
+            </label>
+          </div>
+          {changingCompany ? (
+            <div>
+              <div className="mb-1 text-xs text-surface-500">Move to company:</div>
+              <CompanyPicker value={null} onChange={(c) => c && relink(c.id)} />
+            </div>
+          ) : (
+            <button onClick={() => setChangingCompany(true)}
+              className="text-xs font-medium text-primary-600 hover:underline">
+              Change company…
+            </button>
+          )}
+          <div className="flex gap-2">
+            <button onClick={save}
+              className="rounded-md bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-700">
+              Save
+            </button>
+            <button onClick={() => setEditing(false)}
+              className="rounded-md px-3 py-1 text-xs text-surface-500 hover:bg-surface-100">
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm text-surface-800">
+              {aff.company_name}
+            </div>
+            {(aff.title || aff.role_name || aff.department) && (
+              <div className="truncate text-xs text-surface-400">
+                {[aff.title, aff.department, aff.role_name].filter(Boolean).join(' · ')}
+              </div>
+            )}
+          </div>
+          <button
+            title={aff.is_primary ? 'Primary' : 'Set as primary'}
+            onClick={() => !aff.is_primary && run('Set primary', () =>
+              sub.update('contact', entityId, 'affiliations', aff.id, { is_primary: true }))}
+            className={`shrink-0 rounded p-1 ${aff.is_primary ? 'text-amber-500' : 'text-surface-300 hover:bg-surface-100 hover:text-amber-500'}`}>
+            <Star size={13} fill={aff.is_primary ? 'currentColor' : 'none'} />
+          </button>
+          <button title="Edit" onClick={() => setEditing(true)}
+            className="shrink-0 rounded p-1 text-surface-300 hover:bg-surface-100 hover:text-surface-600">
+            <Pencil size={13} />
+          </button>
+          {confirming ? (
+            <button onClick={() => run('Delete', () =>
+              sub.remove('contact', entityId, 'affiliations', aff.id))}
+              onBlur={() => setConfirming(false)}
+              className="shrink-0 rounded bg-red-600 px-2 py-0.5 text-xs font-medium text-white">
+              Confirm
+            </button>
+          ) : (
+            <button title="Delete" onClick={() => setConfirming(true)}
+              className="shrink-0 rounded p-1 text-surface-300 hover:bg-red-50 hover:text-red-600">
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      )}
+    </li>
   )
 }
 

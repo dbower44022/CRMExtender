@@ -39,8 +39,14 @@ export interface AffiliationRow {
   role_id: string | null
   role_name: string | null
   title: string | null
+  department: string | null
   is_primary: number
   is_current: number
+}
+
+export interface ContactCompanyRole {
+  id: string
+  name: string
 }
 
 export interface HierarchyRow {

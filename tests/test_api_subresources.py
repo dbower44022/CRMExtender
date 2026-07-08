@@ -247,6 +247,29 @@ class TestAffiliations:
         subs = client.get("/api/v1/contacts/ct-1/subresources").json()
         assert subs["affiliations"] == []
 
+    def test_edit_all_fields_roundtrip(self, client, tmp_db):
+        """The Manage modal edits title, department, role, and current."""
+        with get_connection() as conn:
+            _contact(conn)
+            _company(conn)
+            conn.execute(
+                "INSERT INTO contact_company_roles (id, customer_id, name, "
+                "sort_order, is_system, created_at, updated_at) "
+                "VALUES ('role-x', ?, 'Advisor', 0, 0, ?, ?)",
+                (CUST_ID, _NOW, _NOW))
+        row = client.post("/api/v1/contacts/ct-1/affiliations",
+                          json={"company_id": "co-1", "title": "Analyst"}).json()
+        r = client.put(f"/api/v1/contacts/ct-1/affiliations/{row['id']}",
+                       json={"title": "Senior Analyst", "department": "Finance",
+                             "role_id": "role-x", "is_current": False})
+        assert r.status_code == 200
+        subs = client.get("/api/v1/contacts/ct-1/subresources").json()
+        aff = subs["affiliations"][0]
+        assert aff["title"] == "Senior Analyst"
+        assert aff["department"] == "Finance"
+        assert aff["role_name"] == "Advisor"
+        assert aff["is_current"] == 0
+
 
 class TestHierarchy:
     def _three(self, conn):

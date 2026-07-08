@@ -323,6 +323,101 @@ def resolve_new_contact(
     return {"candidates_created": created}
 
 
+def resolve_contacts_batch(
+    contact_ids: set[str], *, customer_id: str | None, source: str,
+) -> dict:
+    """Resolve many newly created contacts in one pass (IDENT-14, sync).
+
+    Loads all profiles once and builds blocking buckets, then scores each
+    target contact against only its blocking-matched peers — amortizing
+    the profile load across the whole batch (email sync can create
+    hundreds of co-participant contacts). Queue-only, idempotent.
+    """
+    if not contact_ids:
+        return {"contacts": 0, "candidates_created": 0}
+
+    thresholds = get_thresholds(customer_id)
+    profiles = load_profiles(customer_id)
+    by_id = {p.id: p for p in profiles}
+
+    # Blocking buckets over all profiles
+    buckets: dict[str, list[str]] = {}
+    for p in profiles:
+        keys = set()
+        for token in p.name.lower().split():
+            if len(token) > 2:
+                keys.add(f"n:{token}")
+        keys.update(f"c:{c}" for c in p.companies)
+        keys.update(f"d:{d}" for d in p.domains)
+        keys.update(f"p:{ph}" for ph in p.phones)
+        for k in keys:
+            buckets.setdefault(k, []).append(p.id)
+
+    with get_connection() as conn:
+        existing = {
+            _pair_key(r["contact_a_id"], r["contact_b_id"])
+            for r in conn.execute(
+                "SELECT contact_a_id, contact_b_id FROM match_candidates"
+            ).fetchall()
+        }
+
+    created = 0
+    resolved = 0
+    now = _now()
+    with get_connection() as conn:
+        for target_id in contact_ids:
+            target = by_id.get(target_id)
+            if target is None:
+                continue
+            resolved += 1
+            # Gather blocking-matched peers
+            peer_ids: set[str] = set()
+            for token in target.name.lower().split():
+                if len(token) > 2:
+                    peer_ids.update(buckets.get(f"n:{token}", ()))
+            for c in target.companies:
+                peer_ids.update(buckets.get(f"c:{c}", ()))
+            for d in target.domains:
+                peer_ids.update(buckets.get(f"d:{d}", ()))
+            for ph in target.phones:
+                peer_ids.update(buckets.get(f"p:{ph}", ()))
+            peer_ids.discard(target_id)
+
+            for peer_id in peer_ids:
+                key = _pair_key(target_id, peer_id)
+                if key in existing:
+                    continue
+                result = score_pair(target, by_id[peer_id])
+                if result.confidence < thresholds["review"]:
+                    continue
+                conn.execute(
+                    "INSERT OR IGNORE INTO match_candidates "
+                    "(id, customer_id, contact_a_id, contact_b_id, confidence, "
+                    " signals, status, source, created_at, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)",
+                    (str(uuid.uuid4()), customer_id, key[0], key[1],
+                     result.confidence, result.signals_json(), source, now, now))
+                existing.add(key)
+                created += 1
+
+    return {"contacts": resolved, "candidates_created": created}
+
+
+def resolve_contacts_since(
+    since_iso: str, *, customer_id: str | None, source: str,
+) -> dict:
+    """Batch-resolve contacts created at/after a timestamp (sync window)."""
+    with get_connection() as conn:
+        ids = {
+            r["id"] for r in conn.execute(
+                "SELECT id FROM contacts WHERE created_at >= ? "
+                "AND status IN ('active', 'incomplete') "
+                "AND (customer_id IS NULL OR customer_id = ?)",
+                (since_iso, customer_id))
+        }
+    return resolve_contacts_batch(ids, customer_id=customer_id, source=source)
+
+
 def pending_candidate_contact_ids(customer_id: str | None) -> set[str]:
     """Contact IDs that appear in a pending match candidate (for the
     "Possible Duplicate" badge, IDENT-15)."""

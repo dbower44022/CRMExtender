@@ -1028,3 +1028,39 @@ def review_queue_restore_api(request: Request, candidate_id: str):
         if not cur.rowcount:
             return _err("Not found", 404)
     return {"status": "pending"}
+
+
+# ---------------------------------------------------------------------------
+# Identity resolution thresholds (IDENT-09/10)
+# ---------------------------------------------------------------------------
+
+@router.get("/settings/duplicate-thresholds")
+def duplicate_thresholds_get_api(request: Request):
+    from ...identity_resolution import DEFAULT_THRESHOLDS, get_thresholds
+
+    return {
+        "thresholds": get_thresholds(request.state.customer_id),
+        "defaults": DEFAULT_THRESHOLDS,
+    }
+
+
+@router.put("/settings/duplicate-thresholds")
+async def duplicate_thresholds_set_api(request: Request):
+    from ...settings import set_setting
+
+    if request.state.user and request.state.user.get("role") != "admin":
+        return _err("Forbidden", 403)
+    cid = request.state.customer_id
+    body = await request.json()
+    for key in ("auto", "flag", "review"):
+        if key in body:
+            try:
+                v = float(body[key])
+            except (TypeError, ValueError):
+                return _err(f"Invalid value for {key}")
+            if not 0.0 <= v <= 1.0:
+                return _err(f"{key} must be between 0 and 1")
+            set_setting(cid, f"idr_threshold_{key}", str(v),
+                        scope="system")
+    from ...identity_resolution import get_thresholds
+    return {"thresholds": get_thresholds(cid)}

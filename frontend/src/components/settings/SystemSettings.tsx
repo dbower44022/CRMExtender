@@ -5,6 +5,7 @@ import {
   useUpdateSystemSettings,
   useReferenceData,
 } from '../../api/settings.ts'
+import { DuplicateThresholds } from './DuplicateThresholds.tsx'
 
 export function SystemSettings() {
   const { data: settings, isLoading } = useSystemSettings()
@@ -159,6 +160,8 @@ export function SystemSettings() {
         >
           {updateSettings.isPending ? 'Saving...' : 'Save'}
         </button>
+
+        <DuplicateThresholds />
       </div>
     </div>
   )

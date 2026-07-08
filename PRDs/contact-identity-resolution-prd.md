@@ -2,7 +2,9 @@
 
 **Version:** 2.1
 **Last Updated:** 2026-07-08
-**Status:** Partially implemented — matching engine (§5–6), review-queue pipeline for existing contacts (§7 batch), and human review queue (§9) built as Tier 3a. Real-time resolution now runs on manual create and vCard import (§7/IDENT-14); "Possible Duplicate" badge on contacts (IDENT-15). Not yet: email-sync entry point (the co-participant firehose — deferred for perf), enrichment entry point, flagged-merge review badges (§10), threshold config UI (IDENT-10).
+**Status:** Partially implemented — matching engine (§5–6), review-queue pipeline for existing contacts (§7 batch), and human review queue (§9) built as Tier 3a. Real-time resolution now runs on manual create and vCard import (§7/IDENT-14); "Possible Duplicate" badge on contacts (IDENT-15). Sync-time resolution now runs after each full sync (batched over the sync window — firehose-safe); threshold config UI in Settings → System (IDENT-10). Not yet: enrichment entry point, flagged-merge review badges (§10 — moot under the current queue-only stance, no silent auto-merge).
+
+> **V2.3 (2026-07-08):** Tier 3c — sync-time resolution: `run_full_sync` batch-resolves contacts created during the sync window via `resolve_contacts_since`/`resolve_contacts_batch` (one profile load amortized across the batch). Tenant threshold config UI (sliders) in Settings → System.
 
 > **V2.2 (2026-07-08):** Tier 3b — real-time resolution wired into manual create (`POST /contacts`) and vCard import via `resolve_new_contact` (targeted blocking queries, queues fuzzy matches the exact dedup missed; queue-only, no silent auto-merge). "Possible Duplicate" badge on the contact record links to the review queue.
 
@@ -287,7 +289,7 @@ Thresholds are configurable per tenant. Changes apply to future matches only, no
 - [x] IDENT-07: Implement weighted confidence scoring formula
 - [x] IDENT-08: Implement threshold-based action routing (auto-merge, flag, review queue, no match)
 - [x] IDENT-09: Implement tenant-configurable threshold settings
-- [ ] IDENT-10: Implement threshold configuration UI in tenant settings
+- [x] IDENT-10: Implement threshold configuration UI in tenant settings
 
 **Tests:**
 

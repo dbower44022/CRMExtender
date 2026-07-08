@@ -58,11 +58,14 @@ def run_full_sync(*, customer_id: str, user_id: str) -> dict:
         "triaged": 0,
         "summarized": 0,
         "enriched": 0,
+        "duplicate_candidates": 0,
         "errors": [],
     }
     if not accounts:
         result["errors"].append("No accounts registered.")
         return result
+
+    sync_start = _now_iso()
 
     gmail_limiter = RateLimiter(rate=config.GMAIL_RATE_LIMIT)
     claude_limiter = RateLimiter(rate=config.CLAUDE_RATE_LIMIT)
@@ -125,6 +128,17 @@ def run_full_sync(*, customer_id: str, user_id: str) -> dict:
         result["enriched"] = enrich_result.get("enriched", 0)
     except Exception as exc:
         result["errors"].append(f"batch enrichment failed ({exc})")
+
+    # Identity resolution over contacts created during this sync
+    # (Identity Resolution Sub-PRD §7 — sync-time entry point). Batched
+    # so the co-participant firehose doesn't score inline per contact.
+    try:
+        from .identity_resolution import resolve_contacts_since
+        idr = resolve_contacts_since(
+            sync_start, customer_id=customer_id, source="email_sync")
+        result["duplicate_candidates"] = idr["candidates_created"]
+    except Exception as exc:
+        log.warning("Sync-time identity resolution failed: %s", exc)
 
     return result
 

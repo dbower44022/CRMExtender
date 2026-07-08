@@ -295,3 +295,137 @@ class TestDuplicateBadgeApi:
         assert detail2["identity"]["is_possible_duplicate"] is True
         assert client.get(
             "/api/v1/contacts/review-queue").json()["pending_count"] == 1
+
+
+class TestBatchResolution:
+    def test_resolve_batch_amortized(self, tmp_db):
+        from poc.identity_resolution import resolve_contacts_batch
+        with get_connection() as conn:
+            _company(conn, "co-b", "BatchCo")
+            _contact(conn, "old1", "Chris Vance", company_id="co-b",
+                     email="chris@old.com")
+            _contact(conn, "new1", "Chris Vance", company_id="co-b",
+                     email="cvance@new.com")
+            _contact(conn, "new2", "Unrelated Person", email="u@nowhere.com")
+        r = resolve_contacts_batch(
+            {"new1", "new2"}, customer_id=CUST_ID, source="email_sync")
+        assert r["contacts"] == 2
+        assert r["candidates_created"] == 1  # new1<->old1 only
+
+    def test_resolve_since_window(self, tmp_db):
+        from poc.identity_resolution import resolve_contacts_since
+        # Old contact created "before" the window
+        with get_connection() as conn:
+            _company(conn, "co-w", "WindowCo")
+            _contact(conn, "old", "Dana Lee", company_id="co-w",
+                     email="dana@old.com")
+        marker = datetime.now(timezone.utc).isoformat()
+        with get_connection() as conn:
+            conn.execute(
+                "INSERT INTO contacts (id, customer_id, name, status, "
+                "created_at, updated_at) VALUES ('fresh', ?, 'Dana Lee', "
+                "'active', ?, ?)", (CUST_ID, marker, marker))
+            conn.execute(
+                "INSERT INTO contact_companies (id, contact_id, company_id, "
+                "is_primary, is_current, source, created_at, updated_at) "
+                "VALUES ('cc-fresh', 'fresh', 'co-w', 1, 1, 'test', ?, ?)",
+                (marker, marker))
+        r = resolve_contacts_since(
+            marker, customer_id=CUST_ID, source="email_sync")
+        assert r["contacts"] == 1  # only 'fresh', not 'old'
+        assert r["candidates_created"] == 1
+
+
+class TestThresholdSettings:
+    @pytest.fixture()
+    def client(self, tmp_db, monkeypatch):
+        monkeypatch.setattr(
+            "poc.hierarchy.get_current_user",
+            lambda: {"id": USER_ID, "email": "a@idr.com", "name": "IDR Admin",
+                     "role": "admin", "customer_id": CUST_ID})
+        from poc.web.app import create_app
+        return TestClient(create_app(), raise_server_exceptions=False)
+
+    def test_get_defaults_then_update(self, client, tmp_db):
+        r = client.get("/api/v1/settings/duplicate-thresholds").json()
+        assert r["thresholds"] == {"auto": 0.90, "flag": 0.70, "review": 0.40}
+        r = client.put("/api/v1/settings/duplicate-thresholds",
+                       json={"review": 0.55})
+        assert r.json()["thresholds"]["review"] == 0.55
+        # Persisted
+        assert client.get(
+            "/api/v1/settings/duplicate-thresholds"
+        ).json()["thresholds"]["review"] == 0.55
+
+    def test_rejects_out_of_range(self, client, tmp_db):
+        assert client.put("/api/v1/settings/duplicate-thresholds",
+                          json={"auto": 1.5}).status_code == 400
+        assert client.put("/api/v1/settings/duplicate-thresholds",
+                          json={"flag": "high"}).status_code == 400
+
+    def test_threshold_affects_scan(self, client, tmp_db):
+        # Name-only match scores 0.30 — below default review (0.40) but
+        # above a custom 0.25 threshold
+        with get_connection() as conn:
+            _contact(conn, "a", "Same Name")
+            _contact(conn, "b", "Same Name")
+        assert client.post(
+            "/api/v1/contacts/duplicate-scan").json()["candidates_created"] == 0
+        client.put("/api/v1/settings/duplicate-thresholds",
+                   json={"review": 0.25})
+        assert client.post(
+            "/api/v1/contacts/duplicate-scan").json()["candidates_created"] == 1
+
+
+class TestSyncTimeResolution:
+    def test_run_full_sync_resolves_new_contacts(self, tmp_db, monkeypatch):
+        """run_full_sync resolves contacts created during the sync window."""
+        import poc.sync_service as svc
+
+        # An existing contact predating the sync
+        with get_connection() as conn:
+            _company(conn, "co-s", "SyncCo")
+            _contact(conn, "old", "Morgan Reed", company_id="co-s",
+                     email="morgan@old.com")
+            conn.execute(
+                "INSERT INTO provider_accounts (id, customer_id, provider, "
+                "email_address, auth_token_path, is_active, initial_sync_done, "
+                "created_at, updated_at) VALUES ('acct', ?, 'gmail', "
+                "'me@x.com', '/tmp/t.json', 1, 1, ?, ?)", (CUST_ID, _NOW, _NOW))
+
+        # Mock the network-bound sync steps; sync_contacts "creates" a
+        # duplicate co-participant during the window
+        monkeypatch.setattr("poc.auth.get_credentials_for_account",
+                            lambda p: object())
+        monkeypatch.setattr("poc.gmail_client.get_user_email",
+                            lambda c: "me@x.com")
+
+        def fake_sync_contacts(creds, **kw):
+            with get_connection() as conn:
+                now = datetime.now(timezone.utc).isoformat()
+                conn.execute(
+                    "INSERT INTO contacts (id, customer_id, name, status, "
+                    "created_at, updated_at) VALUES ('fresh', ?, 'Morgan Reed', "
+                    "'active', ?, ?)", (CUST_ID, now, now))
+                conn.execute(
+                    "INSERT INTO contact_companies (id, contact_id, company_id, "
+                    "is_primary, is_current, source, created_at, updated_at) "
+                    "VALUES ('cc-f', 'fresh', 'co-s', 1, 1, 'sync', ?, ?)",
+                    (now, now))
+            return 1
+
+        monkeypatch.setattr("poc.sync.sync_contacts", fake_sync_contacts)
+        monkeypatch.setattr("poc.sync.incremental_sync",
+                            lambda *a, **k: {"messages_fetched": 0})
+        monkeypatch.setattr("poc.sync.process_conversations",
+                            lambda *a, **k: (0, 0, 0))
+        monkeypatch.setattr("poc.enrichment_pipeline.enrich_new_companies",
+                            lambda: {"enriched": 0})
+
+        result = svc.run_full_sync(customer_id=CUST_ID, user_id=USER_ID)
+        assert result["duplicate_candidates"] == 1
+        with get_connection() as conn:
+            n = conn.execute(
+                "SELECT COUNT(*) FROM match_candidates WHERE source = 'email_sync'"
+            ).fetchone()[0]
+        assert n == 1

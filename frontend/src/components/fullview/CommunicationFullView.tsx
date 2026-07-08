@@ -6,7 +6,6 @@ import { ParticipantsCard } from './ParticipantsCard.tsx'
 import { SummaryCard } from './SummaryCard.tsx'
 import { ConversationCard } from './ConversationCard.tsx'
 import { TriageCard } from './TriageCard.tsx'
-import { NotesCard } from './NotesCard.tsx'
 import { MetadataCard } from './MetadataCard.tsx'
 import { FullViewSkeleton } from './FullViewSkeleton.tsx'
 import type { CommunicationFullData } from '../../types/api.ts'
@@ -65,7 +64,6 @@ export function CommunicationFullContent({ commId, onNavigateAway }: Communicati
       {data.triage_result && (
         <TriageCard triageResult={data.triage_result} triageReason={data.triage_reason} />
       )}
-      <NotesCard notes={data.notes} />
       <MetadataCard data={data} />
     </div>
   ) : null

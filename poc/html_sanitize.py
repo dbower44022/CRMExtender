@@ -54,3 +54,32 @@ def sanitize_email_html(html: str | None) -> str | None:
         strip=True,
     )
     return cleaned if cleaned.strip() else None
+
+
+_NOTE_TAGS = [
+    "p", "br", "strong", "em", "u", "s", "code", "pre", "blockquote",
+    "h1", "h2", "h3", "h4", "h5", "h6",
+    "ul", "ol", "li", "a", "img",
+    "table", "thead", "tbody", "tr", "th", "td",
+    "span", "div", "hr", "sub", "sup", "mark",
+]
+
+_NOTE_ATTRS = {
+    "a": ["href", "target", "rel"],
+    "img": ["src", "alt", "title", "width", "height"],
+    "span": ["class", "data-type", "data-id", "data-mention-type"],
+    "td": ["colspan", "rowspan"],
+    "th": ["colspan", "rowspan"],
+}
+
+
+def sanitize_note_html(html: str | None) -> str | None:
+    """Sanitize note editor HTML on save (Tiptap output incl. mention spans).
+
+    Distinct allowlist from sanitize_email_html: notes keep editing markup
+    (mark, sub/sup, mention data attributes) and never contain full email
+    documents.
+    """
+    if not html:
+        return html
+    return bleach.clean(html, tags=_NOTE_TAGS, attributes=_NOTE_ATTRS, strip=True)

@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Last Updated:** 2026-07-07
-**Status:** Draft — Phases 0–2 implemented 2026-07-08 (T01–T03, T05 UI verified by manual browser testing; T04 automation pending). Phase 2 deliberate improvements over legacy: ownership + parent-match checks on all sub-resource routes; exclusive set-primary for every type; hierarchy self-link/duplicate/cycle protection; contact email normalization; contact delete (new capability — legacy had none).
+**Status:** Draft — Phases 0–3 implemented 2026-07-08 (T01–T03, T05 UI verified by manual browser testing; T04 automation pending). Phase 2 deliberate improvements over legacy: ownership + parent-match checks on all sub-resource routes; exclusive set-primary for every type; hierarchy self-link/duplicate/cycle protection; contact email normalization; contact delete (new capability — legacy had none). Phase 3 fixes recorded here: attachment orphans adopted via attachment_ids (legacy never linked them, making its cleanup job unsafe); note deletion removes attachment files (legacy leaked them); mentions recorded server-side (legacy editor never set mentionType, so note_mentions was always empty); exact-segment attachment tenant check; FTS/entity-type errors return 400 not 500. The notes card renders with an empty state instead of suppress-when-empty, superseding the pre-creation-era rule.
 **Parent Documents:** [product-tdd.md] §2.3 (Dual UI Architecture), [gui-functional-requirements-prd.md]
 **Related:** [prd-index.md]
 
@@ -144,9 +144,9 @@ SPA mutations surface API errors via the existing toast pattern (sonner). Redire
 - [x] UIMIG-23: API tests per sub-resource; parity checklist against legacy routes
 
 ### Phase 3 — Notes Subsystem
-- [ ] UIMIG-30: Notes API — CRUD, pin, revisions, attachments (upload/serve), mentions, entity links, search
-- [ ] UIMIG-31: SPA notes UI — editor (TipTap), revision history, attachments, mentions, linking
-- [ ] UIMIG-32: Notes cards in entity views gain create/edit/pin
+- [x] UIMIG-30: Notes API — CRUD, pin, revisions, attachments (upload/serve), mentions, entity links, search
+- [x] UIMIG-31: SPA notes UI — editor (TipTap), revision history, attachments, mentions, linking
+- [x] UIMIG-32: Notes cards in entity views gain create/edit/pin
 
 ### Phase 4 — Workflows
 - [ ] UIMIG-40: Create forms — events, projects, notes, conversations
@@ -169,5 +169,5 @@ SPA mutations surface API errors via the existing toast pattern (sonner). Redire
 - [ ] UIMIG-T04: No `<a>` in the SPA resolves to a legacy page route (automated link audit), excluding auth/OAuth
 - [x] UIMIG-T05: Dashboard endpoint returns counts matching legacy dashboard queries
 - [x] UIMIG-T06: Sub-resource API round-trip per type (add → edit → set-primary → delete)
-- [ ] UIMIG-T07: Notes round-trip incl. revision created on edit, attachment upload/download
+- [x] UIMIG-T07: Notes round-trip incl. revision created on edit, attachment upload/download
 - [ ] UIMIG-T08: Decommission — legacy page URLs 308 to SPA equivalents; action routes return 404

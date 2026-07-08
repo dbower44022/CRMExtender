@@ -113,9 +113,12 @@ def _extract_mentions_from_doc(node: dict | list) -> list[tuple[str, str]]:
     elif isinstance(node, dict):
         if node.get("type") == "mention":
             attrs = node.get("attrs", {})
-            m_type = attrs.get("mentionType", "")
+            # Tiptap's default Mention node has no mentionType attr — the
+            # legacy editor never set one, so mentions were never recorded.
+            # Default to "user" (the only type the UI offers).
+            m_type = attrs.get("mentionType") or "user"
             m_id = attrs.get("id", "")
-            if m_type and m_id:
+            if m_id:
                 results.append((m_type, m_id))
         for child in node.get("content", []):
             results.extend(_extract_mentions_from_doc(child))

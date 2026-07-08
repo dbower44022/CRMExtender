@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useEntityDetail } from '../../api/detail.ts'
 import { ManageRecordModal } from './ManageRecordModal.tsx'
+import { EntityNotesCard } from '../notes/EntityNotesCard.tsx'
 import { IdentityZone } from './IdentityZone.tsx'
 import { ContextZone } from './ContextZone.tsx'
 import { TimelineZone } from './TimelineZone.tsx'
@@ -39,6 +40,11 @@ export function RecordDetail({ entityType, entityId }: RecordDetailProps) {
         onManage={editable ? () => setManaging(true) : undefined}
       />
       <ContextZone data={data.context} />
+      {['contact', 'company', 'event', 'project'].includes(entityType) && (
+        <div className="border-b border-surface-200 p-3">
+          <EntityNotesCard entityType={entityType} entityId={entityId} />
+        </div>
+      )}
       <TimelineZone entries={data.timeline} />
       {managing && editable && (
         <ManageRecordModal

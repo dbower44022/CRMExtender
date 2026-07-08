@@ -68,6 +68,7 @@ def create_app() -> FastAPI:
 
     from .routes import (
         api,
+        api_notes,
         api_subresources,
         auth_routes,
         communications,
@@ -85,6 +86,9 @@ def create_app() -> FastAPI:
     )
 
     # JSON API for React frontend
+    # api_notes first: its literal /notes/* paths must match before
+    # api.py's GET /notes/{note_id}
+    app.include_router(api_notes.router, prefix="/api/v1")
     app.include_router(api.router, prefix="/api/v1")
     app.include_router(api_subresources.router, prefix="/api/v1")
 

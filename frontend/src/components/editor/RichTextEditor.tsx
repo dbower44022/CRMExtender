@@ -2,6 +2,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { EditorToolbar } from './EditorToolbar.tsx'
+import { NoteMention } from './mentionSuggestion.ts'
 import './editor.css'
 
 interface RichTextEditorProps {
@@ -11,6 +12,8 @@ interface RichTextEditorProps {
   editable?: boolean
   className?: string
   autoFocus?: boolean
+  /** Enable @-mention autocomplete (notes) */
+  mentions?: boolean
 }
 
 export function RichTextEditor({
@@ -20,6 +23,7 @@ export function RichTextEditor({
   editable = true,
   className = '',
   autoFocus = false,
+  mentions = false,
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -31,6 +35,7 @@ export function RichTextEditor({
         },
       }),
       Placeholder.configure({ placeholder }),
+      ...(mentions ? [NoteMention] : []),
     ],
     content: content || '',
     editable,

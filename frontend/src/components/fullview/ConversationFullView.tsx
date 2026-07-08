@@ -11,7 +11,7 @@ import { ConversationAssociationsCard } from './ConversationAssociationsCard.tsx
 import { ConversationChildrenCard } from './ConversationChildrenCard.tsx'
 import { ConversationTagsCard } from './ConversationTagsCard.tsx'
 import { TriageCard } from './TriageCard.tsx'
-import { ConversationNotesCard } from './ConversationNotesCard.tsx'
+import { EntityNotesCard } from '../notes/EntityNotesCard.tsx'
 import { ConversationMetadataCard } from './ConversationMetadataCard.tsx'
 import { FullViewSkeleton } from './FullViewSkeleton.tsx'
 
@@ -139,7 +139,7 @@ export function ConversationFullView({ convId, onNavigateAway }: ConversationFul
       {data.triage_result && (
         <TriageCard triageResult={data.triage_result} triageReason={data.dismissed_reason} />
       )}
-      <ConversationNotesCard notes={data.notes} />
+      <EntityNotesCard entityType="conversation" entityId={convId} />
       <ConversationMetadataCard data={data} />
     </div>
   ) : null

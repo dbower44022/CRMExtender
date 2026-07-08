@@ -42,6 +42,17 @@ from ... import config
 router = APIRouter()
 
 
+def _has_pending_candidate(contact_id: str, customer_id: str) -> bool:
+    """True if the contact appears in a pending duplicate candidate."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM match_candidates WHERE status = 'pending' "
+            "AND (contact_a_id = ? OR contact_b_id = ?) "
+            "AND (customer_id IS NULL OR customer_id = ?) LIMIT 1",
+            (contact_id, contact_id, customer_id)).fetchone()
+    return row is not None
+
+
 def _comm_html_col(conn) -> str:
     """Return the column name for cleaned HTML content in communications.
 
@@ -895,6 +906,14 @@ async def create_contact_api(request: Request):
             (str(__import__("uuid").uuid4()), uid, contact_id, now, now),
         )
 
+    # Real-time identity resolution (IDENT-14) — the inline check already
+    # caught exact-email dups; this queues fuzzy matches for review
+    try:
+        from ...identity_resolution import resolve_new_contact
+        resolve_new_contact(contact_id, customer_id=cid, source="manual_entry")
+    except Exception:
+        pass
+
     return contact
 
 
@@ -1124,6 +1143,7 @@ def contact_detail_api(request: Request, contact_id: str):
             "source": contact.get("source"),
             "status": contact.get("status"),
             "score": score_data.get("score_value") if score_data else None,
+            "is_possible_duplicate": _has_pending_candidate(contact_id, cid),
         },
         "context": {
             "affiliations": affiliations,

@@ -214,3 +214,84 @@ class TestReviewQueueApi:
         # (a,b) and (b,c) gone with b; (a,c) survives
         assert client.get(
             "/api/v1/contacts/review-queue").json()["pending_count"] == 1
+
+
+class TestRealtimeResolution:
+    def test_resolve_new_contact_queues_fuzzy_match(self, tmp_db):
+        from poc.identity_resolution import resolve_new_contact
+        with get_connection() as conn:
+            _company(conn, "co-x", "Acme Corp")
+            _contact(conn, "existing", "Pat Q Smith", company_id="co-x",
+                     email="pat@personal.com")
+            _contact(conn, "newone", "Pat Q Smith", company_id="co-x",
+                     email="psmith@work.com")
+        r = resolve_new_contact("newone", customer_id=CUST_ID, source="import")
+        assert r["candidates_created"] == 1
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT status, source FROM match_candidates").fetchone()
+        assert row["status"] == "pending"
+        assert row["source"] == "import"
+
+    def test_resolve_is_idempotent(self, tmp_db):
+        from poc.identity_resolution import resolve_new_contact
+        with get_connection() as conn:
+            _contact(conn, "existing", "Dup Name", email="a@corp.io")
+            _contact(conn, "newone", "Dup Name", email="b@corp.io")
+        assert resolve_new_contact(
+            "newone", customer_id=CUST_ID, source="import"
+        )["candidates_created"] == 1
+        assert resolve_new_contact(
+            "newone", customer_id=CUST_ID, source="import"
+        )["candidates_created"] == 0
+
+    def test_no_candidate_for_unrelated_contact(self, tmp_db):
+        from poc.identity_resolution import resolve_new_contact
+        with get_connection() as conn:
+            _contact(conn, "existing", "Alice Johnson", email="alice@x.com")
+            _contact(conn, "newone", "Bob Williams", email="bob@y.com")
+        assert resolve_new_contact(
+            "newone", customer_id=CUST_ID, source="manual_entry"
+        )["candidates_created"] == 0
+
+    def test_pending_contact_ids(self, tmp_db):
+        from poc.identity_resolution import (
+            pending_candidate_contact_ids, resolve_new_contact)
+        with get_connection() as conn:
+            _contact(conn, "existing", "Dup Name", email="a@corp.io")
+            _contact(conn, "newone", "Dup Name", email="b@corp.io")
+        resolve_new_contact("newone", customer_id=CUST_ID, source="import")
+        assert pending_candidate_contact_ids(CUST_ID) == {"existing", "newone"}
+
+
+class TestDuplicateBadgeApi:
+    @pytest.fixture()
+    def client(self, tmp_db, monkeypatch):
+        monkeypatch.setattr(
+            "poc.hierarchy.get_current_user",
+            lambda: {"id": USER_ID, "email": "a@idr.com", "name": "IDR Admin",
+                     "role": "admin", "customer_id": CUST_ID})
+        from poc.web.app import create_app
+        return TestClient(create_app(), raise_server_exceptions=False)
+
+    def test_manual_create_queues_and_badges(self, client, tmp_db):
+        with get_connection() as conn:
+            _company(conn, "co-navy", "US Navy")
+            _contact(conn, "existing", "Grace Hopper", company_id="co-navy",
+                     email="grace@navy.mil")
+            conn.execute(
+                "INSERT INTO user_contacts (id, user_id, contact_id, "
+                "visibility, is_owner, created_at, updated_at) "
+                "VALUES ('uc-ex', ?, 'existing', 'public', 1, ?, ?)",
+                (USER_ID, _NOW, _NOW))
+        # Same name + same company -> 0.30 + 0.25 = 0.475, above review
+        r = client.post("/api/v1/contacts", json={
+            "first_name": "Grace", "last_name": "Hopper",
+            "company_id": "co-navy"})
+        new_id = r.json()["id"]
+        detail = client.get(f"/api/v1/contacts/{new_id}").json()
+        assert detail["identity"]["is_possible_duplicate"] is True
+        detail2 = client.get("/api/v1/contacts/existing").json()
+        assert detail2["identity"]["is_possible_duplicate"] is True
+        assert client.get(
+            "/api/v1/contacts/review-queue").json()["pending_count"] == 1

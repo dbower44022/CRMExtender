@@ -180,6 +180,165 @@ def load_profiles(customer_id: str | None) -> list[ContactProfile]:
     ]
 
 
+def load_profile(conn, contact_id: str) -> ContactProfile | None:
+    """Load one contact's matchable profile (targeted queries)."""
+    c = conn.execute(
+        "SELECT id, name FROM contacts WHERE id = ?", (contact_id,)
+    ).fetchone()
+    if not c:
+        return None
+    emails = {
+        r["v"] for r in conn.execute(
+            "SELECT LOWER(value) AS v FROM contact_identifiers "
+            "WHERE contact_id = ? AND type = 'email'", (contact_id,))
+    }
+    phones = {
+        r["number"] for r in conn.execute(
+            "SELECT number FROM phone_numbers WHERE entity_type = 'contact' "
+            "AND entity_id = ? AND is_current = 1", (contact_id,))
+    }
+    linkedin = {
+        r["v"].rstrip("/") for r in conn.execute(
+            "SELECT LOWER(profile_url) AS v FROM contact_social_profiles "
+            "WHERE contact_id = ? AND platform = 'linkedin'", (contact_id,))
+    }
+    companies, titles = set(), set()
+    for r in conn.execute(
+        "SELECT LOWER(co.name) AS co_name, LOWER(COALESCE(cc.title,'')) AS title "
+        "FROM contact_companies cc JOIN companies co ON co.id = cc.company_id "
+        "WHERE cc.contact_id = ? AND cc.is_current = 1", (contact_id,)
+    ):
+        companies.add(r["co_name"])
+        if r["title"]:
+            titles.add(r["title"])
+    return ContactProfile(
+        id=c["id"], name=(c["name"] or "").strip(),
+        emails=frozenset(emails),
+        domains=frozenset(
+            e.split("@", 1)[1] for e in emails
+            if "@" in e and e.split("@", 1)[1] not in _PUBLIC_DOMAINS),
+        phones=frozenset(phones), linkedin=frozenset(linkedin),
+        companies=frozenset(companies), titles=frozenset(titles),
+    )
+
+
+def _blocking_candidate_ids(conn, profile: ContactProfile,
+                            customer_id: str | None) -> set[str]:
+    """Existing active/incomplete contacts that share a blocking key with
+    the given profile — the only ones worth scoring against it."""
+    ids: set[str] = set()
+
+    def _add(rows):
+        for r in rows:
+            ids.add(r[0])
+
+    # Shared email domain
+    for domain in profile.domains:
+        _add(conn.execute(
+            "SELECT DISTINCT ci.contact_id FROM contact_identifiers ci "
+            "JOIN contacts c ON c.id = ci.contact_id "
+            "WHERE ci.type = 'email' AND LOWER(ci.value) LIKE ? "
+            "AND c.status IN ('active','incomplete') "
+            "AND (c.customer_id IS NULL OR c.customer_id = ?)",
+            (f"%@{domain}", customer_id)))
+    # Shared phone
+    for phone in profile.phones:
+        _add(conn.execute(
+            "SELECT DISTINCT pn.entity_id FROM phone_numbers pn "
+            "JOIN contacts c ON c.id = pn.entity_id "
+            "WHERE pn.entity_type = 'contact' AND pn.number = ? "
+            "AND c.status IN ('active','incomplete') "
+            "AND (c.customer_id IS NULL OR c.customer_id = ?)",
+            (phone, customer_id)))
+    # Shared company
+    for company in profile.companies:
+        _add(conn.execute(
+            "SELECT DISTINCT cc.contact_id FROM contact_companies cc "
+            "JOIN companies co ON co.id = cc.company_id "
+            "JOIN contacts c ON c.id = cc.contact_id "
+            "WHERE LOWER(co.name) = ? AND cc.is_current = 1 "
+            "AND c.status IN ('active','incomplete') "
+            "AND (c.customer_id IS NULL OR c.customer_id = ?)",
+            (company, customer_id)))
+    # Name-token overlap (each significant token)
+    for token in profile.name.lower().split():
+        if len(token) > 2:
+            _add(conn.execute(
+                "SELECT id FROM contacts "
+                "WHERE LOWER(name) LIKE ? AND status IN ('active','incomplete') "
+                "AND (customer_id IS NULL OR customer_id = ?)",
+                (f"%{token}%", customer_id)))
+
+    ids.discard(profile.id)
+    return ids
+
+
+def resolve_new_contact(
+    contact_id: str, *, customer_id: str | None, source: str,
+) -> dict:
+    """Score a newly created contact against existing ones and queue
+    review candidates (Identity Resolution Sub-PRD §7, IDENT-14).
+
+    Runs at import/create time. Queues (does not auto-merge) any pair at
+    or above the review threshold — deletions/merges stay human-driven,
+    matching the batch scan's safety stance. Idempotent per pair.
+    """
+    thresholds = get_thresholds(customer_id)
+    created = 0
+    with get_connection() as conn:
+        profile = load_profile(conn, contact_id)
+        if profile is None:
+            return {"candidates_created": 0}
+        candidate_ids = _blocking_candidate_ids(conn, profile, customer_id)
+        if not candidate_ids:
+            return {"candidates_created": 0}
+
+        existing = {
+            _pair_key(r["contact_a_id"], r["contact_b_id"])
+            for r in conn.execute(
+                "SELECT contact_a_id, contact_b_id FROM match_candidates "
+                "WHERE contact_a_id = ? OR contact_b_id = ?",
+                (contact_id, contact_id))
+        }
+        now = _now()
+        for other_id in candidate_ids:
+            key = _pair_key(profile.id, other_id)
+            if key in existing:
+                continue
+            other = load_profile(conn, other_id)
+            if other is None:
+                continue
+            result = score_pair(profile, other)
+            if result.confidence < thresholds["review"]:
+                continue
+            conn.execute(
+                "INSERT OR IGNORE INTO match_candidates "
+                "(id, customer_id, contact_a_id, contact_b_id, confidence, "
+                " signals, status, source, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)",
+                (str(uuid.uuid4()), customer_id, key[0], key[1],
+                 result.confidence, result.signals_json(), source, now, now))
+            existing.add(key)
+            created += 1
+    return {"candidates_created": created}
+
+
+def pending_candidate_contact_ids(customer_id: str | None) -> set[str]:
+    """Contact IDs that appear in a pending match candidate (for the
+    "Possible Duplicate" badge, IDENT-15)."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT contact_a_id, contact_b_id FROM match_candidates "
+            "WHERE status = 'pending' "
+            "AND (customer_id IS NULL OR customer_id = ?)",
+            (customer_id,)).fetchall()
+    ids: set[str] = set()
+    for r in rows:
+        ids.add(r["contact_a_id"])
+        ids.add(r["contact_b_id"])
+    return ids
+
+
 def score_pair(a: ContactProfile, b: ContactProfile) -> MatchResult:
     """Score two contacts against each other (PRD §5/§6)."""
     signals: list[Signal] = []

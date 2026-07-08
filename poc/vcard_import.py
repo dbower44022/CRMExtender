@@ -483,3 +483,13 @@ def _import_single_contact(
         "emails": [em["value"] for em in emails],
         "company": data.get("org") or "",
     })
+
+    # Real-time identity resolution — queue review candidates for fuzzy
+    # matches the exact-match dedup above did not catch (IDENT-14)
+    try:
+        from .identity_resolution import resolve_new_contact
+        resolve_new_contact(
+            contact_id, customer_id=customer_id, source="import")
+    except Exception:
+        log.warning("Identity resolution failed for imported contact %s",
+                    contact_id, exc_info=True)

@@ -8,6 +8,7 @@ import {
   Pencil,
   Phone,
   MapPin,
+  AlertTriangle,
 } from 'lucide-react'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { useLayoutStore } from '../../stores/layout.ts'
@@ -32,6 +33,7 @@ export function IdentityZone({ data, entityType, onManage }: IdentityZoneProps) 
   const Icon = ENTITY_ICONS[entityType] ?? User
   const name = String(data.name ?? data.title ?? 'Untitled')
   const subtitle = data.subtitle ? String(data.subtitle) : null
+  const isPossibleDuplicate = data.is_possible_duplicate === true
   const emails = (data.emails as string[] | undefined) ?? []
   const phones = (data.phones as string[] | undefined) ?? []
   const addresses = (data.addresses as string[] | undefined) ?? []
@@ -53,6 +55,15 @@ export function IdentityZone({ data, entityType, onManage }: IdentityZoneProps) 
           </h3>
           {subtitle && (
             <p className="truncate text-sm text-surface-500">{subtitle}</p>
+          )}
+          {isPossibleDuplicate && (
+            <button
+              onClick={() => useNavigationStore.getState().openReview()}
+              title="This contact may be a duplicate — open the review queue"
+              className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-200"
+            >
+              <AlertTriangle size={11} /> Possible duplicate
+            </button>
           )}
         </div>
         {onManage && (

@@ -2,7 +2,9 @@
 
 **Version:** 2.1
 **Last Updated:** 2026-07-08
-**Status:** Partially implemented — matching engine (§5–6), review-queue pipeline for existing contacts (§7 batch), and human review queue (§9) built as Tier 3a. Not yet: pipeline entry points on email-sync/import/enrichment (§7 real-time), inline-detection wiring to the shared candidate model (§8 — the create form has its own lighter dup check from Tier 1), flagged-merge review badges (§10), threshold config UI (IDENT-10).
+**Status:** Partially implemented — matching engine (§5–6), review-queue pipeline for existing contacts (§7 batch), and human review queue (§9) built as Tier 3a. Real-time resolution now runs on manual create and vCard import (§7/IDENT-14); "Possible Duplicate" badge on contacts (IDENT-15). Not yet: email-sync entry point (the co-participant firehose — deferred for perf), enrichment entry point, flagged-merge review badges (§10), threshold config UI (IDENT-10).
+
+> **V2.2 (2026-07-08):** Tier 3b — real-time resolution wired into manual create (`POST /contacts`) and vCard import via `resolve_new_contact` (targeted blocking queries, queues fuzzy matches the exact dedup missed; queue-only, no silent auto-merge). "Possible Duplicate" badge on the contact record links to the review queue.
 
 > **V2.1 (2026-07-08):** Tier 3a implemented. `poc/identity_resolution.py` scores contact pairs with the PRD's weighted-signal model and probabilistic combination; tenant thresholds via `idr_threshold_*` settings. Schema v22 adds `match_candidates`. `POST /contacts/duplicate-scan` populates the queue for existing contacts (blocking + idempotent); `GET /contacts/review-queue` + reject/restore drive the SPA Duplicate Review view (rail entry with pending badge). Merge auto-resolves candidates via FK cascade. Live scan of the current DB surfaced 936 candidates (heavy duplication from the earlier SCORE-account sync bug).
 **Entity Base PRD:** [contact-entity-base-prd.md]
@@ -335,17 +337,17 @@ The end-to-end pipeline processes incoming data through five stages:
 
 **Tasks:**
 
-- [ ] IDENT-11: Implement end-to-end resolution pipeline orchestration (5 stages)
+- [x] IDENT-11: Implement end-to-end resolution pipeline orchestration (5 stages)
 - [x] IDENT-12: Implement match candidate record creation for review queue entries
 - [x] IDENT-13: Ensure pipeline idempotency (no duplicate candidates or contacts on re-processing)
-- [ ] IDENT-14: Implement pipeline entry points for each data source (email sync, import, enrichment, manual entry, browser extension)
-- [ ] IDENT-15: Implement "Possible Duplicate" badge on contacts with pending match candidates
+- [x] IDENT-14: Implement pipeline entry points for each data source (email sync, import, enrichment, manual entry, browser extension)
+- [x] IDENT-15: Implement "Possible Duplicate" badge on contacts with pending match candidates
 - [ ] IDENT-16: Implement "Review Merge" badge on contacts with flagged auto-merges
 
 **Tests:**
 
-- [ ] IDENT-T12: Full pipeline processes incoming email participant and resolves to existing contact
-- [ ] IDENT-T13: Full pipeline processes unknown person and creates new contact
+- [x] IDENT-T12: Full pipeline processes incoming email participant and resolves to existing contact
+- [x] IDENT-T13: Full pipeline processes unknown person and creates new contact
 - [x] IDENT-T14: Pipeline creates match candidate record for medium-confidence matches
 - [x] IDENT-T15: Re-processing identical data does not create duplicates
 - [ ] IDENT-T16: Pipeline handles concurrent resolution of the same person from two sources

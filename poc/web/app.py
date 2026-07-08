@@ -68,6 +68,7 @@ def create_app() -> FastAPI:
 
     from .routes import (
         api,
+        api_subresources,
         auth_routes,
         communications,
         companies,
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
 
     # JSON API for React frontend
     app.include_router(api.router, prefix="/api/v1")
+    app.include_router(api_subresources.router, prefix="/api/v1")
 
     app.include_router(auth_routes.router)
     app.include_router(dashboard.router)

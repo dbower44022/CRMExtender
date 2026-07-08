@@ -5,6 +5,7 @@ import {
   Calendar,
   Maximize2,
   Mail,
+  Pencil,
   Phone,
   MapPin,
 } from 'lucide-react'
@@ -22,9 +23,10 @@ interface IdentityZoneProps {
   data: Record<string, unknown>
   entityType: string
   entityId: string
+  onManage?: () => void
 }
 
-export function IdentityZone({ data, entityType }: IdentityZoneProps) {
+export function IdentityZone({ data, entityType, onManage }: IdentityZoneProps) {
   const setActiveEntityType = useNavigationStore((s) => s.setActiveEntityType)
   const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
   const Icon = ENTITY_ICONS[entityType] ?? User
@@ -53,6 +55,15 @@ export function IdentityZone({ data, entityType }: IdentityZoneProps) {
             <p className="truncate text-sm text-surface-500">{subtitle}</p>
           )}
         </div>
+        {onManage && (
+          <button
+            onClick={onManage}
+            title="Manage details"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-surface-400 transition-colors hover:bg-surface-100 hover:text-surface-600"
+          >
+            <Pencil size={14} />
+          </button>
+        )}
         <button
           onClick={expandDetailPanel}
           title="Open full view"

@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { useEntityDetail } from '../../api/detail.ts'
+import { ManageRecordModal } from './ManageRecordModal.tsx'
 import { IdentityZone } from './IdentityZone.tsx'
 import { ContextZone } from './ContextZone.tsx'
 import { TimelineZone } from './TimelineZone.tsx'
@@ -10,6 +12,7 @@ interface RecordDetailProps {
 
 export function RecordDetail({ entityType, entityId }: RecordDetailProps) {
   const { data, isLoading, error } = useEntityDetail(entityType, entityId)
+  const [managing, setManaging] = useState(false)
 
   if (isLoading) {
     return <DetailSkeleton />
@@ -25,15 +28,26 @@ export function RecordDetail({ entityType, entityId }: RecordDetailProps) {
 
   if (!data) return null
 
+  const editable = entityType === 'contact' || entityType === 'company'
+
   return (
     <div className="flex h-full flex-col">
       <IdentityZone
         data={data.identity}
         entityType={entityType}
         entityId={entityId}
+        onManage={editable ? () => setManaging(true) : undefined}
       />
       <ContextZone data={data.context} />
       <TimelineZone entries={data.timeline} />
+      {managing && editable && (
+        <ManageRecordModal
+          entityType={entityType as 'contact' | 'company'}
+          entityId={entityId}
+          entityName={String(data.identity.name ?? data.identity.title ?? '')}
+          onClose={() => setManaging(false)}
+        />
+      )}
     </div>
   )
 }

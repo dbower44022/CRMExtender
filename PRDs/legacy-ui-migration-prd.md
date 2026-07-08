@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Last Updated:** 2026-07-07
-**Status:** Draft — Phases 0–1 implemented 2026-07-07 (T01–T03, T05 UI verified by manual browser testing; T04 automation pending)
+**Status:** Draft — Phases 0–2 implemented 2026-07-08 (T01–T03, T05 UI verified by manual browser testing; T04 automation pending). Phase 2 deliberate improvements over legacy: ownership + parent-match checks on all sub-resource routes; exclusive set-primary for every type; hierarchy self-link/duplicate/cycle protection; contact email normalization; contact delete (new capability — legacy had none).
 **Parent Documents:** [product-tdd.md] §2.3 (Dual UI Architecture), [gui-functional-requirements-prd.md]
 **Related:** [prd-index.md]
 
@@ -138,10 +138,10 @@ SPA mutations surface API errors via the existing toast pattern (sonner). Redire
 - [x] UIMIG-13: ~~Wire delete row-action where API exists~~ Re-scoped: audit found no entity DELETE endpoints in the JSON API (the inventory's "delete" was the legacy route). Entity deletes move to Phases 2/4 with their APIs.
 
 ### Phase 2 — Entity Editing Parity
-- [ ] UIMIG-20: Generic sub-resource API router (identifiers/phones/emails/addresses/affiliations/hierarchy)
-- [ ] UIMIG-21: SPA editing sections in RecordDetail zones (add/edit/delete/set-primary)
-- [ ] UIMIG-22: Score recompute endpoints + UI actions
-- [ ] UIMIG-23: API tests per sub-resource; parity checklist against legacy routes
+- [x] UIMIG-20: Generic sub-resource API router (identifiers/phones/emails/addresses/affiliations/hierarchy)
+- [x] UIMIG-21: SPA editing sections in RecordDetail zones (add/edit/delete/set-primary)
+- [x] UIMIG-22: Score recompute endpoints + UI actions
+- [x] UIMIG-23: API tests per sub-resource; parity checklist against legacy routes
 
 ### Phase 3 — Notes Subsystem
 - [ ] UIMIG-30: Notes API — CRUD, pin, revisions, attachments (upload/serve), mentions, entity links, search
@@ -168,6 +168,6 @@ SPA mutations surface API errors via the existing toast pattern (sonner). Redire
 - [x] UIMIG-T03: Grid subject link click stays in SPA; middle-click opens working deep link
 - [ ] UIMIG-T04: No `<a>` in the SPA resolves to a legacy page route (automated link audit), excluding auth/OAuth
 - [x] UIMIG-T05: Dashboard endpoint returns counts matching legacy dashboard queries
-- [ ] UIMIG-T06: Sub-resource API round-trip per type (add → edit → set-primary → delete)
+- [x] UIMIG-T06: Sub-resource API round-trip per type (add → edit → set-primary → delete)
 - [ ] UIMIG-T07: Notes round-trip incl. revision created on edit, attachment upload/download
 - [ ] UIMIG-T08: Decommission — legacy page URLs 308 to SPA equivalents; action routes return 404

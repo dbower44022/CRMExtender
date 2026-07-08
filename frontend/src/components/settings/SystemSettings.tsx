@@ -6,6 +6,7 @@ import {
   useReferenceData,
 } from '../../api/settings.ts'
 import { DuplicateThresholds } from './DuplicateThresholds.tsx'
+import { VersionInfo } from './VersionInfo.tsx'
 
 export function SystemSettings() {
   const { data: settings, isLoading } = useSystemSettings()
@@ -162,6 +163,7 @@ export function SystemSettings() {
         </button>
 
         <DuplicateThresholds />
+        <VersionInfo />
       </div>
     </div>
   )

@@ -67,9 +67,13 @@ export function ConversationFullView({ convId, onNavigateAway }: ConversationFul
   const [containerWidth, setContainerWidth] = useState(0)
   const [rightWidth, setRightWidth] = useState(() => getSplitterWidth(convId) ?? DEFAULT_RIGHT_WIDTH)
 
-  useEffect(() => {
+  // Each conversation remembers its own splitter position, so re-read it when
+  // navigating between conversations without remounting.
+  const [prevConvId, setPrevConvId] = useState(convId)
+  if (convId !== prevConvId) {
+    setPrevConvId(convId)
     setRightWidth(getSplitterWidth(convId) ?? DEFAULT_RIGHT_WIDTH)
-  }, [convId])
+  }
 
   useEffect(() => {
     const el = containerRef.current

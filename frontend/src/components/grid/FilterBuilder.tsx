@@ -3,7 +3,7 @@ import { Plus, X } from 'lucide-react'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { useEntityRegistry } from '../../api/registry.ts'
 import { useViewConfig, useUpdateViewFilters } from '../../api/views.ts'
-import type { FieldDef } from '../../types/api.ts'
+import type { EntityDef, FieldDef, ViewFilter } from '../../types/api.ts'
 
 const OPERATOR_LABELS: Record<string, string> = {
   equals: 'Equals',
@@ -41,23 +41,40 @@ export function FilterBuilder({ onClose }: { onClose: () => void }) {
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)
   const { data: registry } = useEntityRegistry()
   const { data: viewConfig } = useViewConfig(activeViewId)
-  const updateFilters = useUpdateViewFilters(activeViewId ?? '')
-  const ref = useRef<HTMLDivElement>(null)
 
   const entityDef = registry?.[activeEntityType]
-  const existingFilters = viewConfig?.filters ?? []
+  if (!entityDef || !activeViewId || !viewConfig) return null
 
-  const [filters, setFilters] = useState<FilterRow[]>([])
+  // Keyed on the view so switching views re-seeds the draft rows from scratch.
+  return (
+    <FilterBuilderForm
+      key={activeViewId}
+      viewId={activeViewId}
+      entityDef={entityDef}
+      existingFilters={viewConfig.filters ?? []}
+      onClose={onClose}
+    />
+  )
+}
 
-  useEffect(() => {
-    setFilters(
-      existingFilters.map((f) => ({
-        field_key: f.field_key,
-        operator: f.operator,
-        value: f.value ?? '',
-      })),
-    )
-  }, [existingFilters.length]) // eslint-disable-line react-hooks/exhaustive-deps
+interface FilterBuilderFormProps {
+  viewId: string
+  entityDef: EntityDef
+  existingFilters: ViewFilter[]
+  onClose: () => void
+}
+
+function FilterBuilderForm({ viewId, entityDef, existingFilters, onClose }: FilterBuilderFormProps) {
+  const updateFilters = useUpdateViewFilters(viewId)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const [filters, setFilters] = useState<FilterRow[]>(() =>
+    existingFilters.map((f) => ({
+      field_key: f.field_key,
+      operator: f.operator,
+      value: f.value ?? '',
+    })),
+  )
 
   // Close on outside click
   useEffect(() => {
@@ -69,8 +86,6 @@ export function FilterBuilder({ onClose }: { onClose: () => void }) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [onClose])
-
-  if (!entityDef) return null
 
   const filterableFields = Object.entries(entityDef.fields).filter(
     ([, fd]: [string, FieldDef]) => fd.filterable && fd.type !== 'hidden',

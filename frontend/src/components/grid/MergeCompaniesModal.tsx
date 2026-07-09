@@ -16,21 +16,13 @@ export function MergeCompaniesModal({ companyIds, onClose }: MergeCompaniesModal
   const preview = useCompanyMergePreview()
   const merge = useMergeCompanies()
 
-  const [survivingId, setSurvivingId] = useState<string>('')
+  // Until the user picks a survivor, default to the first company in the preview.
+  const [chosenSurvivingId, setSurvivingId] = useState<string | null>(null)
+  const survivingId = chosenSurvivingId ?? preview.data?.companies[0]?.id ?? ''
 
   useEffect(() => {
     preview.mutate(companyIds)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Set defaults when preview loads
-  useEffect(() => {
-    if (preview.data) {
-      const companies = preview.data.companies
-      if (companies.length > 0 && !survivingId) {
-        setSurvivingId(companies[0].id)
-      }
-    }
-  }, [preview.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleConfirm = () => {
     const absorbedIds = companyIds.filter((id) => id !== survivingId)

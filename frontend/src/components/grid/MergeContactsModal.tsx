@@ -16,29 +16,18 @@ export function MergeContactsModal({ contactIds, onClose }: MergeContactsModalPr
   const preview = useMergePreview()
   const merge = useMergeContacts()
 
-  const [survivingId, setSurvivingId] = useState<string>('')
-  const [chosenName, setChosenName] = useState<string>('')
-  const [chosenSource, setChosenSource] = useState<string>('')
+  // Until the user picks, each choice defaults to the first option the preview offers.
+  const [pickedSurvivingId, setSurvivingId] = useState<string | null>(null)
+  const [pickedName, setChosenName] = useState<string | null>(null)
+  const [pickedSource, setChosenSource] = useState<string | null>(null)
+
+  const survivingId = pickedSurvivingId ?? preview.data?.contacts[0]?.id ?? ''
+  const chosenName = pickedName ?? preview.data?.conflicts.name[0] ?? ''
+  const chosenSource = pickedSource ?? preview.data?.conflicts.source[0] ?? ''
 
   useEffect(() => {
     preview.mutate(contactIds)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Set defaults when preview loads
-  useEffect(() => {
-    if (preview.data) {
-      const contacts = preview.data.contacts
-      if (contacts.length > 0 && !survivingId) {
-        setSurvivingId(contacts[0].id)
-      }
-      if (preview.data.conflicts.name.length > 0 && !chosenName) {
-        setChosenName(preview.data.conflicts.name[0])
-      }
-      if (preview.data.conflicts.source.length > 0 && !chosenSource) {
-        setChosenSource(preview.data.conflicts.source[0])
-      }
-    }
-  }, [preview.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleConfirm = () => {
     const absorbedIds = contactIds.filter((id) => id !== survivingId)

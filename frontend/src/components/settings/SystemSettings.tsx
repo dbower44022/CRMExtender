@@ -1,39 +1,34 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import {
   useSystemSettings,
   useUpdateSystemSettings,
   useReferenceData,
+  type SystemSettings as SystemSettingsData,
 } from '../../api/settings.ts'
 import { DuplicateThresholds } from './DuplicateThresholds.tsx'
 import { VersionInfo } from './VersionInfo.tsx'
 
 export function SystemSettings() {
   const { data: settings, isLoading } = useSystemSettings()
+
+  if (isLoading || !settings) {
+    return <div className="text-sm text-surface-500">Loading...</div>
+  }
+
+  return <SystemSettingsForm settings={settings} />
+}
+
+function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
   const { data: refData } = useReferenceData()
   const updateSettings = useUpdateSystemSettings()
 
-  const [companyName, setCompanyName] = useState('')
-  const [defaultTz, setDefaultTz] = useState('UTC')
-  const [defaultPhoneCountry, setDefaultPhoneCountry] = useState('US')
-  const [emailHistoryWindow, setEmailHistoryWindow] = useState('90d')
-  const [syncEnabled, setSyncEnabled] = useState(true)
-  const [allowSelfReg, setAllowSelfReg] = useState(false)
-
-  useEffect(() => {
-    if (settings) {
-      setCompanyName(settings.company_name)
-      setDefaultTz(settings.default_timezone)
-      setDefaultPhoneCountry(settings.default_phone_country)
-      setEmailHistoryWindow(settings.email_history_window)
-      setSyncEnabled(settings.sync_enabled === 'true')
-      setAllowSelfReg(settings.allow_self_registration === 'true')
-    }
-  }, [settings])
-
-  if (isLoading) {
-    return <div className="text-sm text-surface-500">Loading...</div>
-  }
+  const [companyName, setCompanyName] = useState(settings.company_name)
+  const [defaultTz, setDefaultTz] = useState(settings.default_timezone)
+  const [defaultPhoneCountry, setDefaultPhoneCountry] = useState(settings.default_phone_country)
+  const [emailHistoryWindow, setEmailHistoryWindow] = useState(settings.email_history_window)
+  const [syncEnabled, setSyncEnabled] = useState(settings.sync_enabled === 'true')
+  const [allowSelfReg, setAllowSelfReg] = useState(settings.allow_self_registration === 'true')
 
   const handleSave = () => {
     updateSettings.mutate(

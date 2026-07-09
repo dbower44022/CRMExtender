@@ -3,7 +3,7 @@ import { get, put, post, del } from './client.ts'
 
 // --- Types ---
 
-interface Profile {
+export interface Profile {
   id: string
   name: string
   email: string
@@ -13,7 +13,7 @@ interface Profile {
   date_format: string | null
 }
 
-interface SystemSettings {
+export interface SystemSettings {
   company_name: string
   default_timezone: string
   sync_enabled: string

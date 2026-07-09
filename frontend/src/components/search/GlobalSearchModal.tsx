@@ -67,10 +67,13 @@ export function GlobalSearchModal() {
     return items
   }, [displayData])
 
-  // Reset focused index when results change
-  useEffect(() => {
+  // Reset focus to the first result whenever the result count changes, and to
+  // -1 (nothing focused) when the results empty out.
+  const [prevItemCount, setPrevItemCount] = useState(flatItems.length)
+  if (flatItems.length !== prevItemCount) {
+    setPrevItemCount(flatItems.length)
     setFocusedIndex(flatItems.length > 0 ? 0 : -1)
-  }, [flatItems.length])
+  }
 
   // Auto-focus input on mount and when returning to search mode
   useEffect(() => {

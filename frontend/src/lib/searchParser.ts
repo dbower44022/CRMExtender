@@ -162,7 +162,7 @@ export function parseSearchQuery(input: string, fields: Fields): ParsedSearch {
     // Must have colon and something before it
     if (colonIdx > 0) {
       const fieldPart = token.substring(0, colonIdx).toLowerCase()
-      let valuePart = token.substring(colonIdx + 1)
+      const valuePart = token.substring(colonIdx + 1)
 
       const fieldKey = fieldLookup.get(fieldPart)
       if (fieldKey) {

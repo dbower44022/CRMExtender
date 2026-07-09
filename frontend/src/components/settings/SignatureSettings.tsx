@@ -55,8 +55,8 @@ export function SignatureSettings() {
     setIsCreating(false)
   }
 
-  const handleEditorChange = (_json: string, html: string, _text: string) => {
-    setFormBodyJson(_json)
+  const handleEditorChange = (json: string, html: string, _text: string) => {
+    setFormBodyJson(json)
     setFormBodyHtml(html)
   }
 

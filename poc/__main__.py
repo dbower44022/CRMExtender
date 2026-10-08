@@ -52,7 +52,7 @@ console = Console()
 def cmd_run(args: argparse.Namespace) -> None:
     """Run sync + process for all registered accounts."""
     from .auth import get_credentials_for_account
-    from .gmail_client import get_user_email
+    from .providers import get_provider
     from .rate_limiter import RateLimiter
     from .sync import (
         get_all_accounts,
@@ -101,7 +101,7 @@ def cmd_run(args: argparse.Namespace) -> None:
             console.print(f"[yellow]  Authentication failed ({exc}), skipping.[/yellow]")
             continue
 
-        user_email = get_user_email(creds)
+        user_email = get_provider(account.get("provider") or "gmail").get_user_email(creds)
 
         # Sync contacts
         try:

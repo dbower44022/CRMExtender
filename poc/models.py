@@ -98,7 +98,13 @@ class KnownContact:
 
 @dataclass
 class ParsedEmail:
-    """A single email message parsed from Gmail API."""
+    """A single normalized email message as delivered by a MailProvider.
+
+    This is the ``MailMessage`` type of the provider contract
+    (poc/providers/base.py; Mail Client TDD D-15). The fields after
+    ``snippet`` carry mailbox state and RFC headers; they default empty so
+    older call sites and tests are unaffected. Storing them is MAIL-07.
+    """
 
     message_id: str
     thread_id: str
@@ -111,6 +117,19 @@ class ParsedEmail:
     body_plain: str = ""
     body_html: str = ""
     snippet: str = ""
+    # --- mailbox state and headers (provider contract; stored by MAIL-07) ---
+    bcc: list[str] = field(default_factory=list)
+    reply_to: list[str] = field(default_factory=list)
+    #: address → display name for every participant that had one
+    participant_names: dict[str, str] = field(default_factory=dict)
+    header_message_id: str | None = None
+    header_in_reply_to: str | None = None
+    header_references: str | None = None
+    label_ids: list[str] = field(default_factory=list)
+    is_read: bool = True
+    is_starred: bool = False
+    #: dicts with keys: attachment_id, filename, mime_type, size, content_id, is_inline
+    attachments: list[dict] = field(default_factory=list)
 
     @property
     def all_participants(self) -> list[str]:

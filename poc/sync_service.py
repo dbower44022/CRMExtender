@@ -22,7 +22,7 @@ def run_full_sync(*, customer_id: str, user_id: str) -> dict:
     """Run the sync pipeline synchronously; returns a structured summary."""
     from . import config
     from .auth import get_credentials_for_account
-    from .gmail_client import get_user_email
+    from .providers import get_provider
     from .rate_limiter import RateLimiter
     from .sync import (
         incremental_sync,
@@ -82,7 +82,7 @@ def run_full_sync(*, customer_id: str, user_id: str) -> dict:
             result["errors"].append(f"{email_addr}: auth failed ({exc})")
             continue
 
-        user_email = get_user_email(creds)
+        user_email = get_provider(account.get("provider") or "gmail").get_user_email(creds)
 
         try:
             result["contacts"] += sync_contacts(

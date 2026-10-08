@@ -1,7 +1,7 @@
 # Email Provider Sync — Channel Sub-PRD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 12:33
+**Last Updated:** 10-08-26 13:05
 **Status:** Approved 10-08-26 by the product owner — not yet implemented
 **Parent Documents:** [communication-provider-sync-prd.md] (framework), [mail-client-prd.md] (functional area that consumes this contract)
 **Entity Base PRD:** [communication-entity-base-prd.md]
@@ -215,16 +215,16 @@ Adapters report what they can do; the mail client hides or adapts affordances ac
 ## 7. Task List
 
 ```
-- [ ] EPS-01: MailProvider interface and RawMessage, Delta, Action, ActionResult types (poc/providers/base.py)
-- [ ] EPS-02: Adapter registry keyed by provider_accounts.provider
-- [ ] EPS-03: GmailProvider implementing every method; sync.py and outbound.py call only the interface
-- [ ] EPS-04: Gmail history processing for labelAdded/labelRemoved; flag mapping to is_read/is_starred
-- [ ] EPS-05: Gmail backfill by before: paging with cursor persistence
-- [ ] EPS-06: Gmail attachment fetch and Content-ID resolution
-- [ ] EPS-07: Gmail batchModify action pushing; trash/untrash; label creation
+- [x] EPS-01: MailProvider interface and MailMessage, Delta, Action, ActionResult types (poc/providers/base.py) — v10.6, 10-08-26. The normalized type is `ParsedEmail` extended with the mailbox-state fields (TDD D-15).
+- [x] EPS-02: Adapter registry keyed by provider_accounts.provider — v10.6 (`poc/providers/__init__.py`, lazy adapter import)
+- [x] EPS-03: GmailProvider implementing every method; sync.py and outbound.py call only the interface — v10.6 (`poc/providers/gmail.py`; `sync_service.py` and `__main__.py` also switched; `migrate_refetch_emails.py` is a retired one-off and still imports the client directly)
+- [x] EPS-04: Gmail history processing for labelAdded/labelRemoved; flag mapping to is_read/is_starred — v10.6 **adapter side only**: `fetch_incremental` returns the label and flag changes in the Delta; the engine ignores them until MAIL-10
+- [x] EPS-05: Gmail backfill by before: paging with cursor persistence — v10.6 adapter side (`fetch_backfill`, cursor `"<epoch>|<page_token>"`); the resumable job is MAIL-11
+- [x] EPS-06: Gmail attachment fetch and Content-ID resolution — v10.6 adapter side (`fetch_attachment`; `_parse_message` captures attachment metadata with `content_id`/`is_inline`); storage and cache are MAIL-15
+- [x] EPS-07: Gmail batchModify action pushing; trash/untrash; label creation — v10.6 adapter side (`apply_action`, all §3.2 kinds; 404 → `gone`); the outbox worker is MAIL-14
 - [ ] EPS-08: Cursor recovery and reconciliation pass (KP-EPS-04)
 - [ ] EPS-09: Echo suppression for self-originated changes (KP-EPS-02 step 3)
-- [ ] EPS-10: Send through the interface with stored threading headers; sent-copy reconciliation
+- [x] EPS-10: Send through the interface with stored threading headers; sent-copy reconciliation — v10.6 send path (`outbound.send_email` → `provider.send(OutboundMessage)`); sent-copy reconciliation pending with MAIL-36
 - [ ] EPS-11: MicrosoftGraphProvider (Phase 3)
 - [ ] EPS-12: ImapSmtpProvider with provider detection by domain (Phase 3); populate docs/Public_email_provider_detection.MD
 - [ ] EPS-13: Contract test suite every adapter must pass from recorded fixtures

@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 12:33
+**Last Updated:** 10-08-26 13:05
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -392,7 +392,7 @@ Phase 0 — Close the ledger
 - [x] MAIL-04: Product owner approves mail-client-prd.md, email-provider-sync-prd.md, mail-client-tdd.md; PRD index updated — approved 10-08-26
 
 Phase 1 — Mail store foundation
-- [ ] MAIL-05: Define the MailProvider interface (email-provider-sync-prd.md §3) and move gmail_client.py behind a GmailProvider
+- [x] MAIL-05: Define the MailProvider interface (email-provider-sync-prd.md §3) and move gmail_client.py behind a GmailProvider — v10.6, 10-08-26 (`poc/providers/`; tests in `tests/test_providers.py`)
 - [ ] MAIL-06: Add gmail.modify to the requested scopes; re-authorization flow in Settings → Accounts with a clear "needs reconnect" state
 - [ ] MAIL-07: Schema v23 — header columns populated (Message-ID, In-Reply-To, References, Reply-To), bcc participants, recipient display names, is_starred, provider label ids; backfill from the provider for existing rows
 - [ ] MAIL-08: Schema v23 — mailbox_labels and communication_labels tables; system folder mapping per provider

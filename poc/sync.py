@@ -12,14 +12,6 @@ from . import config
 from .contacts_client import fetch_contact_groups, fetch_contacts
 from .database import get_connection
 from .email_parser import strip_quotes
-from .gmail_client import (
-    HistoryExpiredError,
-    fetch_history,
-    fetch_messages,
-    fetch_threads,
-    get_history_id,
-    get_user_email,
-)
 from .models import (
     Conversation,
     ConversationSummary,
@@ -35,6 +27,7 @@ from .domain_resolver import (
     is_public_domain,
     resolve_company_by_domain,
 )
+from .providers import CursorInvalid, get_provider
 from .rate_limiter import RateLimiter
 from .summarizer import summarize_conversation
 from .triage import AUTOMATED_SENDER_PATTERNS
@@ -82,7 +75,7 @@ def register_account(
 
     Returns the account_id (UUID).
     """
-    user_email = get_user_email(creds)
+    user_email = get_provider(provider).get_user_email(creds)
     token_path = token_path or str(config.TOKEN_PATH)
     now = _now_iso()
 
@@ -524,11 +517,12 @@ def sync_contact_email(
         except Exception:
             log.warning("Could not load credentials for account %s", account_id)
             continue
+        provider = get_provider(acct.get("provider") or "gmail")
 
         # Fetch all pages
         page_token: str | None = None
         while True:
-            threads, page_token = fetch_threads(
+            threads, page_token = provider.fetch_initial(
                 creds,
                 query=full_query,
                 max_threads=500,
@@ -937,6 +931,7 @@ def initial_sync(
 
     account_email = account["email_address"]
     query = account["backfill_query"] or config.GMAIL_QUERY
+    provider = get_provider(account.get("provider") or "gmail")
 
     # Start sync log
     sync_id = str(uuid.uuid4())
@@ -960,7 +955,7 @@ def initial_sync(
     page_token: str | None = None
 
     while True:
-        threads, page_token = fetch_threads(
+        threads, page_token = provider.fetch_initial(
             creds,
             query=query,
             max_threads=config.GMAIL_MAX_THREADS,
@@ -995,7 +990,7 @@ def initial_sync(
             break
 
     # Record sync cursor (current historyId)
-    history_id = get_history_id(creds)
+    history_id = provider.get_cursor(creds)
     now = _now_iso()
 
     with get_connection() as conn:
@@ -1052,6 +1047,7 @@ def incremental_sync(
 
     account_email = account["email_address"]
     cursor_before = account["sync_cursor"]
+    provider = get_provider(account.get("provider") or "gmail")
 
     if not cursor_before:
         raise ValueError(f"Account {account_id} has no sync_cursor; run initial_sync first")
@@ -1075,11 +1071,14 @@ def incremental_sync(
     # message instead of advancing the cursor over the gap. Any other
     # error aborts the sync with the cursor untouched, so the next run
     # retries the same window.
+    # Label and flag changes in the delta are ignored here until MAIL-10
+    # teaches the engine to mirror them.
     try:
-        added_ids, deleted_ids = fetch_history(
+        delta, history_id = provider.fetch_incremental(
             creds, cursor_before, rate_limiter=rate_limiter,
         )
-    except HistoryExpiredError:
+        added_ids, deleted_ids = delta.added_ids, delta.deleted_ids
+    except CursorInvalid:
         log.warning(
             "Sync cursor %s expired for account %s — backfilling by query",
             cursor_before, account_email,
@@ -1087,7 +1086,7 @@ def incremental_sync(
         return _backfill_sync(
             account_id, account_email, creds, sync_id, cursor_before,
             contact_index, rate_limiter=rate_limiter,
-            customer_id=customer_id, user_id=user_id,
+            customer_id=customer_id, user_id=user_id, provider=provider,
         )
     except Exception:
         with get_connection() as conn:
@@ -1104,7 +1103,7 @@ def incremental_sync(
 
     # Process additions: fetch full messages and store
     if added_ids:
-        new_emails = fetch_messages(creds, added_ids, rate_limiter=rate_limiter)
+        new_emails = provider.fetch_messages(creds, added_ids, rate_limiter=rate_limiter)
 
         # Group by thread_id
         threads_map: dict[str, list[ParsedEmail]] = {}
@@ -1161,8 +1160,9 @@ def incremental_sync(
                             (actual_count, _now_iso(), conv_id),
                         )
 
-    # Update sync cursor
-    history_id = get_history_id(creds)
+    # Update sync cursor to the position the delta was fetched at (not
+    # "now"), so changes that landed while this run was processing are
+    # picked up by the next run instead of being skipped (TDD D-17).
     now = _now_iso()
 
     with get_connection() as conn:
@@ -1208,6 +1208,7 @@ def _backfill_sync(
     *,
     customer_id: str | None = None,
     user_id: str | None = None,
+    provider=None,
 ) -> dict:
     """Recover from an expired history cursor by re-fetching threads by query.
 
@@ -1235,6 +1236,10 @@ def _backfill_sync(
 
     log.info("Backfill for %s using query %r", account_email, query)
 
+    if provider is None:
+        acct_row = get_account(account_id) or {}
+        provider = get_provider(acct_row.get("provider") or "gmail")
+
     messages_fetched = 0
     messages_stored = 0
     conversations_created = 0
@@ -1242,7 +1247,7 @@ def _backfill_sync(
     page_token: str | None = None
 
     while True:
-        threads, page_token = fetch_threads(
+        threads, page_token = provider.fetch_initial(
             creds,
             query=query,
             max_threads=config.GMAIL_MAX_THREADS,
@@ -1268,7 +1273,7 @@ def _backfill_sync(
         if not page_token:
             break
 
-    history_id = get_history_id(creds)
+    history_id = provider.get_cursor(creds)
     now = _now_iso()
 
     with get_connection() as conn:

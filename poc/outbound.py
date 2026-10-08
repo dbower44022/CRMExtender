@@ -178,7 +178,7 @@ def send_email(conn, *, queue_id: str, user_id: str) -> dict:
     2. Transition to 'sending'
     3. Load provider_account credentials
     4. Inject signature HTML into body if signature_id set
-    5. Call gmail_client.send_message()
+    5. Send through the account's MailProvider adapter
     6. Create Communication record + participants
     7. Update queue record: status='sent', communication_id, sent_at
     8. Auto-create contacts for unknown recipients
@@ -187,7 +187,7 @@ def send_email(conn, *, queue_id: str, user_id: str) -> dict:
     On failure: status='failed', failure_reason=str(error)
     """
     from .auth import get_credentials_for_account
-    from .gmail_client import send_message
+    from .providers import OutboundMessage, get_provider
 
     record = get_queue_record(conn, queue_id=queue_id)
     if not record:
@@ -262,20 +262,23 @@ def send_email(conn, *, queue_id: str, user_id: str) -> dict:
                 references = f"{refs} {in_reply_to}".strip()
             thread_id = parent["provider_thread_id"]
 
-    # Send via Gmail
+    # Send through the provider adapter
     try:
-        provider_msg_id, provider_thread_id = send_message(
+        provider = get_provider(acct.get("provider") or "gmail")
+        provider_msg_id, provider_thread_id = provider.send(
             creds,
-            from_email=from_email,
-            to=to_emails,
-            subject=record["subject"],
-            body_html=body_html,
-            body_text=body_text,
-            cc=cc_emails or None,
-            bcc=bcc_emails or None,
-            in_reply_to=in_reply_to,
-            references=references,
-            thread_id=thread_id,
+            OutboundMessage(
+                from_email=from_email,
+                to=to_emails,
+                subject=record["subject"],
+                body_html=body_html,
+                body_text=body_text,
+                cc=cc_emails or None,
+                bcc=bcc_emails or None,
+                in_reply_to=in_reply_to,
+                references=references,
+                thread_id=thread_id,
+            ),
         )
     except Exception as exc:
         _fail_send(conn, queue_id, str(exc))

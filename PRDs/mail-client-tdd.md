@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 12:33
+**Last Updated:** 10-08-26 13:05
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -123,6 +123,42 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 ---
 
+### D-15 The normalized message type is `ParsedEmail`, extended
+
+**Decision:** The provider contract's message type (`MailMessage` in `poc/providers/base.py`) is the existing `poc.models.ParsedEmail` dataclass, extended with defaulted fields for Bcc, Reply-To, participant display names, the RFC header ids, provider label ids, read and starred flags, and attachment metadata. No separate `RawMessage` class.
+
+**Rationale:** Every pipeline stage (`_store_thread`, conversation formation, participant rows, tests) already consumes `ParsedEmail`. Adding fields with defaults changes nothing downstream today and gives MAIL-07 the data it needs to store. A second type would have forced a conversion at the adapter boundary and a rewrite of the storage path in the same change as the interface.
+
+**Alternatives Rejected:** A new `RawMessage` plus `normalize()` step — cleaner naming, but doubles the types the engine touches for no behavioral gain.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-05).
+
+### D-16 `fetch_initial` returns threads, not messages
+
+**Decision:** `fetch_initial` returns `(threads, next_page_token)` where each thread is a date-ascending list of messages, matching what `_store_thread` consumes. `fetch_backfill` and `fetch_messages` return flat message lists.
+
+**Rationale:** Conversation formation is thread-driven; the engine's initial and recovery paths already loop over threads. The sub-PRD's §3.1 sketch shows a flat list; the signature in `base.py` is authoritative.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-05).
+
+### D-17 Incremental cursor is the position the delta was fetched at
+
+**Decision:** `fetch_incremental` returns the provider's cursor as read at fetch time, and the engine stores that value after processing. The previous code read a fresh history id after processing, which could skip changes that arrived while the run was storing messages.
+
+**Rationale:** A cursor must never move past changes that have not been applied. Reading it before processing makes an in-flight change show up in the next delta instead of being lost. The cost is that the next run re-sees messages this run already stored; the provider-message-id upsert absorbs that.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-05).
+
+### D-18 Adapters call the HTTP client through the module object
+
+**Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
+
+**Rationale:** Existing tests patch `poc.gmail_client.<function>`; module-attribute calls keep those patches effective. The HTTP layer stays in one file that owns rate limiting and error mapping.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-05).
+
+---
+
 ## 3. Decisions to Be Added by Claude Code
 
 - **Thread model:** whether the mail surface groups by provider thread id or by RFC References chain; the two disagree on Gmail occasionally. Decide once the backfill data is in.
@@ -139,5 +175,6 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-08-26 13:05 | Claude (Claude Code) | Implementation write-back for MAIL-05: D-15 (`ParsedEmail` as the contract type), D-16 (thread-grouped `fetch_initial`), D-17 (cursor read at fetch time), D-18 (module-object calls). |
 | 1.1 | 10-08-26 12:33 | Claude (Claude Code) | Status set to Approved on the product owner's approval; D-02–D-14 now binding. |
 | 1.0 | 10-08-26 01:30 | Claude (Claude Code) | Initial draft. D-01 records the product owner's architecture choice; D-02–D-14 are proposals for approval. |

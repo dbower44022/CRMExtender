@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Loader2, Pencil, Plus, Star, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { get, put } from '../../api/client.ts'
+import { useProfile } from '../../api/settings.ts'
 import {
   sub,
   useInvalidateRecord,
@@ -13,6 +14,13 @@ import {
   type ContactCore,
   type Subresources,
 } from '../../api/subresources.ts'
+
+/** Only administrators may delete sub-resources or correct stored values;
+ *  users add and mark inactive (contact-view-prd.md rules 2-3). */
+function useIsAdmin(): boolean {
+  const { data: profile } = useProfile()
+  return profile?.role === 'admin'
+}
 
 interface ManageRecordModalProps {
   entityType: 'contact' | 'company'
@@ -397,6 +405,7 @@ function EditableAffiliation({ aff, entityId, roles, run }: {
   const [department, setDepartment] = useState(aff.department ?? '')
   const [roleId, setRoleId] = useState(aff.role_id ?? '')
   const [isCurrent, setIsCurrent] = useState(!!aff.is_current)
+  const isAdmin = useIsAdmin()
 
   const inputCls =
     'rounded-md border border-surface-300 px-2 py-1 text-sm focus:border-primary-400 focus:outline-none'
@@ -413,8 +422,10 @@ function EditableAffiliation({ aff, entityId, roles, run }: {
   }
 
   const relink = async (newCompanyId: string) => {
-    // Company is part of the affiliation's identity — changing it is a
-    // delete + re-add that preserves the title/role
+    // Company is part of the affiliation's identity, so it is never edited in
+    // place. Add the new affiliation and deactivate the old one, preserving
+    // employment history (contact-view-prd.md rule 7) — not a delete, which is
+    // admin-only.
     await run('Change company', async () => {
       await sub.add('contact', entityId, 'affiliations', {
         company_id: newCompanyId,
@@ -422,7 +433,10 @@ function EditableAffiliation({ aff, entityId, roles, run }: {
         role_id: aff.role_id || undefined,
         is_primary: !!aff.is_primary,
       })
-      await sub.remove('contact', entityId, 'affiliations', aff.id)
+      await sub.update('contact', entityId, 'affiliations', aff.id, {
+        is_current: false,
+        is_primary: false,
+      })
     })
     setChangingCompany(false)
   }
@@ -501,7 +515,7 @@ function EditableAffiliation({ aff, entityId, roles, run }: {
             className="shrink-0 rounded p-1 text-surface-300 hover:bg-surface-100 hover:text-surface-600">
             <Pencil size={13} />
           </button>
-          {confirming ? (
+          {isAdmin && (confirming ? (
             <button onClick={() => run('Delete', () =>
               sub.remove('contact', entityId, 'affiliations', aff.id))}
               onBlur={() => setConfirming(false)}
@@ -513,7 +527,7 @@ function EditableAffiliation({ aff, entityId, roles, run }: {
               className="shrink-0 rounded p-1 text-surface-300 hover:bg-red-50 hover:text-red-600">
               <Trash2 size={13} />
             </button>
-          )}
+          ))}
         </div>
       )}
     </li>
@@ -662,6 +676,7 @@ function RowList({ rows, onPrimary, onDelete }: {
   onDelete: (id: string) => void
 }) {
   const [confirming, setConfirming] = useState<string | null>(null)
+  const isAdmin = useIsAdmin()
   if (rows.length === 0) {
     return <div className="py-1 text-sm italic text-surface-300">None</div>
   }
@@ -689,7 +704,7 @@ function RowList({ rows, onPrimary, onDelete }: {
               <Star size={13} fill={row.isPrimary ? 'currentColor' : 'none'} />
             </button>
           )}
-          {confirming === row.id ? (
+          {isAdmin && (confirming === row.id ? (
             <button
               onClick={() => { onDelete(row.id); setConfirming(null) }}
               onBlur={() => setConfirming(null)}
@@ -705,7 +720,7 @@ function RowList({ rows, onPrimary, onDelete }: {
             >
               <Trash2 size={13} />
             </button>
-          )}
+          ))}
         </li>
       ))}
     </ul>

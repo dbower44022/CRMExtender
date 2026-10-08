@@ -771,8 +771,12 @@ def remove_phone_number(phone_id: str) -> None:
 
 
 def update_phone_number(phone_id: str, **fields) -> dict | None:
-    """Update a phone number's fields. Returns updated row dict or None."""
-    allowed = {"phone_type", "is_primary", "is_current", "started_at", "ended_at"}
+    """Update a phone number's fields. Returns updated row dict or None.
+
+    ``number`` is accepted for admin value corrections; the caller must pass an
+    already-normalized (E.164) value — see the phones PUT route.
+    """
+    allowed = {"number", "phone_type", "is_primary", "is_current", "started_at", "ended_at"}
     updates = {k: v for k, v in fields.items() if k in allowed}
     if not updates:
         return None

@@ -49,6 +49,34 @@ def client(tmp_db, monkeypatch):
     return TestClient(create_app(), raise_server_exceptions=False)
 
 
+PLAIN_USER_ID = "user-sub-plain"
+
+
+@pytest.fixture()
+def non_admin_client(tmp_db, monkeypatch):
+    """Same customer, but a non-admin ('user') role, for permission tests.
+
+    The auth-bypass middleware reads this identity for every request, so a test
+    that needs both an admin and a non-admin cannot use two clients at once —
+    the permission tests seed as this non-admin (adds are ungated) and verify
+    against the DB directly.
+    """
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO users "
+            "(id, customer_id, email, name, role, is_active, created_at, updated_at) "
+            "VALUES (?, ?, 'user@sub.com', 'User', 'user', 1, ?, ?)",
+            (PLAIN_USER_ID, CUST_ID, _NOW, _NOW),
+        )
+    monkeypatch.setattr(
+        "poc.hierarchy.get_current_user",
+        lambda: {"id": PLAIN_USER_ID, "email": "user@sub.com", "name": "User",
+                 "role": "user", "customer_id": CUST_ID},
+    )
+    from poc.web.app import create_app
+    return TestClient(create_app(), raise_server_exceptions=False)
+
+
 def _contact(conn, cid="ct-1", name="Test Contact", customer=CUST_ID):
     conn.execute(
         "INSERT INTO contacts (id, customer_id, name, created_at, updated_at) "
@@ -429,3 +457,104 @@ class TestContactCreateAndCheck:
         assert r.json()["status"] == "archived"
         assert client.put(f"/api/v1/contacts/{c['id']}",
                           json={"status": "bogus"}).status_code == 400
+
+
+def _one(table: str, where_id: str) -> dict | None:
+    with get_connection() as conn:
+        row = conn.execute(
+            f"SELECT * FROM {table} WHERE id = ?", (where_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+class TestSubresourcePermissions:
+    """No sub-resource is user-deletable, and value corrections are admin-only;
+    non-admins retain only the lifecycle actions (mark inactive, set primary).
+    See contact-view-prd.md rules 2-3.
+
+    Adds are ungated, so these seed as the non-admin and verify against the DB
+    (a single get_current_user patch backs every request, so an admin and a
+    non-admin client cannot be exercised in the same test)."""
+
+    def _seed(self):
+        with get_connection() as conn:
+            _contact(conn)
+            _company(conn, "co-1")
+
+    def test_nonadmin_cannot_delete_identifier(self, non_admin_client, tmp_db):
+        self._seed()
+        e = non_admin_client.post("/api/v1/contacts/ct-1/identifiers",
+                                  json={"type": "email", "value": "perm@x.com"}).json()
+        r = non_admin_client.delete(f"/api/v1/contacts/ct-1/identifiers/{e['id']}")
+        assert r.status_code == 403
+        assert _one("contact_identifiers", e["id"]) is not None
+
+    def test_admin_can_delete_identifier(self, client, tmp_db):
+        with get_connection() as conn:
+            _contact(conn)
+        e = client.post("/api/v1/contacts/ct-1/identifiers",
+                        json={"type": "email", "value": "perm@x.com"}).json()
+        assert client.delete(
+            f"/api/v1/contacts/ct-1/identifiers/{e['id']}").status_code == 200
+        assert _one("contact_identifiers", e["id"]) is None
+
+    def test_nonadmin_cannot_delete_phone_address_or_affiliation(
+            self, non_admin_client, tmp_db):
+        self._seed()
+        ph = non_admin_client.post("/api/v1/contacts/ct-1/phones",
+                                   json={"number": "330-242-1961"}).json()
+        ad = non_admin_client.post("/api/v1/contacts/ct-1/addresses",
+                                   json={"street": "1 Main St"}).json()
+        af = non_admin_client.post("/api/v1/contacts/ct-1/affiliations",
+                                   json={"company_id": "co-1", "title": "Eng"}).json()
+        assert non_admin_client.delete(
+            f"/api/v1/contacts/ct-1/phones/{ph['id']}").status_code == 403
+        assert non_admin_client.delete(
+            f"/api/v1/contacts/ct-1/addresses/{ad['id']}").status_code == 403
+        assert non_admin_client.delete(
+            f"/api/v1/contacts/ct-1/affiliations/{af['id']}").status_code == 403
+        assert _one("phone_numbers", ph["id"]) is not None
+        assert _one("addresses", ad["id"]) is not None
+        assert _one("contact_companies", af["id"]) is not None
+
+    def test_nonadmin_cannot_edit_address_value(self, non_admin_client, tmp_db):
+        self._seed()
+        ad = non_admin_client.post("/api/v1/contacts/ct-1/addresses",
+                                   json={"street": "1 Main St"}).json()
+        r = non_admin_client.put(f"/api/v1/contacts/ct-1/addresses/{ad['id']}",
+                                 json={"street": "999 Evil Rd"})
+        assert r.status_code == 403
+        assert _one("addresses", ad["id"])["street"] == "1 Main St"
+
+    def test_nonadmin_may_mark_inactive_and_set_primary(
+            self, non_admin_client, tmp_db):
+        self._seed()
+        ph = non_admin_client.post("/api/v1/contacts/ct-1/phones",
+                                   json={"number": "330-242-1961"}).json()
+        assert non_admin_client.put(
+            f"/api/v1/contacts/ct-1/phones/{ph['id']}",
+            json={"is_current": False}).status_code == 200
+        assert non_admin_client.put(
+            f"/api/v1/contacts/ct-1/phones/{ph['id']}",
+            json={"is_primary": True}).status_code == 200
+        row = _one("phone_numbers", ph["id"])
+        assert row["is_current"] == 0 and row["is_primary"] == 1
+
+    def test_admin_can_correct_phone_number(self, client, tmp_db):
+        with get_connection() as conn:
+            _contact(conn)
+        ph = client.post("/api/v1/contacts/ct-1/phones",
+                         json={"number": "330-242-1961"}).json()
+        r = client.put(f"/api/v1/contacts/ct-1/phones/{ph['id']}",
+                       json={"number": "440-247-4563"})
+        assert r.status_code == 200
+        assert _one("phone_numbers", ph["id"])["number"] == "+14402474563"
+
+    def test_nonadmin_cannot_correct_phone_number(self, non_admin_client, tmp_db):
+        self._seed()
+        ph = non_admin_client.post("/api/v1/contacts/ct-1/phones",
+                                   json={"number": "330-242-1961"}).json()
+        assert non_admin_client.put(
+            f"/api/v1/contacts/ct-1/phones/{ph['id']}",
+            json={"number": "440-247-4563"}).status_code == 403
+        assert _one("phone_numbers", ph["id"])["number"] == "+13302421961"

@@ -1,8 +1,12 @@
 # CRMExtender — PRD Index
 
-**Version:** 23.0
-**Last Updated:** 2026-07-08
+**Version:** 25.0
+**Last Updated:** 10-08-26 12:33
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V25.0 (10-08-26):** Added the Mail Client Functional Area PRD (`mail-client-prd.md`), its TDD (`mail-client-tdd.md`), and the long-planned Email Provider Sync channel sub-PRD (`email-provider-sync-prd.md`) — all APPROVED by the product owner on 10-08-26. Direction: CRMExtender becomes the owner's standard interface for all email accounts. Architecture decided by the product owner on 10-08-26: **local mirror with write-back** (every folder, label, and flag of every account stored locally; user actions queued back to the provider) — recorded as D-01 in the Mail Client TDD. Six delivery phases in `mail-client-prd.md` §5.3. A 10-08-26 review found the running system to be a mail watcher (read-only Gmail scope, no inbox, no write-back, no full-text search, no scheduler); the gap list is in `mail-client-prd.md` V1.0 note and the TDD.
+
+> **V24.0 (2026-07-10):** Added View Contact Sub-PRD (`contact-view-prd.md`) — a bespoke Contact Full View plus a separate Edit page, replacing the generic RecordDetail + Manage modal for contacts (inline grid editing rejected as the edit surface). Establishes the identifier-lifecycle rules (email never edited, nothing user-deletable, admin-only value corrections, mark-inactive with a one-active-email floor, change-company preserves history). The API-side enforcement of those rules (admin-only sub-resource deletes + value edits) shipped as the CM-30/31 security tightenings.
 
 > **V23.0 (2026-07-08):** Legacy UI Migration COMPLETE — all six phases done. The HTMX/Jinja UI is decommissioned: ~130 legacy routes and their templates deleted; page URLs 308-redirect into the SPA; auth, the OAuth connect flow, and note-attachment serving remain server-side. Product TDD §2.3 revised to record the single-UI architecture. Conversation View PRD's V1.4 deviation (1) is moot — the legacy detail pages no longer exist.
 
@@ -79,6 +83,7 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | └ Enrichment | 2.0 | `contact-enrichment-prd.md` | Draft — Key Processes added | 2026-02-23 |
 | └ AI Intelligence | 2.0 | `contact-ai-intelligence-prd.md` | Draft — Key Processes added | 2026-02-23 |
 | └ Relationship Intelligence | 2.0 | `contact-relationship-intelligence-prd.md` | Draft — Key Processes added | 2026-02-23 |
+| └ View Contact | 1.0 | `contact-view-prd.md` | Draft — bespoke Full View + Edit page; identifier-lifecycle rules (§3) enforced by CM-30/31 | 2026-07-10 |
 | Company Management | 1.0 | `company-management-prd.md` | Superseded — decomposed into Entity Base + 6 Sub-PRDs + TDD | 2026-02-23 |
 | └ Company Entity Base | 1.0 | `company-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
 | &nbsp;&nbsp;└ Company Entity TDD | 1.0 | `company-entity-tdd.md` | Draft — Living document, 9 sections | 2026-02-23 |
@@ -120,7 +125,9 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | Adaptive Grid Intelligence | 2.0 | `adaptive-grid-intelligence-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Master Glossary | 4.0 | `glossary.md` | Active — Key Process, field metadata, † caching terms added | 2026-02-23 |
 | Email Parsing & Content Extraction | 1.0 | `email-stripping.md` | Technical spec — Mojibake cleaned | 2026-02-22 |
-| Email Provider Sync | — | — | **Planned** — parent (Communications) complete | — |
+| Mail Client | 1.0 | `mail-client-prd.md` | Draft — Functional Area PRD; unified inbox, folders, write-back actions, search, compose placement; 6 phases, MAIL-01–55 | 10-08-26 |
+| └ Mail Client TDD | 1.0 | `mail-client-tdd.md` | Draft — Living document; D-01 local mirror (owner decision), D-02–D-14 proposed | 10-08-26 |
+| └ Email Provider Sync | 1.0 | `email-provider-sync-prd.md` | Draft — Channel sub-PRD; MailProvider contract, Gmail / Microsoft Graph / IMAP-SMTP mappings, EPS-01–13 | 10-08-26 |
 | SMS/MMS | — | — | **Planned** — parent (Communications) complete | — |
 | Voice/VoIP | — | — | **Planned** — parent (Communications) complete | — |
 | Video Meetings | — | — | **Planned** — parent (Communications) complete | — |
@@ -194,7 +201,7 @@ Document version history is managed by Git. Previous versions of any document ca
 
 | Child PRD               | Scope                                                                                     | Status                    |
 | ----------------------- | ----------------------------------------------------------------------------------------- | ------------------------- |
-| Email Provider Sync PRD | Gmail, Outlook, IMAP adapters; dual-track parsing; email threading; email-specific triage | Planned — parent complete |
+| Email Provider Sync PRD | `email-provider-sync-prd.md` — MailProvider contract (fetch, delta with labels and flags, actions, attachments, send); Gmail, Microsoft Graph, IMAP/SMTP mappings; cursor recovery; action outbox | Draft 1.0 (10-08-26) — consumed by `mail-client-prd.md` |
 | SMS/MMS PRD | Twilio/OpenPhone adapters; message sync; phone number resolution; MMS media | Planned |
 | Voice/VoIP PRD | Call recording integration; transcription pipeline; provider adapters | Planned |
 | Video Meetings PRD | Zoom/Teams/Meet integration; transcript capture; recording management | Planned |
@@ -238,6 +245,7 @@ Document version history is managed by Git. Previous versions of any document ca
 | Enrichment Sub-PRD | `contact-enrichment-prd.md` | 2.0 | Apollo/Clearbit/PDL adapters, enrichment pipeline, Key Processes |
 | AI Intelligence Sub-PRD | `contact-ai-intelligence-prd.md` | 2.0 | AI briefings, tag suggestions, NL search, Key Processes |
 | Relationship Intelligence Sub-PRD | `contact-relationship-intelligence-prd.md` | 2.0 | Neo4j graph, relationship scoring, influence mapping, Key Processes |
+| View Contact Sub-PRD | `contact-view-prd.md` | 1.0 | Bespoke Contact Full View (identity, identifiers, employment history, relationships, intelligence, activity, notes cards) + separate Edit page; identifier-lifecycle Key Processes (email never edited, nothing user-deletable, admin-only value corrections, mark-inactive with one-active-email floor, change-company preserves history) |
 
 **Key sections (monolithic PRD):**
 
@@ -596,20 +604,9 @@ Document version history is managed by Git. Previous versions of any document ca
 
 ## Planned PRDs (Not Yet Started)
 
-### Email Provider Sync PRD
+### ~~Email Provider Sync PRD~~ — drafted 10-08-26 as `email-provider-sync-prd.md`
 
-**Scope:** Gmail, Outlook, IMAP provider adapters; OAuth flows; email sync pipeline (initial, incremental, manual); email parsing & content extraction (dual-track pipeline from `email-stripping.md`); email-specific triage patterns; email threading models per provider.
-
-**Parent:** Communications PRD (now complete — defines the provider adapter interface and common schema)
-**Key input:** `email-stripping.md` (technical spec for dual-track parsing pipeline)
-**Dependencies:** Communications PRD (adapter interface), Contact Management PRD (identity resolution), Permissions PRD (provider account management)
-
-**Key questions to resolve:**
-
-- How do Gmail Pub/Sub and Outlook webhook callbacks work in production deployment?
-- What is the exact cursor lifecycle for each provider?
-- How are provider-specific parsing patterns organized in the code?
-- Should email sending be included in V1 or deferred?
+The four key questions listed here since V10.0 are answered in the draft: push callbacks are Phase 5 (`mail-client-prd.md` MAIL-52), cursor lifecycle per provider is §5 of the sub-PRD with recovery in KP-EPS-04, parsing patterns stay in `email-stripping.md` with adapters delivering raw parts, and sending is included in V1 through the adapter's `send` method.
 
 ---
 
@@ -766,7 +763,7 @@ Cross-cutting PRDs:
 Based on dependency analysis (all entity reconciliation complete):
 
 1. ~~**Company Management V2**~~ — **Completed.** Decomposed into Entity Base PRD + 6 Sub-PRDs + TDD.
-2. **Email Provider Sync PRD** — First channel child PRD. Gmail, Outlook, IMAP adapters; dual-track parsing pipeline; email-specific triage. Parent (Communications PRD) is complete.
+2. ~~**Email Provider Sync PRD**~~ — **Drafted 10-08-26** as `email-provider-sync-prd.md` under the Mail Client functional area. Implementation order is now the six phases in `mail-client-prd.md` §5.3 (Phase 0 ledger close → Phase 1 mail store → Phase 2 mail surface → Phase 3 every account → Phase 4 intelligence → Phase 5 hardening).
 3. **AI Learning & Classification PRD** — Requirements established by Conversations PRD. Depends on Communications (triage correction signals) and Conversations (assignment correction signals).
 4. **SMS/MMS PRD** — Second channel child PRD. Provider selection still open (Twilio vs. OpenPhone).
 

@@ -169,7 +169,8 @@ class SyncScheduler:
     def _load_accounts(self) -> list[dict]:
         with get_connection() as conn:
             rows = conn.execute(
-                "SELECT * FROM provider_accounts WHERE is_active = 1 ORDER BY created_at"
+                "SELECT * FROM provider_accounts WHERE is_active = 1 "
+                "AND COALESCE(auth_status, 'ok') NOT IN ('needs_reauth', 'disconnected') ORDER BY created_at"
             ).fetchall()
             return [dict(r) for r in rows]
 
@@ -252,6 +253,18 @@ class SyncScheduler:
                 error = str(exc)
             events.publish("sync.finished", account_id=account["id"], email=account["email_address"],
                            error=error, result=_event_result(result))
+            try:
+                from .account_health import record_sync_outcome
+                from .mail_notify import new_inbox_messages
+                with get_connection() as conn:
+                    record_sync_outcome(conn, account["id"], ([error] if error else None) or (result or {}).get("errors"))
+                    # New inbox mail from this run (MAIL-39); a first sync is history, not news.
+                    if account.get("initial_sync_done"):
+                        fresh = new_inbox_messages(conn, account["id"], st["last_started"].isoformat())
+                        if fresh["count"]:
+                            events.publish("mail.new", account_id=account["id"], email=account["email_address"], **fresh)
+            except Exception:
+                log.exception("Could not record sync outcome for %s", account["email_address"])
             with self._lock:
                 st.update(running=False, last_finished=_now(), last_result=result,
                           last_error=error, runs=st["runs"] + 1)

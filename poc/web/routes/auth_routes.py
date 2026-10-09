@@ -392,7 +392,8 @@ async def _handle_add_account(
         reconnected = True
         with get_connection() as conn:
             conn.execute(
-                "UPDATE provider_accounts SET auth_token_path = ?, is_active = 1, updated_at = ? WHERE id = ?",
+                "UPDATE provider_accounts SET auth_token_path = ?, is_active = 1, "
+                "auth_status = 'ok', auth_error = NULL, updated_at = ? WHERE id = ?",
                 (str(token_path), now, account_id),
             )
             conn.execute(

@@ -58,6 +58,21 @@ interface ProviderAccount {
   /** Short names of the missing scopes, e.g. ["gmail.modify"]. */
   missing_scopes: string[]
   token_present: boolean
+  /** ok | needs_reauth (saved sign-in failed) | disconnected (MAIL-38). */
+  auth_status: 'ok' | 'needs_reauth' | 'disconnected'
+  auth_error: string | null
+  last_sync_error: string | null
+  last_sync_error_at: string | null
+  /** New-mail pop-ups for this account, per user (MAIL-39). */
+  notifications: 'all' | 'known_contacts' | 'none'
+  sync: {
+    running: boolean
+    next_due_at: string | null
+    last_started: string | null
+    last_finished: string | null
+    /** False when the scheduler is off or the account is inactive or parked. */
+    scheduled: boolean
+  }
 }
 
 export interface CalendarEntry {
@@ -232,6 +247,43 @@ export function useToggleAccount() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'accounts'] })
       qc.invalidateQueries({ queryKey: ['settings', 'calendars'] })
+    },
+  })
+}
+
+/** Ask the scheduler to sync one account now (MAIL-38). */
+export function useSyncAccountNow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (accountId: string) =>
+      post<{ status: string; account_id: string }>(`/settings/accounts/${accountId}/sync`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'accounts'] })
+    },
+  })
+}
+
+/** New-mail notification mode for one account (MAIL-39). */
+export function useSetAccountNotifications() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ accountId, mode }: { accountId: string; mode: 'all' | 'known_contacts' | 'none' }) =>
+      put<{ ok: boolean; mode: string }>(`/settings/accounts/${accountId}/notifications`, { mode }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'accounts'] })
+    },
+  })
+}
+
+/** Disconnect an account: keep its mail as history, or delete it all (MAIL-38). */
+export function useDisconnectAccount() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ accountId, mode }: { accountId: string; mode: 'keep' | 'delete' }) =>
+      del<{ ok: boolean; deleted: boolean; communications?: number }>(`/settings/accounts/${accountId}?mode=${mode}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'accounts'] })
+      qc.invalidateQueries({ queryKey: ['mail'] })
     },
   })
 }

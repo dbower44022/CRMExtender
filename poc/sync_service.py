@@ -57,6 +57,19 @@ def _empty_result(n_accounts: int = 0) -> dict:
     }
 
 
+def _mark_reauth_if_needed(account_id: str, exc: Exception) -> None:
+    """A refresh failure in non-interactive mode parks the account (MAIL-38)."""
+    from .auth import ReauthRequired
+    if not isinstance(exc, ReauthRequired):
+        return
+    from .account_health import mark_needs_reauth
+    try:
+        with get_connection() as conn:
+            mark_needs_reauth(conn, account_id, exc.reason)
+    except Exception:
+        log.exception("Could not mark account %s needs_reauth", account_id)
+
+
 def sync_account(
     account: dict,
     *,
@@ -81,12 +94,13 @@ def sync_account(
     account_id = account["id"]
     email_addr = account["email_address"]
 
-    token_path = Path(account["auth_token_path"])
+    token_path = Path(account["auth_token_path"] or "")
     try:
         creds = get_credentials_for_account(token_path)
     except Exception as exc:
         log.warning("Auth failed for %s: %s", email_addr, exc)
         out["errors"].append(f"{email_addr}: auth failed ({exc})")
+        _mark_reauth_if_needed(account_id, exc)
         return out
 
     provider = get_provider(account.get("provider") or "gmail")

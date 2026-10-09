@@ -351,10 +351,14 @@ def send_email(conn, *, queue_id: str, user_id: str) -> dict:
     from_email = acct["email_address"]
 
     # Load credentials
-    token_path = Path(acct["auth_token_path"])
+    token_path = Path(acct["auth_token_path"] or "")
     try:
         creds = get_credentials_for_account(token_path)
     except Exception as exc:
+        from .auth import ReauthRequired
+        if isinstance(exc, ReauthRequired):
+            from .account_health import mark_needs_reauth
+            mark_needs_reauth(conn, acct["id"], exc.reason)
         reason = f"Could not load credentials: {exc}"
         _fail_send(conn, queue_id, reason)
         return {"queue_id": queue_id, "status": "failed", "failure_reason": reason}

@@ -2846,12 +2846,25 @@ def settings_accounts(request: Request):
     # write-back; the UI shows a "Needs reconnect" state from these fields.
     from ...auth import missing_scopes as _missing_scopes
 
+    from ...mail_notify import notification_mode as _notification_mode
+    from ...scheduler import get_scheduler
+    sched = get_scheduler()
+    sched_accounts = (sched.status()["accounts"] if sched is not None and sched.running else {})
+
     for a in accounts:
         path = a.get("auth_token_path")
         missing = _missing_scopes(Path(path)) if path else list(config.GOOGLE_SCOPES)
-        a["needs_reauth"] = bool(missing)
+        a["auth_status"] = a.get("auth_status") or "ok"
+        a["needs_reauth"] = bool(missing) or a["auth_status"] == "needs_reauth"
         a["missing_scopes"] = [s.rsplit("/", 1)[-1] for s in missing]
         a["token_present"] = bool(path) and Path(path).exists()
+        a["notifications"] = _notification_mode(cid, uid, a["id"])
+        st = sched_accounts.get(a["id"]) or {}
+        a["sync"] = {
+            "running": bool(st.get("running")), "next_due_at": st.get("next_due_at"),
+            "last_started": st.get("last_started"), "last_finished": st.get("last_finished"),
+            "scheduled": a["is_active"] == 1 and a["auth_status"] == "ok" and bool(sched_accounts),
+        }
 
     # Strip sensitive fields
     for a in accounts:
@@ -2886,6 +2899,59 @@ async def settings_account_update(request: Request, account_id: str):
         )
 
     return {"ok": True}
+
+
+@router.put("/settings/accounts/{account_id}/notifications")
+async def settings_account_notifications(request: Request, account_id: str):
+    """Per-user, per-account new-mail notification mode (MAIL-39):
+    ``{"mode": "all" | "known_contacts" | "none"}``."""
+    from ...mail_notify import set_notification_mode
+
+    uid = request.state.user["id"]
+    cid = request.state.customer_id
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+    with get_connection() as conn:
+        ok = conn.execute(
+            "SELECT 1 FROM provider_accounts pa JOIN user_provider_accounts upa ON upa.account_id = pa.id "
+            "WHERE pa.id = ? AND pa.customer_id = ? AND upa.user_id = ?", (account_id, cid, uid)).fetchone()
+    if not ok:
+        return JSONResponse({"error": "Account not found"}, status_code=404)
+    try:
+        mode = set_notification_mode(cid, uid, account_id, str(body.get("mode", "")))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "mode": mode}
+
+
+@router.delete("/settings/accounts/{account_id}")
+def settings_account_disconnect(request: Request, account_id: str, mode: str = "keep"):
+    """Disconnect an account (MAIL-38). ``mode=keep`` removes the saved
+    sign-in and stops syncing but keeps every message as history;
+    ``mode=delete`` also deletes the account's messages, conversations,
+    calendar events, labels, and outbound mail. Owner of the account or an
+    administrator."""
+    from ...account_health import disconnect_account
+
+    uid = request.state.user["id"]
+    cid = request.state.customer_id
+    if mode not in ("keep", "delete"):
+        return JSONResponse({"error": "mode must be keep or delete"}, status_code=400)
+    with get_connection() as conn:
+        acct = conn.execute(
+            "SELECT id FROM provider_accounts WHERE id = ? AND customer_id = ?", (account_id, cid)).fetchone()
+        if not acct:
+            return JSONResponse({"error": "Account not found"}, status_code=404)
+        role = conn.execute(
+            "SELECT role FROM user_provider_accounts WHERE user_id = ? AND account_id = ?",
+            (uid, account_id)).fetchone()
+        if request.state.user["role"] != "admin" and not (role and role["role"] == "owner"):
+            return JSONResponse({"error": "Only the account's owner or an administrator can disconnect it"},
+                                status_code=403)
+        result = disconnect_account(conn, account_id, delete_data=(mode == "delete"))
+    return {"ok": True, **result}
 
 
 @router.post("/settings/accounts/{account_id}/toggle-active")

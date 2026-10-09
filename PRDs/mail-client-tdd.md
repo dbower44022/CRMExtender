@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 09:58
+**Last Updated:** 10-09-26 10:07
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -365,6 +365,30 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-37).
 
+### D-40 Account health: non-interactive credentials in the server, a parked state the scheduler skips
+
+**Decision:** `auth.get_credentials_for_account` gains an `interactive` switch with a module default; `create_app` turns it off, so inside the web server a token that is missing, unreadable, or fails to refresh raises `ReauthRequired` instead of starting the local-browser consent flow. The CLI keeps the interactive default. `sync_account` and `send_email` catch `ReauthRequired` and set `provider_accounts.auth_status = 'needs_reauth'` with the reason; the scheduler's account query excludes `needs_reauth` and `disconnected`; the web reconnect callback sets the status back to `ok`. Every scheduled run records its first error (or clears it) on the account row, which the Accounts page shows as a Sync error badge. Disconnect has two modes: *keep* removes the token file, blanks the cursor, and marks the row `disconnected` and inactive, leaving every message as history; *delete* removes the account's outbound mail, messages, conversations, calendar events, and the row (labels, actions, sync log, and user links cascade). Attachment cache files are left to the cache's own size pruning. A successful refresh is now written back to the token file, which the old code did not do.
+
+**Rationale:** The interactive flow inside a server thread would hang the worker waiting for a browser nobody sees (§9.1). A status column, not a derived check, lets the page explain *why* an account stopped and lets the scheduler skip it cheaply. Keeping mail on disconnect matches D-22 (deletion archives, never destroys) and is the default the page offers first.
+
+**Alternatives Rejected:** Deactivating the account (`is_active = 0`) on refresh failure — loses the distinction between "the owner paused it" and "it broke", and the page could not offer the right action. Deleting the account's mail by cascade from the account row — the schema sets `account_id` to NULL on communications and conversations, which would orphan them silently.
+
+**Constraints/Tradeoffs:** `GET /settings/system` is administrator-only, so for a non-administrator the browser falls back to the built-in defaults for the mark-read dwell and the undo window. The seven-day refresh-token expiry of a Testing OAuth client, if it ever applies, now shows as Needs reconnect with the provider's reason rather than a hung sync.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-38).
+
+### D-41 New-mail notifications: the server finds the news, the browser applies the setting
+
+**Decision:** After an account run finishes, the scheduler worker queries the messages stored since the run started that are inbound, unread, current, and in the inbox, and publishes them as one `mail.new` event (count plus up to ten items with sender, subject, snippet, thread id, and a `known_contact` flag from the contact identifiers). A run on an account whose first sync has not completed publishes nothing. The browser reads the account's `mail_notifications` setting (per user, per account, stored as a user-scoped setting `mail_notifications:<account_id>`; default `known_contacts`) and shows up to three pop-ups, then one summary, each with an Open link that deep-links to the thread. The event also invalidates the mail queries, which refreshes the rail badge.
+
+**Rationale:** Deriving "new" from `created_at >= run start` needs no change to the sync engine's return value and is correct for incremental runs. Applying the setting in the browser keeps the event one per run and lets a setting change take effect on the next event without touching the server. Known-contact filtering uses the same identifier lookup as the thread list, so the two never disagree.
+
+**Alternatives Rejected:** One event per message — noisy on a busy inbox and no better for the summary case. Filtering on the server per subscriber — the stream is one per browser tab, not per account setting, and the browser already fetches the account list.
+
+**Constraints/Tradeoffs:** Mail that arrives while the browser is closed is not announced later; the unread badge covers it. The browser fetches the account list on each `mail.new` event (cheap, cached a minute elsewhere). `GET /settings/system` being administrator-only does not affect this path.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-39).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -391,6 +415,8 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.21 | 10-09-26 10:07 | Claude (Claude Code) | Write-back for MAIL-39: D-41 (new-mail notifications). |
+| 1.20 | 10-09-26 10:06 | Claude (Claude Code) | Write-back for MAIL-38: D-40 (non-interactive credentials, parked accounts, disconnect modes). |
 | 1.19 | 10-09-26 09:58 | Claude (Claude Code) | Write-back for MAIL-37: D-39 (in-process broadcaster streamed as server-sent events). |
 | 1.18 | 10-09-26 09:50 | Claude (Claude Code) | Write-back for MAIL-33–36: D-38 (one composer form, three placements, queued send through the outbox table). |
 | 1.17 | 10-09-26 02:30 | Claude (Claude Code) | Write-back for MAIL-32: D-37 (context column on the contact detail route). |

@@ -55,6 +55,11 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    # A token that will not refresh must never open a browser from inside
+    # the server; the account is marked needs_reauth instead (MAIL-38).
+    from .. import auth as _auth
+    _auth.set_interactive(False)
+
     app = FastAPI(title="CRM Extender", lifespan=lifespan)
 
     app.mount(

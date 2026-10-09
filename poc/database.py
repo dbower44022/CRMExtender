@@ -54,6 +54,10 @@ CREATE TABLE IF NOT EXISTS provider_accounts (
     initial_sync_done INTEGER DEFAULT 0,
     is_active         INTEGER DEFAULT 1,
     backfill_query    TEXT DEFAULT 'newer_than:90d',
+    auth_status       TEXT NOT NULL DEFAULT 'ok',   -- ok | needs_reauth | disconnected (v27)
+    auth_error        TEXT,
+    last_sync_error   TEXT,
+    last_sync_error_at TEXT,
     created_at        TEXT NOT NULL,
     updated_at        TEXT NOT NULL,
     UNIQUE(provider, email_address),

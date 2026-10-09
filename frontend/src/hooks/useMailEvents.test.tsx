@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
-import { useMailEvents, MAIL_EVENTS_URL } from './useMailEvents.ts'
+import { useMailEvents, MAIL_EVENTS_URL, announceNewMail } from './useMailEvents.ts'
 import { useLiveStore } from '../stores/live.ts'
+import { stubFetch } from '../test/utils.tsx'
+
+const toastSpy = vi.hoisted(() => vi.fn())
+vi.mock('sonner', () => ({ toast: toastSpy }))
 
 /** A hand-driven EventSource: the test fires the events. */
 class FakeEventSource {
@@ -48,5 +52,31 @@ describe('useMailEvents (MAIL-37)', () => {
     expect(useLiveStore.getState().connected).toBe(false)
     r.unmount()
     expect(es.closed).toBe(true)
+  })
+
+  it('announces new mail per the account setting and opens the thread from the pop-up (MAIL-39)', async () => {
+    toastSpy.mockClear()
+    stubFetch({ '/api/v1/settings/accounts': [{ id: 'a', email_address: 'me@x.com', notifications: 'known_contacts' }] })
+    const open = vi.fn()
+    await announceNewMail({
+      type: 'mail.new', account_id: 'a', count: 2,
+      items: [
+        { communication_id: 'c1', thread_id: 't1', sender_address: 'ada@x.com', sender_name: 'Ada', known_contact: true, subject: 'Lunch?', snippet: '', timestamp: '' },
+        { communication_id: 'c2', thread_id: 't2', sender_address: 'spam@x.com', sender_name: null, known_contact: false, subject: 'Buy', snippet: '', timestamp: '' },
+      ],
+    }, open)
+    expect(toastSpy).toHaveBeenCalledTimes(1)
+    const [title, opts] = toastSpy.mock.calls[0]
+    expect(title).toBe('Ada')
+    expect(opts.description).toBe('Lunch?')
+    opts.action.onClick()
+    expect(open).toHaveBeenCalledWith('a', 't1')
+    // none: silent
+    toastSpy.mockClear()
+    stubFetch({ '/api/v1/settings/accounts': [{ id: 'a', email_address: 'me@x.com', notifications: 'none' }] })
+    await announceNewMail({ type: 'mail.new', account_id: 'a', count: 1, items: [
+      { communication_id: 'c1', thread_id: 't1', sender_address: 'ada@x.com', sender_name: 'Ada', known_contact: true, subject: 'Lunch?', snippet: '', timestamp: '' },
+    ] }, open)
+    expect(toastSpy).not.toHaveBeenCalled()
   })
 })

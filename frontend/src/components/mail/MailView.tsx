@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels'
 import { toast } from 'sonner'
 import { useComposeStore } from '../../stores/compose.ts'
 import { useMailShortcuts } from '../../hooks/useMailShortcuts.ts'
@@ -175,6 +176,9 @@ export function MailView() {
     if (threads.hasNextPage && !threads.isFetchingNextPage) threads.fetchNextPage()
   }
 
+  // The list / reading-pane split is draggable and remembered per browser.
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({ storage: localStorage, id: 'crm-mail-layout' })
+
   return (
     <div className="flex h-full min-h-0 overflow-hidden bg-surface-0">
       <aside className="w-56 shrink-0 overflow-y-auto border-r border-surface-200 bg-surface-50">
@@ -186,7 +190,9 @@ export function MailView() {
           onSelect={(acct, f) => setMailFolder(acct, f)}
         />
       </aside>
-      <section className="relative flex w-[400px] shrink-0 flex-col overflow-hidden border-r border-surface-200">
+      <Group orientation="horizontal" id="crm-mail" className="min-w-0 flex-1" defaultLayout={defaultLayout} onLayoutChanged={onLayoutChanged}>
+      <Panel id="mail-list" defaultSize="38%" minSize="22%" maxSize="75%">
+      <section className="relative flex h-full flex-col overflow-hidden">
         <SearchBox ref={searchRef} value={searchQ} onSearch={setSearchQ} saved={saved} onSaveSearch={saveSearch} onRemoveSaved={removeSaved} />
         <ActionBar targets={targets} onDone={clearSelection} />
         {folder === 'drafts' && <LocalDrafts />}
@@ -209,9 +215,14 @@ export function MailView() {
           onLoadMore={onLoadMore}
         />
       </section>
-      <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      </Panel>
+      <Separator className="separator-handle" aria-label="Resize the message list" />
+      <Panel id="mail-reading" minSize="25%">
+      <section className="flex h-full min-w-0 flex-col overflow-hidden">
         <ReadingPane accountId={openAccountId} threadId={threadId} />
       </section>
+      </Panel>
+      </Group>
       {sheetOpen && <ShortcutSheet onClose={() => setSheetOpen(false)} />}
     </div>
   )

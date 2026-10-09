@@ -9,8 +9,8 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, Paperclip } from 'lucide-react'
 import { useThread, type MailMessage } from '../../api/mail.ts'
-import { sanitizeHtml } from '../../lib/sanitizeHtml.ts'
 import { splitEmailZones } from '../../lib/emailZones.ts'
+import { MessageFrame } from './MessageFrame.tsx'
 
 interface Props {
   accountId: string | null
@@ -36,18 +36,17 @@ function initialExpanded(messages: MailMessage[]): Set<string> {
   return ids
 }
 
-function MessageBody({ html, text }: { html: string; text: string }) {
+function MessageBody({ html, text, sender }: { html: string; text: string; sender: string | null }) {
   const [showQuoted, setShowQuoted] = useState(false)
-  const zones = useMemo(() => (html ? splitEmailZones(sanitizeHtml(html)) : null), [html])
+  // Split before sanitizing: the splitter looks for client markup the
+  // sanitizer may rewrite. Each zone then renders in its own sandboxed frame.
+  const zones = useMemo(() => (html ? splitEmailZones(html) : null), [html])
   if (!zones) {
     return <pre className="mt-3 whitespace-pre-wrap font-sans text-sm text-surface-800">{text}</pre>
   }
   return (
     <div className="mt-3">
-      <div
-        className="prose prose-sm max-w-none overflow-x-auto text-surface-800"
-        dangerouslySetInnerHTML={{ __html: zones.primaryHtml }}
-      />
+      <MessageFrame html={zones.primaryHtml} senderAddress={sender} />
       {zones.quotedHtml && (
         <div className="mt-2">
           <button
@@ -59,10 +58,7 @@ function MessageBody({ html, text }: { html: string; text: string }) {
             {showQuoted ? '· · · hide quoted text' : '· · ·'}
           </button>
           {showQuoted && (
-            <div
-              className="prose prose-sm mt-2 max-w-none border-l-2 border-surface-200 pl-3 text-surface-600"
-              dangerouslySetInnerHTML={{ __html: zones.quotedHtml }}
-            />
+            <MessageFrame html={zones.quotedHtml} senderAddress={sender} className="mt-2 border-l-2 border-surface-200 pl-3" />
           )}
         </div>
       )}
@@ -170,7 +166,7 @@ export function ReadingPane({ accountId, threadId }: Props) {
                     </div>
                   )}
                   <div className="pl-5">
-                    <MessageBody html={m.body_html} text={m.body_text} />
+                    <MessageBody html={m.body_html} text={m.body_text} sender={m.sender.address} />
                   </div>
                 </>
               ) : (

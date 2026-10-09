@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 00:30
+**Last Updated:** 10-09-26 00:50
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -269,6 +269,18 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-21).
 
+### D-31 Mail bodies render in an opaque-origin frame; the allow list is per browser for now
+
+**Decision (implements D-08):** Each body zone (new text, quoted text) is sanitized by DOMPurify with a profile that also forbids forms, frames, `meta`, `link`, and `base`, then wrapped in a `srcdoc` document carrying a strict Content Security Policy and rendered in an `<iframe sandbox="allow-scripts">`. The frame has an opaque origin: it cannot read cookies, storage, or the parent page. The only script inside is ours, appended after sanitization, which reports the document height and relays link clicks through `postMessage`; the parent opens `http`, `https`, `mailto`, and `tel` links in a new tab and drops the rest. Remote images and CSS `url()` loads are neutralized until the viewer clicks "Load images" (this message) or "Always from this sender", which is stored in the browser's localStorage. The regex sanitizer stays in use for the Communication full view until that view is retired.
+
+**Rationale:** An all-accounts client reads mail from strangers; the TDD for the old view admitted the regex sanitizer was not a security boundary. `allow-scripts` without `allow-same-origin` is the documented safe pairing: our measuring script runs, but the page is cross-origin to the application. Splitting before sanitizing keeps the quote-splitter's client-markup heuristics intact.
+
+**Alternatives Rejected:** DOMPurify alone in the page — leaks mail CSS into the shell. `allow-same-origin` for direct height measurement — would let the sandboxed document reach the parent if sanitization ever failed.
+
+**Constraints/Tradeoffs:** Height arrives asynchronously, so a frame can flash short before the first report. The allow list does not follow the user across browsers; PRD §3.1 `mail.remote_images` as a server-side user setting is still to do. `cid:` images resolve only once MAIL-26 serves attachments.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-25).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -295,6 +307,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.11 | 10-09-26 00:50 | Claude (Claude Code) | Write-back for MAIL-25: D-31 (opaque-origin frames, DOMPurify profile, per-browser allow list). |
 | 1.10 | 10-09-26 00:30 | Claude (Claude Code) | Write-back for MAIL-21: D-30 (mail as a shell mode with its own panes; URL mapping; polling). |
 | 1.9 | 10-09-26 00:20 | Claude (Claude Code) | Write-back for MAIL-16: D-29 (thread grouping, folder membership, local counts); §3 thread-model item settled. |
 | 1.8 | 10-09-26 00:15 | Claude (Claude Code) | Write-back for MAIL-12: D-28 (FTS5 table by triggers, phrase-quoted terms, operator resolution). |

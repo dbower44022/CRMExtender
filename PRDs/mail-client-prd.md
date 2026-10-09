@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 13:40
+**Last Updated:** 10-08-26 21:45
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -353,7 +353,7 @@ Each phase ships as a release with a VERSION bump, task checkboxes updated in th
 | 0 | Close the ledger | Commit stranded 2026-07-10 work; re-authorize the deactivated account; rotate the Anthropic key; approve this PRD, the child PRD, and the TDD | MAIL-01–04 |
 | 1 | Mail store foundation | Adapter interface with Gmail behind it; `gmail.modify` scope; full headers, labels, flags, attachment metadata; label tables; action outbox; label-change sync; full-mailbox backfill; FTS5 search; per-account scheduler; attachment cache | MAIL-05–20 |
 | 2 | Mail surface | `/app/mail` with folder tree, message list, reading pane, context column; all actions; keyboard model; isolated rendering; composer upgrades; live updates; per-account health; first frontend test harness | MAIL-21–40 |
-| 3 | Every account | Microsoft Graph adapter and IMAP/SMTP adapter; cross-account duplicate handling | MAIL-41–45 |
+| 3 | Every account | Connect the remaining Google accounts (cbmentors.org, case.edu); cross-account duplicate handling. Microsoft Graph and IMAP/SMTP adapters deferred until a non-Google account appears (§9.2) | MAIL-41–45 |
 | 4 | CRM-only intelligence | Priority inbox; awaiting-reply reminders; AI reply drafts; summarization cost controls | MAIL-46–50 |
 | 5 | Hardening | Encrypted credentials; Gmail push; desktop notifications; phone layout | MAIL-51–55 |
 
@@ -432,9 +432,10 @@ Phase 2 — Mail surface
 - [ ] MAIL-40: Frontend test harness (Vitest + Testing Library) with tests for list, reading pane, actions, keyboard; one Playwright smoke test
 
 Phase 3 — Every account
-- [ ] MAIL-41: Product owner supplies the account inventory (provider per address)
-- [ ] MAIL-42: Microsoft Graph provider (OAuth, delta queries, folders, flags, send)
-- [ ] MAIL-43: IMAP/SMTP provider (IDLE or polling, folders, flags, UIDVALIDITY handling, SMTP send) with provider detection by domain
+- [x] MAIL-41: Product owner supplies the account inventory (provider per address) — 10-08-26, four Google Workspace accounts, table in §9.2
+- [ ] MAIL-42: Microsoft Graph provider (OAuth, delta queries, folders, flags, send) — DEFERRED until a non-Google account is added (§9.2)
+- [ ] MAIL-43: IMAP/SMTP provider (IDLE or polling, folders, flags, UIDVALIDITY handling, SMTP send) with provider detection by domain — DEFERRED until a non-Google account is added (§9.2)
+- [ ] MAIL-41a: Connect doug.bower@cbmentors.org and dwb80@case.edu (after MAIL-06, so they are authorized with the modify scope once)
 - [ ] MAIL-44: Cross-account duplicate detection (same Message-ID in two accounts) with a single thread presentation
 - [ ] MAIL-45: Tests per provider against recorded fixtures
 
@@ -487,7 +488,16 @@ Phase 5 — Hardening
 ## 9. Open Questions
 
 1. **Google OAuth client publishing status.** A client in testing mode expires refresh tokens after seven days. Background sync needs a published client or Workspace-internal accounts. To be confirmed in Phase 0.
-2. **Account inventory.** Only two Google accounts are known. Phase 3 scope depends on which providers the owner's other accounts use.
+2. ~~**Account inventory.**~~ **Resolved 10-08-26** (MAIL-41). All four accounts are Google Workspace mailboxes, so no non-Google adapter is needed until a new account appears. Provider identification by mail exchanger lookup on 10-08-26, except case.edu, which sits behind a university gateway and was confirmed by the owner as read in Gmail.
+
+   | Address | Provider | Role | Unified inbox | Size |
+   |---|---|---|---|---|
+   | doug@dougbower.com | Google Workspace (own domain) | primary | yes | 11 years; 4,484 rows in the 90-day mirror |
+   | douglas.bower@scorevolunteer.org | Google Workspace | secondary | yes | unknown; 1,314 rows mirrored; account deactivated pending re-authorization |
+   | doug.bower@cbmentors.org | Google Workspace | secondary | yes | ~200 messages |
+   | dwb80@case.edu | Google Workspace for Education (university tenant) | secondary | yes | ~100 messages; the tenant may block third-party OAuth sign-in, to be found out at connect time |
+
+   Consequence: Phase 3's Microsoft Graph and IMAP/SMTP adapters (MAIL-42, MAIL-43) are deferred until a non-Google account is added; MAIL-44 (cross-account duplicates) and MAIL-45 stay, and connecting the two new accounts becomes the Phase 3 work.
 3. **Permanent deletion.** Not offered in V1; decide whether Trash emptying is needed.
 4. **Shared accounts.** Mail actions on `shared` accounts are read-only in V1; revisit if a shared inbox is connected.
 
@@ -497,6 +507,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 10-08-26 21:45 | Claude (Claude Code) | Account inventory recorded (§9.2); MAIL-41 closed; MAIL-42/43 deferred; MAIL-41a added; Phase 3 scope restated. |
 | 1.3 | 10-08-26 13:40 | Claude (Claude Code) | MAIL-07 and MAIL-08 checked off (v10.7). |
 | 1.2 | 10-08-26 13:05 | Claude (Claude Code) | MAIL-05 checked off (v10.6). |
 | 1.1 | 10-08-26 12:33 | Claude (Claude Code) | Status set to Approved on the product owner's approval; MAIL-01 and MAIL-04 checked off. |

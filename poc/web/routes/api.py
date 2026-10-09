@@ -2617,6 +2617,7 @@ def settings_system(request: Request):
         "email_history_window": get_setting(cid, "email_history_window") or "90d",
         "summarize_settle_minutes": get_setting(cid, "summarize_settle_minutes") or "15",
         "summarize_max_per_sync": get_setting(cid, "summarize_max_per_sync") or "500",
+        "mail_sync_interval_seconds": get_setting(cid, "mail_sync_interval_seconds") or "120",
     }
 
 
@@ -2638,17 +2639,19 @@ async def settings_system_update(request: Request):
     _SYSTEM_KEYS = [
         "company_name", "default_timezone", "sync_enabled",
         "default_phone_country", "allow_self_registration", "email_history_window",
-        "summarize_settle_minutes", "summarize_max_per_sync",
+        "summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds",
     ]
     for key in _SYSTEM_KEYS:
         val = body.get(key)
         if val is None:
             continue
-        if key in ("summarize_settle_minutes", "summarize_max_per_sync"):
+        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds"):
             try:
                 val = max(0, int(val))
             except (TypeError, ValueError):
                 return JSONResponse({"error": f"{key} must be a whole number"}, status_code=400)
+            if key == "mail_sync_interval_seconds":
+                val = max(60, val)
         set_setting(cid, key, str(val), scope="system")
 
     return {"ok": True}
@@ -3624,13 +3627,23 @@ def dashboard_api(request: Request):
 
 @router.post("/sync")
 def sync_trigger_api(request: Request):
-    """Start a background full sync; 409 if one is already running."""
+    """Start a background full sync; 409 if one is already running.
+
+    With the scheduler running (MAIL-13) this requests an immediate run
+    of every account on its own thread; otherwise the legacy single-slot
+    thread runs the pipeline.
+    """
+    from ...scheduler import get_scheduler
     from ...sync_service import start_background_sync
 
-    uid = request.state.user["id"] if request.state.user else ""
-    started = start_background_sync(
-        customer_id=request.state.customer_id, user_id=uid,
-    )
+    sched = get_scheduler()
+    if sched is not None and sched.running:
+        started = sched.request_run()
+    else:
+        uid = request.state.user["id"] if request.state.user else ""
+        started = start_background_sync(
+            customer_id=request.state.customer_id, user_id=uid,
+        )
     if not started:
         return JSONResponse(
             {"error": "A sync is already running"}, status_code=409,
@@ -3640,7 +3653,63 @@ def sync_trigger_api(request: Request):
 
 @router.get("/sync/status")
 def sync_status_api(request: Request):
-    """Status of the current/most recent background sync."""
+    """Status of the current/most recent background sync, plus the
+    scheduler's per-account view when it is running."""
+    from ...scheduler import get_scheduler
     from ...sync_service import sync_status
 
-    return sync_status()
+    sched = get_scheduler()
+    if sched is not None and sched.running:
+        out = sched.legacy_status()
+        out["scheduler"] = sched.status()
+        return out
+    out = sync_status()
+    out["scheduler"] = {"enabled": False}
+    return out
+
+
+@router.post("/sync/pause")
+def sync_pause_api(request: Request):
+    """Admin: stop timed syncs (manual Sync Now still works)."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    from ...scheduler import get_scheduler
+    sched = get_scheduler()
+    if sched is None or not sched.running:
+        return JSONResponse({"error": "Scheduler is not running"}, status_code=409)
+    sched.pause()
+    return {"paused": True}
+
+
+@router.post("/sync/resume")
+def sync_resume_api(request: Request):
+    """Admin: resume timed syncs."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    from ...scheduler import get_scheduler
+    sched = get_scheduler()
+    if sched is None or not sched.running:
+        return JSONResponse({"error": "Scheduler is not running"}, status_code=409)
+    sched.resume()
+    return {"paused": False}
+
+
+@router.post("/settings/accounts/{account_id}/sync")
+def settings_account_sync_now(request: Request, account_id: str):
+    """Sync one account now (owner or shared user of that account)."""
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT pa.id FROM provider_accounts pa JOIN user_provider_accounts upa "
+            "ON upa.account_id = pa.id WHERE pa.id = ? AND upa.user_id = ? AND pa.is_active = 1",
+            (account_id, uid),
+        ).fetchone()
+    if not row:
+        return JSONResponse({"error": "Account not found"}, status_code=404)
+    from ...scheduler import get_scheduler
+    sched = get_scheduler()
+    if sched is None or not sched.running:
+        return JSONResponse(
+            {"error": "Scheduler is not running; use Sync Now on the Dashboard"}, status_code=409)
+    sched.request_run(account_id)
+    return {"status": "requested", "account_id": account_id}

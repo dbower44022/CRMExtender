@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 
 
@@ -16,6 +17,9 @@ class RateLimiter:
         self.burst = burst if burst is not None else max(1, int(rate))
         self.tokens = float(self.burst)
         self.last_refill = time.monotonic()
+        # Shared across the scheduler's per-account threads (MAIL-13), so
+        # the token bookkeeping must be serialized.
+        self._lock = threading.Lock()
 
     def _refill(self) -> None:
         now = time.monotonic()
@@ -26,10 +30,11 @@ class RateLimiter:
     def acquire(self) -> None:
         """Block until a token is available."""
         while True:
-            self._refill()
-            if self.tokens >= 1.0:
-                self.tokens -= 1.0
-                return
-            # Sleep for the time needed to generate one token
-            deficit = 1.0 - self.tokens
+            with self._lock:
+                self._refill()
+                if self.tokens >= 1.0:
+                    self.tokens -= 1.0
+                    return
+                # Sleep (outside the lock) for the time needed to generate one token
+                deficit = 1.0 - self.tokens
             time.sleep(deficit / self.rate)

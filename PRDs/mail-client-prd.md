@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 23:55
+**Last Updated:** 10-09-26 00:05
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -115,7 +115,7 @@ New mail arriving in an inbox folder raises an in-application notification (toas
 
 | Setting | Description | Type | Default | Scope | Editable By |
 |---|---|---|---|---|---|
-| `mail.sync_interval_seconds` | Interval between incremental syncs per account | integer | 120 | system, provider | admin |
+| `mail.sync_interval_seconds` | Interval between incremental syncs per account (shipped as setting key `mail_sync_interval_seconds`; per-provider override not yet implemented) | integer | 120 | system, provider | admin |
 | `mail.backfill_enabled` | Whether historical backfill beyond the initial window runs | boolean | true | provider | admin |
 | `mail.backfill_batch_size` | Messages fetched per backfill batch | integer | 200 | system | admin |
 | `mail.mark_read_dwell_ms` | Time a thread must be open before it is marked read; 0 disables auto mark-read | integer | 1500 | user | user |
@@ -402,7 +402,7 @@ Phase 1 — Mail store foundation
 - [x] MAIL-10: Incremental sync processes labelAdded/labelRemoved and flag changes; is_read mirrors the provider — v10.8, 10-08-26 (`mail_state.apply_label_delta`; TRASH arriving archives the Communication per §6.4; provider deletions now archive instead of hard-deleting, TDD D-22)
 - [ ] MAIL-11: Resumable full-mailbox backfill job with checkpoint and batch size setting
 - [ ] MAIL-12: Schema v24 — communications_fts (FTS5) over subject, search_text, participant names and addresses; query parser for the §2.5 operators
-- [ ] MAIL-13: Per-account background scheduler (interval setting, one run per account, global pause)
+- [x] MAIL-13: Per-account background scheduler (interval setting, one run per account, global pause) — v10.13, 10-09-26 (`poc/scheduler.py`, started by the web server lifespan unless `CRM_SCHEDULER_ENABLED=false`; setting `mail_sync_interval_seconds`, floor 60, on Settings → System; `sync_enabled=false` stops timers but not Sync Now; `POST /sync/pause|resume` admin-only; `POST /settings/accounts/{id}/sync` per-account sync now; `GET /sync/status` carries a `scheduler` block. TDD D-27)
 - [x] MAIL-14: Action outbox worker: ordered push per account, backoff, dead-letter, API to list and retry — v10.12, 10-08-26 (`poc/mail_actions.py`; routes in new `poc/web/routes/api_mail.py`: `POST /mail/actions`, `GET /mail/actions`, `POST /mail/actions/{id}/retry|discard`, `POST /mail/actions/push`; the worker also runs before each account's sync in `run_full_sync`. Until MAIL-13 there is no timer, so pushes happen on Sync Now or the push endpoint. Setting key is `mail_action_retry_max` (TDD D-26)
 - [ ] MAIL-15: Attachment metadata captured on sync; attachment fetch-on-demand with disk cache and cid: serving
 - [ ] MAIL-16: Mail API: folders with counts, thread list per folder/account/unified, thread detail, actions, search, per-account sync and status
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.10 | 10-09-26 00:05 | Claude (Claude Code) | MAIL-13 checked off (v10.13); interval setting key noted in §3.1. |
 | 1.9 | 10-08-26 23:55 | Claude (Claude Code) | MAIL-09 and MAIL-14 checked off (v10.12). |
 | 1.8 | 10-08-26 23:40 | Claude (Claude Code) | MAIL-19 checked off (v10.11); two summarization settings added to §3.1. |
 | 1.7 | 10-08-26 22:52 | Claude (Claude Code) | §9.1 resolved: OAuth client stays in Testing/External; MAIL-38 gains the refresh-failure rule. |

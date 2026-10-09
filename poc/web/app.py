@@ -42,7 +42,16 @@ async def lifespan(app: FastAPI):
         init_db()
     except Exception as exc:
         log.warning("init_db had issues (may need migration): %s", exc)
-    yield
+    scheduler = None
+    if config.SCHEDULER_ENABLED:
+        from ..scheduler import start_scheduler
+        scheduler = start_scheduler()
+    try:
+        yield
+    finally:
+        if scheduler is not None:
+            from ..scheduler import stop_scheduler
+            stop_scheduler()
 
 
 def create_app() -> FastAPI:

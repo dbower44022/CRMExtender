@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 23:55
+**Last Updated:** 10-09-26 00:05
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -223,6 +223,18 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-08-26 (MAIL-14).
 
+### D-27 Scheduler mechanics: one tick, per-account workers, one post pass, manual runs aggregated
+
+**Decision (refines D-07):** A single scheduler thread ticks every five seconds. Each active account is due when its interval has elapsed since its last run *finished* (not started), or when a run was requested; a due account syncs on its own worker thread and an account never has two runs at once. The cross-account pass (summaries, enrichment, identity resolution) runs once, only when no account worker is active and at least one has finished since the last pass. Pause stops timed runs; requests still run. The Dashboard's "Sync Now" becomes a request for every account tracked as one aggregate run, so its existing status contract (`running`, `started_at`, `completed_at`, `result`, `error`) is unchanged and a second Sync Now during a manual run still returns 409. The `sync_enabled` tenant setting already on the System page is the timer switch. The pipeline was split into `sync_account` and `post_sync_pass` so the scheduler and `run_full_sync` share one implementation; `RateLimiter` became thread-safe for the shared Gmail limiter.
+
+**Rationale:** Interval-from-finish keeps a slow account from queueing back-to-back runs. One post pass after all accounts matches D-25. Reusing the manual-run contract avoids touching the Dashboard.
+
+**Alternatives Rejected:** Per-account timers as separate threads — more threads to supervise for no gain at four accounts. Running the post pass inside each account worker — would reintroduce the blocking D-25 removed.
+
+**Constraints/Tradeoffs:** The scheduler lives in the web server process, so a server restart interrupts a running account sync (the next tick restarts it; provider-id upserts absorb the overlap). Scheduled runs attribute created records to the account's first owner. A failed token refresh in a worker still calls the interactive flow inside `get_credentials_for_account`; MAIL-38 owns that fix (§9.1).
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-13).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -249,6 +261,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 10-09-26 00:05 | Claude (Claude Code) | Write-back for MAIL-13: D-27 (scheduler mechanics, manual-run aggregation, pipeline split). |
 | 1.6 | 10-08-26 23:55 | Claude (Claude Code) | Write-back for MAIL-09/14: D-26 (outbox failure classes, discard, push-before-pull). |
 | 1.5 | 10-08-26 23:40 | Claude (Claude Code) | Write-back for MAIL-19: D-25 (settled, capped, post-loop summarization). |
 | 1.4 | 10-08-26 22:10 | Claude (Claude Code) | Write-back for MAIL-10/06: D-22 (deletion archives), D-23 (tokens loaded with granted scopes), D-24 (reconnect = connect). |

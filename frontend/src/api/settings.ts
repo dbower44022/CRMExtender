@@ -24,6 +24,8 @@ export interface SystemSettings {
   summarize_settle_minutes: string
   /** Max conversations summarized per sync run; "0" = unlimited (MAIL-19). */
   summarize_max_per_sync: string
+  /** Seconds between timed syncs per account, minimum 60 (MAIL-13). */
+  mail_sync_interval_seconds: string
 }
 
 interface UserRecord {

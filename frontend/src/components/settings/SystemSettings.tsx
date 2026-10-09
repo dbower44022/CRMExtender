@@ -29,6 +29,7 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
   const [emailHistoryWindow, setEmailHistoryWindow] = useState(settings.email_history_window)
   const [settleMinutes, setSettleMinutes] = useState(settings.summarize_settle_minutes ?? '15')
   const [maxPerSync, setMaxPerSync] = useState(settings.summarize_max_per_sync ?? '500')
+  const [syncInterval, setSyncInterval] = useState(settings.mail_sync_interval_seconds ?? '120')
   const [syncEnabled, setSyncEnabled] = useState(settings.sync_enabled === 'true')
   const [allowSelfReg, setAllowSelfReg] = useState(settings.allow_self_registration === 'true')
 
@@ -41,6 +42,7 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
         email_history_window: emailHistoryWindow,
         summarize_settle_minutes: settleMinutes,
         summarize_max_per_sync: maxPerSync,
+        mail_sync_interval_seconds: syncInterval,
         sync_enabled: syncEnabled ? 'true' : 'false',
         allow_self_registration: allowSelfReg ? 'true' : 'false',
       },
@@ -171,6 +173,23 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
             <div className="peer h-5 w-9 rounded-full bg-surface-300 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-600 peer-checked:after:translate-x-full" />
           </label>
           <span className="text-sm text-surface-700">Sync enabled</span>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700">
+            Sync every (seconds)
+          </label>
+          <input
+            type="number"
+            min={60}
+            step={30}
+            value={syncInterval}
+            onChange={(e) => setSyncInterval(e.target.value)}
+            className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            Each account syncs on its own timer in the background; minimum 60 seconds. Turning Sync enabled off stops the timers but Sync Now still works.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">

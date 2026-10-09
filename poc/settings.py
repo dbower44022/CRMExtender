@@ -23,6 +23,8 @@ _HARDCODED_DEFAULTS = {
     "summarize_max_per_sync": "500",
     # Mail action outbox: attempts before a transient failure is dead-lettered (MAIL-14)
     "mail_action_retry_max": "8",
+    # Scheduler: seconds between timed syncs per account, never below 60 (MAIL-13)
+    "mail_sync_interval_seconds": "120",
 }
 
 

@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 13:05
+**Last Updated:** 10-08-26 13:40
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -394,8 +394,8 @@ Phase 0 — Close the ledger
 Phase 1 — Mail store foundation
 - [x] MAIL-05: Define the MailProvider interface (email-provider-sync-prd.md §3) and move gmail_client.py behind a GmailProvider — v10.6, 10-08-26 (`poc/providers/`; tests in `tests/test_providers.py`)
 - [ ] MAIL-06: Add gmail.modify to the requested scopes; re-authorization flow in Settings → Accounts with a clear "needs reconnect" state
-- [ ] MAIL-07: Schema v23 — header columns populated (Message-ID, In-Reply-To, References, Reply-To), bcc participants, recipient display names, is_starred, provider label ids; backfill from the provider for existing rows
-- [ ] MAIL-08: Schema v23 — mailbox_labels and communication_labels tables; system folder mapping per provider
+- [x] MAIL-07: Schema v23 — header columns populated (Message-ID, In-Reply-To, References, Reply-To), bcc participants, recipient display names, is_starred, provider label ids; backfill from the provider for existing rows — v10.7, 10-08-26 (`poc/migrate_to_v23.py`, `poc/mail_state.py`; backfill is the `backfill-mail-state` command, **not yet run against the live database**)
+- [x] MAIL-08: Schema v23 — mailbox_labels and communication_labels tables; system folder mapping per provider — v10.7, 10-08-26 (label list refreshed from the adapter before each orchestrated sync; placeholder rows typed from system ids)
 - [ ] MAIL-09: Schema v23 — mail_actions outbox table (action, target, payload, attempts, status, error)
 - [ ] MAIL-10: Incremental sync processes labelAdded/labelRemoved and flag changes; is_read mirrors the provider
 - [ ] MAIL-11: Resumable full-mailbox backfill job with checkpoint and batch size setting
@@ -497,5 +497,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-08-26 13:40 | Claude (Claude Code) | MAIL-07 and MAIL-08 checked off (v10.7). |
+| 1.2 | 10-08-26 13:05 | Claude (Claude Code) | MAIL-05 checked off (v10.6). |
 | 1.1 | 10-08-26 12:33 | Claude (Claude Code) | Status set to Approved on the product owner's approval; MAIL-01 and MAIL-04 checked off. |
 | 1.0 | 10-08-26 01:30 | Claude (Claude Code) | Initial draft for approval, from the 10-08-26 project review and the owner's choice of the local-mirror architecture. |

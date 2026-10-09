@@ -179,8 +179,11 @@ class GmailProvider(MailProvider):
         message_ids: list[str],
         *,
         rate_limiter: RateLimiter | None = None,
+        metadata_only: bool = False,
     ) -> list[MailMessage]:
-        return gmail_client.fetch_messages(session, message_ids, rate_limiter=rate_limiter)
+        return gmail_client.fetch_messages(
+            session, message_ids, rate_limiter=rate_limiter, metadata_only=metadata_only,
+        )
 
     def fetch_attachment(
         self,

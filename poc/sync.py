@@ -12,6 +12,7 @@ from . import config
 from .contacts_client import fetch_contact_groups, fetch_contacts
 from .database import get_connection
 from .email_parser import strip_quotes
+from .mail_state import apply_mail_state, ensure_labels, set_communication_labels
 from .models import (
     Conversation,
     ConversationSummary,
@@ -685,8 +686,9 @@ def _store_thread(
                     sender_address, sender_name, subject, snippet,
                     provider_message_id, provider_thread_id,
                     header_message_id, header_references, header_in_reply_to,
-                    is_read, is_current, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    header_reply_to, is_read, is_starred, mail_state_synced_at,
+                    is_current, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     row["id"], row["account_id"], row["channel"],
                     row["timestamp"],
@@ -697,7 +699,8 @@ def _store_thread(
                     row["subject"], row["snippet"],
                     row["provider_message_id"], row["provider_thread_id"],
                     row["header_message_id"], row["header_references"],
-                    row["header_in_reply_to"], row["is_read"],
+                    row["header_in_reply_to"], row["header_reply_to"],
+                    row["is_read"], row["is_starred"], now,
                     row["is_current"], row["created_at"], row["updated_at"],
                 ),
             )
@@ -719,6 +722,22 @@ def _store_thread(
                     (rec_row["communication_id"], rec_row["address"],
                      rec_row["name"], rec_row["role"]),
                 )
+            # Label membership (MAIL-08); flags and headers went in above.
+            if em.label_ids:
+                mapping = ensure_labels(conn, account_id, em.label_ids)
+                set_communication_labels(
+                    conn, comm_id, [mapping[l] for l in em.label_ids if l in mapping])
+        else:
+            # Already stored (re-fetch, backfill overlap, or a CRM-composed
+            # message now seen from the provider): the provider is
+            # authoritative for mailbox state, so refresh flags, headers,
+            # labels, and participant names without touching bodies.
+            existing = conn.execute(
+                "SELECT id FROM communications WHERE account_id = ? AND provider_message_id = ?",
+                (account_id, em.message_id),
+            ).fetchone()
+            if existing:
+                apply_mail_state(conn, existing["id"], account_id, em)
 
     # ------------------------------------------------------------------
     # Step 2: Check for existing conversation

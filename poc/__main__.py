@@ -101,7 +101,11 @@ def cmd_run(args: argparse.Namespace) -> None:
             console.print(f"[yellow]  Authentication failed ({exc}), skipping.[/yellow]")
             continue
 
-        user_email = get_provider(account.get("provider") or "gmail").get_user_email(creds)
+        provider = get_provider(account.get("provider") or "gmail")
+        user_email = provider.get_user_email(creds)
+
+        from .mail_state import refresh_labels
+        refresh_labels(account, creds, provider, rate_limiter=gmail_limiter)
 
         # Sync contacts
         try:
@@ -896,8 +900,8 @@ def cmd_migrate(args: argparse.Namespace) -> None:
     import importlib
     import sqlite3 as _sqlite3
 
-    LATEST_VERSION = 22
-    MIGRATIONS = list(range(2, LATEST_VERSION + 1))  # [2, 3, ..., 22]
+    LATEST_VERSION = 23
+    MIGRATIONS = list(range(2, LATEST_VERSION + 1))  # [2, 3, ..., 23]
 
     db_path = args.db
     if not db_path:
@@ -915,7 +919,7 @@ def cmd_migrate(args: argparse.Namespace) -> None:
 
     # Fresh databases (created by init_db) have user_version=0 but already
     # have the latest schema.  Detect this by checking for a table that
-    # only exists in v22+.
+    # only exists in v23+.
     if current == 0:
         conn = _sqlite3.connect(str(db_path))
         try:
@@ -925,7 +929,7 @@ def cmd_migrate(args: argparse.Namespace) -> None:
             }
         finally:
             conn.close()
-        if "match_candidates" in tables:
+        if "mailbox_labels" in tables:
             console.print(
                 f"[green]Database is already at the latest schema (v{LATEST_VERSION}).[/green]"
             )
@@ -958,6 +962,57 @@ def cmd_migrate(args: argparse.Namespace) -> None:
         f"\n{prefix}[green]Applied {len(applied)} migration(s): "
         f"v{applied[0]}–v{applied[-1]}.[/green]"
     )
+
+
+def cmd_backfill_mail_state(args: argparse.Namespace) -> None:
+    """Fetch headers, flags, and labels for email rows that predate v23 (MAIL-07)."""
+    from .auth import get_credentials_for_account
+    from .mail_state import backfill_mail_state, pending_backfill_count, refresh_labels
+    from .providers import get_provider
+    from .rate_limiter import RateLimiter
+    from .sync import get_all_accounts
+
+    init_db()
+    accounts = [a for a in get_all_accounts() if a.get("is_active", 1)]
+    if args.account:
+        accounts = [a for a in accounts if a["email_address"].lower() == args.account.lower()]
+        if not accounts:
+            console.print(f"[red]No active account matches {args.account}[/red]")
+            raise SystemExit(1)
+
+    total_pending = pending_backfill_count()
+    console.print(f"\n[bold]{total_pending} email rows await mail-state backfill.[/bold]")
+    limiter = RateLimiter(rate=config.GMAIL_RATE_LIMIT)
+
+    for account in accounts:
+        email_addr = account["email_address"]
+        pending = pending_backfill_count(account["id"])
+        if not pending:
+            console.print(f"  {email_addr}: nothing to do.")
+            continue
+        try:
+            creds = get_credentials_for_account(Path(account["auth_token_path"]))
+        except Exception as exc:
+            console.print(f"[yellow]  {email_addr}: authentication failed ({exc}), skipping.[/yellow]")
+            continue
+        provider = get_provider(account.get("provider") or "gmail")
+        refresh_labels(account, creds, provider, rate_limiter=limiter)
+
+        console.print(f"  {email_addr}: {pending} rows" + (f" (limit {args.limit})" if args.limit else ""))
+
+        def _progress(done: int, total: int) -> None:
+            console.print(f"    {done}/{total}", end="\r")
+
+        result = backfill_mail_state(
+            account, creds, provider,
+            batch_size=args.batch_size, limit=args.limit,
+            rate_limiter=limiter, progress=_progress,
+        )
+        console.print(
+            f"\n[green]  {email_addr}: {result['updated']} updated, "
+            f"{result['missing']} no longer at provider, "
+            f"{result['remaining']} remaining.[/green]"
+        )
 
 
 def cmd_resolve_domains(args: argparse.Namespace) -> None:
@@ -1608,6 +1663,15 @@ def build_parser() -> argparse.ArgumentParser:
     ec.add_argument("--provider", default="website_scraper",
                     help="Enrichment provider (default: website_scraper)")
 
+    # backfill-mail-state (MAIL-07)
+    bm = sub.add_parser(
+        "backfill-mail-state",
+        help="Fetch headers, read/starred flags, and labels for email rows stored before schema v23",
+    )
+    bm.add_argument("--account", help="Only this account's email address (default: all active)")
+    bm.add_argument("--limit", type=int, help="Stop after this many rows per account")
+    bm.add_argument("--batch-size", type=int, default=100, help="Rows per provider batch (default 100)")
+
     # migrate (unified)
     mg = sub.add_parser("migrate", help="Run all pending migrations to bring the database up to date")
     mg.add_argument("--db", type=Path, help="Path to the SQLite database file")
@@ -1665,6 +1729,7 @@ def main() -> None:
         "list-accounts": cmd_list_accounts,
         "remove-account": cmd_remove_account,
         "reauth": cmd_reauth,
+        "backfill-mail-state": cmd_backfill_mail_state,
         "infer-relationships": cmd_infer_relationships,
         "show-relationships": cmd_show_relationships,
         "bootstrap-user": cmd_bootstrap_user,

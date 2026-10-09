@@ -290,7 +290,10 @@ CREATE TABLE IF NOT EXISTS communications (
     header_message_id   TEXT,
     header_references   TEXT,
     header_in_reply_to  TEXT,
+    header_reply_to     TEXT,
     is_read             INTEGER DEFAULT 0,
+    is_starred          INTEGER NOT NULL DEFAULT 0,
+    mail_state_synced_at TEXT,
     phone_number_from   TEXT,
     phone_number_to     TEXT,
     duration_seconds    INTEGER,
@@ -318,6 +321,28 @@ CREATE TABLE IF NOT EXISTS communication_participants (
     contact_id       TEXT REFERENCES contacts(id) ON DELETE SET NULL,
     role             TEXT NOT NULL,
     PRIMARY KEY (communication_id, address, role)
+);
+
+-- Mailbox labels / folders per provider account (Mail Client TDD D-03)
+CREATE TABLE IF NOT EXISTS mailbox_labels (
+    id                TEXT PRIMARY KEY,
+    account_id        TEXT NOT NULL REFERENCES provider_accounts(id) ON DELETE CASCADE,
+    provider_label_id TEXT NOT NULL,
+    name              TEXT NOT NULL,
+    kind              TEXT NOT NULL DEFAULT 'user',
+    parent_id         TEXT,
+    unread_count      INTEGER,
+    total_count       INTEGER,
+    created_at        TEXT NOT NULL,
+    updated_at        TEXT NOT NULL,
+    UNIQUE (account_id, provider_label_id)
+);
+
+-- Communication ↔ label membership (a folder is a single label row)
+CREATE TABLE IF NOT EXISTS communication_labels (
+    communication_id TEXT NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
+    label_id         TEXT NOT NULL REFERENCES mailbox_labels(id) ON DELETE CASCADE,
+    PRIMARY KEY (communication_id, label_id)
 );
 
 -- Conversation ↔ Communication M:N join
@@ -1036,6 +1061,9 @@ CREATE INDEX IF NOT EXISTS idx_comm_thread         ON communications(provider_th
 CREATE INDEX IF NOT EXISTS idx_comm_header_msg_id  ON communications(header_message_id);
 CREATE INDEX IF NOT EXISTS idx_comm_current        ON communications(is_current);
 CREATE INDEX IF NOT EXISTS idx_comm_archived       ON communications(is_archived);
+CREATE INDEX IF NOT EXISTS idx_comm_mail_state     ON communications(mail_state_synced_at);
+CREATE INDEX IF NOT EXISTS idx_mlabel_account      ON mailbox_labels(account_id);
+CREATE INDEX IF NOT EXISTS idx_clabel_label        ON communication_labels(label_id);
 
 -- Conversations
 CREATE INDEX IF NOT EXISTS idx_conv_topic          ON conversations(topic_id);

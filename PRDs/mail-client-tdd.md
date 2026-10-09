@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 13:05
+**Last Updated:** 10-08-26 13:40
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -149,6 +149,30 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-08-26 (MAIL-05).
 
+### D-19 Provider state is authoritative on re-seen messages
+
+**Decision:** When the sync store meets a message it already holds (backfill overlap, re-fetch, or a CRM-composed message now arriving from the provider), it rewrites the row's flags, header ids, label membership, and participant display names from the provider copy, and never touches the stored bodies. `mail_state_synced_at` records when that last happened.
+
+**Rationale:** A mirror has one source of truth for mailbox state. Keeping the first-seen flags would make the local inbox diverge from the provider until MAIL-10's delta handling lands, and bodies are the one thing the provider will not change.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-07).
+
+### D-20 Flag labels are columns, membership labels are rows
+
+**Decision:** Gmail's `UNREAD` and `STARRED` labels map to `is_read` and `is_starred` columns and never get `communication_labels` rows. Every other label (system, category, user) is a membership row against `mailbox_labels`.
+
+**Rationale:** Read and starred state are per-message flags on every provider, queried on every list; a column is the natural index. Treating them as labels would make "unread count" a join.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-08).
+
+### D-21 Pre-v23 rows are backfilled by a command, not the migration
+
+**Decision:** The v23 migration adds columns and tables only. A separate `backfill-mail-state` command fetches metadata-only copies in batches and is resumable on `mail_state_synced_at IS NULL`; rows the provider no longer has are stamped so they are not retried.
+
+**Rationale:** A migration must not depend on the network or on valid credentials. At the Gmail rate limit the 5,798 live rows take roughly twenty minutes, which belongs in a progress-reporting command the owner runs when ready.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-07).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -175,6 +199,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-08-26 13:40 | Claude (Claude Code) | Write-back for MAIL-07/08: D-19 (provider authoritative on re-seen rows), D-20 (flags as columns), D-21 (backfill by command). |
 | 1.2 | 10-08-26 13:05 | Claude (Claude Code) | Implementation write-back for MAIL-05: D-15 (`ParsedEmail` as the contract type), D-16 (thread-grouped `fetch_initial`), D-17 (cursor read at fetch time), D-18 (module-object calls). |
 | 1.1 | 10-08-26 12:33 | Claude (Claude Code) | Status set to Approved on the product owner's approval; D-02–D-14 now binding. |
 | 1.0 | 10-08-26 01:30 | Claude (Claude Code) | Initial draft. D-01 records the product owner's architecture choice; D-02–D-14 are proposals for approval. |

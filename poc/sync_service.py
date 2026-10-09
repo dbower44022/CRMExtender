@@ -82,7 +82,13 @@ def run_full_sync(*, customer_id: str, user_id: str) -> dict:
             result["errors"].append(f"{email_addr}: auth failed ({exc})")
             continue
 
-        user_email = get_provider(account.get("provider") or "gmail").get_user_email(creds)
+        provider = get_provider(account.get("provider") or "gmail")
+        user_email = provider.get_user_email(creds)
+
+        # Label list first so membership rows written by the sync below
+        # point at named, typed labels rather than placeholders (MAIL-08).
+        from .mail_state import refresh_labels
+        refresh_labels(account, creds, provider, rate_limiter=gmail_limiter)
 
         try:
             result["contacts"] += sync_contacts(

@@ -553,13 +553,19 @@ def fetch_messages(
     creds: Credentials,
     message_ids: list[str],
     rate_limiter: RateLimiter | None = None,
+    *,
+    metadata_only: bool = False,
 ) -> list[ParsedEmail]:
     """Fetch full message data for a list of message IDs.
 
-    Returns parsed emails (skips failures).
+    Returns parsed emails (skips failures). With ``metadata_only=True``
+    the ``metadata`` format is requested: headers, labels, and flags come
+    back but bodies and attachment parts do not (used by the mail-state
+    backfill, which must not overwrite stored bodies).
     """
     service = build("gmail", "v1", credentials=creds)
     emails: list[ParsedEmail] = []
+    fmt = "metadata" if metadata_only else "full"
 
     for mid in message_ids:
         try:
@@ -569,7 +575,7 @@ def fetch_messages(
             msg = (
                 service.users()
                 .messages()
-                .get(userId="me", id=mid, format="full")
+                .get(userId="me", id=mid, format=fmt)
                 .execute()
             )
             emails.append(_parse_message(msg))

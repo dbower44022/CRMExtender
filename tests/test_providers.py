@@ -223,9 +223,9 @@ class TestFolders:
             {"id": "Label_1", "name": "Clients/Acme", "type": "user"},
             {"id": "Label_2", "name": SNOOZE_LABEL_NAME, "type": "user"},
         ]
-        service = MagicMock()
-        service.users().labels().list().execute.return_value = {"labels": labels}
-        with patch("poc.gmail_client.build", return_value=service):
+        # conftest stubs list_labels to [] for every test (network boundary);
+        # this test is about the mapping, so feed the raw label resources in.
+        with patch("poc.gmail_client.list_labels", return_value=labels):
             folders = {f.id: f for f in GmailProvider().list_folders(MagicMock())}
 
         assert folders["INBOX"].kind is FolderKind.INBOX and folders["INBOX"].unread_count == 3

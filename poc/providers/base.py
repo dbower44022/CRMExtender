@@ -278,8 +278,13 @@ class MailProvider(abc.ABC):
         message_ids: list[str],
         *,
         rate_limiter: RateLimiter | None = None,
+        metadata_only: bool = False,
     ) -> list[MailMessage]:
-        """Full messages for the given provider ids; failures are skipped."""
+        """Messages for the given provider ids; failures are skipped.
+
+        ``metadata_only`` returns headers, labels, and flags without
+        bodies or attachment parts, for refreshing mailbox state cheaply.
+        """
 
     @abc.abstractmethod
     def fetch_attachment(

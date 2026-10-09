@@ -251,7 +251,7 @@ def _parse_message(msg: dict) -> ParsedEmail:
 
 def get_user_email(creds: Credentials) -> str:
     """Return the authenticated user's email address from the Gmail profile."""
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     profile = service.users().getProfile(userId="me").execute()
     return profile["emailAddress"].lower()
 
@@ -269,7 +269,7 @@ def fetch_threads(
     each thread being a list of ParsedEmail sorted by date ascending.
     The next_page_token can be passed back to continue fetching.
     """
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     query = query or config.GMAIL_QUERY
     max_threads = max_threads or config.GMAIL_MAX_THREADS
 
@@ -338,7 +338,7 @@ def fetch_threads(
 
 def get_history_id(creds: Credentials) -> str:
     """Return the current Gmail historyId for the authenticated user."""
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     profile = service.users().getProfile(userId="me").execute()
     return str(profile["historyId"])
 
@@ -372,7 +372,7 @@ def fetch_history(
     and propagates other API errors so the caller aborts without
     advancing its cursor.
     """
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     added: list[str] = []
     deleted: list[str] = []
     label_changes: dict[str, dict] = {}
@@ -440,7 +440,7 @@ def list_labels(creds: Credentials, rate_limiter: RateLimiter | None = None) -> 
     """Return the raw Gmail label resources for the mailbox."""
     if rate_limiter:
         rate_limiter.acquire()
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     result = service.users().labels().list(userId="me").execute()
     return list(result.get("labels", []))
 
@@ -456,7 +456,7 @@ def list_message_ids(
     """One page of message ids matching ``query`` (newest first)."""
     if rate_limiter:
         rate_limiter.acquire()
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     params: dict = {"userId": "me", "q": query, "maxResults": max_results}
     if page_token:
         params["pageToken"] = page_token
@@ -474,7 +474,7 @@ def fetch_attachment(
     """Return the decoded bytes of one attachment part."""
     if rate_limiter:
         rate_limiter.acquire()
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     result = (
         service.users()
         .messages()
@@ -501,7 +501,7 @@ def modify_labels(
         return
     if rate_limiter:
         rate_limiter.acquire()
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     body: dict = {"ids": list(message_ids)}
     if add:
         body["addLabelIds"] = list(add)
@@ -518,7 +518,7 @@ def trash_messages(
     rate_limiter: RateLimiter | None = None,
 ) -> None:
     """Move messages to or out of Trash (one request per message)."""
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     for mid in message_ids:
         if rate_limiter:
             rate_limiter.acquire()
@@ -534,7 +534,7 @@ def create_label(
     """Create a user label; nested labels use ``Parent/Child`` names."""
     if rate_limiter:
         rate_limiter.acquire()
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     body = {
         "name": name,
         "labelListVisibility": "labelShow",
@@ -545,7 +545,7 @@ def create_label(
 
 def get_profile(creds: Credentials) -> dict:
     """Return the raw Gmail profile (emailAddress, historyId, counts)."""
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     return service.users().getProfile(userId="me").execute()
 
 
@@ -563,7 +563,7 @@ def fetch_messages(
     back but bodies and attachment parts do not (used by the mail-state
     backfill, which must not overwrite stored bodies).
     """
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     emails: list[ParsedEmail] = []
     fmt = "metadata" if metadata_only else "full"
 
@@ -649,7 +649,7 @@ def send_message(
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
 
     # Send via Gmail API
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     send_body: dict = {"raw": raw}
     if thread_id:
         send_body["threadId"] = thread_id

@@ -52,7 +52,7 @@ def fetch_contact_groups(
 
     System groups (myContacts, starred, etc.) are filtered out.
     """
-    service = build("people", "v1", credentials=creds)
+    service = build("people", "v1", credentials=creds, cache_discovery=False)
     if rate_limiter:
         rate_limiter.acquire()
 
@@ -130,7 +130,7 @@ def fetch_contacts(
     group_map: dict[str, str] | None = None,
 ) -> list[KnownContact]:
     """Fetch all contacts with email addresses from Google People API."""
-    service = build("people", "v1", credentials=creds)
+    service = build("people", "v1", credentials=creds, cache_discovery=False)
     contacts: list[KnownContact] = []
     page_token: str | None = None
 

@@ -1326,6 +1326,9 @@ def init_db(db_path: Path | None = None) -> None:
             "CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5("
             "note_id UNINDEXED, title, content_text, tokenize='porter unicode61')"
         )
+        # Mail full-text index + maintenance triggers (Mail Client MAIL-12)
+        from .mail_search import FTS_SCHEMA_SQL
+        conn.executescript(FTS_SCHEMA_SQL)
         # Defensive: add is_archived column for existing DBs
         cols = {r[1] for r in conn.execute("PRAGMA table_info(communications)")}
         if "is_archived" not in cols:

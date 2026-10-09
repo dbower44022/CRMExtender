@@ -2312,6 +2312,17 @@ def note_detail_api(request: Request, note_id: str):
 # Cross-entity search
 # ------------------------------------------------------------------
 
+def _fts_match(like_pattern: str) -> str:
+    """Turn the global search's ``%q%`` pattern into a safe FTS5 phrase
+    (each word quoted, prefix-matched) for the communications index."""
+    from ...mail_search import _fts_term
+
+    words = like_pattern.strip("%").split()
+    if not words:
+        return '""'
+    return " ".join(_fts_term(w + "*") for w in words)
+
+
 @router.get("/search")
 def search_entities(
     request: Request,
@@ -2437,11 +2448,15 @@ def search_entities(
         {
             "entity_type": "communication",
             "label": "Communications",
+            # Full-text (MAIL-12): subject, body, and participants via the
+            # communications_fts index, newest first. The LIKE on subject and
+            # sender is kept as an OR so a partial token still matches.
             "count_sql": (
                 "SELECT COUNT(*) FROM communications comm "
                 "JOIN provider_accounts pa ON pa.id = comm.account_id "
                 "WHERE pa.customer_id = ? AND (comm.subject LIKE ? COLLATE NOCASE "
-                "  OR comm.sender_address LIKE ? COLLATE NOCASE)"
+                "  OR comm.sender_address LIKE ? COLLATE NOCASE "
+                "  OR comm.id IN (SELECT comm_id FROM communications_fts WHERE communications_fts MATCH ?))"
             ),
             "results_sql": (
                 "SELECT comm.id, comm.subject AS name, "
@@ -2450,11 +2465,12 @@ def search_entities(
                 "FROM communications comm "
                 "JOIN provider_accounts pa ON pa.id = comm.account_id "
                 "WHERE pa.customer_id = ? AND (comm.subject LIKE ? COLLATE NOCASE "
-                "  OR comm.sender_address LIKE ? COLLATE NOCASE) "
-                "ORDER BY comm.subject COLLATE NOCASE LIMIT ?"
+                "  OR comm.sender_address LIKE ? COLLATE NOCASE "
+                "  OR comm.id IN (SELECT comm_id FROM communications_fts WHERE communications_fts MATCH ?)) "
+                "ORDER BY comm.timestamp DESC LIMIT ?"
             ),
-            "count_params": lambda cid, pat: (cid, pat, pat),
-            "results_params": lambda cid, pat, lim: (cid, pat, pat, lim),
+            "count_params": lambda cid, pat: (cid, pat, pat, _fts_match(pat)),
+            "results_params": lambda cid, pat, lim: (cid, pat, pat, _fts_match(pat), lim),
         },
     ]
 

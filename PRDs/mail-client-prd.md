@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 00:05
+**Last Updated:** 10-09-26 00:15
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -401,7 +401,7 @@ Phase 1 — Mail store foundation
 - [x] MAIL-09: Schema v23 — mail_actions outbox table (action, target, payload, attempts, status, error) — shipped as **schema v24**, v10.12, 10-08-26 (`poc/migrate_to_v24.py`; v23 had already shipped without it)
 - [x] MAIL-10: Incremental sync processes labelAdded/labelRemoved and flag changes; is_read mirrors the provider — v10.8, 10-08-26 (`mail_state.apply_label_delta`; TRASH arriving archives the Communication per §6.4; provider deletions now archive instead of hard-deleting, TDD D-22)
 - [ ] MAIL-11: Resumable full-mailbox backfill job with checkpoint and batch size setting
-- [ ] MAIL-12: Schema v24 — communications_fts (FTS5) over subject, search_text, participant names and addresses; query parser for the §2.5 operators
+- [x] MAIL-12: Schema v24 — communications_fts (FTS5) over subject, search_text, participant names and addresses; query parser for the §2.5 operators — shipped as **schema v25**, v10.14, 10-09-26 (`poc/mail_search.py`: index + triggers, `parse_query`, `build_sql`, `search`; `GET /mail/search?q=`; global search now reaches bodies and participants. Operators: from, to, cc, subject, has:attachment, in:<folder|label>, label, account, is:unread|read|starred|unstarred, before, after, newer_than, older_than, quoted phrases. Trash and spam hidden unless named. TDD D-28)
 - [x] MAIL-13: Per-account background scheduler (interval setting, one run per account, global pause) — v10.13, 10-09-26 (`poc/scheduler.py`, started by the web server lifespan unless `CRM_SCHEDULER_ENABLED=false`; setting `mail_sync_interval_seconds`, floor 60, on Settings → System; `sync_enabled=false` stops timers but not Sync Now; `POST /sync/pause|resume` admin-only; `POST /settings/accounts/{id}/sync` per-account sync now; `GET /sync/status` carries a `scheduler` block. TDD D-27)
 - [x] MAIL-14: Action outbox worker: ordered push per account, backoff, dead-letter, API to list and retry — v10.12, 10-08-26 (`poc/mail_actions.py`; routes in new `poc/web/routes/api_mail.py`: `POST /mail/actions`, `GET /mail/actions`, `POST /mail/actions/{id}/retry|discard`, `POST /mail/actions/push`; the worker also runs before each account's sync in `run_full_sync`. Until MAIL-13 there is no timer, so pushes happen on Sync Now or the push endpoint. Setting key is `mail_action_retry_max` (TDD D-26)
 - [ ] MAIL-15: Attachment metadata captured on sync; attachment fetch-on-demand with disk cache and cid: serving
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.11 | 10-09-26 00:15 | Claude (Claude Code) | MAIL-12 checked off (v10.14). |
 | 1.10 | 10-09-26 00:05 | Claude (Claude Code) | MAIL-13 checked off (v10.13); interval setting key noted in §3.1. |
 | 1.9 | 10-08-26 23:55 | Claude (Claude Code) | MAIL-09 and MAIL-14 checked off (v10.12). |
 | 1.8 | 10-08-26 23:40 | Claude (Claude Code) | MAIL-19 checked off (v10.11); two summarization settings added to §3.1. |

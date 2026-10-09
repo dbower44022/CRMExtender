@@ -66,6 +66,26 @@ def _account_for_communications(conn, communication_ids: list[str]) -> str | Non
 
 
 # ---------------------------------------------------------------------------
+# Search (MAIL-12)
+# ---------------------------------------------------------------------------
+
+@router.get("/mail/search")
+def mail_search(request: Request, q: str = "", limit: int = 50, offset: int = 0):
+    """Full-text mail search with mailbox operators over the caller's accounts.
+
+    Operators: from:, to:, cc:, subject:, has:attachment, in:<folder|label>,
+    label:, account:, is:unread|read|starred|unstarred, before:/after:
+    (YYYY-MM-DD), newer_than:/older_than: (7d, 2w, 3m, 1y). Quoted phrases
+    are matched exactly. Trash and spam are excluded unless named.
+    """
+    from ...mail_search import search
+
+    accounts = _visible_account_ids(request)
+    with get_connection() as conn:
+        return search(conn, q or "", account_ids=accounts, limit=limit, offset=offset)
+
+
+# ---------------------------------------------------------------------------
 # Actions
 # ---------------------------------------------------------------------------
 

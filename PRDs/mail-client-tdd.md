@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 00:05
+**Last Updated:** 10-09-26 00:15
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -235,6 +235,18 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-13).
 
+### D-28 Mail search: a plain FTS5 table kept by triggers, operators resolved in one function
+
+**Decision (refines D-06):** `communications_fts` is a regular (not external-content) FTS5 table with `comm_id`, `subject`, `body`, `participants`, tokenizer `porter unicode61`, maintained by six triggers on `communications` and `communication_participants`. Free text and `subject:` go to `MATCH`; every user term is quoted as a phrase (trailing `*` keeps prefix matching) so punctuation and the words AND, OR, NOT are literal. `from:`, `to:`, `cc:`, `account:` use case-insensitive LIKE on the structured columns; folders and labels resolve through `mailbox_labels`; `in:archive` means "in no inbox, trash, or spam folder"; trash and spam are excluded unless the query names them. `build_sql` is the only function that produces SQL.
+
+**Rationale:** External-content FTS5 keys on rowid, which SQLite does not guarantee stable for a table with a text primary key across VACUUM; a plain table keyed by `comm_id` is safe. Phrase-quoting every term removes the FTS5 syntax surface from user input. Keeping participant operators on structured columns gives exact role semantics (to versus cc) that the index cannot.
+
+**Alternatives Rejected:** `MATCH` with raw user input — a stray quote or colon returns an FTS syntax error. Indexing participants only in the FTS table — loses the to/cc distinction.
+
+**Constraints/Tradeoffs:** Porter stemming makes `subject:meeting` also match "Meet"; acceptable for mail search, and a phrase in quotes is still stemmed. The index roughly doubles text storage (11,508 rows indexed in under three seconds on the live copy). `has:attachment` returns nothing until MAIL-15 stores attachment metadata.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-12).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -261,6 +273,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.8 | 10-09-26 00:15 | Claude (Claude Code) | Write-back for MAIL-12: D-28 (FTS5 table by triggers, phrase-quoted terms, operator resolution). |
 | 1.7 | 10-09-26 00:05 | Claude (Claude Code) | Write-back for MAIL-13: D-27 (scheduler mechanics, manual-run aggregation, pipeline split). |
 | 1.6 | 10-08-26 23:55 | Claude (Claude Code) | Write-back for MAIL-09/14: D-26 (outbox failure classes, discard, push-before-pull). |
 | 1.5 | 10-08-26 23:40 | Claude (Claude Code) | Write-back for MAIL-19: D-25 (settled, capped, post-loop summarization). |

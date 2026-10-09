@@ -20,6 +20,11 @@ interface NavigationState {
   settingsTab: string
   dashboardMode: boolean
   reviewMode: boolean
+  /** Mail surface (Mail Client PRD MAIL-21): /app/mail/{account|unified}/{folder}[/{thread}] */
+  mailMode: boolean
+  mailAccountId: string          // 'unified' or a provider account id
+  mailFolder: string             // inbox | starred | sent | drafts | archive | all | trash | spam | label:<id>
+  mailThreadId: string | null
 
   setActiveEntityType: (entityType: string) => void
   setActiveViewId: (viewId: string | null) => void
@@ -42,6 +47,10 @@ interface NavigationState {
   closeDashboard: () => void
   openReview: () => void
   closeReview: () => void
+  openMail: (accountId?: string, folder?: string, threadId?: string | null) => void
+  closeMail: () => void
+  setMailFolder: (accountId: string, folder: string) => void
+  setMailThread: (threadId: string | null) => void
   setSettingsTab: (tab: string) => void
   reset: () => void
 }
@@ -65,6 +74,10 @@ const DEFAULTS = {
   settingsTab: 'profile',
   dashboardMode: false,
   reviewMode: false,
+  mailMode: false,
+  mailAccountId: 'unified',
+  mailFolder: 'inbox',
+  mailThreadId: null as string | null,
 }
 
 export const useNavigationStore = create<NavigationState>()((set) => ({
@@ -87,6 +100,7 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
       settingsMode: false,
       dashboardMode: false,
       reviewMode: false,
+      mailMode: false,
     }),
 
   setActiveViewId: (viewId) =>
@@ -185,7 +199,7 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
   setPendingNavigation: (nav) => set({ pendingNavigation: nav }),
 
   openSettings: () =>
-    set({ settingsMode: true, dashboardMode: false, reviewMode: false }),
+    set({ settingsMode: true, dashboardMode: false, reviewMode: false, mailMode: false }),
 
   closeSettings: () =>
     set({ settingsMode: false }),
@@ -194,16 +208,36 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
     set({ settingsTab: tab }),
 
   openDashboard: () =>
-    set({ dashboardMode: true, settingsMode: false, reviewMode: false }),
+    set({ dashboardMode: true, settingsMode: false, reviewMode: false, mailMode: false }),
 
   closeDashboard: () =>
     set({ dashboardMode: false }),
 
   openReview: () =>
-    set({ reviewMode: true, settingsMode: false, dashboardMode: false }),
+    set({ reviewMode: true, settingsMode: false, dashboardMode: false, mailMode: false }),
 
   closeReview: () =>
     set({ reviewMode: false }),
+
+  openMail: (accountId, folder, threadId) =>
+    set((state) => ({
+      mailMode: true,
+      settingsMode: false,
+      dashboardMode: false,
+      reviewMode: false,
+      mailAccountId: accountId ?? state.mailAccountId,
+      mailFolder: folder ?? state.mailFolder,
+      mailThreadId: threadId === undefined ? state.mailThreadId : threadId,
+    })),
+
+  closeMail: () =>
+    set({ mailMode: false }),
+
+  setMailFolder: (accountId, folder) =>
+    set({ mailAccountId: accountId, mailFolder: folder, mailThreadId: null }),
+
+  setMailThread: (threadId) =>
+    set({ mailThreadId: threadId }),
 
   reset: () => set(DEFAULTS),
 }))

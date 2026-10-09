@@ -36,9 +36,20 @@ const SETTINGS_TABS = [
 
 export function ActionPanel() {
   const settingsMode = useNavigationStore((s) => s.settingsMode)
+  const mailMode = useNavigationStore((s) => s.mailMode)
 
   if (settingsMode) {
     return <SettingsPanel />
+  }
+  if (mailMode) {
+    // The mail surface carries its own folder tree inside the content
+    // area (MAIL-22); this panel has nothing to add yet.
+    return (
+      <div className="flex h-full flex-col border-r border-surface-200 bg-surface-50 p-3 text-xs text-surface-500">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-surface-500">Mail</div>
+        <p className="mt-2">Folders are in the mail view. Collapse this panel for more room.</p>
+      </div>
+    )
   }
   return <ViewsPanel />
 }

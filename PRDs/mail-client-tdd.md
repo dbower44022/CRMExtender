@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 00:20
+**Last Updated:** 10-09-26 00:30
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -257,6 +257,18 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-16).
 
+### D-30 The mail surface is a mode of the existing shell, with its own three panes inside the content area
+
+**Decision:** Mail is a fourth special mode of the single-page application beside Dashboard, Review, and Settings: a `mailMode` flag plus `mailAccountId`, `mailFolder`, and `mailThreadId` in the navigation store, mapped to `/app/mail/{account|unified}/{folder}[/{thread}]` by the existing URL-sync hook (a thread change within the same folder replaces history; a folder change pushes). The content panel renders `MailView`, which lays out its own folder tree, thread list, and reading pane; the shell's Action Panel shows a placeholder in mail mode and the Detail Panel is untouched. Folder, thread, and unread data come from the MAIL-16 routes through TanStack Query with 30-second polling for the list and 60-second polling for the rail badge (the D-11 first step).
+
+**Rationale:** The shell's panels are sized for grid-plus-detail; mail needs three panes of its own proportions, so it owns them. Reusing the mode pattern keeps the rail, header, and URL handling consistent with the other surfaces and avoids introducing a router.
+
+**Alternatives Rejected:** Making mail an "entity type" in the grid system — the grid is the wrong shape for threads. Introducing a router library — the hand-written URL sync already covers the needed forms.
+
+**Constraints/Tradeoffs:** A thread id is unique only within an account; the reading pane resolves the account from the loaded list in unified view, so a deep link to a unified thread resolves only once the list containing it has loaded. The Action and Detail panels still take space in mail mode until the user collapses them.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-21).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -283,6 +295,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.10 | 10-09-26 00:30 | Claude (Claude Code) | Write-back for MAIL-21: D-30 (mail as a shell mode with its own panes; URL mapping; polling). |
 | 1.9 | 10-09-26 00:20 | Claude (Claude Code) | Write-back for MAIL-16: D-29 (thread grouping, folder membership, local counts); §3 thread-model item settled. |
 | 1.8 | 10-09-26 00:15 | Claude (Claude Code) | Write-back for MAIL-12: D-28 (FTS5 table by triggers, phrase-quoted terms, operator resolution). |
 | 1.7 | 10-09-26 00:05 | Claude (Claude Code) | Write-back for MAIL-13: D-27 (scheduler mechanics, manual-run aggregation, pipeline split). |

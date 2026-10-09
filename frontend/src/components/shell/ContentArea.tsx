@@ -1,4 +1,5 @@
 import { DashboardView } from '../dashboard/DashboardView.tsx'
+import { MailView } from '../mail/MailView.tsx'
 import { RelationshipTypesSettings } from '../settings/RelationshipTypesSettings.tsx'
 import { ReviewQueue } from '../review/ReviewQueue.tsx'
 import { useNavigationStore } from '../../stores/navigation.ts'
@@ -28,6 +29,11 @@ export function ContentArea() {
   const settingsTab = useNavigationStore((s) => s.settingsTab)
   const dashboardMode = useNavigationStore((s) => s.dashboardMode)
   const reviewMode = useNavigationStore((s) => s.reviewMode)
+  const mailMode = useNavigationStore((s) => s.mailMode)
+
+  if (mailMode) {
+    return <MailView />
+  }
 
   if (dashboardMode) {
     return <DashboardView />

@@ -18,7 +18,28 @@ Folder and search membership share one predicate builder
 
 from __future__ import annotations
 
+import html
+import re
+
 from .mail_search import SearchQuery, parse_query, predicates
+
+_ANGLE = re.compile(r"\s*<[^>]*>\s*$")
+
+
+def _display_name(name: str | None, address: str | None) -> str | None:
+    """``sender_name`` historically stored the full ``Name <addr>`` display
+    string; return just the name, or None when it is only the address."""
+    if not name:
+        return None
+    n = _ANGLE.sub("", name).strip().strip('"')
+    if not n or (address and n.lower() == address.lower()):
+        return None
+    return n
+
+
+def _snippet(text: str | None) -> str:
+    """Gmail snippets arrive HTML-escaped (``&#39;``); show them plain."""
+    return html.unescape(text or "")
 
 #: Folder keys the API accepts, mapped onto SearchQuery.in_ values.
 SYSTEM_FOLDERS = {
@@ -181,11 +202,11 @@ def _thread_summary(conn, g: dict) -> dict:
     for m in msgs:
         key = (m["sender_address"] or "").lower()
         if key and all(p["address"] != key for p in seen):
-            seen.append({"address": key, "name": m["sender_name"] or None,
+            seen.append({"address": key, "name": _display_name(m["sender_name"], key),
                          "is_me": key == account_email.lower()})
     return {
         "account_id": account_id, "account_email": account_email, "thread_id": thread_id,
-        "subject": latest.get("subject") or "(no subject)", "snippet": latest.get("snippet") or "",
+        "subject": latest.get("subject") or "(no subject)", "snippet": _snippet(latest.get("snippet")),
         "last_at": g["last_at"], "message_count": len(msgs), "unread_count": sum(1 for m in msgs if not m["is_read"]),
         "starred": any(m["is_starred"] for m in msgs), "has_attachments": has_attachments,
         "labels": labels, "participants": seen[:4], "latest_message_id": latest.get("id"),
@@ -252,8 +273,8 @@ def thread_detail(conn, *, account_id: str, thread_id: str) -> dict | None:
         sender = (r["sender_address"] or "").lower()
         messages.append({
             "id": r["id"], "timestamp": r["timestamp"], "direction": r["direction"],
-            "subject": r["subject"], "snippet": r["snippet"],
-            "sender": {"address": r["sender_address"], "name": r["sender_name"],
+            "subject": r["subject"], "snippet": _snippet(r["snippet"]),
+            "sender": {"address": r["sender_address"], "name": _display_name(r["sender_name"], r["sender_address"]),
                        "contact_id": (sender_contacts.get(sender) or {}).get("id"),
                        "contact_name": (sender_contacts.get(sender) or {}).get("name"),
                        "is_me": sender == (r["account_email"] or "").lower()},

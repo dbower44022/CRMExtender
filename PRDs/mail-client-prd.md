@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 00:20
+**Last Updated:** 10-09-26 00:30
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -412,10 +412,10 @@ Phase 1 — Mail store foundation
 - [ ] MAIL-20: Tests for MAIL-05–19 (see §8)
 
 Phase 2 — Mail surface
-- [ ] MAIL-21: /app/mail route, rail icon with unread badge, URL forms /app/mail/{account|unified}/{folder}[/{thread}]
-- [ ] MAIL-22: Folder tree with unified set, per-account sections, unread counts, sync status per account
-- [ ] MAIL-23: Thread list in email rows with virtualization, selection model, account chips, attachment and star indicators
-- [ ] MAIL-24: Reading pane with collapsed older messages, expand/collapse, quoted-text collapse
+- [x] MAIL-21: /app/mail route, rail icon with unread badge, URL forms /app/mail/{account|unified}/{folder}[/{thread}] — v10.16, 10-09-26 (`stores/navigation.ts` mail state, `lib/appRoutes.ts` mail paths, `hooks/useUrlSync.ts`, `components/mail/MailView.tsx`, rail Inbox icon with unified-inbox unread badge refreshed each minute. TDD D-30)
+- [x] MAIL-22: Folder tree with unified set, per-account sections, unread counts, sync status per account — v10.16 (`components/mail/FolderTree.tsx`: unified Inbox/Starred/Snoozed/Drafts/Sent, per account Inbox/Starred/Sent/Drafts/Archive/Spam/Trash plus user labels, counts from `/mail/folders`, spinner while an account syncs and a warning mark on its last error)
+- [ ] MAIL-23: Thread list in email rows with virtualization, selection model, account chips, attachment and star indicators — **first cut shipped in v10.16** (`components/mail/ThreadList.tsx`: plain rows, unread weight, account chip in the unified view, star and attachment marks, first 50 threads). Pending: virtualization, multi-select, more-than-50 paging
+- [ ] MAIL-24: Reading pane with collapsed older messages, expand/collapse, quoted-text collapse — **first cut shipped in v10.16** (`components/mail/ReadingPane.tsx`: all messages expanded, bodies through the existing sanitizer). Pending: collapsing, quoted-text folding, per-message reply
 - [ ] MAIL-25: Isolated message rendering: DOMPurify + sandboxed iframe + content security policy; remote-image blocking with per-sender allow list
 - [ ] MAIL-26: Attachment preview (image, PDF) and download
 - [ ] MAIL-27: Actions wired to the outbox API with optimistic updates and pending/failed indicators
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.13 | 10-09-26 00:30 | Claude (Claude Code) | Phase 2 begins: MAIL-21 and MAIL-22 checked off, MAIL-23 and MAIL-24 first cuts noted (v10.16). |
 | 1.12 | 10-09-26 00:20 | Claude (Claude Code) | MAIL-16 checked off (v10.15); Phase 1 backend now complete except MAIL-11, MAIL-15, MAIL-17, MAIL-18, MAIL-20. |
 | 1.11 | 10-09-26 00:15 | Claude (Claude Code) | MAIL-12 checked off (v10.14). |
 | 1.10 | 10-09-26 00:05 | Claude (Claude Code) | MAIL-13 checked off (v10.13); interval setting key noted in §3.1. |

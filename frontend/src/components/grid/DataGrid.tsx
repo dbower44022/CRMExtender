@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useRef, useEffect, useState } from 'react'
+import { INLINE_CELL_EDITING } from '../../lib/gridConfig.ts'
 import {
   useReactTable,
   getCoreRowModel,
@@ -790,6 +791,7 @@ export function DataGrid() {
 
                     const fd = entityDef?.fields[fieldKey]
                     const isEditable =
+                      INLINE_CELL_EDITING &&
                       fd?.editable &&
                       (activeEntityType === 'contact' ||
                         activeEntityType === 'company')
@@ -922,13 +924,19 @@ export function DataGrid() {
             setContextMenu(null)
           }}
           onEdit={() => {
-            // Find first editable field
-            const firstEditable = visibleColumnKeys.find((k) => {
+            // Find first editable field; without inline editing, open the record form.
+            const firstEditable = INLINE_CELL_EDITING ? visibleColumnKeys.find((k) => {
               const fd = entityDef?.fields[k]
               return fd?.editable && (activeEntityType === 'contact' || activeEntityType === 'company')
-            })
+            }) : undefined
             if (firstEditable) {
               setEditingCell({ rowId: contextMenu.rowId, fieldKey: firstEditable })
+            } else if (activeEntityType === 'communication') {
+              const idx = rows.findIndex((r) => (r as { id?: string }).id === contextMenu.rowId)
+              setSelectedRow(contextMenu.rowId, idx)
+              expandDetailPanel()
+            } else {
+              setRecordModal({ entityType: activeEntityType, entityId: contextMenu.rowId })
             }
             setContextMenu(null)
           }}

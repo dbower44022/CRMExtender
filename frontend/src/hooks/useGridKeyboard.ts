@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react'
+import { INLINE_CELL_EDITING } from '../lib/gridConfig.ts'
 import type { Row } from '@tanstack/react-table'
 import { useNavigationStore } from '../stores/navigation.ts'
 import { useLayoutStore } from '../stores/layout.ts'
@@ -46,7 +47,7 @@ export function useGridKeyboard({
     (fieldKey: string) => {
       if (!entityDef) return false
       const fd = entityDef[fieldKey]
-      return fd?.editable && (entityType === 'contact' || entityType === 'company')
+      return INLINE_CELL_EDITING && fd?.editable && (entityType === 'contact' || entityType === 'company')
     },
     [entityDef, entityType],
   )

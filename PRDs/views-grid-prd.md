@@ -2,8 +2,9 @@
 
 ## CRMExtender — Polymorphic View & Grid Subsystem
 
-**Version:** 6.0
-**Date:** 2026-02-22
+**Version:** 6.1
+**Date:** 02-22-26
+**Last Updated:** 10-09-26 12:33
 **Status:** Draft
 **Parent Document:** [CRMExtender PRD v1.1](PRD.md)
 
@@ -106,7 +107,7 @@ CRMExtender's view system combines Attio's object-model flexibility with ClickUp
 3. **Powerful filtering** — Users build compound filters with AND/OR logic, using operators appropriate to each field type. Filters can reference fields on related entities.
 4. **Flexible sorting & grouping** — Multi-level sorting, group-by with collapsible sections, and summary aggregation rows for grouped data.
 5. **Multiple view types** — The same data renders as a List/Grid (tabular), Calendar (date-plotted), or Timeline (date-range bars). Each view type has type-specific configuration while sharing the common filter/sort infrastructure.
-6. **Inline editing** — Users edit field values directly in the grid without opening a detail view, for field types that support inline editing.
+6. **Inline editing** — Users edit field values directly in the grid without opening a detail view, for field types that support inline editing. **Switched off 10-09-26 (v10.30) by the product owner** after accidental edits: a focused cell began editing on any printed key. The code stays behind the `INLINE_CELL_EDITING` switch in `frontend/src/lib/gridConfig.ts`; records are edited through the record form and Bulk Edit. Re-enabling needs an explicit confirmation step before a cell edit is saved.
 7. **Persistent, shareable views** — Views are saved with all configuration. Personal views are private by default. Shared views are available to team members (with data permissions enforced).
 8. **Alert foundation** — Views serve as the query definition layer for the alert system. Any view can be promoted to an alert with a trigger, frequency, and delivery method.
 
@@ -187,7 +188,7 @@ CRMExtender's view system combines Attio's object-model flexibility with ClickUp
 
 #### Grid Interactions
 
-- **US-V22:** As a user, I want to edit field values directly in the grid cell (inline editing) for field types that support it, so that I don't have to open a detail view for simple changes.
+- **US-V22:** As a user, I want to edit field values directly in the grid cell (inline editing) for field types that support it, so that I don't have to open a detail view for simple changes. *(Withdrawn 10-09-26: off by the owner's decision, see Core Principle 6.)*
 - **US-V23:** As a user, I want to expand a row to see a Detail Panel (slide-out or inline expansion) for the full record, including fields not shown in the grid columns.
 - **US-V24:** As a user, I want to select multiple rows and perform bulk actions (change status, assign to project, delete, export) for efficient batch operations.
 - **US-V25:** As a user, I want to click on a row to navigate to the entity's full detail page when I need the complete context.
@@ -1790,3 +1791,10 @@ General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architectu
 ---
 
 *This document is a living specification. As the Custom Objects PRD is developed and as implementation progresses, sections will be updated to reflect design decisions, scope adjustments, and lessons learned. The phasing roadmap will be synchronized with the Custom Objects PRD to ensure dependencies are resolved in the correct order.*
+
+## Change Log
+
+| Rev | Date (MM-DD-YY HH:MM) | Author | Change |
+|---|---|---|---|
+| 6.1 | 10-09-26 12:33 | Claude (Claude Code) | Inline cell editing switched off at the owner's request (v10.30): Core Principle 6 and US-V22 annotated; row-menu Edit opens the record form. Change log added. |
+| 6.0 | 02-22-26 | — | Prior revision (no change log kept before 6.1). |

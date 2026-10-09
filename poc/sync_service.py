@@ -90,6 +90,23 @@ def run_full_sync(*, customer_id: str, user_id: str) -> dict:
         from .mail_state import refresh_labels
         refresh_labels(account, creds, provider, rate_limiter=gmail_limiter)
 
+        # Push the user's queued actions before pulling the delta (MAIL-14),
+        # so the provider reflects them and the delta does not undo them.
+        try:
+            from .mail_actions import push_pending
+            from .settings import get_setting
+            retry_max = get_setting(customer_id, "mail_action_retry_max")
+            pushed = push_pending(
+                account, creds, provider,
+                retry_max=int(retry_max) if retry_max else None,
+                rate_limiter=gmail_limiter,
+            )
+            result["actions_pushed"] = result.get("actions_pushed", 0) + pushed["pushed"]
+            result["actions_failed"] = result.get("actions_failed", 0) + pushed["failed"]
+        except Exception as exc:
+            log.warning("Action push failed for %s: %s", email_addr, exc)
+            result["errors"].append(f"{email_addr}: action push failed ({exc})")
+
         try:
             result["contacts"] += sync_contacts(
                 creds, rate_limiter=gmail_limiter,

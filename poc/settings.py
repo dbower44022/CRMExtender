@@ -21,6 +21,8 @@ _HARDCODED_DEFAULTS = {
     # Summarization cost controls (Mail Client MAIL-19)
     "summarize_settle_minutes": "15",
     "summarize_max_per_sync": "500",
+    # Mail action outbox: attempts before a transient failure is dead-lettered (MAIL-14)
+    "mail_action_retry_max": "8",
 }
 
 

@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 23:40
+**Last Updated:** 10-08-26 23:55
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -213,6 +213,16 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-08-26 (MAIL-19).
 
+### D-26 Outbox failure classes, discard semantics, and push timing
+
+**Decision:** An adapter marks an `ActionResult` as `permanent` when the provider's answer cannot change on retry (Gmail: any 4xx except 429); the outbox dead-letters those at once and backs off only transient failures (429, 5xx, network, adapter exceptions), doubling from 30 seconds to a one-hour cap until `mail_action_retry_max` (default 8) attempts. A dead-lettered row is resolved by the user: retry re-queues it with attempts reset; discard reverts the local change by applying the inverse action (a move is undone by restoring the origin labels). The worker runs for each account before its delta is fetched, so the provider carries the user's changes before the mirror reads back. Targets are stored as provider message ids, resolved from local ids at enqueue time.
+
+**Rationale:** Retrying a 403 or a malformed request only delays the user's discovery; retrying a 429 is exactly right. Reverting on discard keeps the mirror honest with the provider when a change never landed. Push-before-pull avoids a delta re-applying the pre-action state over an optimistic change.
+
+**Constraints/Tradeoffs:** Echo suppression (EPS-09) is not implemented; a delta that reports the pushed change re-applies it, which is idempotent. A newer local change on the same message could still be overwritten by a stale delta in the window between push and fetch; the scheduler (MAIL-13) narrows that window.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-14).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -239,6 +249,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 10-08-26 23:55 | Claude (Claude Code) | Write-back for MAIL-09/14: D-26 (outbox failure classes, discard, push-before-pull). |
 | 1.5 | 10-08-26 23:40 | Claude (Claude Code) | Write-back for MAIL-19: D-25 (settled, capped, post-loop summarization). |
 | 1.4 | 10-08-26 22:10 | Claude (Claude Code) | Write-back for MAIL-10/06: D-22 (deletion archives), D-23 (tokens loaded with granted scopes), D-24 (reconnect = connect). |
 | 1.3 | 10-08-26 13:40 | Claude (Claude Code) | Write-back for MAIL-07/08: D-19 (provider authoritative on re-seen rows), D-20 (flags as columns), D-21 (backfill by command). |

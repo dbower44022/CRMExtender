@@ -345,6 +345,26 @@ CREATE TABLE IF NOT EXISTS communication_labels (
     PRIMARY KEY (communication_id, label_id)
 );
 
+-- Mail action outbox: user actions applied locally at once and pushed to
+-- the provider in order with retry (Mail Client TDD D-04)
+CREATE TABLE IF NOT EXISTS mail_actions (
+    id              TEXT PRIMARY KEY,
+    account_id      TEXT NOT NULL REFERENCES provider_accounts(id) ON DELETE CASCADE,
+    action          TEXT NOT NULL,
+    target_ids      TEXT NOT NULL,
+    label_id        TEXT,
+    payload         TEXT,
+    created_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
+    status          TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'pushed', 'gone', 'failed', 'discarded')),
+    attempts        INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at TEXT,
+    error           TEXT,
+    pushed_at       TEXT,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+
 -- Conversation ↔ Communication M:N join
 CREATE TABLE IF NOT EXISTS conversation_communications (
     conversation_id   TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -1064,6 +1084,7 @@ CREATE INDEX IF NOT EXISTS idx_comm_archived       ON communications(is_archived
 CREATE INDEX IF NOT EXISTS idx_comm_mail_state     ON communications(mail_state_synced_at);
 CREATE INDEX IF NOT EXISTS idx_mlabel_account      ON mailbox_labels(account_id);
 CREATE INDEX IF NOT EXISTS idx_clabel_label        ON communication_labels(label_id);
+CREATE INDEX IF NOT EXISTS idx_mail_actions_queue  ON mail_actions(account_id, status, created_at);
 
 -- Conversations
 CREATE INDEX IF NOT EXISTS idx_conv_topic          ON conversations(topic_id);

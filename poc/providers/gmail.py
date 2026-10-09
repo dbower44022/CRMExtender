@@ -210,9 +210,13 @@ class GmailProvider(MailProvider):
         try:
             return self._apply(session, action, rate_limiter)
         except HttpError as exc:
-            if _status(exc) == 404:
+            status = _status(exc)
+            if status == 404:
                 return ActionResult(ActionStatus.GONE, error=str(exc))
-            return ActionResult(ActionStatus.FAILED, error=str(exc))
+            # 429 and 5xx are transient; other 4xx (400 bad label, 401/403
+            # scope or auth) will not succeed on retry.
+            permanent = 400 <= status < 500 and status != 429
+            return ActionResult(ActionStatus.FAILED, error=str(exc), permanent=permanent)
 
     def _apply(self, session: Any, action: Action, rate_limiter: RateLimiter | None) -> ActionResult:
         kind = action.kind

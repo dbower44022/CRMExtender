@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 23:40
+**Last Updated:** 10-08-26 23:55
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -398,12 +398,12 @@ Phase 1 — Mail store foundation
 - [x] MAIL-06: Add gmail.modify to the requested scopes; re-authorization flow in Settings → Accounts with a clear "needs reconnect" state — v10.8, 10-08-26. Tokens are loaded with their own granted scopes so old accounts keep working read-only (TDD D-23); the accounts list reports `needs_reauth`/`missing_scopes`; "Reconnect" reuses the web connect flow, which now replaces the token of a known address and reactivates it instead of refusing a duplicate (TDD D-24). **Both live accounts show Needs reconnect until the owner reconnects them.**
 - [x] MAIL-07: Schema v23 — header columns populated (Message-ID, In-Reply-To, References, Reply-To), bcc participants, recipient display names, is_starred, provider label ids; backfill from the provider for existing rows — v10.7, 10-08-26 (`poc/migrate_to_v23.py`, `poc/mail_state.py`; backfill is the `backfill-mail-state` command, **not yet run against the live database**)
 - [x] MAIL-08: Schema v23 — mailbox_labels and communication_labels tables; system folder mapping per provider — v10.7, 10-08-26 (label list refreshed from the adapter before each orchestrated sync; placeholder rows typed from system ids)
-- [ ] MAIL-09: Schema v23 — mail_actions outbox table (action, target, payload, attempts, status, error)
+- [x] MAIL-09: Schema v23 — mail_actions outbox table (action, target, payload, attempts, status, error) — shipped as **schema v24**, v10.12, 10-08-26 (`poc/migrate_to_v24.py`; v23 had already shipped without it)
 - [x] MAIL-10: Incremental sync processes labelAdded/labelRemoved and flag changes; is_read mirrors the provider — v10.8, 10-08-26 (`mail_state.apply_label_delta`; TRASH arriving archives the Communication per §6.4; provider deletions now archive instead of hard-deleting, TDD D-22)
 - [ ] MAIL-11: Resumable full-mailbox backfill job with checkpoint and batch size setting
 - [ ] MAIL-12: Schema v24 — communications_fts (FTS5) over subject, search_text, participant names and addresses; query parser for the §2.5 operators
 - [ ] MAIL-13: Per-account background scheduler (interval setting, one run per account, global pause)
-- [ ] MAIL-14: Action outbox worker: ordered push per account, backoff, dead-letter, API to list and retry
+- [x] MAIL-14: Action outbox worker: ordered push per account, backoff, dead-letter, API to list and retry — v10.12, 10-08-26 (`poc/mail_actions.py`; routes in new `poc/web/routes/api_mail.py`: `POST /mail/actions`, `GET /mail/actions`, `POST /mail/actions/{id}/retry|discard`, `POST /mail/actions/push`; the worker also runs before each account's sync in `run_full_sync`. Until MAIL-13 there is no timer, so pushes happen on Sync Now or the push endpoint. Setting key is `mail_action_retry_max` (TDD D-26)
 - [ ] MAIL-15: Attachment metadata captured on sync; attachment fetch-on-demand with disk cache and cid: serving
 - [ ] MAIL-16: Mail API: folders with counts, thread list per folder/account/unified, thread detail, actions, search, per-account sync and status
 - [ ] MAIL-17: Snooze: local return-time table, provider label CRMExtender/Snoozed, scheduler return pass
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.9 | 10-08-26 23:55 | Claude (Claude Code) | MAIL-09 and MAIL-14 checked off (v10.12). |
 | 1.8 | 10-08-26 23:40 | Claude (Claude Code) | MAIL-19 checked off (v10.11); two summarization settings added to §3.1. |
 | 1.7 | 10-08-26 22:52 | Claude (Claude Code) | §9.1 resolved: OAuth client stays in Testing/External; MAIL-38 gains the refresh-failure rule. |
 | 1.6 | 10-08-26 22:20 | Claude (Claude Code) | SCORE mailbox closed: inventory row marked closed, MAIL-02 moot. Web-connected accounts now take the tenant history window as their initial-sync query (v10.9). |

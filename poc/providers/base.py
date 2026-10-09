@@ -157,6 +157,9 @@ class ActionResult:
     status: ActionStatus
     error: str | None = None
     created_label: Folder | None = None
+    #: True when retrying cannot help (bad request, forbidden, missing scope);
+    #: the outbox dead-letters such a failure at once instead of backing off.
+    permanent: bool = False
 
 
 # ---------------------------------------------------------------------------

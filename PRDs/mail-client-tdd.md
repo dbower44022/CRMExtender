@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 02:15
+**Last Updated:** 10-09-26 02:20
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -313,6 +313,16 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-30).
 
+### D-35 Frontend test harness (implements D-13)
+
+**Decision:** Vitest with Testing Library in jsdom, run by `npm test` and in CI after lint. Tests live beside their subjects as `*.test.ts(x)` under `src/`; `src/test/setup.ts` provides DOM matchers, a stand-in ResizeObserver, and fixed element heights so TanStack Virtual renders rows; `src/test/utils.tsx` renders inside a fresh QueryClient and stubs `fetch` by URL prefix so components are exercised through their real data hooks. Synthetic key events carry `code` as well as `key`, because react-hotkeys-hook matches on both. The Playwright smoke test from the PRD is deferred until the app can be driven from where the tests run.
+
+**Rationale:** Vitest shares the Vite config, so the harness costs one config block and no second toolchain. Stubbing `fetch` rather than the hooks keeps the tests honest about request shapes (the mark-read test asserts the exact action body).
+
+**Constraints/Tradeoffs:** jsdom has no layout; row virtualization is tested with fixed heights, not real scrolling. Sandboxed frames render as elements but their inner document is not executed.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-40).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -339,6 +349,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.15 | 10-09-26 02:20 | Claude (Claude Code) | Write-back for MAIL-40: D-35 (harness choices). |
 | 1.14 | 10-09-26 02:15 | Claude (Claude Code) | Write-back for MAIL-30: D-34 (keyboard mechanics, whole-thread targets). |
 | 1.13 | 10-09-26 01:05 | Claude (Claude Code) | Write-back for MAIL-27: D-33 (action targets, server-owned optimism, dwell). |
 | 1.12 | 10-09-26 01:00 | Claude (Claude Code) | Write-back for MAIL-15: D-32 (metadata at sync, bytes on demand, no retroactive capture). |

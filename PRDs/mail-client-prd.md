@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 02:15
+**Last Updated:** 10-09-26 02:20
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -431,7 +431,7 @@ Phase 2 — Mail surface
 - [ ] MAIL-37: Live updates: polling of folder counts and current list; then server-sent events from the scheduler
 - [ ] MAIL-38: Accounts settings: per-account sync now, reconnect, disconnect (keep or delete), error badge, sync interval. **Includes (added 10-08-26):** a failed token refresh in the web server must mark the account `needs_reauth` and skip it, never start the interactive desktop OAuth flow (`auth.get_credentials_for_account` currently does on refresh failure) — see §9.1
 - [ ] MAIL-39: In-application notifications for new inbox mail per mail.notifications
-- [ ] MAIL-40: Frontend test harness (Vitest + Testing Library) with tests for list, reading pane, actions, keyboard; one Playwright smoke test
+- [x] MAIL-40: Frontend test harness (Vitest + Testing Library) with tests for list, reading pane, actions, keyboard; one Playwright smoke test — v10.21, 10-09-26 (`npm test` = Vitest in jsdom, `src/test/setup.ts` + `src/test/utils.tsx`; 19 tests: sanitizer and frame document, mail routes and quote splitter, thread list rows/keys/selection, keyboard bindings and g-chords, reading pane collapse/expand/attachments and mark-read dwell; CI runs `npm test` after lint. **The Playwright smoke test is deferred**: the owner's machine is the only place the app can be driven end to end tonight)
 
 Phase 3 — Every account
 - [x] MAIL-41: Product owner supplies the account inventory (provider per address) — 10-08-26, four Google Workspace accounts, table in §9.2
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.19 | 10-09-26 02:20 | Claude (Claude Code) | MAIL-40 checked off (v10.21), Playwright smoke deferred. |
 | 1.18 | 10-09-26 02:15 | Claude (Claude Code) | MAIL-30 checked off (v10.20); thread-level action targets. |
 | 1.17 | 10-09-26 01:05 | Claude (Claude Code) | MAIL-27 checked off (v10.19); `mail_mark_read_dwell_ms` added as the shipped key for §3.1 `mail.mark_read_dwell_ms`. |
 | 1.16 | 10-09-26 01:00 | Claude (Claude Code) | MAIL-15 and MAIL-26 checked off (v10.19). |

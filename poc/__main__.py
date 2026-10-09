@@ -143,28 +143,25 @@ def cmd_run(args: argparse.Namespace) -> None:
                 console.print(f"[red]  Initial sync failed ({exc}).[/red]")
                 continue
 
-        # Process conversations (triage + summarize)
-        if config.ANTHROPIC_API_KEY:
-            console.print(
-                f"  Processing conversations (model: [cyan]{config.CLAUDE_MODEL}[/cyan])..."
-            )
-        else:
-            console.print("  Processing conversations (triage only)...")
-
-        try:
-            triaged, summarized, topics = process_conversations(
-                account_id, creds, user_email,
-                rate_limiter=gmail_limiter,
-                claude_limiter=claude_limiter,
-            )
-            console.print(
-                f"[green]  {triaged} triaged out, "
-                f"{summarized} summarized, "
-                f"{topics} topics extracted.[/green]"
-            )
-        except Exception as exc:
-            log.warning("Processing failed for %s: %s", email_addr, exc)
-            console.print(f"[yellow]  Processing failed ({exc}).[/yellow]")
+    # Summarize once after every account has synced (MAIL-19).
+    if config.ANTHROPIC_API_KEY:
+        console.print(
+            f"\n[bold]Processing conversations (model: [cyan]{config.CLAUDE_MODEL}[/cyan])...[/bold]"
+        )
+    else:
+        console.print("\n[bold]Processing conversations (no API key — summaries skipped)...[/bold]")
+    try:
+        triaged, summarized, topics = process_conversations(
+            None, None, None,
+            rate_limiter=gmail_limiter,
+            claude_limiter=claude_limiter,
+        )
+        console.print(
+            f"[green]  {summarized} summarized, {topics} topics extracted.[/green]"
+        )
+    except Exception as exc:
+        log.warning("Processing failed: %s", exc)
+        console.print(f"[yellow]  Processing failed ({exc}).[/yellow]")
 
     # Display merged results
     multi_account = len(all_account_ids) > 1

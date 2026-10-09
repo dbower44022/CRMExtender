@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 22:52
+**Last Updated:** 10-08-26 23:40
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -126,6 +126,8 @@ New mail arriving in an inbox folder raises an in-application notification (toas
 | `mail.unified_inbox_accounts` | Accounts included in the unified inbox | list | all active | user | user |
 | `mail.attachment_cache_mb` | Disk budget for the local attachment cache | integer | 2048 | system | admin |
 | `mail.action_retry_max` | Attempts before a queued provider action is marked failed | integer | 8 | system | admin |
+| `summarize_settle_minutes` | Minutes a thread must be quiet before it is summarized; 0 summarizes on every sync (added 10-08-26, MAIL-19) | integer | 15 | system | admin |
+| `summarize_max_per_sync` | Conversations summarized per sync run, newest first; 0 means unlimited (added 10-08-26, MAIL-19) | integer | 500 | system | admin |
 
 **Scope values:** `system` (one value for the tenant), `provider` (per provider account, overriding system), `user` (per-user preference).
 
@@ -406,7 +408,7 @@ Phase 1 — Mail store foundation
 - [ ] MAIL-16: Mail API: folders with counts, thread list per folder/account/unified, thread detail, actions, search, per-account sync and status
 - [ ] MAIL-17: Snooze: local return-time table, provider label CRMExtender/Snoozed, scheduler return pass
 - [ ] MAIL-18: Drop the duplicate HTML copy (cleaned_html == original_html) during v23 migration; store one body plus derived text
-- [ ] MAIL-19: Summarization trigger changed from per-message to per-thread settle window (cost control)
+- [x] MAIL-19: Summarization trigger changed from per-message to per-thread settle window (cost control) — v10.11, 10-08-26. Settle window (`summarize_settle_minutes`, default 15) and per-run cap (`summarize_max_per_sync`, default 500, newest first) in Settings → System; summarization runs once after all accounts have synced instead of inside the account loop (TDD D-25)
 - [ ] MAIL-20: Tests for MAIL-05–19 (see §8)
 
 Phase 2 — Mail surface
@@ -507,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.8 | 10-08-26 23:40 | Claude (Claude Code) | MAIL-19 checked off (v10.11); two summarization settings added to §3.1. |
 | 1.7 | 10-08-26 22:52 | Claude (Claude Code) | §9.1 resolved: OAuth client stays in Testing/External; MAIL-38 gains the refresh-failure rule. |
 | 1.6 | 10-08-26 22:20 | Claude (Claude Code) | SCORE mailbox closed: inventory row marked closed, MAIL-02 moot. Web-connected accounts now take the tenant history window as their initial-sync query (v10.9). |
 | 1.5 | 10-08-26 22:10 | Claude (Claude Code) | MAIL-10 and MAIL-06 checked off (v10.8). |

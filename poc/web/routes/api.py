@@ -2615,6 +2615,8 @@ def settings_system(request: Request):
         "default_phone_country": get_setting(cid, "default_phone_country") or "US",
         "allow_self_registration": get_setting(cid, "allow_self_registration") or "false",
         "email_history_window": get_setting(cid, "email_history_window") or "90d",
+        "summarize_settle_minutes": get_setting(cid, "summarize_settle_minutes") or "15",
+        "summarize_max_per_sync": get_setting(cid, "summarize_max_per_sync") or "500",
     }
 
 
@@ -2636,11 +2638,18 @@ async def settings_system_update(request: Request):
     _SYSTEM_KEYS = [
         "company_name", "default_timezone", "sync_enabled",
         "default_phone_country", "allow_self_registration", "email_history_window",
+        "summarize_settle_minutes", "summarize_max_per_sync",
     ]
     for key in _SYSTEM_KEYS:
         val = body.get(key)
-        if val is not None:
-            set_setting(cid, key, str(val), scope="system")
+        if val is None:
+            continue
+        if key in ("summarize_settle_minutes", "summarize_max_per_sync"):
+            try:
+                val = max(0, int(val))
+            except (TypeError, ValueError):
+                return JSONResponse({"error": f"{key} must be a whole number"}, status_code=400)
+        set_setting(cid, key, str(val), scope="system")
 
     return {"ok": True}
 

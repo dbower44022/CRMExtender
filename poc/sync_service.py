@@ -115,17 +115,25 @@ def run_full_sync(*, customer_id: str, user_id: str) -> dict:
             log.warning("Email sync failed for %s: %s", email_addr, exc)
             result["errors"].append(f"{email_addr}: email sync failed ({exc})")
 
-        try:
-            triaged, summarized, _topics = process_conversations(
-                account_id, creds, user_email,
-                rate_limiter=gmail_limiter,
-                claude_limiter=claude_limiter,
-            )
-            result["triaged"] += triaged
-            result["summarized"] += summarized
-        except Exception as exc:
-            log.warning("Processing failed for %s: %s", email_addr, exc)
-            result["errors"].append(f"{email_addr}: processing failed ({exc})")
+    # Summarize once, after every account has synced (MAIL-19): running it
+    # inside the loop let one account's backlog block the next account's
+    # sync for the length of the summarization pass.
+    try:
+        from .settings import get_setting
+        settle = get_setting(customer_id, "summarize_settle_minutes")
+        cap = get_setting(customer_id, "summarize_max_per_sync")
+        triaged, summarized, _topics = process_conversations(
+            None, None, None,
+            rate_limiter=gmail_limiter,
+            claude_limiter=claude_limiter,
+            settle_minutes=int(settle) if settle else None,
+            max_per_run=int(cap) if cap else None,
+        )
+        result["triaged"] += triaged
+        result["summarized"] += summarized
+    except Exception as exc:
+        log.warning("Summarization failed: %s", exc)
+        result["errors"].append(f"summarization failed ({exc})")
 
     # Batch-enrich companies that have a domain but no completed enrichment run
     try:

@@ -20,6 +20,10 @@ export interface SystemSettings {
   default_phone_country: string
   allow_self_registration: string
   email_history_window: string
+  /** Minutes a thread must be quiet before it is summarized (MAIL-19). */
+  summarize_settle_minutes: string
+  /** Max conversations summarized per sync run; "0" = unlimited (MAIL-19). */
+  summarize_max_per_sync: string
 }
 
 interface UserRecord {

@@ -1325,35 +1325,88 @@ def _backfill_sync(
 # Conversation processing (summarize)
 # ---------------------------------------------------------------------------
 
+#: Defaults for the summarization cost controls (Mail Client MAIL-19).
+#: Overridable per tenant through the settings cascade
+#: (``summarize_settle_minutes``, ``summarize_max_per_sync``).
+SUMMARIZE_SETTLE_MINUTES = 15
+SUMMARIZE_MAX_PER_SYNC = 500
+
+
+def _conversation_owner_email(conn, conversation_id: str) -> str | None:
+    """The mailbox address a conversation was captured through.
+
+    Used when summarization runs once for all accounts (MAIL-19) and the
+    prompt still needs to know which address is "you" in each thread.
+    """
+    row = conn.execute(
+        """SELECT pa.email_address
+           FROM conversation_communications cc
+           JOIN communications c ON c.id = cc.communication_id
+           JOIN provider_accounts pa ON pa.id = c.account_id
+           WHERE cc.conversation_id = ?
+           ORDER BY c.timestamp DESC LIMIT 1""",
+        (conversation_id,),
+    ).fetchone()
+    return row["email_address"] if row else None
+
+
 def process_conversations(
-    account_id: str,
-    creds: Credentials,
-    user_email: str,
+    account_id: str | None,
+    creds: Credentials | None,
+    user_email: str | None,
     rate_limiter: RateLimiter | None = None,
     claude_limiter: RateLimiter | None = None,
+    *,
+    settle_minutes: int | None = None,
+    max_per_run: int | None = None,
 ) -> tuple[int, int, int]:
     """Summarize conversations that need processing.
 
     Triage is no longer needed here — conversations are pre-filtered at
     creation time by ``_should_create_conversation()``.
 
+    Cost controls (MAIL-19, TDD D-25): a conversation is summarized only
+    once it has been quiet for ``settle_minutes`` (default
+    ``SUMMARIZE_SETTLE_MINUTES``), so an active thread costs one call
+    when it settles rather than one per message; and at most
+    ``max_per_run`` conversations (default ``SUMMARIZE_MAX_PER_SYNC``, 0
+    means unlimited) are summarized per call, newest first, so a large
+    backlog is worked off across runs instead of in one unbounded bill.
+
+    ``account_id``, ``creds``, and ``user_email`` may be ``None``: the
+    pass is global across accounts, and when ``user_email`` is ``None``
+    each conversation's owning mailbox address is looked up for the
+    prompt.
+
     Returns (triaged_count, summarized_count, tag_count).
     triaged_count is always 0 (kept for backward-compatible return signature).
     """
     import anthropic
+    from datetime import timedelta
 
-    # Find conversations needing summarization
+    settle = SUMMARIZE_SETTLE_MINUTES if settle_minutes is None else max(0, int(settle_minutes))
+    cap = SUMMARIZE_MAX_PER_SYNC if max_per_run is None else max(0, int(max_per_run))
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=settle)).isoformat()
+
+    # Find conversations needing summarization that have settled
     with get_connection() as conn:
         rows = conn.execute(
             """SELECT * FROM conversations
                WHERE ai_summarized_at IS NULL
                  AND dismissed = 0
+                 AND (last_activity_at IS NULL OR last_activity_at <= ?)
                ORDER BY last_activity_at DESC""",
+            (cutoff,),
         ).fetchall()
 
     if not rows:
         log.info("No conversations need processing")
         return 0, 0, 0
+
+    skipped = 0
+    if cap and len(rows) > cap:
+        skipped = len(rows) - cap
+        rows = rows[:cap]
 
     summarized_count = 0
     tag_count = 0
@@ -1399,8 +1452,13 @@ def process_conversations(
                 all_participants[p] = None
         conv.participants = list(all_participants.keys())
 
+        owner_email = user_email
+        if not owner_email:
+            with get_connection() as conn:
+                owner_email = _conversation_owner_email(conn, conv_id) or ""
+
         client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        summary = summarize_conversation(conv, client, user_email, claude_limiter)
+        summary = summarize_conversation(conv, client, owner_email, claude_limiter)
 
         if not summary.error:
             update = summary.to_update_dict()
@@ -1423,8 +1481,8 @@ def process_conversations(
                 tag_count += _store_tags(conv_id, summary.key_topics)
 
     log.info(
-        "Processing complete: %d summarized, %d tags",
-        summarized_count, tag_count,
+        "Processing complete: %d summarized, %d tags, %d deferred to the next run",
+        summarized_count, tag_count, skipped,
     )
     return 0, summarized_count, tag_count
 

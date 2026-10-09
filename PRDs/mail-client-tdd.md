@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 22:10
+**Last Updated:** 10-08-26 23:40
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -201,6 +201,18 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-08-26 (MAIL-06).
 
+### D-25 Summarization is one settled, capped pass after all accounts sync
+
+**Decision:** A conversation is summarized only after it has had no new mail for a settle window (default 15 minutes); at most a capped number of conversations (default 500, newest first) are summarized per run, the rest deferred; and the pass runs once after every account has synced, resolving each conversation's owning mailbox for the prompt, instead of once per account inside the sync loop.
+
+**Rationale:** Every new message in a thread resets its summary, so a busy thread was being summarized on each message. On 10-08-26 a 507-conversation backlog ran inside the first account's turn and held up the two newly connected accounts for half an hour. A settle window turns N calls into one; the cap bounds any single run's bill; moving the pass after the loop keeps mail sync independent of summarization time.
+
+**Alternatives Rejected:** A token budget per run (MAIL-46/49) — right long-term control, but needs usage accounting that does not exist yet; the cap is the cheap stand-in. Summarizing in a separate background thread — the scheduler (MAIL-13) will own that; until then one ordered pass is simpler to reason about.
+
+**Constraints/Tradeoffs:** A brand-new thread waits the settle window before its first summary. With the cap, a very large backlog takes several runs to clear.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-19).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -227,6 +239,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 10-08-26 23:40 | Claude (Claude Code) | Write-back for MAIL-19: D-25 (settled, capped, post-loop summarization). |
 | 1.4 | 10-08-26 22:10 | Claude (Claude Code) | Write-back for MAIL-10/06: D-22 (deletion archives), D-23 (tokens loaded with granted scopes), D-24 (reconnect = connect). |
 | 1.3 | 10-08-26 13:40 | Claude (Claude Code) | Write-back for MAIL-07/08: D-19 (provider authoritative on re-seen rows), D-20 (flags as columns), D-21 (backfill by command). |
 | 1.2 | 10-08-26 13:05 | Claude (Claude Code) | Implementation write-back for MAIL-05: D-15 (`ParsedEmail` as the contract type), D-16 (thread-grouped `fetch_initial`), D-17 (cursor read at fetch time), D-18 (module-object calls). |

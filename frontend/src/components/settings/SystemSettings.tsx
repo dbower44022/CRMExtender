@@ -27,6 +27,8 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
   const [defaultTz, setDefaultTz] = useState(settings.default_timezone)
   const [defaultPhoneCountry, setDefaultPhoneCountry] = useState(settings.default_phone_country)
   const [emailHistoryWindow, setEmailHistoryWindow] = useState(settings.email_history_window)
+  const [settleMinutes, setSettleMinutes] = useState(settings.summarize_settle_minutes ?? '15')
+  const [maxPerSync, setMaxPerSync] = useState(settings.summarize_max_per_sync ?? '500')
   const [syncEnabled, setSyncEnabled] = useState(settings.sync_enabled === 'true')
   const [allowSelfReg, setAllowSelfReg] = useState(settings.allow_self_registration === 'true')
 
@@ -37,6 +39,8 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
         default_timezone: defaultTz,
         default_phone_country: defaultPhoneCountry,
         email_history_window: emailHistoryWindow,
+        summarize_settle_minutes: settleMinutes,
+        summarize_max_per_sync: maxPerSync,
         sync_enabled: syncEnabled ? 'true' : 'false',
         allow_self_registration: allowSelfReg ? 'true' : 'false',
       },
@@ -119,6 +123,41 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-surface-700">
+              Summarize after quiet (minutes)
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={settleMinutes}
+              onChange={(e) => setSettleMinutes(e.target.value)}
+              className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+            />
+            <p className="mt-1 text-xs text-surface-500">
+              A thread is summarized once it has had no new mail for this long, not on every message.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-surface-700">
+              Max summaries per sync
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={maxPerSync}
+              onChange={(e) => setMaxPerSync(e.target.value)}
+              className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+            />
+            <p className="mt-1 text-xs text-surface-500">
+              Newest threads first; the rest wait for the next sync. 0 means no limit.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

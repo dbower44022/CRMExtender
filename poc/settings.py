@@ -18,6 +18,9 @@ _HARDCODED_DEFAULTS = {
     "default_phone_country": "US",
     "allow_self_registration": "false",
     "email_history_window": "90d",
+    # Summarization cost controls (Mail Client MAIL-19)
+    "summarize_settle_minutes": "15",
+    "summarize_max_per_sync": "500",
 }
 
 

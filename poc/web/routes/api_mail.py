@@ -13,7 +13,7 @@ do not own.
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from ...database import get_connection
 from ...mail_actions import (
@@ -63,6 +63,58 @@ def _account_for_communications(conn, communication_ids: list[str]) -> str | Non
         tuple(communication_ids),
     ).fetchall()
     return rows[0]["account_id"] if len(rows) == 1 else None
+
+
+# ---------------------------------------------------------------------------
+# Live updates (MAIL-37)
+# ---------------------------------------------------------------------------
+
+@router.get("/mail/events")
+async def mail_events(request: Request, max_seconds: float | None = None):
+    """Server-sent events from the scheduler: ``sync.started``,
+    ``sync.finished``, ``post_pass.finished``, ``outbound.sent``. The browser
+    invalidates its mail queries on each; a keep-alive comment flows every
+    fifteen seconds while idle. Events for accounts the caller cannot see are
+    withheld. ``max_seconds`` ends the stream after that long (the browser
+    reconnects); it exists for proxies with idle limits and for tests."""
+    import asyncio
+    import queue
+    import time
+
+    from ... import events
+
+    visible = set(_visible_account_ids(request))
+    q = events.subscribe()
+    poll = 0.25
+    keepalive = 15.0
+
+    async def stream():
+        started = time.monotonic()
+        last_sent = started
+        try:
+            yield f": connected subscribers={events.subscriber_count()}\n\n"
+            while True:
+                if await request.is_disconnected():
+                    return
+                if max_seconds is not None and time.monotonic() - started >= max_seconds:
+                    return
+                try:
+                    ev = q.get_nowait()
+                except queue.Empty:
+                    if time.monotonic() - last_sent >= keepalive:
+                        last_sent = time.monotonic()
+                        yield ": keepalive\n\n"
+                    await asyncio.sleep(poll)
+                    continue
+                if ev.get("account_id") and ev["account_id"] not in visible:
+                    continue
+                last_sent = time.monotonic()
+                yield events.format_sse(ev)
+        finally:
+            events.unsubscribe(q)
+
+    return StreamingResponse(stream(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 # ---------------------------------------------------------------------------

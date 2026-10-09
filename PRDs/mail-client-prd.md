@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 09:50
+**Last Updated:** 10-09-26 09:58
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -428,7 +428,7 @@ Phase 2 — Mail surface
 - [x] MAIL-34: Docked, minimizable compose (up to three) replacing the modal — v10.24, 10-09-26 (`components/compose/ComposeDock.tsx` bottom-right; each composer minimizes to a title tab; a fourth is refused with a message. The centered modal is removed; the Compose button, the Communication view's reply buttons, and `c` all open a docked composer. `Esc` in a docked composer minimizes it; `Ctrl+Enter` sends. Shared form in `ComposeForm.tsx`. TDD D-38)
 - [x] MAIL-35: Compose: attachment upload, signature insertion, drafts folder and resume, undo-send, scheduled send — v10.24, 10-09-26 (attachments by picker or drag-and-drop, stored under `data/uploads/outbound/<draft>/` and sent as MIME parts: `GET/POST/DELETE /outbound-emails/{id}/attachments`; the account's default signature shown under the editor and added on send; Drafts folder lists drafts written here above the provider's drafts, click to resume, trash to delete; Send holds the message for `mail_undo_send_seconds` (default 10) as `queued` with an Undo bar, and the scheduler sends queued mail whose time has passed; Schedule send offers quick slots or a date-time; `POST /outbound-emails/{id}/send` takes `undo`, `delay_seconds` or `scheduled_send_at`, `POST /outbound-emails/{id}/undo` returns it to draft. TDD D-38)
 - [x] MAIL-36: Sent folder populated immediately on send; reconciliation on sync — v10.24, 10-09-26 (the composed Communication is labelled SENT, marked read, and given the provider's thread id as soon as the adapter returns; the next sync matches the provider's copy by provider message id, as before)
-- [ ] MAIL-37: Live updates: polling of folder counts and current list; then server-sent events from the scheduler
+- [x] MAIL-37: Live updates: polling of folder counts and current list; then server-sent events from the scheduler — v10.25, 10-09-26 (polling of folder counts, the open list, and the open thread every 30 s was in place since MAIL-21/23; `GET /mail/events` now streams `sync.started`, `sync.finished`, `post_pass.finished`, `outbound.sent` from `poc/events.py`, published by the scheduler's workers; `hooks/useMailEvents.ts` refreshes every mail query when a sync or post pass finishes or a queued message goes out, and the folder tree shows Live / Polling with the last event time and a spinner per account while it syncs. Polling stays as the fallback. TDD D-39)
 - [ ] MAIL-38: Accounts settings: per-account sync now, reconnect, disconnect (keep or delete), error badge, sync interval. **Includes (added 10-08-26):** a failed token refresh in the web server must mark the account `needs_reauth` and skip it, never start the interactive desktop OAuth flow (`auth.get_credentials_for_account` currently does on refresh failure) — see §9.1
 - [ ] MAIL-39: In-application notifications for new inbox mail per mail.notifications
 - [x] MAIL-40: Frontend test harness (Vitest + Testing Library) with tests for list, reading pane, actions, keyboard; one Playwright smoke test — v10.21, 10-09-26 (`npm test` = Vitest in jsdom, `src/test/setup.ts` + `src/test/utils.tsx`; 19 tests: sanitizer and frame document, mail routes and quote splitter, thread list rows/keys/selection, keyboard bindings and g-chords, reading pane collapse/expand/attachments and mark-read dwell; CI runs `npm test` after lint. **The Playwright smoke test is deferred**: the owner's machine is the only place the app can be driven end to end tonight)
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.23 | 10-09-26 09:58 | Claude (Claude Code) | MAIL-37 checked off (v10.25): server-sent events from the scheduler. |
 | 1.22 | 10-09-26 09:50 | Claude (Claude Code) | MAIL-33, 34, 35, 36 checked off (v10.24): inline reply, docked composers, attachments, signature, local drafts, undo and scheduled send, immediate Sent. |
 | 1.21 | 10-09-26 02:30 | Claude (Claude Code) | MAIL-32 checked off (v10.23). |
 | 1.20 | 10-09-26 02:25 | Claude (Claude Code) | MAIL-31 checked off (v10.22). |

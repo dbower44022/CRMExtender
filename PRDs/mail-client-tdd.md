@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 09:50
+**Last Updated:** 10-09-26 09:58
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -353,6 +353,18 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-33–36).
 
+### D-39 Live updates: an in-process broadcaster streamed as server-sent events, polling kept as fallback
+
+**Decision:** `poc/events.py` is a process-wide broadcaster: publishers (the scheduler's account workers, the post pass, the queued-send step) call `publish(type, **data)` from their threads; each subscriber owns a bounded queue of 256 events and a slow subscriber loses its oldest events rather than blocking a publisher. `GET /mail/events` subscribes, polls its queue four times a second, checks for client disconnect each loop, sends a keep-alive comment after fifteen idle seconds, and withholds events for accounts the caller cannot see; `max_seconds` ends a stream for idle-limited proxies and for tests. The browser opens one EventSource per tab and, on `sync.finished`, `post_pass.finished`, or `outbound.sent`, invalidates every mail query; the 30-second polling of folders, list, and thread stays, so a dropped event or a closed stream costs at most one poll interval. Events carry counts only (`_event_result`), never message content.
+
+**Rationale:** The scheduler already lives in the web server process (D-27), so no message bus is needed; one queue per browser tab is cheap at this scale. Invalidating rather than patching the cache keeps the browser logic to one line and reuses the existing fetches. Gmail push (MAIL-52) will publish through the same broadcaster.
+
+**Alternatives Rejected:** WebSockets — two-way is not needed and the session cookie works unchanged with EventSource. Patching the query cache from event payloads — would duplicate the server's folder and thread logic in the browser.
+
+**Constraints/Tradeoffs:** One stream per tab, each polling an in-memory queue; fine for a handful of tabs. A browser behind a proxy that buffers responses sees nothing until the proxy flushes; `X-Accel-Buffering: no` is set for the common case. Events do not cross processes: a second server process would not see this one's syncs.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-37).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -379,6 +391,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.19 | 10-09-26 09:58 | Claude (Claude Code) | Write-back for MAIL-37: D-39 (in-process broadcaster streamed as server-sent events). |
 | 1.18 | 10-09-26 09:50 | Claude (Claude Code) | Write-back for MAIL-33–36: D-38 (one composer form, three placements, queued send through the outbox table). |
 | 1.17 | 10-09-26 02:30 | Claude (Claude Code) | Write-back for MAIL-32: D-37 (context column on the contact detail route). |
 | 1.16 | 10-09-26 02:25 | Claude (Claude Code) | Write-back for MAIL-31: D-36 (search narrows the folder; per-browser saved searches). |

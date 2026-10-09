@@ -21,7 +21,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from . import config
+from . import config, events
 from .database import get_connection
 
 log = logging.getLogger(__name__)
@@ -33,6 +33,15 @@ TICK_SECONDS = 5.0
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _event_result(result: dict | None) -> dict | None:
+    """The counts worth sending to browsers (never the full result)."""
+    if not result:
+        return None
+    keys = ("emails_fetched", "emails_added", "emails_deleted", "labels_changed", "flags_changed",
+            "actions_pushed", "actions_failed", "summarized", "contacts")
+    return {k: result[k] for k in keys if k in result}
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -218,6 +227,9 @@ class SyncScheduler:
                 sent = send_due(conn, now_iso=now.isoformat())
             if sent:
                 log.info("Queued send: %d message(s) processed", len(sent))
+                for r in sent:
+                    events.publish("outbound.sent", queue_id=r.get("queue_id"), status=r.get("status"),
+                                   communication_id=r.get("communication_id"), error=r.get("failure_reason"))
         except Exception:
             log.exception("Queued send failed")
         return started
@@ -226,6 +238,7 @@ class SyncScheduler:
         st.update(running=True, last_started=_now(), last_error=None)
         customer_id = account["customer_id"]
         user_id = self._owner_for(account["id"], customer_id)
+        events.publish("sync.started", account_id=account["id"], email=account["email_address"])
 
         def work() -> None:
             from .sync_service import sync_account
@@ -237,6 +250,8 @@ class SyncScheduler:
             except Exception as exc:
                 log.exception("Scheduled sync failed for %s", account["email_address"])
                 error = str(exc)
+            events.publish("sync.finished", account_id=account["id"], email=account["email_address"],
+                           error=error, result=_event_result(result))
             with self._lock:
                 st.update(running=False, last_finished=_now(), last_result=result,
                           last_error=error, runs=st["runs"] + 1)
@@ -279,6 +294,7 @@ class SyncScheduler:
             except Exception as exc:
                 log.exception("Post-sync pass failed")
                 error = str(exc)
+            events.publish("post_pass.finished", error=error, result=_event_result(result))
             with self._lock:
                 self._post_pass_running = False
                 self._post_pass_state.update(running=False, completed_at=_iso(_now()),

@@ -2,6 +2,7 @@
 
 import { Inbox, Star, Clock, FileText, Send, Archive, Trash2, ShieldAlert, Tag, RefreshCw, AlertTriangle } from 'lucide-react'
 import type { MailAccountFolders, MailFolders } from '../../api/mail.ts'
+import { useLiveStore } from '../../stores/live.ts'
 
 const UNIFIED: { key: string; label: string; icon: typeof Inbox }[] = [
   { key: 'inbox', label: 'Inbox', icon: Inbox },
@@ -70,7 +71,8 @@ function AccountSection({
     .filter((l) => l.kind === 'user')
     .sort((a, b) => a.name.localeCompare(b.name))
   const isActiveAccount = activeAccountId === account.id
-  const syncing = account.sync?.running
+  const liveSyncing = useLiveStore((s) => s.syncing[account.id])
+  const syncing = liveSyncing ?? account.sync?.running
   const syncError = account.sync?.last_error
   return (
     <div className="mt-3">
@@ -116,6 +118,19 @@ function AccountSection({
   )
 }
 
+function LiveStatus() {
+  const connected = useLiveStore((s) => s.connected)
+  const last = useLiveStore((s) => s.lastEvent)
+  const when = last ? new Date(last.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null
+  return (
+    <div className="mt-3 flex items-center gap-1.5 px-2 text-[11px] text-surface-400" title={connected ? 'Updates arrive from the server as syncs finish' : 'Refreshing every 30 seconds'}>
+      <span className={`inline-block h-1.5 w-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-surface-300'}`} />
+      <span>{connected ? 'Live' : 'Polling'}</span>
+      {when && <span>· last sync event {when}</span>}
+    </div>
+  )
+}
+
 export function FolderTree({ data, loading, activeAccountId, activeFolder, onSelect }: Props) {
   if (loading && !data) {
     return <div className="p-3 text-sm text-surface-500">Loading folders…</div>
@@ -156,6 +171,7 @@ export function FolderTree({ data, loading, activeAccountId, activeFolder, onSel
           onSelect={onSelect}
         />
       ))}
+      <LiveStatus />
     </nav>
   )
 }

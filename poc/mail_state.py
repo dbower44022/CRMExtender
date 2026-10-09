@@ -171,6 +171,10 @@ def apply_mail_state(conn, communication_id: str, account_id: str, em: ParsedEma
     mapping = ensure_labels(conn, account_id, em.label_ids)
     set_communication_labels(conn, communication_id, [mapping[l] for l in em.label_ids if l in mapping])
 
+    if em.attachments:
+        from .mail_attachments import store_attachment_rows
+        store_attachment_rows(conn, communication_id, em)
+
     if refresh_participants:
         for rec in em.recipient_rows(communication_id):
             conn.execute(

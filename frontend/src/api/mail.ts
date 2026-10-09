@@ -73,6 +73,15 @@ export interface ThreadPage {
   offset: number
 }
 
+export interface MailAttachment {
+  id: string
+  filename: string
+  mime_type: string | null
+  size_bytes: number | null
+  content_id: string | null
+  is_inline: boolean
+}
+
 export interface MailMessage {
   id: string
   timestamp: string
@@ -93,7 +102,7 @@ export interface MailMessage {
   is_starred: boolean
   is_archived: boolean
   labels: { id: string; name: string; kind: string }[]
-  attachments: { id: string; filename: string; mime_type: string | null; size_bytes: number | null }[]
+  attachments: MailAttachment[]
   header_message_id: string | null
   provider_message_id: string | null
 }
@@ -194,6 +203,38 @@ export function useMailAction() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: MailActionInput) => post<{ id: string; status: string }>('/mail/actions', input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mail'] })
+    },
+  })
+}
+
+export interface MailActionRow {
+  id: string
+  account_id: string
+  action: string
+  target_ids: string[]
+  status: 'pending' | 'pushed' | 'gone' | 'failed' | 'discarded'
+  attempts: number
+  error: string | null
+  created_at: string
+}
+
+/** The action queue for the caller's accounts: counts plus recent rows. */
+export function useMailActionQueue() {
+  return useQuery({
+    queryKey: ['mail', 'actions'],
+    queryFn: () => get<{ items: MailActionRow[]; counts: { pending: number; failed: number } }>('/mail/actions?limit=50'),
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  })
+}
+
+export function useMailActionResolve() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, op }: { id: string; op: 'retry' | 'discard' }) =>
+      post<MailActionRow>(`/mail/actions/${encodeURIComponent(id)}/${op}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mail'] })
     },

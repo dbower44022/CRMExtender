@@ -8,7 +8,8 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigationStore } from '../../stores/navigation.ts'
-import { threadKey, useInfiniteThreads, useMailFolders, type ThreadSummary } from '../../api/mail.ts'
+import { threadKey, useInfiniteThreads, useMailFolders, useThread, type ThreadSummary } from '../../api/mail.ts'
+import { ActionBar } from './ActionBar.tsx'
 import { FolderTree } from './FolderTree.tsx'
 import { ThreadList } from './ThreadList.tsx'
 import { ReadingPane } from './ReadingPane.tsx'
@@ -54,6 +55,17 @@ export function MailView() {
   const open = threadId ? items.find((t) => t.thread_id === threadId) ?? null : null
   const openKey = open ? threadKey(open) : null
   const openAccountId = open?.account_id ?? (accountId !== 'unified' ? accountId : null)
+
+  // Targets for the action bar: the selection when any, else the open thread.
+  const openThread = useThread(openAccountId, threadId)
+  const targets = selectedKeys.size > 0
+    ? items.filter((t) => selectedKeys.has(threadKey(t)))
+    : open ? [open] : []
+  const messageIdsByThread: Record<string, string[]> = {}
+  if (openThread.data) {
+    messageIdsByThread[`${openThread.data.account_id}:${openThread.data.thread_id}`] = openThread.data.messages.map((x) => x.id)
+  }
+  const clearSelection = () => setSelectedKeys(() => new Set<string>())
 
   const onOpen = (t: ThreadSummary) => {
     setFocusedKey(threadKey(t))
@@ -101,7 +113,8 @@ export function MailView() {
           onSelect={(acct, f) => setMailFolder(acct, f)}
         />
       </aside>
-      <section className="flex w-[400px] shrink-0 flex-col overflow-hidden border-r border-surface-200">
+      <section className="relative flex w-[400px] shrink-0 flex-col overflow-hidden border-r border-surface-200">
+        <ActionBar targets={targets} messageIdsByThread={messageIdsByThread} onDone={clearSelection} />
         <ThreadList
           items={items}
           total={total}

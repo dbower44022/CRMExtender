@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 00:50
+**Last Updated:** 10-09-26 01:05
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -118,7 +118,7 @@ New mail arriving in an inbox folder raises an in-application notification (toas
 | `mail.sync_interval_seconds` | Interval between incremental syncs per account (shipped as setting key `mail_sync_interval_seconds`; per-provider override not yet implemented) | integer | 120 | system, provider | admin |
 | `mail.backfill_enabled` | Whether historical backfill beyond the initial window runs | boolean | true | provider | admin |
 | `mail.backfill_batch_size` | Messages fetched per backfill batch | integer | 200 | system | admin |
-| `mail.mark_read_dwell_ms` | Time a thread must be open before it is marked read; 0 disables auto mark-read | integer | 1500 | user | user |
+| `mail.mark_read_dwell_ms` | Time a thread must be open before it is marked read; 0 disables auto mark-read (shipped as system setting `mail_mark_read_dwell_ms`; per-user scope deferred) | integer | 1500 | user | user |
 | `mail.remote_images` | `block`, `allow_known_contacts`, `allow_all` | enum | `block` | user | user |
 | `mail.notifications` | `all`, `known_contacts`, `none` | enum | `known_contacts` | user, provider | user |
 | `mail.undo_send_seconds` | Undo-send window | integer | 10 | user | user |
@@ -404,7 +404,7 @@ Phase 1 — Mail store foundation
 - [x] MAIL-12: Schema v24 — communications_fts (FTS5) over subject, search_text, participant names and addresses; query parser for the §2.5 operators — shipped as **schema v25**, v10.14, 10-09-26 (`poc/mail_search.py`: index + triggers, `parse_query`, `build_sql`, `search`; `GET /mail/search?q=`; global search now reaches bodies and participants. Operators: from, to, cc, subject, has:attachment, in:<folder|label>, label, account, is:unread|read|starred|unstarred, before, after, newer_than, older_than, quoted phrases. Trash and spam hidden unless named. TDD D-28)
 - [x] MAIL-13: Per-account background scheduler (interval setting, one run per account, global pause) — v10.13, 10-09-26 (`poc/scheduler.py`, started by the web server lifespan unless `CRM_SCHEDULER_ENABLED=false`; setting `mail_sync_interval_seconds`, floor 60, on Settings → System; `sync_enabled=false` stops timers but not Sync Now; `POST /sync/pause|resume` admin-only; `POST /settings/accounts/{id}/sync` per-account sync now; `GET /sync/status` carries a `scheduler` block. TDD D-27)
 - [x] MAIL-14: Action outbox worker: ordered push per account, backoff, dead-letter, API to list and retry — v10.12, 10-08-26 (`poc/mail_actions.py`; routes in new `poc/web/routes/api_mail.py`: `POST /mail/actions`, `GET /mail/actions`, `POST /mail/actions/{id}/retry|discard`, `POST /mail/actions/push`; the worker also runs before each account's sync in `run_full_sync`. Until MAIL-13 there is no timer, so pushes happen on Sync Now or the push endpoint. Setting key is `mail_action_retry_max` (TDD D-26)
-- [ ] MAIL-15: Attachment metadata captured on sync; attachment fetch-on-demand with disk cache and cid: serving
+- [x] MAIL-15: Attachment metadata captured on sync; attachment fetch-on-demand with disk cache and cid: serving — v10.19, 10-09-26 (schema v26 adds `provider_attachment_id`, `content_id`, `is_inline`; `poc/mail_attachments.py` upserts parts at sync and on re-seen messages, fetches bytes through the adapter on first request into `data/attachments/` with least-recently-used pruning to `mail_attachment_cache_mb`; `GET /mail/attachments/{id}[?download=1]` and `GET /mail/attachments/cid/{message}/{cid}`; HTML/SVG/JS attachments always download. **Messages stored before v10.19 have no attachment rows**; a full-fetch backfill is deferred, see TDD D-32)
 - [x] MAIL-16: Mail API: folders with counts, thread list per folder/account/unified, thread detail, actions, search, per-account sync and status — v10.15, 10-09-26 (`poc/mail_threads.py`; `GET /mail/folders`, `GET /mail/threads?folder|label_id&account_id&q`, `GET /mail/threads/{account}/{thread}`; actions MAIL-14, search MAIL-12, per-account sync MAIL-13. Counts computed locally; folder and search share one predicate builder. Snoozed folder is empty until MAIL-17; Drafts shows provider drafts until MAIL-35. TDD D-29)
 - [ ] MAIL-17: Snooze: local return-time table, provider label CRMExtender/Snoozed, scheduler return pass
 - [ ] MAIL-18: Drop the duplicate HTML copy (cleaned_html == original_html) during v23 migration; store one body plus derived text
@@ -417,8 +417,8 @@ Phase 2 — Mail surface
 - [x] MAIL-23: Thread list in email rows with virtualization, selection model, account chips, attachment and star indicators — v10.17, 10-09-26 (`components/mail/ThreadList.tsx`: virtualized rows, offset paging as the user nears the end, selection with checkbox / `x` / Shift-click ranges / Ctrl+A, `j` `k` `Enter` `o` movement, unread weight, account chip in the unified view, star and attachment marks; selection is keyed by folder so changing folder clears it)
 - [x] MAIL-24: Reading pane with collapsed older messages, expand/collapse, quoted-text collapse — v10.17, 10-09-26 (`components/mail/ReadingPane.tsx`: unread messages and the last one expanded, others collapsed to sender/snippet/date lines, click or `Shift+O` to expand, quoted text folded behind a `· · ·` toggle using the splitter shared with the Communication view, `lib/emailZones.ts`). Per-message reply arrives with MAIL-33
 - [x] MAIL-25: Isolated message rendering: DOMPurify + sandboxed iframe + content security policy; remote-image blocking with per-sender allow list — v10.18, 10-09-26 (`lib/mailRender.ts`, `components/mail/MessageFrame.tsx`: DOMPurify profile forbidding forms/frames/meta, remote `img` and CSS `url()` neutralized until "Load images" or "Always from this sender", srcdoc with a strict CSP in an `allow-scripts`-only sandbox (opaque origin), height and link clicks relayed by postMessage, links open in a new tab. The allow list is per browser (localStorage) in V1; a per-user server setting is deferred. TDD D-31)
-- [ ] MAIL-26: Attachment preview (image, PDF) and download
-- [ ] MAIL-27: Actions wired to the outbox API with optimistic updates and pending/failed indicators
+- [x] MAIL-26: Attachment preview (image, PDF) and download — v10.19, 10-09-26 (chips in the reading pane open images, PDFs, and text in a new tab and download everything else; a download button on every chip; inline `cid:` images render inside the message frame; inline parts are kept out of the chip row)
+- [x] MAIL-27: Actions wired to the outbox API with optimistic updates and pending/failed indicators — v10.19, 10-09-26 (`components/mail/ActionBar.tsx` over the thread list: archive, trash, spam, star/unstar, mark read/unread for the selection or the open thread; opening a thread marks it read after `mail_mark_read_dwell_ms` (new system setting, default 1500, 0 disables); the bar shows pending and failed queue counts, with retry and discard-and-revert for failed rows. Keyboard bindings for these arrive with MAIL-30)
 - [ ] MAIL-28: Snooze picker and Snoozed folder
 - [ ] MAIL-29: Label/move picker with label creation
 - [ ] MAIL-30: Keyboard model (§5.1) via react-hotkeys-hook; shortcut sheet on ?
@@ -509,6 +509,8 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.17 | 10-09-26 01:05 | Claude (Claude Code) | MAIL-27 checked off (v10.19); `mail_mark_read_dwell_ms` added as the shipped key for §3.1 `mail.mark_read_dwell_ms`. |
+| 1.16 | 10-09-26 01:00 | Claude (Claude Code) | MAIL-15 and MAIL-26 checked off (v10.19). |
 | 1.15 | 10-09-26 00:50 | Claude (Claude Code) | MAIL-25 checked off (v10.18). |
 | 1.14 | 10-09-26 00:45 | Claude (Claude Code) | MAIL-23 and MAIL-24 checked off (v10.17). |
 | 1.13 | 10-09-26 00:30 | Claude (Claude Code) | Phase 2 begins: MAIL-21 and MAIL-22 checked off, MAIL-23 and MAIL-24 first cuts noted (v10.16). |

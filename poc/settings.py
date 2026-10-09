@@ -25,6 +25,10 @@ _HARDCODED_DEFAULTS = {
     "mail_action_retry_max": "8",
     # Scheduler: seconds between timed syncs per account, never below 60 (MAIL-13)
     "mail_sync_interval_seconds": "120",
+    # Mail attachment cache budget in megabytes (MAIL-15)
+    "mail_attachment_cache_mb": "2048",
+    # Milliseconds a thread stays open before it is marked read; 0 disables (MAIL-27)
+    "mail_mark_read_dwell_ms": "1500",
 }
 
 

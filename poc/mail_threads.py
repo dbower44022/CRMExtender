@@ -247,10 +247,11 @@ def thread_detail(conn, *, account_id: str, thread_id: str) -> dict | None:
 
     atts: dict[str, list[dict]] = {}
     for r in conn.execute(
-        f"SELECT id, communication_id, filename, mime_type, size_bytes FROM attachments "
+        f"SELECT id, communication_id, filename, mime_type, size_bytes, content_id, is_inline FROM attachments "
         f"WHERE communication_id IN ({placeholders}) ORDER BY filename", ids):
         atts.setdefault(r["communication_id"], []).append(
-            {"id": r["id"], "filename": r["filename"], "mime_type": r["mime_type"], "size_bytes": r["size_bytes"]})
+            {"id": r["id"], "filename": r["filename"], "mime_type": r["mime_type"], "size_bytes": r["size_bytes"],
+             "content_id": r["content_id"], "is_inline": bool(r["is_inline"])})
 
     # Sender → contact via a current email identifier
     sender_contacts: dict[str, dict] = {}

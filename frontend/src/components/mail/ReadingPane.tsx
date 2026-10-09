@@ -6,9 +6,10 @@
  * them into a sandboxed frame.
  */
 
-import { useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, Paperclip } from 'lucide-react'
-import { useThread, type MailMessage } from '../../api/mail.ts'
+import { useEffect, useMemo, useState } from 'react'
+import { ChevronDown, ChevronRight, Download, Paperclip } from 'lucide-react'
+import { useMailAction, useThread, type MailAttachment, type MailMessage } from '../../api/mail.ts'
+import { useSystemSettings } from '../../api/settings.ts'
 import { splitEmailZones } from '../../lib/emailZones.ts'
 import { MessageFrame } from './MessageFrame.tsx'
 
@@ -27,6 +28,48 @@ function senderLabel(m: MailMessage): string {
   return m.sender.contact_name || m.sender.name || m.sender.address || '(unknown)'
 }
 
+const PREVIEWABLE = /^(image\/(png|jpeg|gif|webp)|application\/pdf|text\/plain)$/i
+
+function fmtSize(n: number | null): string {
+  if (!n) return ''
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/** Inline images already appear in the body via cid:; keep them out of the chip row. */
+function isInlineImage(a: MailAttachment, html: string): boolean {
+  return !!a.content_id && !!a.is_inline && html.includes(`cid:${a.content_id}`)
+}
+
+function AttachmentChip({ attachment: a }: { attachment: MailAttachment }) {
+  const url = `/api/v1/mail/attachments/${encodeURIComponent(a.id)}`
+  const previewable = PREVIEWABLE.test(a.mime_type || '')
+  return (
+    <span className="inline-flex items-center overflow-hidden rounded border border-surface-200">
+      <a
+        href={previewable ? url : `${url}?download=1`}
+        target={previewable ? '_blank' : undefined}
+        rel="noopener noreferrer"
+        className="inline-flex max-w-[260px] items-center gap-1 px-1.5 py-0.5 hover:bg-surface-100"
+        title={previewable ? 'Open in a new tab' : 'Download'}
+      >
+        <Paperclip size={11} className="shrink-0" />
+        <span className="truncate">{a.filename}</span>
+        {a.size_bytes ? <span className="shrink-0 text-surface-400">{fmtSize(a.size_bytes)}</span> : null}
+      </a>
+      <a
+        href={`${url}?download=1`}
+        className="border-l border-surface-200 px-1.5 py-0.5 text-surface-500 hover:bg-surface-100"
+        title="Download"
+        aria-label={`Download ${a.filename}`}
+      >
+        <Download size={11} />
+      </a>
+    </span>
+  )
+}
+
 /** Which messages start expanded: every unread one, plus the last. */
 function initialExpanded(messages: MailMessage[]): Set<string> {
   const ids = new Set<string>()
@@ -36,7 +79,8 @@ function initialExpanded(messages: MailMessage[]): Set<string> {
   return ids
 }
 
-function MessageBody({ html, text, sender }: { html: string; text: string; sender: string | null }) {
+function MessageBody({ html, text, sender, messageId }: { html: string; text: string; sender: string | null; messageId: string }) {
+  const cidBase = `/api/v1/mail/attachments/cid/${encodeURIComponent(messageId)}/`
   const [showQuoted, setShowQuoted] = useState(false)
   // Split before sanitizing: the splitter looks for client markup the
   // sanitizer may rewrite. Each zone then renders in its own sandboxed frame.
@@ -46,7 +90,7 @@ function MessageBody({ html, text, sender }: { html: string; text: string; sende
   }
   return (
     <div className="mt-3">
-      <MessageFrame html={zones.primaryHtml} senderAddress={sender} />
+      <MessageFrame html={zones.primaryHtml} senderAddress={sender} cidBase={cidBase} />
       {zones.quotedHtml && (
         <div className="mt-2">
           <button
@@ -58,7 +102,7 @@ function MessageBody({ html, text, sender }: { html: string; text: string; sende
             {showQuoted ? '· · · hide quoted text' : '· · ·'}
           </button>
           {showQuoted && (
-            <MessageFrame html={zones.quotedHtml} senderAddress={sender} className="mt-2 border-l-2 border-surface-200 pl-3" />
+            <MessageFrame html={zones.quotedHtml} senderAddress={sender} cidBase={cidBase} className="mt-2 border-l-2 border-surface-200 pl-3" />
           )}
         </div>
       )}
@@ -68,6 +112,23 @@ function MessageBody({ html, text, sender }: { html: string; text: string; sende
 
 export function ReadingPane({ accountId, threadId }: Props) {
   const thread = useThread(accountId, threadId)
+  const { data: settings } = useSystemSettings()
+  const markRead = useMailAction()
+
+  // Mark the thread's unread messages read after the dwell (MAIL-27, PRD §5.1).
+  const dwellMs = Number(settings?.mail_mark_read_dwell_ms ?? '1500')
+  const unreadIds = thread.data?.messages.filter((m) => !m.is_read).map((m) => m.id) ?? []
+  const unreadKey = unreadIds.join(',')
+  const mutate = markRead.mutate
+  const loadedAccount = thread.data?.account_id
+  useEffect(() => {
+    if (!loadedAccount || !unreadKey || !(dwellMs >= 0) || settings?.mail_mark_read_dwell_ms === '0') return
+    const ids = unreadKey.split(',')
+    const timer = window.setTimeout(() => {
+      mutate({ action: 'mark_read', account_id: loadedAccount, communication_ids: ids })
+    }, dwellMs)
+    return () => window.clearTimeout(timer)
+  }, [loadedAccount, unreadKey, dwellMs, settings?.mail_mark_read_dwell_ms, mutate])
   // Expanded set keyed by the loaded thread: a new thread starts from
   // initialExpanded() without a seeding effect.
   const loadedKey = thread.data ? `${thread.data.account_id}:${thread.data.thread_id}` : null
@@ -158,15 +219,13 @@ export function ReadingPane({ accountId, threadId }: Props) {
                   </div>
                   {m.attachments.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1 pl-5 text-xs text-surface-600">
-                      {m.attachments.map((a) => (
-                        <span key={a.id} className="inline-flex items-center gap-1 rounded border border-surface-200 px-1.5 py-0.5">
-                          <Paperclip size={11} /> {a.filename}
-                        </span>
+                      {m.attachments.filter((a) => !isInlineImage(a, m.body_html)).map((a) => (
+                        <AttachmentChip key={a.id} attachment={a} />
                       ))}
                     </div>
                   )}
                   <div className="pl-5">
-                    <MessageBody html={m.body_html} text={m.body_text} sender={m.sender.address} />
+                    <MessageBody html={m.body_html} text={m.body_text} sender={m.sender.address} messageId={m.id} />
                   </div>
                 </>
               ) : (

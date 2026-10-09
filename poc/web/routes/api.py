@@ -2634,6 +2634,7 @@ def settings_system(request: Request):
         "summarize_settle_minutes": get_setting(cid, "summarize_settle_minutes") or "15",
         "summarize_max_per_sync": get_setting(cid, "summarize_max_per_sync") or "500",
         "mail_sync_interval_seconds": get_setting(cid, "mail_sync_interval_seconds") or "120",
+        "mail_mark_read_dwell_ms": get_setting(cid, "mail_mark_read_dwell_ms") or "1500",
     }
 
 
@@ -2656,12 +2657,13 @@ async def settings_system_update(request: Request):
         "company_name", "default_timezone", "sync_enabled",
         "default_phone_country", "allow_self_registration", "email_history_window",
         "summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds",
+        "mail_mark_read_dwell_ms",
     ]
     for key in _SYSTEM_KEYS:
         val = body.get(key)
         if val is None:
             continue
-        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds"):
+        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds", "mail_mark_read_dwell_ms"):
             try:
                 val = max(0, int(val))
             except (TypeError, ValueError):

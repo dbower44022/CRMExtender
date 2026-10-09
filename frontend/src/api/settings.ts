@@ -26,6 +26,8 @@ export interface SystemSettings {
   summarize_max_per_sync: string
   /** Seconds between timed syncs per account, minimum 60 (MAIL-13). */
   mail_sync_interval_seconds: string
+  /** Milliseconds an open thread waits before being marked read; "0" disables (MAIL-27). */
+  mail_mark_read_dwell_ms: string
 }
 
 interface UserRecord {

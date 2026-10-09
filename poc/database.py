@@ -388,7 +388,10 @@ CREATE TABLE IF NOT EXISTS attachments (
     size_bytes       INTEGER,
     storage_ref      TEXT,
     source           TEXT,
-    created_at       TEXT NOT NULL
+    created_at       TEXT NOT NULL,
+    provider_attachment_id TEXT,
+    content_id       TEXT,
+    is_inline        INTEGER NOT NULL DEFAULT 0
 );
 
 -- Tags (AI-extracted keyword phrases; distinct from hierarchy topics)
@@ -1085,6 +1088,7 @@ CREATE INDEX IF NOT EXISTS idx_comm_mail_state     ON communications(mail_state_
 CREATE INDEX IF NOT EXISTS idx_mlabel_account      ON mailbox_labels(account_id);
 CREATE INDEX IF NOT EXISTS idx_clabel_label        ON communication_labels(label_id);
 CREATE INDEX IF NOT EXISTS idx_mail_actions_queue  ON mail_actions(account_id, status, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_attachments_provider ON attachments(communication_id, provider_attachment_id);
 
 -- Conversations
 CREATE INDEX IF NOT EXISTS idx_conv_topic          ON conversations(topic_id);

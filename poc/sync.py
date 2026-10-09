@@ -12,6 +12,7 @@ from . import config
 from .contacts_client import fetch_contact_groups, fetch_contacts
 from .database import get_connection
 from .email_parser import strip_quotes
+from .mail_attachments import store_attachment_rows
 from .mail_state import (
     apply_label_delta,
     apply_mail_state,
@@ -733,6 +734,9 @@ def _store_thread(
                 mapping = ensure_labels(conn, account_id, em.label_ids)
                 set_communication_labels(
                     conn, comm_id, [mapping[l] for l in em.label_ids if l in mapping])
+            # Attachment metadata (MAIL-15); bytes are fetched on demand.
+            if em.attachments:
+                store_attachment_rows(conn, comm_id, em)
         else:
             # Already stored (re-fetch, backfill overlap, or a CRM-composed
             # message now seen from the provider): the provider is

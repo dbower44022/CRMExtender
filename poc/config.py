@@ -101,6 +101,8 @@ MAX_CONVERSATION_CHARS = int(_env("POC_MAX_CONVERSATION_CHARS", "6000"))
 
 # File uploads (notes attachments)
 UPLOAD_DIR = Path(_env("CRM_UPLOAD_DIR", "") or str(_PROJECT_ROOT / "data" / "uploads"))
+# Mail attachment cache (Mail Client MAIL-15): bytes fetched from the provider on demand
+ATTACHMENT_CACHE_DIR = Path(_env("CRM_ATTACHMENT_CACHE_DIR", "") or str(_PROJECT_ROOT / "data" / "attachments"))
 MAX_UPLOAD_SIZE_MB = int(_env("CRM_MAX_UPLOAD_SIZE_MB", "10"))
 ALLOWED_UPLOAD_TYPES = {
     "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",

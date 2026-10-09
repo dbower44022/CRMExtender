@@ -127,6 +127,83 @@ def mail_thread_detail(request: Request, account_id: str, thread_id: str):
 
 
 # ---------------------------------------------------------------------------
+# Attachments (MAIL-15 / MAIL-26)
+# ---------------------------------------------------------------------------
+
+def _attachment_row(conn, where: str, params: tuple) -> dict | None:
+    row = conn.execute(
+        f"""SELECT a.*, c.provider_message_id, c.account_id
+            FROM attachments a JOIN communications c ON c.id = a.communication_id
+            WHERE {where}""", params).fetchone()
+    return dict(row) if row else None
+
+
+def _serve_attachment(request: Request, row: dict, *, download: bool):
+    from pathlib import Path
+
+    from fastapi.responses import FileResponse
+
+    from ... import config
+    from ...auth import get_credentials_for_account
+    from ...mail_attachments import cached_path
+    from ...providers import get_provider
+    from ...rate_limiter import RateLimiter
+    from ...settings import get_setting
+
+    if row["account_id"] not in _visible_account_ids(request):
+        return _err("Not found", 404)
+    if not row.get("provider_attachment_id") or not row.get("provider_message_id"):
+        return _err("This attachment has no provider reference; it predates attachment capture", 409)
+    with get_connection() as conn:
+        account = conn.execute("SELECT * FROM provider_accounts WHERE id = ?", (row["account_id"],)).fetchone()
+        account = dict(account)
+        try:
+            creds = get_credentials_for_account(Path(account["auth_token_path"]))
+            provider = get_provider(account.get("provider") or "gmail")
+            budget = get_setting(request.state.customer_id, "mail_attachment_cache_mb")
+            path = cached_path(
+                conn, row, account=account, session=creds, provider=provider,
+                rate_limiter=RateLimiter(rate=config.GMAIL_RATE_LIMIT),
+                budget_mb=int(budget) if budget else None,
+            )
+        except Exception as exc:
+            return _err(f"Could not fetch attachment: {exc}", 502)
+    media = row.get("mime_type") or "application/octet-stream"
+    # Never let a browser execute a served attachment as a page.
+    if media.lower() in ("text/html", "application/xhtml+xml", "image/svg+xml", "application/javascript"):
+        download = True
+    headers = {"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=3600"}
+    disposition = "attachment" if download else "inline"
+    # FileResponse only emits Content-Disposition when a filename is given;
+    # pass it for both forms so the browser always has the real name.
+    return FileResponse(
+        str(path), media_type=media, filename=row["filename"],
+        headers=headers, content_disposition_type=disposition,
+    )
+
+
+@router.get("/mail/attachments/{attachment_id}")
+def mail_attachment(request: Request, attachment_id: str, download: int = 0):
+    """Stream one attachment, fetching it from the provider on first use.
+    ``?download=1`` forces a download; images and PDFs otherwise display inline."""
+    with get_connection() as conn:
+        row = _attachment_row(conn, "a.id = ?", (attachment_id,))
+    if not row:
+        return _err("Not found", 404)
+    return _serve_attachment(request, row, download=bool(download))
+
+
+@router.get("/mail/attachments/cid/{communication_id}/{content_id}")
+def mail_attachment_cid(request: Request, communication_id: str, content_id: str):
+    """Resolve an inline ``cid:`` image reference for the message frame."""
+    with get_connection() as conn:
+        row = _attachment_row(conn, "a.communication_id = ? AND a.content_id = ?", (communication_id, content_id))
+    if not row:
+        return _err("Not found", 404)
+    return _serve_attachment(request, row, download=False)
+
+
+# ---------------------------------------------------------------------------
 # Search (MAIL-12)
 # ---------------------------------------------------------------------------
 

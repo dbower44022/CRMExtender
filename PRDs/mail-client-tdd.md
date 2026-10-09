@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 00:50
+**Last Updated:** 10-09-26 01:05
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -281,6 +281,28 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-25).
 
+### D-32 Attachments: metadata at sync, bytes on demand, no retroactive capture
+
+**Decision (implements D-09):** The Gmail parser already yields every attachment part's id, name, type, size, and Content-ID; the sync store upserts those into `attachments` keyed by (message, provider part id). Bytes are fetched through the adapter only when a user opens or downloads the file, written to `data/attachments/<account>/<id>.bin`, and pruned least-recently-used to the `mail_attachment_cache_mb` budget. Inline images resolve through a `cid` route keyed by message id and Content-ID, so the sandboxed frame never needs an attachment id. Served files always carry `X-Content-Type-Options: nosniff`; HTML, SVG, and JavaScript attachments are forced to download. Messages mirrored before this release have no attachment rows because their mail-state backfill used metadata-only fetches, which carry no parts; a full-fetch backfill is a separate, costly job and is deferred until the owner asks for it.
+
+**Rationale:** Storing every attachment up front would multiply the mirror; most are never opened. Keying inline images by Content-ID matches how the HTML references them.
+
+**Alternatives Rejected:** Re-fetching 11,000 messages in full to recover old attachments — hours at the rate limit for files rarely needed.
+
+**Constraints/Tradeoffs:** The first open of any attachment waits on the provider. The cache is per server, not synchronized anywhere. A thread's "has attachments" mark is false for pre-v10.19 mail.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-15).
+
+### D-33 Action bar semantics: selection beats the open thread; the server owns the optimistic state
+
+**Decision:** The action bar above the thread list acts on the current multi-selection when one exists, otherwise on the open thread. For the open thread every message id is sent (the detail is loaded); for selected-but-unopened threads only the latest message id is known from the list, so the action targets that message. The client sends one request per account, then invalidates every mail query; the server's immediate local write (D-04) is what makes the change appear at once, so the client keeps no shadow state. Mark-read-on-open is a timer in the reading pane keyed by the set of unread message ids; the dwell is the tenant setting `mail_mark_read_dwell_ms`.
+
+**Rationale:** Keeping optimism on the server means the list, counts, and folder tree all agree after one refetch, and a failed push is surfaced from the queue rather than reconstructed client-side.
+
+**Constraints/Tradeoffs:** Acting on an unopened multi-message thread touches only its latest message until MAIL-23's list carries all message ids; a thread-level action endpoint (`thread_ids` → all messages server-side) is the natural fix and is noted for the keyboard work in MAIL-30. The dwell setting is tenant-wide; the PRD wants it per user.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-27).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -307,6 +329,8 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.13 | 10-09-26 01:05 | Claude (Claude Code) | Write-back for MAIL-27: D-33 (action targets, server-owned optimism, dwell). |
+| 1.12 | 10-09-26 01:00 | Claude (Claude Code) | Write-back for MAIL-15: D-32 (metadata at sync, bytes on demand, no retroactive capture). |
 | 1.11 | 10-09-26 00:50 | Claude (Claude Code) | Write-back for MAIL-25: D-31 (opaque-origin frames, DOMPurify profile, per-browser allow list). |
 | 1.10 | 10-09-26 00:30 | Claude (Claude Code) | Write-back for MAIL-21: D-30 (mail as a shell mode with its own panes; URL mapping; polling). |
 | 1.9 | 10-09-26 00:20 | Claude (Claude Code) | Write-back for MAIL-16: D-29 (thread grouping, folder membership, local counts); §3 thread-model item settled. |

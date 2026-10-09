@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 00:15
+**Last Updated:** 10-09-26 00:20
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -247,6 +247,16 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-12).
 
+### D-29 Thread list: provider thread id, folder membership by any message, counts from the mirror
+
+**Decision:** The mail surface groups by `(account_id, provider_thread_id)`, falling back to the message id when the provider gave none; the RFC References chain is not used for grouping (this settles the first item in §3). A thread appears in a folder when any of its messages carries that label, and the list is ordered by the newest matching message. Folder counts (unread, total) are computed from `communication_labels` and the flag columns on every request rather than read from the provider's label counts, which lag behind the mirror. Folders and search share `mail_search.predicates`, so a folder is a search with `in:` preset and a user label is a search on the label row id. The thread subject is the first message's.
+
+**Rationale:** Gmail's own list behaves this way, so the mirror matches what the user sees elsewhere. Computing counts locally keeps them consistent with the optimistic action effects (D-04). One predicate builder means the folder tree and the search box can never disagree on membership.
+
+**Constraints/Tradeoffs:** Counting on each request is a full scan of membership rows; at the production profile (about 12,000 messages) it is milliseconds, and a cached count table is the escape hatch if that changes. Cross-account duplicates (the same Message-ID in two accounts) show as two threads until MAIL-44.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-16).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -259,7 +269,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 ## 3. Decisions to Be Added by Claude Code
 
-- **Thread model:** whether the mail surface groups by provider thread id or by RFC References chain; the two disagree on Gmail occasionally. Decide once the backfill data is in.
+- ~~**Thread model:**~~ settled by D-29 (provider thread id).
 - **Unified inbox ordering across accounts:** last-activity time versus newest-message time, and how to break ties.
 - **Outbox batching:** batch size per provider and whether to coalesce opposite actions (star then unstar) before push.
 - **IMAP connection lifecycle:** persistent IDLE versus polling per folder, decided when a real IMAP account is available.
@@ -273,6 +283,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.9 | 10-09-26 00:20 | Claude (Claude Code) | Write-back for MAIL-16: D-29 (thread grouping, folder membership, local counts); §3 thread-model item settled. |
 | 1.8 | 10-09-26 00:15 | Claude (Claude Code) | Write-back for MAIL-12: D-28 (FTS5 table by triggers, phrase-quoted terms, operator resolution). |
 | 1.7 | 10-09-26 00:05 | Claude (Claude Code) | Write-back for MAIL-13: D-27 (scheduler mechanics, manual-run aggregation, pipeline split). |
 | 1.6 | 10-08-26 23:55 | Claude (Claude Code) | Write-back for MAIL-09/14: D-26 (outbox failure classes, discard, push-before-pull). |

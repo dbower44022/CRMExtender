@@ -121,6 +121,8 @@ class SearchQuery:
     before: datetime | None = None
     after: datetime | None = None
     unknown: list[str] = field(default_factory=list)     # operators we did not understand (kept as terms)
+    #: mailbox_labels.id values (set by the folder API, not by the parser)
+    label_row_ids: list[str] = field(default_factory=list)
 
     def is_empty(self) -> bool:
         return not any((self.terms, self.from_, self.to, self.cc, self.subject, self.has_attachment,
@@ -265,12 +267,11 @@ _SYSTEM_IN = {
 }
 
 
-def build_sql(sq: SearchQuery, *, account_ids: list[str], limit: int = 50, offset: int = 0,
-              count: bool = False) -> tuple[str, list]:
-    """SQL over ``communications c`` returning matching rows newest first.
-
-    ``account_ids`` scopes the search to what the caller may see. With
-    ``count=True`` the statement returns a single ``n`` column.
+def predicates(sq: SearchQuery, *, account_ids: list[str]) -> tuple[list[str], list[str], list]:
+    """The joins, WHERE clauses, and parameters that select the messages a
+    :class:`SearchQuery` matches, over an alias ``c`` of ``communications``
+    (with ``pa`` for the provider account). Shared by :func:`build_sql`
+    and the thread list (MAIL-16) so folders and search agree exactly.
     """
     where: list[str] = ["c.channel = 'email'", "c.is_current = 1"]
     params: list = []
@@ -360,12 +361,27 @@ def build_sql(sq: SearchQuery, *, account_ids: list[str], limit: int = 50, offse
             "EXISTS (SELECT 1 FROM communication_labels cl JOIN mailbox_labels ml ON ml.id = cl.label_id "
             "WHERE cl.communication_id = c.id AND (ml.name = ? COLLATE NOCASE OR ml.provider_label_id = ?))")
         params.extend([lab, lab])
+    for row_id in sq.label_row_ids:
+        where.append("EXISTS (SELECT 1 FROM communication_labels cl WHERE cl.communication_id = c.id AND cl.label_id = ?)")
+        params.append(row_id)
+    if sq.label_row_ids:
+        include_trash_spam = True
     if not include_trash_spam:
         where.append(
             "NOT EXISTS (SELECT 1 FROM communication_labels cl JOIN mailbox_labels ml ON ml.id = cl.label_id "
             "WHERE cl.communication_id = c.id AND ml.kind IN ('trash', 'spam'))")
         where.append("c.is_archived = 0")
+    return joins, where, params
 
+
+def build_sql(sq: SearchQuery, *, account_ids: list[str], limit: int = 50, offset: int = 0,
+              count: bool = False) -> tuple[str, list]:
+    """SQL over ``communications c`` returning matching rows newest first.
+
+    ``account_ids`` scopes the search to what the caller may see. With
+    ``count=True`` the statement returns a single ``n`` column.
+    """
+    joins, where, params = predicates(sq, account_ids=account_ids)
     base = f"FROM communications c {' '.join(joins)} WHERE {' AND '.join(where)}"
     if count:
         return f"SELECT COUNT(*) AS n {base}", params

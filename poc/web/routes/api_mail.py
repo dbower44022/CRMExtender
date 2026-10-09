@@ -66,6 +66,67 @@ def _account_for_communications(conn, communication_ids: list[str]) -> str | Non
 
 
 # ---------------------------------------------------------------------------
+# Folders and threads (MAIL-16)
+# ---------------------------------------------------------------------------
+
+def _scope(request: Request, account_id: str | None) -> list[str]:
+    """Visible accounts, narrowed to one when ``account_id`` is given (not 'unified')."""
+    accounts = _visible_account_ids(request)
+    if account_id and account_id != "unified":
+        accounts = [a for a in accounts if a == account_id]
+    return accounts
+
+
+@router.get("/mail/folders")
+def mail_folders(request: Request):
+    """Per-account folder tree with locally computed unread/total counts, plus
+    the unified set. Scheduler state per account is attached when running."""
+    from ...mail_threads import folders
+    from ...scheduler import get_scheduler
+
+    with get_connection() as conn:
+        out = folders(conn, account_ids=_visible_account_ids(request))
+    sched = get_scheduler()
+    st = sched.status()["accounts"] if (sched is not None and sched.running) else {}
+    for a in out["accounts"]:
+        s = st.get(a["id"])
+        a["sync"] = ({"running": s["running"], "last_finished": s["last_finished"],
+                      "next_due_at": s["next_due_at"], "last_error": s["last_error"]} if s else None)
+    return out
+
+
+@router.get("/mail/threads")
+def mail_threads(request: Request, folder: str = "inbox", account_id: str | None = None,
+                 label_id: str | None = None, q: str | None = None, limit: int = 50, offset: int = 0):
+    """Threads in a folder (``inbox``, ``starred``, ``sent``, ``drafts``,
+    ``archive``, ``all``, ``trash``, ``spam``, ``important``, ``unread``) or
+    under a user label (``label_id`` = mailbox_labels.id), newest first.
+    ``account_id`` narrows to one account; omitted or ``unified`` means all."""
+    from ...mail_threads import thread_list
+
+    accounts = _scope(request, account_id)
+    with get_connection() as conn:
+        try:
+            return thread_list(conn, account_ids=accounts, folder=None if label_id else folder,
+                               label_row_id=label_id, q=q, limit=limit, offset=offset)
+        except ValueError as exc:
+            return _err(str(exc))
+
+
+@router.get("/mail/threads/{account_id}/{thread_id}")
+def mail_thread_detail(request: Request, account_id: str, thread_id: str):
+    """Every message of one thread, oldest first, with bodies, participants,
+    labels, attachments, and the CRM conversation it belongs to."""
+    from ...mail_threads import thread_detail
+
+    if account_id not in _visible_account_ids(request):
+        return _err("Not found", 404)
+    with get_connection() as conn:
+        out = thread_detail(conn, account_id=account_id, thread_id=thread_id)
+    return out if out else _err("Not found", 404)
+
+
+# ---------------------------------------------------------------------------
 # Search (MAIL-12)
 # ---------------------------------------------------------------------------
 

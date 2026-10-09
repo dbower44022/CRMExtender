@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 00:15
+**Last Updated:** 10-09-26 00:20
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -405,7 +405,7 @@ Phase 1 — Mail store foundation
 - [x] MAIL-13: Per-account background scheduler (interval setting, one run per account, global pause) — v10.13, 10-09-26 (`poc/scheduler.py`, started by the web server lifespan unless `CRM_SCHEDULER_ENABLED=false`; setting `mail_sync_interval_seconds`, floor 60, on Settings → System; `sync_enabled=false` stops timers but not Sync Now; `POST /sync/pause|resume` admin-only; `POST /settings/accounts/{id}/sync` per-account sync now; `GET /sync/status` carries a `scheduler` block. TDD D-27)
 - [x] MAIL-14: Action outbox worker: ordered push per account, backoff, dead-letter, API to list and retry — v10.12, 10-08-26 (`poc/mail_actions.py`; routes in new `poc/web/routes/api_mail.py`: `POST /mail/actions`, `GET /mail/actions`, `POST /mail/actions/{id}/retry|discard`, `POST /mail/actions/push`; the worker also runs before each account's sync in `run_full_sync`. Until MAIL-13 there is no timer, so pushes happen on Sync Now or the push endpoint. Setting key is `mail_action_retry_max` (TDD D-26)
 - [ ] MAIL-15: Attachment metadata captured on sync; attachment fetch-on-demand with disk cache and cid: serving
-- [ ] MAIL-16: Mail API: folders with counts, thread list per folder/account/unified, thread detail, actions, search, per-account sync and status
+- [x] MAIL-16: Mail API: folders with counts, thread list per folder/account/unified, thread detail, actions, search, per-account sync and status — v10.15, 10-09-26 (`poc/mail_threads.py`; `GET /mail/folders`, `GET /mail/threads?folder|label_id&account_id&q`, `GET /mail/threads/{account}/{thread}`; actions MAIL-14, search MAIL-12, per-account sync MAIL-13. Counts computed locally; folder and search share one predicate builder. Snoozed folder is empty until MAIL-17; Drafts shows provider drafts until MAIL-35. TDD D-29)
 - [ ] MAIL-17: Snooze: local return-time table, provider label CRMExtender/Snoozed, scheduler return pass
 - [ ] MAIL-18: Drop the duplicate HTML copy (cleaned_html == original_html) during v23 migration; store one body plus derived text
 - [x] MAIL-19: Summarization trigger changed from per-message to per-thread settle window (cost control) — v10.11, 10-08-26. Settle window (`summarize_settle_minutes`, default 15) and per-run cap (`summarize_max_per_sync`, default 500, newest first) in Settings → System; summarization runs once after all accounts have synced instead of inside the account loop (TDD D-25)
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.12 | 10-09-26 00:20 | Claude (Claude Code) | MAIL-16 checked off (v10.15); Phase 1 backend now complete except MAIL-11, MAIL-15, MAIL-17, MAIL-18, MAIL-20. |
 | 1.11 | 10-09-26 00:15 | Claude (Claude Code) | MAIL-12 checked off (v10.14). |
 | 1.10 | 10-09-26 00:05 | Claude (Claude Code) | MAIL-13 checked off (v10.13); interval setting key noted in §3.1. |
 | 1.9 | 10-08-26 23:55 | Claude (Claude Code) | MAIL-09 and MAIL-14 checked off (v10.12). |

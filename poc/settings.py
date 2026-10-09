@@ -29,6 +29,8 @@ _HARDCODED_DEFAULTS = {
     "mail_attachment_cache_mb": "2048",
     # Milliseconds a thread stays open before it is marked read; 0 disables (MAIL-27)
     "mail_mark_read_dwell_ms": "1500",
+    # Seconds a sent message waits (and can be undone) before it goes out (MAIL-35)
+    "mail_undo_send_seconds": "10",
 }
 
 

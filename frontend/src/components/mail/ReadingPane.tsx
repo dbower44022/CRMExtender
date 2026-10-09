@@ -2,17 +2,21 @@
  * messages collapsed to one line, the newest unread (or the last) expanded,
  * quoted text folded, and o / Shift+o to expand one or all.
  *
- * Bodies still render through the regex sanitizer here; MAIL-25 moves
- * them into a sandboxed frame.
+ * Bodies render in sandboxed frames (MAIL-25). Each expanded message has
+ * Reply / Reply all / Forward, and the thread ends with the inline
+ * composer (MAIL-33).
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, Download, Paperclip } from 'lucide-react'
+import { ChevronDown, ChevronRight, Download, Forward, Paperclip, Reply, ReplyAll } from 'lucide-react'
+import { toast } from 'sonner'
 import { useMailAction, useThread, type MailAttachment, type MailMessage } from '../../api/mail.ts'
 import { useSystemSettings } from '../../api/settings.ts'
 import { splitEmailZones } from '../../lib/emailZones.ts'
+import { useComposeStore, type ComposeMode } from '../../stores/compose.ts'
 import { MessageFrame } from './MessageFrame.tsx'
 import { ContextColumn } from './ContextColumn.tsx'
+import { InlineReply } from '../compose/InlineReply.tsx'
 
 interface Props {
   accountId: string | null
@@ -115,6 +119,7 @@ export function ReadingPane({ accountId, threadId }: Props) {
   const thread = useThread(accountId, threadId)
   const { data: settings } = useSystemSettings()
   const markRead = useMailAction()
+  const openCompose = useComposeStore((s) => s.openCompose)
 
   // Mark the thread's unread messages read after the dwell (MAIL-27, PRD §5.1).
   const dwellMs = Number(settings?.mail_mark_read_dwell_ms ?? '1500')
@@ -169,6 +174,10 @@ export function ReadingPane({ accountId, threadId }: Props) {
   if (thread.error || !thread.data) return <div className="p-4 text-sm text-red-700">Could not load this thread.</div>
 
   const t = thread.data
+  const tKey = `${t.account_id}:${t.thread_id}`
+  const replyTo = (mode: ComposeMode, messageId: string) => {
+    if (openCompose(mode, { communicationId: messageId, threadKey: tKey }, 'inline') === null) toast.info('Close a composer first (three are open)')
+  }
   return (
     <div className="flex h-full overflow-hidden">
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden outline-none" tabIndex={0} onKeyDown={onKeyDown}>
@@ -219,6 +228,11 @@ export function ReadingPane({ accountId, threadId }: Props) {
                     </div>
                     <span className="shrink-0 text-xs text-surface-500">{fmt(m.timestamp)}</span>
                   </div>
+                  <div className="mt-1 flex gap-1 pl-5 text-xs text-surface-500">
+                    <button type="button" onClick={() => replyTo('reply', m.id)} className="inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-surface-100 hover:text-surface-800" title="Reply to this message"><Reply size={12} /> Reply</button>
+                    <button type="button" onClick={() => replyTo('reply_all', m.id)} className="inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-surface-100 hover:text-surface-800" title="Reply all to this message"><ReplyAll size={12} /> Reply all</button>
+                    <button type="button" onClick={() => replyTo('forward', m.id)} className="inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-surface-100 hover:text-surface-800" title="Forward this message"><Forward size={12} /> Forward</button>
+                  </div>
                   {m.attachments.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1 pl-5 text-xs text-surface-600">
                       {m.attachments.filter((a) => !isInlineImage(a, m.body_html)).map((a) => (
@@ -249,6 +263,7 @@ export function ReadingPane({ accountId, threadId }: Props) {
             </article>
           )
         })}
+        {t.messages.length > 0 && <InlineReply threadKey={tKey} lastMessageId={t.messages[t.messages.length - 1].id} />}
       </div>
     </div>
     <ContextColumn thread={t} />

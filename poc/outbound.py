@@ -168,6 +168,138 @@ def cancel_draft(conn, *, queue_id: str, user_id: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Queued send: undo window and scheduled send (Mail Client MAIL-35)
+# ---------------------------------------------------------------------------
+
+def queue_send(conn, *, queue_id: str, user_id: str, send_at: str) -> dict:
+    """Hold a draft as ``queued`` until ``send_at`` (ISO, UTC).
+
+    Used for the undo window (now + a few seconds) and for scheduled send.
+    :func:`send_due` sends it when the time has passed; :func:`undo_send`
+    returns it to ``draft`` before then.
+    """
+    record = get_queue_record(conn, queue_id=queue_id)
+    if not record:
+        raise ValueError("Queue record not found")
+    if record["status"] not in ("draft", "queued"):
+        raise ValueError(f"Cannot queue email with status '{record['status']}'")
+    if record["created_by"] != user_id:
+        raise ValueError("Not authorized to send this email")
+    now = _now_iso()
+    conn.execute(
+        "UPDATE outbound_email_queue SET status = 'queued', scheduled_send_at = ?, updated_at = ? WHERE id = ?",
+        (send_at, now, queue_id),
+    )
+    return {"queue_id": queue_id, "status": "queued", "scheduled_send_at": send_at}
+
+
+def undo_send(conn, *, queue_id: str, user_id: str) -> bool:
+    """Return a queued (not yet sent) email to draft. False if too late."""
+    record = get_queue_record(conn, queue_id=queue_id)
+    if not record or record["status"] != "queued" or record["created_by"] != user_id:
+        return False
+    now = _now_iso()
+    conn.execute(
+        "UPDATE outbound_email_queue SET status = 'draft', scheduled_send_at = NULL, updated_at = ? WHERE id = ?",
+        (now, queue_id),
+    )
+    return True
+
+
+def send_due(conn, *, now_iso: str | None = None, limit: int = 20) -> list[dict]:
+    """Send queued emails whose scheduled time has passed. Returns the results."""
+    now_iso = now_iso or _now_iso()
+    rows = conn.execute(
+        "SELECT id, created_by FROM outbound_email_queue WHERE status = 'queued' "
+        "AND scheduled_send_at IS NOT NULL AND scheduled_send_at <= ? ORDER BY scheduled_send_at LIMIT ?",
+        (now_iso, limit),
+    ).fetchall()
+    results = []
+    for r in rows:
+        try:
+            results.append(send_email(conn, queue_id=r["id"], user_id=r["created_by"]))
+        except Exception as exc:  # one failure must not block the rest
+            _fail_send(conn, r["id"], str(exc))
+            results.append({"queue_id": r["id"], "status": "failed", "failure_reason": str(exc)})
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Outbound attachments (MAIL-35)
+# ---------------------------------------------------------------------------
+
+def _outbound_dir(queue_id: str) -> Path:
+    from . import config
+    d = Path(config.UPLOAD_DIR) / "outbound" / queue_id
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def add_attachment(conn, *, queue_id: str, user_id: str, filename: str, mime_type: str | None,
+                   data: bytes, source: str = "user_attached") -> dict:
+    """Store a file for a draft and record it. Raises ValueError on bad state."""
+    record = get_queue_record(conn, queue_id=queue_id)
+    if not record or record["created_by"] != user_id:
+        raise ValueError("Queue record not found")
+    if record["status"] not in ("draft", "queued"):
+        raise ValueError(f"Cannot attach to an email with status '{record['status']}'")
+    safe = "".join(ch for ch in (filename or "attachment") if ch.isalnum() or ch in "._- ") or "attachment"
+    att_id = str(uuid.uuid4())
+    path = _outbound_dir(queue_id) / f"{att_id}_{safe}"
+    path.write_bytes(data)
+    now = _now_iso()
+    order = conn.execute(
+        "SELECT COALESCE(MAX(display_order), -1) + 1 FROM outbound_email_attachments WHERE outbound_email_id = ?",
+        (queue_id,),
+    ).fetchone()[0]
+    conn.execute(
+        """INSERT INTO outbound_email_attachments
+           (id, outbound_email_id, filename, mime_type, size_bytes, storage_ref, source, display_order, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (att_id, queue_id, safe, mime_type, len(data), str(path), source, order, now),
+    )
+    return {"id": att_id, "filename": safe, "mime_type": mime_type, "size_bytes": len(data)}
+
+
+def list_attachments(conn, *, queue_id: str) -> list[dict]:
+    rows = conn.execute(
+        "SELECT id, filename, mime_type, size_bytes FROM outbound_email_attachments "
+        "WHERE outbound_email_id = ? ORDER BY display_order", (queue_id,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_attachment(conn, *, queue_id: str, user_id: str, attachment_id: str) -> bool:
+    record = get_queue_record(conn, queue_id=queue_id)
+    if not record or record["created_by"] != user_id or record["status"] not in ("draft", "queued"):
+        return False
+    row = conn.execute(
+        "SELECT storage_ref FROM outbound_email_attachments WHERE id = ? AND outbound_email_id = ?",
+        (attachment_id, queue_id)).fetchone()
+    if not row:
+        return False
+    try:
+        Path(row["storage_ref"]).unlink(missing_ok=True)
+    except OSError:
+        pass
+    conn.execute("DELETE FROM outbound_email_attachments WHERE id = ?", (attachment_id,))
+    return True
+
+
+def _load_attachment_payloads(conn, queue_id: str) -> list[dict]:
+    """The adapter's attachment dicts (filename, mime_type, data) for a draft."""
+    out = []
+    for r in conn.execute(
+        "SELECT filename, mime_type, storage_ref FROM outbound_email_attachments "
+        "WHERE outbound_email_id = ? ORDER BY display_order", (queue_id,)):
+        try:
+            out.append({"filename": r["filename"], "mime_type": r["mime_type"] or "application/octet-stream",
+                        "data": Path(r["storage_ref"]).read_bytes()})
+        except OSError as exc:
+            log.warning("Outbound attachment unreadable (%s): %s", r["storage_ref"], exc)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Send
 # ---------------------------------------------------------------------------
 
@@ -262,9 +394,10 @@ def send_email(conn, *, queue_id: str, user_id: str) -> dict:
                 references = f"{refs} {in_reply_to}".strip()
             thread_id = parent["provider_thread_id"]
 
-    # Send through the provider adapter
+    # Send through the provider adapter (attachments from MAIL-35 uploads)
     try:
         provider = get_provider(acct.get("provider") or "gmail")
+        attachments = _load_attachment_payloads(conn, queue_id)
         provider_msg_id, provider_thread_id = provider.send(
             creds,
             OutboundMessage(
@@ -278,6 +411,7 @@ def send_email(conn, *, queue_id: str, user_id: str) -> dict:
                 in_reply_to=in_reply_to,
                 references=references,
                 thread_id=thread_id,
+                attachments=attachments or None,
             ),
         )
     except Exception as exc:
@@ -300,6 +434,19 @@ def send_email(conn, *, queue_id: str, user_id: str) -> dict:
         body_html=body_html,
         body_text=body_text,
     )
+
+    # The sent message belongs to the Sent folder immediately (MAIL-36);
+    # the next sync reconciles the provider's copy by provider_message_id.
+    try:
+        from .mail_state import ensure_labels, set_communication_labels
+        mapping = ensure_labels(conn, record["from_account_id"], ["SENT"])
+        set_communication_labels(conn, comm_id, [mapping["SENT"]] if "SENT" in mapping else [])
+        conn.execute(
+            "UPDATE communications SET is_read = 1, mail_state_synced_at = ?, provider_thread_id = COALESCE(provider_thread_id, ?) WHERE id = ?",
+            (_now_iso(), provider_thread_id or None, comm_id),
+        )
+    except Exception as exc:
+        log.warning("Could not label sent message %s: %s", comm_id, exc)
 
     # Update queue record
     now = _now_iso()

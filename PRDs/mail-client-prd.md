@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 02:30
+**Last Updated:** 10-09-26 09:50
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -424,10 +424,10 @@ Phase 2 — Mail surface
 - [x] MAIL-30: Keyboard model (§5.1) via react-hotkeys-hook; shortcut sheet on ? — v10.20, 10-09-26 (`hooks/useMailShortcuts.ts`, `components/mail/ShortcutSheet.tsx`: j/k/Enter/o/x/Esc, e/#/!/s/u, r/a/f/c, g-then-i/s/t/d/Shift+A, 0–9 account switch, ? sheet; inert bindings z, l/v, / show a note until MAIL-17/29/31. Actions now target whole threads: `POST /mail/actions` accepts `threads` and expands to every message server-side, closing the D-33 gap)
 - [x] MAIL-31: Mail search box with operator highlighting, results list, saved searches — v10.22, 10-09-26 (`components/mail/SearchBox.tsx`, `lib/mailSearchUi.ts`: `/` focuses, Enter runs, Esc clears, operator chips as hints, highlighted operator tokens, results in the same thread list narrowed to the current folder (an `in:` in the query overrides the folder); saved searches are per browser in V1, not folder-tree views. TDD D-36)
 - [x] MAIL-32: Relationship context column (contact, company, score, last interaction, tasks, summary; create-contact affordance) — v10.23, 10-09-26 (`components/mail/ContextColumn.tsx`, `lib/mailParticipants.ts`: the thread's CRM conversation title, status, and summary on top; one card per external participant (senders first, up to three) with name, title, company, relationship score, two most recent conversations with summaries, and an Open contact link; unknown senders get Create contact, which opens the existing contact modal without prefill. Tasks are omitted: the PoC has no task entity yet. TDD D-37)
-- [ ] MAIL-33: Inline reply/reply-all/forward composer at thread bottom
-- [ ] MAIL-34: Docked, minimizable compose (up to three) replacing the modal
-- [ ] MAIL-35: Compose: attachment upload, signature insertion, drafts folder and resume, undo-send, scheduled send
-- [ ] MAIL-36: Sent folder populated immediately on send; reconciliation on sync
+- [x] MAIL-33: Inline reply/reply-all/forward composer at thread bottom — v10.24, 10-09-26 (`components/compose/InlineReply.tsx` at the end of the reading pane: Reply / Reply all / Forward row, or the composer for that thread; each expanded message has its own Reply / Reply all / Forward; `r` / `a` / `f` open inline for the last message. One inline composer per thread; leaving the thread shows it as a tab in the dock, reopening the thread brings it back. TDD D-38)
+- [x] MAIL-34: Docked, minimizable compose (up to three) replacing the modal — v10.24, 10-09-26 (`components/compose/ComposeDock.tsx` bottom-right; each composer minimizes to a title tab; a fourth is refused with a message. The centered modal is removed; the Compose button, the Communication view's reply buttons, and `c` all open a docked composer. `Esc` in a docked composer minimizes it; `Ctrl+Enter` sends. Shared form in `ComposeForm.tsx`. TDD D-38)
+- [x] MAIL-35: Compose: attachment upload, signature insertion, drafts folder and resume, undo-send, scheduled send — v10.24, 10-09-26 (attachments by picker or drag-and-drop, stored under `data/uploads/outbound/<draft>/` and sent as MIME parts: `GET/POST/DELETE /outbound-emails/{id}/attachments`; the account's default signature shown under the editor and added on send; Drafts folder lists drafts written here above the provider's drafts, click to resume, trash to delete; Send holds the message for `mail_undo_send_seconds` (default 10) as `queued` with an Undo bar, and the scheduler sends queued mail whose time has passed; Schedule send offers quick slots or a date-time; `POST /outbound-emails/{id}/send` takes `undo`, `delay_seconds` or `scheduled_send_at`, `POST /outbound-emails/{id}/undo` returns it to draft. TDD D-38)
+- [x] MAIL-36: Sent folder populated immediately on send; reconciliation on sync — v10.24, 10-09-26 (the composed Communication is labelled SENT, marked read, and given the provider's thread id as soon as the adapter returns; the next sync matches the provider's copy by provider message id, as before)
 - [ ] MAIL-37: Live updates: polling of folder counts and current list; then server-sent events from the scheduler
 - [ ] MAIL-38: Accounts settings: per-account sync now, reconnect, disconnect (keep or delete), error badge, sync interval. **Includes (added 10-08-26):** a failed token refresh in the web server must mark the account `needs_reauth` and skip it, never start the interactive desktop OAuth flow (`auth.get_credentials_for_account` currently does on refresh failure) — see §9.1
 - [ ] MAIL-39: In-application notifications for new inbox mail per mail.notifications
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.22 | 10-09-26 09:50 | Claude (Claude Code) | MAIL-33, 34, 35, 36 checked off (v10.24): inline reply, docked composers, attachments, signature, local drafts, undo and scheduled send, immediate Sent. |
 | 1.21 | 10-09-26 02:30 | Claude (Claude Code) | MAIL-32 checked off (v10.23). |
 | 1.20 | 10-09-26 02:25 | Claude (Claude Code) | MAIL-31 checked off (v10.22). |
 | 1.19 | 10-09-26 02:20 | Claude (Claude Code) | MAIL-40 checked off (v10.21), Playwright smoke deferred. |

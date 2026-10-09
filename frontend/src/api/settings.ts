@@ -28,6 +28,8 @@ export interface SystemSettings {
   mail_sync_interval_seconds: string
   /** Milliseconds an open thread waits before being marked read; "0" disables (MAIL-27). */
   mail_mark_read_dwell_ms: string
+  /** Seconds a sent message can be undone before it goes out; "0" sends at once (MAIL-35). */
+  mail_undo_send_seconds: string
 }
 
 interface UserRecord {

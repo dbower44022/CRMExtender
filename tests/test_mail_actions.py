@@ -210,7 +210,8 @@ class TestWorker:
 
     def test_transient_failure_backs_off_then_dead_letters(self, tmp_db):
         (aid,) = self._queue(1)
-        t0 = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)
+        # Relative to the clock: enqueue stamps next_attempt_at with real now.
+        t0 = datetime.now(timezone.utc) + timedelta(minutes=1)
         p = _provider([ActionResult(ActionStatus.FAILED, error="500")] * 3)
 
         s1 = push_pending({"id": ACCOUNT_ID}, object(), p, retry_max=3, now=t0)

@@ -211,6 +211,15 @@ class SyncScheduler:
             if (self._post_pass_due and not self._post_pass_running
                     and not any(s["running"] for s in self._accounts.values())):
                 self._start_post_pass()
+        # Queued outbound mail whose undo window or scheduled time has passed (MAIL-35)
+        try:
+            from .outbound import send_due
+            with get_connection() as conn:
+                sent = send_due(conn, now_iso=now.isoformat())
+            if sent:
+                log.info("Queued send: %d message(s) processed", len(sent))
+        except Exception:
+            log.exception("Queued send failed")
         return started
 
     def _start_account(self, account: dict, st: dict) -> None:

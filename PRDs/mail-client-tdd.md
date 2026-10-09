@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 02:30
+**Last Updated:** 10-09-26 09:50
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -343,6 +343,16 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-32).
 
+### D-38 Composer: one form, three placements, queued send through the outbox table
+
+**Decision:** One form (`ComposeForm`) serves the docked composer, the inline reply, and a resumed draft; it seeds its state from props once the reply context or draft is known (`ComposeFormLoader`), so it has no pre-fill effects. The store holds up to three composers, each docked or inline; an inline composer is keyed to its thread (`account:thread`) and is drawn by the reading pane while that thread is open and by the dock as a tab otherwise, without the store changing. Undo-send and scheduled send are one mechanism: the draft becomes `queued` with `scheduled_send_at`, the scheduler tick calls `outbound.send_due`, and `/undo` returns a still-queued row to `draft`. Files picked before the draft exists stay in the browser and upload when the draft is first saved; the server stores them under the upload directory and reads them back as MIME parts at send time. The default signature is shown under the editor as read-only and added by the server on send, as it already was, so it is never sent twice.
+
+**Rationale:** One form keeps reply, forward, new, and resume behaving the same. Reusing the outbox row's `queued` status needs no new table and makes a scheduled message visible as a draft that cannot be edited until it is pulled back. Seeding from props follows the React Compiler rule the mail view already keeps.
+
+**Constraints/Tradeoffs:** The undo window is bounded by the scheduler tick (5 s) on top of the setting. A queued message is sent by whichever process runs the scheduler, so with the scheduler disabled nothing goes out until it is enabled. The signature cannot be edited in the composer; that waits for a signature-editing task.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-33–36).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -369,6 +379,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.18 | 10-09-26 09:50 | Claude (Claude Code) | Write-back for MAIL-33–36: D-38 (one composer form, three placements, queued send through the outbox table). |
 | 1.17 | 10-09-26 02:30 | Claude (Claude Code) | Write-back for MAIL-32: D-37 (context column on the contact detail route). |
 | 1.16 | 10-09-26 02:25 | Claude (Claude Code) | Write-back for MAIL-31: D-36 (search narrows the folder; per-browser saved searches). |
 | 1.15 | 10-09-26 02:20 | Claude (Claude Code) | Write-back for MAIL-40: D-35 (harness choices). |

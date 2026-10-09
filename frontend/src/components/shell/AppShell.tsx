@@ -16,7 +16,7 @@ import { ActionPanel } from './ActionPanel.tsx'
 import { ContentArea } from './ContentArea.tsx'
 import { DetailPanel } from './DetailPanel.tsx'
 import { GlobalSearchModal } from '../search/GlobalSearchModal.tsx'
-import { ComposePanel } from '../compose/ComposePanel.tsx'
+import { ComposeDock } from '../compose/ComposeDock.tsx'
 import { useDefaultView } from '../../hooks/useDefaultView.ts'
 import { useUrlSync } from '../../hooks/useUrlSync.ts'
 import { useProfile } from '../../api/settings.ts'
@@ -154,7 +154,7 @@ export function AppShell() {
       </div>
     </div>
     {searchModalOpen && <GlobalSearchModal />}
-    <ComposePanel />
+    <ComposeDock />
     </>
   )
 }

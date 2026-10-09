@@ -19,6 +19,7 @@ import { ActionBar } from './ActionBar.tsx'
 import { FolderTree } from './FolderTree.tsx'
 import { ThreadList } from './ThreadList.tsx'
 import { ReadingPane } from './ReadingPane.tsx'
+import { LocalDrafts } from './LocalDrafts.tsx'
 
 export function MailView() {
   const accountId = useNavigationStore((s) => s.mailAccountId)
@@ -123,11 +124,12 @@ export function MailView() {
         .catch((err) => toast.error(err instanceof Error ? err.message : String(err)))
     },
     reply: (mode) => {
-      const msgs = openThread.data?.messages
-      if (!msgs || msgs.length === 0) { toast.info('Open a thread first'); return }
-      openCompose(mode, { communicationId: msgs[msgs.length - 1].id })
+      const t = openThread.data
+      if (!t || t.messages.length === 0) { toast.info('Open a thread first'); return }
+      const id = openCompose(mode, { communicationId: t.messages[t.messages.length - 1].id, threadKey: `${t.account_id}:${t.thread_id}` }, 'inline')
+      if (id === null) toast.info('Close a composer first (three are open)')
     },
-    compose: () => openCompose('new'),
+    compose: () => { if (openCompose('new') === null) toast.info('Close a composer first (three are open)') },
     goFolder: (f) => setMailFolder(accountId, f),
     goAccount: (n) => {
       if (n === 0) { setMailFolder('unified', 'inbox'); return }
@@ -187,6 +189,7 @@ export function MailView() {
       <section className="relative flex w-[400px] shrink-0 flex-col overflow-hidden border-r border-surface-200">
         <SearchBox ref={searchRef} value={searchQ} onSearch={setSearchQ} saved={saved} onSaveSearch={saveSearch} onRemoveSaved={removeSaved} />
         <ActionBar targets={targets} onDone={clearSelection} />
+        {folder === 'drafts' && <LocalDrafts />}
         <ThreadList
           items={items}
           total={total}

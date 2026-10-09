@@ -2635,6 +2635,7 @@ def settings_system(request: Request):
         "summarize_max_per_sync": get_setting(cid, "summarize_max_per_sync") or "500",
         "mail_sync_interval_seconds": get_setting(cid, "mail_sync_interval_seconds") or "120",
         "mail_mark_read_dwell_ms": get_setting(cid, "mail_mark_read_dwell_ms") or "1500",
+        "mail_undo_send_seconds": get_setting(cid, "mail_undo_send_seconds") or "10",
     }
 
 
@@ -2657,13 +2658,13 @@ async def settings_system_update(request: Request):
         "company_name", "default_timezone", "sync_enabled",
         "default_phone_country", "allow_self_registration", "email_history_window",
         "summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds",
-        "mail_mark_read_dwell_ms",
+        "mail_mark_read_dwell_ms", "mail_undo_send_seconds",
     ]
     for key in _SYSTEM_KEYS:
         val = body.get(key)
         if val is None:
             continue
-        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds", "mail_mark_read_dwell_ms"):
+        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds", "mail_mark_read_dwell_ms", "mail_undo_send_seconds"):
             try:
                 val = max(0, int(val))
             except (TypeError, ValueError):
@@ -3298,13 +3299,43 @@ async def outbound_update(request: Request, email_id: str):
 
 
 @router.post("/outbound-emails/{email_id}/send")
-def outbound_send(request: Request, email_id: str):
-    """Send a draft."""
-    from ...outbound import send_email
+async def outbound_send(request: Request, email_id: str):
+    """Send a draft — at once, after an undo window, or at a scheduled time.
+
+    Body (optional): ``{"delay_seconds": 10}`` queues it to send after the
+    window (the Mail Client default comes from ``mail_undo_send_seconds``);
+    ``{"scheduled_send_at": "<ISO UTC>"}`` queues it for that time. A
+    queued email can be pulled back with ``/undo`` until it goes out.
+    """
+    from datetime import timedelta
+
+    from ...outbound import queue_send, send_email
+    from ...settings import get_setting
 
     uid = request.state.user["id"]
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    body = body or {}
+    scheduled = body.get("scheduled_send_at")
+    delay = body.get("delay_seconds")
+    if delay is None and body.get("undo", False):
+        delay = int(get_setting(request.state.customer_id, "mail_undo_send_seconds") or 10)
+
     with get_connection() as conn:
         try:
+            if scheduled:
+                try:
+                    when = datetime.fromisoformat(str(scheduled).replace("Z", "+00:00"))
+                except ValueError:
+                    return JSONResponse({"error": "scheduled_send_at must be an ISO timestamp"}, status_code=400)
+                if when.tzinfo is None:
+                    when = when.replace(tzinfo=timezone.utc)
+                return queue_send(conn, queue_id=email_id, user_id=uid, send_at=when.astimezone(timezone.utc).isoformat())
+            if delay is not None and int(delay) > 0:
+                when = datetime.now(timezone.utc) + timedelta(seconds=int(delay))
+                return queue_send(conn, queue_id=email_id, user_id=uid, send_at=when.isoformat())
             result = send_email(conn, queue_id=email_id, user_id=uid)
             if result.get("status") == "failed":
                 return JSONResponse(result, status_code=502)
@@ -3313,6 +3344,68 @@ def outbound_send(request: Request, email_id: str):
             return JSONResponse({"error": str(exc)}, status_code=400)
         except Exception as exc:
             return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.post("/outbound-emails/{email_id}/undo")
+def outbound_undo(request: Request, email_id: str):
+    """Pull a queued email back to draft before it goes out."""
+    from ...outbound import undo_send
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        ok = undo_send(conn, queue_id=email_id, user_id=uid)
+    if not ok:
+        return JSONResponse({"error": "Too late — the message has already been sent"}, status_code=409)
+    return {"ok": True, "status": "draft"}
+
+
+@router.get("/outbound-emails/{email_id}/attachments")
+def outbound_attachments_list(request: Request, email_id: str):
+    from ...outbound import get_queue_record, list_attachments
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        rec = get_queue_record(conn, queue_id=email_id)
+        if not rec or rec["created_by"] != uid:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        return list_attachments(conn, queue_id=email_id)
+
+
+@router.post("/outbound-emails/{email_id}/attachments")
+async def outbound_attachments_add(request: Request, email_id: str):
+    """Attach one or more files (multipart ``files``) to a draft."""
+    from ...outbound import add_attachment
+
+    uid = request.state.user["id"]
+    form = await request.form()
+    uploads = form.getlist("files") or ([form["file"]] if "file" in form else [])
+    if not uploads:
+        return JSONResponse({"error": "No files"}, status_code=400)
+    limit = config.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    out = []
+    with get_connection() as conn:
+        for up in uploads:
+            data = await up.read()
+            if len(data) > limit:
+                return JSONResponse({"error": f"{up.filename} exceeds {config.MAX_UPLOAD_SIZE_MB} MB"}, status_code=413)
+            try:
+                out.append(add_attachment(conn, queue_id=email_id, user_id=uid, filename=up.filename or "attachment",
+                                          mime_type=up.content_type, data=data))
+            except ValueError as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+    return out
+
+
+@router.delete("/outbound-emails/{email_id}/attachments/{attachment_id}")
+def outbound_attachments_delete(request: Request, email_id: str, attachment_id: str):
+    from ...outbound import remove_attachment
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        ok = remove_attachment(conn, queue_id=email_id, user_id=uid, attachment_id=attachment_id)
+    if not ok:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return {"ok": True}
 
 
 @router.post("/outbound-emails/{email_id}/cancel")

@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 22:20
+**Last Updated:** 10-08-26 22:52
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -427,7 +427,7 @@ Phase 2 — Mail surface
 - [ ] MAIL-35: Compose: attachment upload, signature insertion, drafts folder and resume, undo-send, scheduled send
 - [ ] MAIL-36: Sent folder populated immediately on send; reconciliation on sync
 - [ ] MAIL-37: Live updates: polling of folder counts and current list; then server-sent events from the scheduler
-- [ ] MAIL-38: Accounts settings: per-account sync now, reconnect, disconnect (keep or delete), error badge, sync interval
+- [ ] MAIL-38: Accounts settings: per-account sync now, reconnect, disconnect (keep or delete), error badge, sync interval. **Includes (added 10-08-26):** a failed token refresh in the web server must mark the account `needs_reauth` and skip it, never start the interactive desktop OAuth flow (`auth.get_credentials_for_account` currently does on refresh failure) — see §9.1
 - [ ] MAIL-39: In-application notifications for new inbox mail per mail.notifications
 - [ ] MAIL-40: Frontend test harness (Vitest + Testing Library) with tests for list, reading pane, actions, keyboard; one Playwright smoke test
 
@@ -487,7 +487,7 @@ Phase 5 — Hardening
 
 ## 9. Open Questions
 
-1. **Google OAuth client publishing status.** A client in testing mode expires refresh tokens after seven days. Background sync needs a published client or Workspace-internal accounts. To be confirmed in Phase 0.
+1. ~~**Google OAuth client publishing status.**~~ **Resolved 10-08-26.** The client (project `strong-land-268114`, desktop-application type) is **Testing** / **External**, with the four inventory addresses as test users (4 of the 100-user lifetime cap). Decision: **stay in Testing.** Publishing to production with `gmail.modify` (a restricted scope) requires Google verification plus a third-party security assessment, out of proportion for a single-owner tool; switching the user type to Internal would admit only dougbower.com Workspace users and lock out cbmentors.org and case.edu. Cost accepted: the unverified-app interstitial on every connect, and Google's documented seven-day refresh-token expiry for External Testing clients. Empirically that expiry has not applied here: the SCORE token issued 2026-02-26 synced until 2026-07-07 without re-authorization. If it ever does apply, the symptom is a token refresh failure; MAIL-38 must surface that as a Needs reconnect state rather than let `get_credentials_for_account` fall into its interactive browser flow inside the web server.
 2. ~~**Account inventory.**~~ **Resolved 10-08-26** (MAIL-41). All four accounts are Google Workspace mailboxes, so no non-Google adapter is needed until a new account appears. Provider identification by mail exchanger lookup on 10-08-26, except case.edu, which sits behind a university gateway and was confirmed by the owner as read in Gmail.
 
    | Address | Provider | Role | Unified inbox | Size |
@@ -507,6 +507,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.7 | 10-08-26 22:52 | Claude (Claude Code) | §9.1 resolved: OAuth client stays in Testing/External; MAIL-38 gains the refresh-failure rule. |
 | 1.6 | 10-08-26 22:20 | Claude (Claude Code) | SCORE mailbox closed: inventory row marked closed, MAIL-02 moot. Web-connected accounts now take the tenant history window as their initial-sync query (v10.9). |
 | 1.5 | 10-08-26 22:10 | Claude (Claude Code) | MAIL-10 and MAIL-06 checked off (v10.8). |
 | 1.4 | 10-08-26 21:45 | Claude (Claude Code) | Account inventory recorded (§9.2); MAIL-41 closed; MAIL-42/43 deferred; MAIL-41a added; Phase 3 scope restated. |

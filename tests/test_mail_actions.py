@@ -308,6 +308,19 @@ class TestApi:
         assert client.post(f"/api/v1/mail/actions/{aid}/discard").json()["status"] == "discarded"
         assert _labels(r["id"]) == ["INBOX"]
 
+    def test_thread_targets_expand_to_every_message(self, tmp_db, monkeypatch):
+        client = _client(monkeypatch, USER_ID, "admin")
+        a = _store(); b = _store()
+        with get_connection() as conn:
+            conn.execute("UPDATE communications SET provider_thread_id = 'thr-X' WHERE id IN (?, ?)", (a["id"], b["id"]))
+        resp = client.post("/api/v1/mail/actions",
+                           json={"action": "mark_read", "threads": [{"account_id": ACCOUNT_ID, "thread_id": "thr-X"}]})
+        assert resp.status_code == 201, resp.text
+        assert sorted(resp.json()["target_ids"]) == sorted([a["provider_message_id"], b["provider_message_id"]])
+        assert _comm(a["id"])["is_read"] == 1 and _comm(b["id"])["is_read"] == 1
+        assert client.post("/api/v1/mail/actions",
+                           json={"action": "archive", "threads": [{"account_id": ACCOUNT_ID, "thread_id": "nope"}]}).status_code == 404
+
     def test_shared_user_cannot_act(self, tmp_db, monkeypatch):
         client = _client(monkeypatch, OTHER_USER, "user")
         r = _store()

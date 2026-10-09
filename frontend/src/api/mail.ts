@@ -193,7 +193,9 @@ export function useThread(accountId: string | null, threadId: string | null) {
 
 export interface MailActionInput {
   action: string
-  communication_ids: string[]
+  communication_ids?: string[]
+  /** Whole threads: every current message of each is targeted server-side (D-33). */
+  threads?: { account_id: string; thread_id: string }[]
   label_id?: string
   account_id?: string
   payload?: Record<string, unknown>
@@ -202,7 +204,7 @@ export interface MailActionInput {
 export function useMailAction() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: MailActionInput) => post<{ id: string; status: string }>('/mail/actions', input),
+    mutationFn: (input: MailActionInput) => post<{ id: string; status: string } | { items: unknown[] }>('/mail/actions', input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mail'] })
     },

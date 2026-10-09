@@ -12,8 +12,6 @@ import { useMailAction, useMailActionQueue, useMailActionResolve, type ThreadSum
 interface Props {
   /** Threads the actions apply to (the open thread, or the selection). */
   targets: ThreadSummary[]
-  /** Message ids per thread key, when the thread detail is loaded (open thread). */
-  messageIdsByThread: Record<string, string[]>
   onDone?: () => void
 }
 
@@ -32,7 +30,7 @@ function Btn({ title, onClick, disabled, children }: { title: string; onClick: (
   )
 }
 
-export function ActionBar({ targets, messageIdsByThread, onDone }: Props) {
+export function ActionBar({ targets, onDone }: Props) {
   const act = useMailAction()
   const queue = useMailActionQueue()
   const resolve = useMailActionResolve()
@@ -43,20 +41,10 @@ export function ActionBar({ targets, messageIdsByThread, onDone }: Props) {
   const disabled = targets.length === 0 || act.isPending
 
   const run = (action: string, label: string) => {
-    // One request per account (an action's targets must share an account).
-    const byAccount = new Map<string, string[]>()
-    for (const t of targets) {
-      const key = `${t.account_id}:${t.thread_id}`
-      const ids = messageIdsByThread[key] ?? (t.latest_message_id ? [t.latest_message_id] : [])
-      if (ids.length === 0) continue
-      byAccount.set(t.account_id, [...(byAccount.get(t.account_id) ?? []), ...ids])
-    }
-    if (byAccount.size === 0) return
-    Promise.all(
-      [...byAccount.entries()].map(([account_id, communication_ids]) =>
-        act.mutateAsync({ action, account_id, communication_ids }),
-      ),
-    )
+    if (targets.length === 0) return
+    // Whole threads: the server expands each to all of its messages and
+    // queues one action per account (D-33).
+    act.mutateAsync({ action, threads: targets.map((t) => ({ account_id: t.account_id, thread_id: t.thread_id })) })
       .then(() => {
         toast.success(`${label}${targets.length > 1 ? ` · ${targets.length} threads` : ''}`)
         onDone?.()

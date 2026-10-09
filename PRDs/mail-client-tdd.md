@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 01:05
+**Last Updated:** 10-09-26 02:15
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -303,6 +303,16 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-27).
 
+### D-34 Keyboard model mechanics
+
+**Decision:** Bindings are registered with react-hotkeys-hook at the mail view level, enabled only in mail mode and never inside form fields. Two-key folder chords are a one-second "g" arm: `s` is star unless it follows `g`, when it is "go to Starred". Action shortcuts target the selection when one exists, else the focused row, else the open thread, and send whole threads to the server (`threads` on `POST /mail/actions`), which expands each to all of its current messages; this replaces the D-33 latest-message compromise for list actions too. After archive, trash, or spam the focus advances to the next row and the reading pane closes if it showed a removed thread, so `j`/`e` runs flow. Esc cascades: shortcut sheet, then open thread, then selection, matching the GUI PRD §23.3 order. Bindings whose feature is not built yet (snooze, label, move, search) show a one-line note rather than doing nothing silently.
+
+**Rationale:** The list and pane keep their own local key handling for movement when focused; the view-level layer is what makes "ten emails in ten keystrokes" work without the list having focus. Whole-thread targets are the only correct semantics for a row that stands for several messages.
+
+**Constraints/Tradeoffs:** The `g` arm is a timer, so a slow second key falls back to the key's plain meaning. Account switch by digit follows the folder tree's order, which is account creation order.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-30).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -329,6 +339,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.14 | 10-09-26 02:15 | Claude (Claude Code) | Write-back for MAIL-30: D-34 (keyboard mechanics, whole-thread targets). |
 | 1.13 | 10-09-26 01:05 | Claude (Claude Code) | Write-back for MAIL-27: D-33 (action targets, server-owned optimism, dwell). |
 | 1.12 | 10-09-26 01:00 | Claude (Claude Code) | Write-back for MAIL-15: D-32 (metadata at sync, bytes on demand, no retroactive capture). |
 | 1.11 | 10-09-26 00:50 | Claude (Claude Code) | Write-back for MAIL-25: D-31 (opaque-origin frames, DOMPurify profile, per-browser allow list). |

@@ -240,29 +240,50 @@ async def mail_action_create(request: Request):
     except Exception:
         return _err("Invalid JSON")
     comm_ids = [c for c in (body.get("communication_ids") or []) if isinstance(c, str)]
-    if not comm_ids:
-        return _err("communication_ids required")
-    with get_connection() as conn:
-        account_id = body.get("account_id") or _account_for_communications(conn, comm_ids)
-    if not account_id:
-        return _err("targets must belong to one account")
-    if _account_role(request, account_id) != "owner":
-        return _err("Only the account owner can act on its mail", 403)
+    threads = [t for t in (body.get("threads") or []) if isinstance(t, dict) and t.get("account_id") and t.get("thread_id")]
+    if not comm_ids and not threads:
+        return _err("communication_ids or threads required")
 
+    # Expand thread targets to every current message of each thread, grouped
+    # by account (an action's targets must share an account; TDD D-33).
+    by_account: dict[str, list[str]] = {}
+    with get_connection() as conn:
+        if comm_ids:
+            account_id = body.get("account_id") or _account_for_communications(conn, comm_ids)
+            if not account_id:
+                return _err("targets must belong to one account")
+            by_account.setdefault(account_id, []).extend(comm_ids)
+        for t in threads:
+            rows = conn.execute(
+                "SELECT id FROM communications WHERE account_id = ? AND COALESCE(provider_thread_id, id) = ? "
+                "AND is_current = 1", (t["account_id"], t["thread_id"])).fetchall()
+            if rows:
+                by_account.setdefault(t["account_id"], []).extend(r["id"] for r in rows)
+    if not by_account:
+        return _err("no messages found for the given targets", 404)
+    for account_id in by_account:
+        if _account_role(request, account_id) != "owner":
+            return _err("Only the account owner can act on its mail", 403)
+
+    created = []
     with get_connection() as conn:
         try:
-            row = enqueue(
-                conn,
-                account_id=account_id,
-                kind=body.get("action", ""),
-                communication_ids=comm_ids,
-                label_id=body.get("label_id"),
-                payload=body.get("payload") or None,
-                created_by=request.state.user["id"],
-            )
+            for account_id, ids in by_account.items():
+                created.append(enqueue(
+                    conn,
+                    account_id=account_id,
+                    kind=body.get("action", ""),
+                    communication_ids=list(dict.fromkeys(ids)),
+                    label_id=body.get("label_id"),
+                    payload=body.get("payload") or None,
+                    created_by=request.state.user["id"],
+                ))
         except MailActionError as exc:
             return _err(str(exc))
-    return JSONResponse(row, status_code=201)
+    # Back-compatible shape: one row when one account, else a list under "items"
+    if len(created) == 1:
+        return JSONResponse(created[0], status_code=201)
+    return JSONResponse({"items": created}, status_code=201)
 
 
 @router.get("/mail/actions")

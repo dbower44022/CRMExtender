@@ -7,8 +7,12 @@
  */
 
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { useComposeStore } from '../../stores/compose.ts'
+import { useMailShortcuts } from '../../hooks/useMailShortcuts.ts'
+import { ShortcutSheet } from './ShortcutSheet.tsx'
 import { useNavigationStore } from '../../stores/navigation.ts'
-import { threadKey, useInfiniteThreads, useMailFolders, useThread, type ThreadSummary } from '../../api/mail.ts'
+import { threadKey, useInfiniteThreads, useMailAction, useMailFolders, useThread, type ThreadSummary } from '../../api/mail.ts'
 import { ActionBar } from './ActionBar.tsx'
 import { FolderTree } from './FolderTree.tsx'
 import { ThreadList } from './ThreadList.tsx'
@@ -61,11 +65,62 @@ export function MailView() {
   const targets = selectedKeys.size > 0
     ? items.filter((t) => selectedKeys.has(threadKey(t)))
     : open ? [open] : []
-  const messageIdsByThread: Record<string, string[]> = {}
-  if (openThread.data) {
-    messageIdsByThread[`${openThread.data.account_id}:${openThread.data.thread_id}`] = openThread.data.messages.map((x) => x.id)
-  }
   const clearSelection = () => setSelectedKeys(() => new Set<string>())
+
+  // Keyboard model (MAIL-30)
+  const act = useMailAction()
+  const openCompose = useComposeStore((s) => s.openCompose)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const keys = items.map(threadKey)
+  const focusedIndex = focusedKey ? keys.indexOf(focusedKey) : -1
+  const shortcutTargets = selectedKeys.size > 0
+    ? items.filter((t) => selectedKeys.has(threadKey(t)))
+    : focusedIndex >= 0 ? [items[focusedIndex]] : open ? [open] : []
+  useMailShortcuts(true, {
+    moveFocus: (delta) => {
+      if (items.length === 0) return
+      const base = focusedIndex < 0 ? (delta > 0 ? -1 : 0) : focusedIndex
+      const next = Math.min(items.length - 1, Math.max(0, base + delta))
+      setFocusedKey(keys[next])
+    },
+    openFocused: () => { if (focusedIndex >= 0) onOpen(items[focusedIndex]) },
+    toggleSelectFocused: () => { if (focusedKey) onToggleSelect(focusedKey) },
+    escape: () => {
+      if (sheetOpen) setSheetOpen(false)
+      else if (threadId) setMailThread(null)
+      else if (selectedKeys.size > 0) clearSelection()
+    },
+    act: (action) => {
+      if (shortcutTargets.length === 0) return
+      const starred = shortcutTargets.some((t) => t.starred)
+      const kind = action === 'star' && starred ? 'unstar' : action
+      act.mutateAsync({ action: kind, threads: shortcutTargets.map((t) => ({ account_id: t.account_id, thread_id: t.thread_id })) })
+        .then(() => {
+          if (selectedKeys.size > 0) clearSelection()
+          // Archive/trash/spam remove the thread from most folders: advance focus so j/k keep flowing.
+          if ((action === 'archive' || action === 'trash' || action === 'spam') && focusedIndex >= 0) {
+            const nextKey = keys[focusedIndex + 1] ?? keys[focusedIndex - 1] ?? null
+            setFocusedKey(nextKey)
+            if (threadId && shortcutTargets.some((t) => t.thread_id === threadId)) setMailThread(null)
+          }
+        })
+        .catch((err) => toast.error(err instanceof Error ? err.message : String(err)))
+    },
+    reply: (mode) => {
+      const msgs = openThread.data?.messages
+      if (!msgs || msgs.length === 0) { toast.info('Open a thread first'); return }
+      openCompose(mode, { communicationId: msgs[msgs.length - 1].id })
+    },
+    compose: () => openCompose('new'),
+    goFolder: (f) => setMailFolder(accountId, f),
+    goAccount: (n) => {
+      if (n === 0) { setMailFolder('unified', 'inbox'); return }
+      const acct = folders.data?.accounts[n - 1]
+      if (acct) setMailFolder(acct.id, 'inbox')
+    },
+    focusSearch: () => toast.info('Mail search arrives with MAIL-31'),
+    toggleSheet: () => setSheetOpen((v) => !v),
+  })
 
   const onOpen = (t: ThreadSummary) => {
     setFocusedKey(threadKey(t))
@@ -114,7 +169,7 @@ export function MailView() {
         />
       </aside>
       <section className="relative flex w-[400px] shrink-0 flex-col overflow-hidden border-r border-surface-200">
-        <ActionBar targets={targets} messageIdsByThread={messageIdsByThread} onDone={clearSelection} />
+        <ActionBar targets={targets} onDone={clearSelection} />
         <ThreadList
           items={items}
           total={total}
@@ -137,6 +192,7 @@ export function MailView() {
       <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <ReadingPane accountId={openAccountId} threadId={threadId} />
       </section>
+      {sheetOpen && <ShortcutSheet onClose={() => setSheetOpen(false)} />}
     </div>
   )
 }

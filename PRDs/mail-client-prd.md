@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 01:05
+**Last Updated:** 10-09-26 02:15
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -421,7 +421,7 @@ Phase 2 — Mail surface
 - [x] MAIL-27: Actions wired to the outbox API with optimistic updates and pending/failed indicators — v10.19, 10-09-26 (`components/mail/ActionBar.tsx` over the thread list: archive, trash, spam, star/unstar, mark read/unread for the selection or the open thread; opening a thread marks it read after `mail_mark_read_dwell_ms` (new system setting, default 1500, 0 disables); the bar shows pending and failed queue counts, with retry and discard-and-revert for failed rows. Keyboard bindings for these arrive with MAIL-30)
 - [ ] MAIL-28: Snooze picker and Snoozed folder
 - [ ] MAIL-29: Label/move picker with label creation
-- [ ] MAIL-30: Keyboard model (§5.1) via react-hotkeys-hook; shortcut sheet on ?
+- [x] MAIL-30: Keyboard model (§5.1) via react-hotkeys-hook; shortcut sheet on ? — v10.20, 10-09-26 (`hooks/useMailShortcuts.ts`, `components/mail/ShortcutSheet.tsx`: j/k/Enter/o/x/Esc, e/#/!/s/u, r/a/f/c, g-then-i/s/t/d/Shift+A, 0–9 account switch, ? sheet; inert bindings z, l/v, / show a note until MAIL-17/29/31. Actions now target whole threads: `POST /mail/actions` accepts `threads` and expands to every message server-side, closing the D-33 gap)
 - [ ] MAIL-31: Mail search box with operator highlighting, results list, saved searches
 - [ ] MAIL-32: Relationship context column (contact, company, score, last interaction, tasks, summary; create-contact affordance)
 - [ ] MAIL-33: Inline reply/reply-all/forward composer at thread bottom
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.18 | 10-09-26 02:15 | Claude (Claude Code) | MAIL-30 checked off (v10.20); thread-level action targets. |
 | 1.17 | 10-09-26 01:05 | Claude (Claude Code) | MAIL-27 checked off (v10.19); `mail_mark_read_dwell_ms` added as the shipped key for §3.1 `mail.mark_read_dwell_ms`. |
 | 1.16 | 10-09-26 01:00 | Claude (Claude Code) | MAIL-15 and MAIL-26 checked off (v10.19). |
 | 1.15 | 10-09-26 00:50 | Claude (Claude Code) | MAIL-25 checked off (v10.18). |

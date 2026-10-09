@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 02:25
+**Last Updated:** 10-09-26 02:30
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -333,6 +333,16 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-31).
 
+### D-37 Context column reads the existing contact detail route
+
+**Decision:** The column derives the thread's external participants client-side from the thread detail (senders newest-first, then recipients, excluding the account's own address, at most three) and fetches each known contact through the existing `GET /contacts/{id}` route, which already returns identity, current affiliation, score, and a timeline with conversation summaries. No mail-specific contact endpoint was added. Unknown senders open the existing Add Contact modal; prefilling it with the sender's name and address is a small follow-up once that modal accepts initial values.
+
+**Rationale:** The contact detail route is the one source the Contact Full View will also use (contact-view-prd.md), so the column cannot drift from it. Three cards keep the column readable on a thread with many recipients.
+
+**Constraints/Tradeoffs:** Three contact requests per opened thread, cached a minute. The PRD's "open tasks" line waits for the Task entity.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-32).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -359,6 +369,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.17 | 10-09-26 02:30 | Claude (Claude Code) | Write-back for MAIL-32: D-37 (context column on the contact detail route). |
 | 1.16 | 10-09-26 02:25 | Claude (Claude Code) | Write-back for MAIL-31: D-36 (search narrows the folder; per-browser saved searches). |
 | 1.15 | 10-09-26 02:20 | Claude (Claude Code) | Write-back for MAIL-40: D-35 (harness choices). |
 | 1.14 | 10-09-26 02:15 | Claude (Claude Code) | Write-back for MAIL-30: D-34 (keyboard mechanics, whole-thread targets). |

@@ -12,6 +12,7 @@ import { useMailAction, useThread, type MailAttachment, type MailMessage } from 
 import { useSystemSettings } from '../../api/settings.ts'
 import { splitEmailZones } from '../../lib/emailZones.ts'
 import { MessageFrame } from './MessageFrame.tsx'
+import { ContextColumn } from './ContextColumn.tsx'
 
 interface Props {
   accountId: string | null
@@ -169,7 +170,8 @@ export function ReadingPane({ accountId, threadId }: Props) {
 
   const t = thread.data
   return (
-    <div className="flex h-full flex-col overflow-hidden outline-none" tabIndex={0} onKeyDown={onKeyDown}>
+    <div className="flex h-full overflow-hidden">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden outline-none" tabIndex={0} onKeyDown={onKeyDown}>
       <header className="border-b border-surface-200 px-5 py-3">
         <h1 className="truncate text-base font-semibold text-surface-900">{t.subject}</h1>
         <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-surface-500">
@@ -248,6 +250,8 @@ export function ReadingPane({ accountId, threadId }: Props) {
           )
         })}
       </div>
+    </div>
+    <ContextColumn thread={t} />
     </div>
   )
 }

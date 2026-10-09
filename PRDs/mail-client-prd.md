@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 02:25
+**Last Updated:** 10-09-26 02:30
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -423,7 +423,7 @@ Phase 2 — Mail surface
 - [ ] MAIL-29: Label/move picker with label creation
 - [x] MAIL-30: Keyboard model (§5.1) via react-hotkeys-hook; shortcut sheet on ? — v10.20, 10-09-26 (`hooks/useMailShortcuts.ts`, `components/mail/ShortcutSheet.tsx`: j/k/Enter/o/x/Esc, e/#/!/s/u, r/a/f/c, g-then-i/s/t/d/Shift+A, 0–9 account switch, ? sheet; inert bindings z, l/v, / show a note until MAIL-17/29/31. Actions now target whole threads: `POST /mail/actions` accepts `threads` and expands to every message server-side, closing the D-33 gap)
 - [x] MAIL-31: Mail search box with operator highlighting, results list, saved searches — v10.22, 10-09-26 (`components/mail/SearchBox.tsx`, `lib/mailSearchUi.ts`: `/` focuses, Enter runs, Esc clears, operator chips as hints, highlighted operator tokens, results in the same thread list narrowed to the current folder (an `in:` in the query overrides the folder); saved searches are per browser in V1, not folder-tree views. TDD D-36)
-- [ ] MAIL-32: Relationship context column (contact, company, score, last interaction, tasks, summary; create-contact affordance)
+- [x] MAIL-32: Relationship context column (contact, company, score, last interaction, tasks, summary; create-contact affordance) — v10.23, 10-09-26 (`components/mail/ContextColumn.tsx`, `lib/mailParticipants.ts`: the thread's CRM conversation title, status, and summary on top; one card per external participant (senders first, up to three) with name, title, company, relationship score, two most recent conversations with summaries, and an Open contact link; unknown senders get Create contact, which opens the existing contact modal without prefill. Tasks are omitted: the PoC has no task entity yet. TDD D-37)
 - [ ] MAIL-33: Inline reply/reply-all/forward composer at thread bottom
 - [ ] MAIL-34: Docked, minimizable compose (up to three) replacing the modal
 - [ ] MAIL-35: Compose: attachment upload, signature insertion, drafts folder and resume, undo-send, scheduled send
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.21 | 10-09-26 02:30 | Claude (Claude Code) | MAIL-32 checked off (v10.23). |
 | 1.20 | 10-09-26 02:25 | Claude (Claude Code) | MAIL-31 checked off (v10.22). |
 | 1.19 | 10-09-26 02:20 | Claude (Claude Code) | MAIL-40 checked off (v10.21), Playwright smoke deferred. |
 | 1.18 | 10-09-26 02:15 | Claude (Claude Code) | MAIL-30 checked off (v10.20); thread-level action targets. |

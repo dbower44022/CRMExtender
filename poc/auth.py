@@ -18,20 +18,62 @@ from .gmail_client import get_user_email
 log = logging.getLogger(__name__)
 
 
+#: Scopes that satisfy a required scope without being spelled the same.
+_SCOPE_SUPERSETS = {
+    "https://www.googleapis.com/auth/gmail.readonly": {
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://mail.google.com/",
+    },
+    "https://www.googleapis.com/auth/gmail.modify": {"https://mail.google.com/"},
+    "https://www.googleapis.com/auth/gmail.send": {"https://mail.google.com/"},
+}
+
+
+def token_scopes(token_path: Path) -> list[str]:
+    """The scopes recorded in a saved token file ([] if unreadable or absent)."""
+    try:
+        data = json.loads(Path(token_path).read_text())
+    except (OSError, json.JSONDecodeError, ValueError):
+        return []
+    scopes = data.get("scopes") or []
+    if isinstance(scopes, str):
+        scopes = scopes.split()
+    return [s for s in scopes if isinstance(s, str)]
+
+
+def missing_scopes(token_path: Path, required: list[str] | None = None) -> list[str]:
+    """Scopes in ``required`` (default ``config.GOOGLE_SCOPES``) that the
+    saved token does not grant. Non-empty means the account needs to be
+    reconnected before write-back can work (Mail Client MAIL-06).
+    """
+    granted = set(token_scopes(token_path))
+    missing: list[str] = []
+    for scope in required or config.GOOGLE_SCOPES:
+        if scope in granted or granted & _SCOPE_SUPERSETS.get(scope, set()):
+            continue
+        missing.append(scope)
+    return missing
+
+
 def get_credentials_for_account(token_path: Path) -> Credentials:
     """Return valid Google OAuth credentials for a specific account token path.
 
     Handles load/refresh/re-authorize cycle and persists the token.
     Also performs one-time migration if token_path is the old generic path.
+
+    The saved token is loaded with the scopes *it* was granted, not the
+    scopes the application now requests: google-auth refuses to refresh
+    when requested scopes exceed granted ones, which would turn every
+    scope upgrade into a forced re-authorization. Accounts whose token
+    lacks a current scope are reported by :func:`missing_scopes` and keep
+    working within their old grant until reconnected (TDD D-23).
     """
     creds: Credentials | None = None
 
     # Try loading saved token
     if token_path.exists():
         try:
-            creds = Credentials.from_authorized_user_file(
-                str(token_path), config.GOOGLE_SCOPES
-            )
+            creds = Credentials.from_authorized_user_file(str(token_path))
         except (json.JSONDecodeError, ValueError) as exc:
             log.warning("Saved token is invalid, re-authenticating: %s", exc)
             creds = None

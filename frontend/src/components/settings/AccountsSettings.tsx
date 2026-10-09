@@ -14,10 +14,17 @@ export function AccountsSettings() {
   // Show success toast if redirected back from OAuth
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get('connected') === '1') {
-      toast.success('Google account connected successfully')
+    const connected = params.get('connected') === '1'
+    const reconnected = params.get('reconnected') === '1'
+    if (connected || reconnected) {
+      toast.success(
+        reconnected
+          ? 'Google account reconnected with the current permissions'
+          : 'Google account connected successfully',
+      )
       const url = new URL(window.location.href)
       url.searchParams.delete('connected')
+      url.searchParams.delete('reconnected')
       window.history.replaceState({}, '', url.pathname + url.hash)
     }
   }, [])
@@ -141,15 +148,29 @@ export function AccountsSettings() {
                     {account.provider}
                   </td>
                   <td className="px-4 py-2">
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                        account.is_active
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {account.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                          account.is_active
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {account.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                      {account.needs_reauth && (
+                        <span
+                          className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+                          title={
+                            account.token_present
+                              ? `Missing permission: ${account.missing_scopes.join(', ')}. Mail is read-only until reconnected.`
+                              : 'No saved sign-in for this account.'
+                          }
+                        >
+                          Needs reconnect
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-2 text-surface-600">
                     {account.initial_sync_done ? 'Done' : 'Pending'}
@@ -162,6 +183,19 @@ export function AccountsSettings() {
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
+                      {googleConfigured && account.provider === 'gmail' && (
+                        <a
+                          href="/settings/accounts/connect"
+                          title={`Sign in again as ${account.email_address} to grant the current permissions`}
+                          className={`rounded px-2 py-0.5 text-xs ${
+                            account.needs_reauth
+                              ? 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+                              : 'text-surface-600 hover:bg-surface-100'
+                          }`}
+                        >
+                          Reconnect
+                        </a>
+                      )}
                       {editingId !== account.id && (
                         <button
                           onClick={() => startEdit(account)}

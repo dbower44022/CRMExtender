@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 21:45
+**Last Updated:** 10-08-26 22:10
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -393,11 +393,11 @@ Phase 0 — Close the ledger
 
 Phase 1 — Mail store foundation
 - [x] MAIL-05: Define the MailProvider interface (email-provider-sync-prd.md §3) and move gmail_client.py behind a GmailProvider — v10.6, 10-08-26 (`poc/providers/`; tests in `tests/test_providers.py`)
-- [ ] MAIL-06: Add gmail.modify to the requested scopes; re-authorization flow in Settings → Accounts with a clear "needs reconnect" state
+- [x] MAIL-06: Add gmail.modify to the requested scopes; re-authorization flow in Settings → Accounts with a clear "needs reconnect" state — v10.8, 10-08-26. Tokens are loaded with their own granted scopes so old accounts keep working read-only (TDD D-23); the accounts list reports `needs_reauth`/`missing_scopes`; "Reconnect" reuses the web connect flow, which now replaces the token of a known address and reactivates it instead of refusing a duplicate (TDD D-24). **Both live accounts show Needs reconnect until the owner reconnects them.**
 - [x] MAIL-07: Schema v23 — header columns populated (Message-ID, In-Reply-To, References, Reply-To), bcc participants, recipient display names, is_starred, provider label ids; backfill from the provider for existing rows — v10.7, 10-08-26 (`poc/migrate_to_v23.py`, `poc/mail_state.py`; backfill is the `backfill-mail-state` command, **not yet run against the live database**)
 - [x] MAIL-08: Schema v23 — mailbox_labels and communication_labels tables; system folder mapping per provider — v10.7, 10-08-26 (label list refreshed from the adapter before each orchestrated sync; placeholder rows typed from system ids)
 - [ ] MAIL-09: Schema v23 — mail_actions outbox table (action, target, payload, attempts, status, error)
-- [ ] MAIL-10: Incremental sync processes labelAdded/labelRemoved and flag changes; is_read mirrors the provider
+- [x] MAIL-10: Incremental sync processes labelAdded/labelRemoved and flag changes; is_read mirrors the provider — v10.8, 10-08-26 (`mail_state.apply_label_delta`; TRASH arriving archives the Communication per §6.4; provider deletions now archive instead of hard-deleting, TDD D-22)
 - [ ] MAIL-11: Resumable full-mailbox backfill job with checkpoint and batch size setting
 - [ ] MAIL-12: Schema v24 — communications_fts (FTS5) over subject, search_text, participant names and addresses; query parser for the §2.5 operators
 - [ ] MAIL-13: Per-account background scheduler (interval setting, one run per account, global pause)
@@ -507,6 +507,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.5 | 10-08-26 22:10 | Claude (Claude Code) | MAIL-10 and MAIL-06 checked off (v10.8). |
 | 1.4 | 10-08-26 21:45 | Claude (Claude Code) | Account inventory recorded (§9.2); MAIL-41 closed; MAIL-42/43 deferred; MAIL-41a added; Phase 3 scope restated. |
 | 1.3 | 10-08-26 13:40 | Claude (Claude Code) | MAIL-07 and MAIL-08 checked off (v10.7). |
 | 1.2 | 10-08-26 13:05 | Claude (Claude Code) | MAIL-05 checked off (v10.6). |

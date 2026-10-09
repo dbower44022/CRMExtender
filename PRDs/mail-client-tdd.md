@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 13:40
+**Last Updated:** 10-08-26 22:10
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -173,6 +173,34 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-08-26 (MAIL-07).
 
+### D-22 Provider deletion archives; it never deletes the local row
+
+**Decision:** A `messageDeleted` history record (or any provider signal that a message is gone for good) sets the Communication to `archived` and clears its label membership. The row, its participants, and its conversation links stay. Before 10-08-26 the engine hard-deleted the row.
+
+**Rationale:** [communication-entity-base-prd.md] §4.1 defines provider deletion as an archive transition, and conversations must not lose messages because the owner emptied Gmail's trash. The 268 rows found missing during the v23 backfill are exactly this case and were preserved.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-10).
+
+### D-23 Saved tokens are loaded with their granted scopes, not the requested set
+
+**Decision:** `get_credentials_for_account` loads a token file without passing `config.GOOGLE_SCOPES`, so the credential carries the scopes Google granted at consent. `auth.missing_scopes()` compares those against the current request set, and the accounts API reports `needs_reauth` and `missing_scopes`.
+
+**Rationale:** google-auth refuses to refresh a token when the requested scopes exceed the granted ones. Loading with the new set would have turned the scope upgrade into an immediate refresh failure for every existing account and, in this code path, a browser-launching re-authorization from inside the web server. Loading with the granted set keeps old accounts working read-only until the owner reconnects at a time of their choosing.
+
+**Alternatives Rejected:** Forcing re-authorization at startup — blocks sync for every account at once and cannot run headless.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-06).
+
+### D-24 Reconnect is the connect flow applied to a known address
+
+**Decision:** The web OAuth callback no longer refuses an address that already has a provider account. It overwrites that account's token file with the newly granted scopes (keeping the stored refresh token when Google omits one on repeat consent), reactivates the row, and redirects with `reconnected=1`. The Accounts page's Reconnect link points at the same `/settings/accounts/connect` route.
+
+**Rationale:** One flow, one code path, and the address is taken from Google's verified ID token, so a token can never be stored under a different mailbox than the one signed in — the failure the SCORE account suffered through the CLI flow in 2026-07.
+
+**Constraints/Tradeoffs:** Choosing a different Google account at the consent screen connects that account instead of reconnecting the intended one; the page's title text names the expected address.
+
+**Decided by:** Claude Code, 10-08-26 (MAIL-06).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -199,6 +227,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.4 | 10-08-26 22:10 | Claude (Claude Code) | Write-back for MAIL-10/06: D-22 (deletion archives), D-23 (tokens loaded with granted scopes), D-24 (reconnect = connect). |
 | 1.3 | 10-08-26 13:40 | Claude (Claude Code) | Write-back for MAIL-07/08: D-19 (provider authoritative on re-seen rows), D-20 (flags as columns), D-21 (backfill by command). |
 | 1.2 | 10-08-26 13:05 | Claude (Claude Code) | Implementation write-back for MAIL-05: D-15 (`ParsedEmail` as the contract type), D-16 (thread-grouped `fetch_initial`), D-17 (cursor read at fetch time), D-18 (module-object calls). |
 | 1.1 | 10-08-26 12:33 | Claude (Claude Code) | Status set to Approved on the product owner's approval; D-02–D-14 now binding. |

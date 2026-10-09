@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -91,7 +92,8 @@ class TestAccountsList:
         assert resp.status_code == 302
         location = resp.headers["location"]
         assert "accounts.google.com" in location
-        assert "gmail.readonly" in location
+        assert "gmail.modify" in location          # MAIL-06: write-back scope
+        assert "gmail.readonly" not in location
         assert "calendar.readonly" in location
         assert "contacts.readonly" in location
         assert "openid" in location
@@ -182,15 +184,25 @@ class TestAccountsCallback:
             assert upa["user_id"] == USER_ID
             assert upa["role"] == "owner"
 
-    def test_callback_add_account_duplicate_email(self, tmp_db, monkeypatch, tmp_path):
-        """Shows error for duplicate email."""
+    def test_callback_existing_account_reconnects(self, tmp_db, monkeypatch, tmp_path):
+        """MAIL-06: consenting again for a known address replaces its token
+        with the newly granted scopes, reactivates the row, and does not
+        create a duplicate."""
         monkeypatch.setattr("poc.config.GOOGLE_OAUTH_CLIENT_ID", "test-client-id")
         monkeypatch.setattr("poc.config.GOOGLE_OAUTH_CLIENT_SECRET", "test-secret")
         monkeypatch.setattr("poc.config.CREDENTIALS_DIR", tmp_path / "creds")
         (tmp_path / "creds").mkdir()
 
-        # Insert existing account
-        _insert_account(email="existing@example.com")
+        # Insert existing, deactivated account with an old read-only token
+        _insert_account(email="existing@example.com", is_active=0)
+        old_token = tmp_path / "creds" / "token_existing.json"
+        old_token.write_text(json.dumps({
+            "token": "old", "refresh_token": "old-refresh",
+            "scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+        }))
+        with get_connection() as conn:
+            conn.execute("UPDATE provider_accounts SET auth_token_path = ? WHERE id = 'acct-1'",
+                         (str(old_token),))
 
         client = _make_client(monkeypatch)
         state = "test-state-456"
@@ -198,8 +210,12 @@ class TestAccountsCallback:
         mock_token_resp = MagicMock()
         mock_token_resp.json.return_value = {
             "access_token": "access-token",
-            "refresh_token": "refresh-token",
+            # No refresh_token: Google omits it on repeat consent; the old one must survive
             "id_token": "fake-id-token",
+            "scope": "openid email https://www.googleapis.com/auth/gmail.modify "
+                     "https://www.googleapis.com/auth/gmail.send "
+                     "https://www.googleapis.com/auth/contacts.readonly "
+                     "https://www.googleapis.com/auth/calendar.readonly",
         }
         mock_token_resp.raise_for_status = MagicMock()
 
@@ -226,7 +242,52 @@ class TestAccountsCallback:
 
         assert resp.status_code == 302
         assert "/settings/accounts" in resp.headers["location"]
-        assert "already+connected" in resp.headers["location"]
+        assert "reconnected=1" in resp.headers["location"]
+
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM provider_accounts WHERE email_address = 'existing@example.com'"
+            ).fetchall()
+            assert len(rows) == 1
+            assert rows[0]["is_active"] == 1
+            assert rows[0]["auth_token_path"] == str(old_token)
+        saved = json.loads(old_token.read_text())
+        assert saved["token"] == "access-token"
+        assert saved["refresh_token"] == "old-refresh"
+        assert "https://www.googleapis.com/auth/gmail.modify" in saved["scopes"]
+        assert "openid" not in saved["scopes"]
+
+    def test_accounts_list_reports_scope_state(self, client, tmp_path):
+        """MAIL-06: an account whose token lacks gmail.modify is flagged."""
+        _insert_account(account_id="acct-old", email="old@example.com")
+        _insert_account(account_id="acct-new", email="new@example.com")
+        old_token = tmp_path / "token_old.json"
+        old_token.write_text(json.dumps({"scopes": [
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/contacts.readonly",
+            "https://www.googleapis.com/auth/calendar.readonly",
+        ]}))
+        new_token = tmp_path / "token_new.json"
+        new_token.write_text(json.dumps({"scopes": [
+            "https://www.googleapis.com/auth/gmail.modify",
+            "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/contacts.readonly",
+            "https://www.googleapis.com/auth/calendar.readonly",
+        ]}))
+        with get_connection() as conn:
+            conn.execute("UPDATE provider_accounts SET auth_token_path = ? WHERE id = 'acct-old'", (str(old_token),))
+            conn.execute("UPDATE provider_accounts SET auth_token_path = ? WHERE id = 'acct-new'", (str(new_token),))
+
+        resp = client.get("/api/v1/settings/accounts")
+        assert resp.status_code == 200
+        by_id = {a["id"]: a for a in resp.json()}
+        assert by_id["acct-old"]["needs_reauth"] is True
+        assert by_id["acct-old"]["missing_scopes"] == ["gmail.modify"]
+        assert by_id["acct-new"]["needs_reauth"] is False
+        assert by_id["acct-new"]["missing_scopes"] == []
+        for a in by_id.values():
+            assert "auth_token_path" not in a
 
     def test_callback_without_purpose_is_login(self, tmp_db, monkeypatch):
         """Default behavior (no oauth_purpose cookie) attempts login."""

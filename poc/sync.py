@@ -12,7 +12,13 @@ from . import config
 from .contacts_client import fetch_contact_groups, fetch_contacts
 from .database import get_connection
 from .email_parser import strip_quotes
-from .mail_state import apply_mail_state, ensure_labels, set_communication_labels
+from .mail_state import (
+    apply_label_delta,
+    apply_mail_state,
+    archive_deleted,
+    ensure_labels,
+    set_communication_labels,
+)
 from .models import (
     Conversation,
     ConversationSummary,
@@ -1145,39 +1151,23 @@ def incremental_sync(
                     conversations_updated += 1
                 messages_stored += len(thread_emails)
 
-    # Process deletions
+    # Process deletions: the provider has permanently removed these, so the
+    # local record is archived, not deleted (entity-base PRD §4.1, TDD D-22).
+    # Conversation membership and counts are unchanged.
+    messages_archived = 0
     if deleted_ids:
         with get_connection() as conn:
-            for mid in deleted_ids:
-                # Find the communication and its conversation
-                comm_row = conn.execute(
-                    "SELECT id FROM communications WHERE account_id = ? AND provider_message_id = ?",
-                    (account_id, mid),
-                ).fetchone()
-                if comm_row:
-                    comm_id = comm_row["id"]
-                    # Find conversation via join table
-                    cc_row = conn.execute(
-                        "SELECT conversation_id FROM conversation_communications WHERE communication_id = ?",
-                        (comm_id,),
-                    ).fetchone()
-                    conv_id = cc_row["conversation_id"] if cc_row else None
+            messages_archived = archive_deleted(conn, account_id, deleted_ids)
 
-                    # Delete the communication (CASCADE removes join rows)
-                    conn.execute(
-                        "DELETE FROM communications WHERE id = ?",
-                        (comm_id,),
-                    )
-                    # Update conversation communication count
-                    if conv_id:
-                        actual_count = conn.execute(
-                            "SELECT COUNT(*) as cnt FROM conversation_communications WHERE conversation_id = ?",
-                            (conv_id,),
-                        ).fetchone()["cnt"]
-                        conn.execute(
-                            "UPDATE conversations SET communication_count = ?, updated_at = ? WHERE id = ?",
-                            (actual_count, _now_iso(), conv_id),
-                        )
+    # Mirror label and flag changes (MAIL-10). Messages added in this same
+    # delta were stored above with their current labels, so the engine
+    # skips them here without harm.
+    label_stats: dict = {}
+    if delta.label_changes or delta.flag_changes:
+        with get_connection() as conn:
+            label_stats = apply_label_delta(
+                conn, account_id, delta.label_changes, delta.flag_changes,
+            )
 
     # Update sync cursor to the position the delta was fetched at (not
     # "now"), so changes that landed while this run was processing are
@@ -1209,6 +1199,9 @@ def incremental_sync(
         "messages_stored": messages_stored,
         "conversations_created": conversations_created,
         "conversations_updated": conversations_updated,
+        "messages_archived": messages_archived,
+        "labels_changed": label_stats.get("labels_changed", 0),
+        "flags_changed": label_stats.get("flags_changed", 0),
         "cursor_before": cursor_before,
         "history_id": history_id,
     }

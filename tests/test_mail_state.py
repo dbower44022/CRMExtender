@@ -242,6 +242,89 @@ class TestBackfill:
         assert pending_backfill_count(ACCOUNT_ID) == 0
 
 
+class TestLabelDelta:
+    """MAIL-10: the engine mirrors label and flag deltas (MAIL-T04)."""
+
+    def _stored(self, **over):
+        em = _email(**over)
+        with get_connection() as conn:
+            _store_thread(conn, ACCOUNT_ID, OWNER, [em], load_contact_index(),
+                          customer_id=CUST_ID, created_by=USER_ID)
+        return em
+
+    def test_delta_updates_labels_flags_and_trash(self, tmp_db):
+        from poc.mail_state import apply_label_delta
+
+        em = self._stored()                      # INBOX, UNREAD, Label_7; unread, unstarred
+        other = self._stored(label_ids=["INBOX"], is_read=True)
+        with get_connection() as conn:
+            stats = apply_label_delta(
+                conn, ACCOUNT_ID,
+                label_changes=[
+                    (em.message_id, ["STARRED", "Label_9"], ["INBOX", "UNREAD"]),
+                    (other.message_id, ["TRASH"], ["INBOX"]),
+                    ("not-stored", ["INBOX"], []),
+                ],
+                flag_changes=[
+                    (em.message_id, {"is_read": True, "is_starred": True}),
+                    ("not-stored", {"is_read": True}),
+                ],
+            )
+            assert stats == {"labels_changed": 2, "flags_changed": 1, "trashed": 1,
+                             "untrashed": 0, "unknown": 2}
+            row = _comm(conn, em.message_id)
+            assert row["is_read"] == 1 and row["is_starred"] == 1 and row["is_archived"] == 0
+            assert _labels_of(conn, row["id"]) == ["Label_7", "Label_9"]   # INBOX gone, STARRED is a flag
+            trashed = _comm(conn, other.message_id)
+            assert trashed["is_archived"] == 1
+            assert _labels_of(conn, trashed["id"]) == ["TRASH"]
+
+            # Restoring from Trash un-archives
+            apply_label_delta(conn, ACCOUNT_ID, [(other.message_id, ["INBOX"], ["TRASH"])], [])
+            assert _comm(conn, other.message_id)["is_archived"] == 0
+            assert _labels_of(conn, _comm(conn, other.message_id)["id"]) == ["INBOX"]
+
+    def test_provider_deletion_archives_and_keeps_conversation(self, tmp_db):
+        from poc.mail_state import archive_deleted
+
+        em = self._stored()
+        with get_connection() as conn:
+            before = conn.execute("SELECT COUNT(*) FROM conversation_communications").fetchone()[0]
+            assert archive_deleted(conn, ACCOUNT_ID, [em.message_id, "never-stored"]) == 1
+            row = _comm(conn, em.message_id)
+            assert row["is_archived"] == 1
+            assert _labels_of(conn, row["id"]) == []
+            assert conn.execute("SELECT COUNT(*) FROM communications").fetchone()[0] == 1
+            assert conn.execute("SELECT COUNT(*) FROM conversation_communications").fetchone()[0] == before
+
+    def test_incremental_sync_applies_delta_end_to_end(self, tmp_db):
+        """A recorded history page with label changes flows through
+        incremental_sync into the mirror; deletions archive."""
+        from unittest.mock import patch
+        from poc.sync import incremental_sync
+
+        em = self._stored()
+        gone = self._stored(label_ids=["INBOX"], is_read=True)
+        history = (
+            [], [gone.message_id],
+            [{"id": em.message_id, "added": ["STARRED"], "removed": ["UNREAD", "INBOX"]}],
+        )
+        with patch("poc.gmail_client.fetch_history", return_value=history), \
+             patch("poc.gmail_client.get_history_id", return_value="h-2"):
+            result = incremental_sync(ACCOUNT_ID, object(), customer_id=CUST_ID, user_id=USER_ID)
+
+        assert result["labels_changed"] == 1 and result["flags_changed"] == 1
+        assert result["messages_archived"] == 1 and result["history_id"] == "h-2"
+        with get_connection() as conn:
+            row = _comm(conn, em.message_id)
+            assert row["is_read"] == 1 and row["is_starred"] == 1
+            assert _labels_of(conn, row["id"]) == ["Label_7"]
+            assert _comm(conn, gone.message_id)["is_archived"] == 1
+            assert conn.execute(
+                "SELECT sync_cursor FROM provider_accounts WHERE id = ?", (ACCOUNT_ID,)
+            ).fetchone()[0] == "h-2"
+
+
 class TestReplyThreading:
     def test_reply_to_synced_message_carries_in_reply_to(self, tmp_db, monkeypatch):
         """MAIL-T12 (backend): once headers are stored, the compose context

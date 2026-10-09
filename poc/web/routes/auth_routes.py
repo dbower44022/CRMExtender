@@ -6,6 +6,7 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.parse import urlencode
 
 import httpx
@@ -344,24 +345,28 @@ async def _handle_add_account(
     uid = user["id"]
     now = datetime.now(timezone.utc).isoformat()
 
-    # Check for duplicate provider account
+    # An account that already exists is being *reconnected* (Mail Client
+    # MAIL-06): the consent just granted carries the current scope set, so
+    # the saved token is replaced and the row reactivated. The address comes
+    # from Google's verified ID token, so the token can never land under the
+    # wrong mailbox — the failure the SCORE account suffered in 2026-07.
     with get_connection() as conn:
         existing = conn.execute(
-            "SELECT id FROM provider_accounts WHERE provider = 'gmail' AND email_address = ?",
+            "SELECT id, auth_token_path FROM provider_accounts "
+            "WHERE provider = 'gmail' AND email_address = ?",
             (google_email,),
         ).fetchone()
 
-    if existing:
-        response = RedirectResponse(
-            f"{accounts_url}?error=Account+{google_email}+is+already+connected",
-            status_code=302,
-        )
-        response.delete_cookie("oauth_state")
-        response.delete_cookie("oauth_purpose")
-        return response
+    # The scopes Google actually granted (it may trim the request); fall back
+    # to the requested set when the token response omits them.
+    granted = (token_data.get("scope") or "").split()
+    granted = [s for s in granted if s not in ("openid", "email", "profile")] or list(config.GOOGLE_SCOPES)
 
     # Save token file
-    token_path = config.token_path_for_account(google_email)
+    token_path = (
+        Path(existing["auth_token_path"]) if existing and existing["auth_token_path"]
+        else config.token_path_for_account(google_email)
+    )
     token_path.parent.mkdir(parents=True, exist_ok=True)
     token_json = {
         "token": token_data.get("access_token"),
@@ -369,34 +374,59 @@ async def _handle_add_account(
         "token_uri": "https://oauth2.googleapis.com/token",
         "client_id": config.GOOGLE_OAUTH_CLIENT_ID,
         "client_secret": config.GOOGLE_OAUTH_CLIENT_SECRET,
-        "scopes": config.GOOGLE_SCOPES,
+        "scopes": granted,
     }
+    if existing and not token_data.get("refresh_token"):
+        # Google only returns a refresh token on the first consent for a
+        # client; keep the one we have so the reconnect does not lose it.
+        try:
+            old = json.loads(token_path.read_text())
+            token_json["refresh_token"] = old.get("refresh_token")
+        except (OSError, ValueError):
+            pass
     token_path.write_text(json.dumps(token_json))
 
-    # Insert provider_accounts row
-    account_id = str(uuid.uuid4())
-    with get_connection() as conn:
-        conn.execute(
-            """INSERT INTO provider_accounts
-               (id, customer_id, provider, account_type, email_address,
-                auth_token_path, is_active, created_at, updated_at)
-               VALUES (?, ?, 'gmail', 'email', ?, ?, 1, ?, ?)""",
-            (account_id, cid, google_email, str(token_path), now, now),
-        )
-        # Link to current user
-        conn.execute(
-            """INSERT INTO user_provider_accounts
-               (id, user_id, account_id, role, created_at)
-               VALUES (?, ?, ?, 'owner', ?)""",
-            (str(uuid.uuid4()), uid, account_id, now),
-        )
+    reconnected = False
+    if existing:
+        account_id = existing["id"]
+        reconnected = True
+        with get_connection() as conn:
+            conn.execute(
+                "UPDATE provider_accounts SET auth_token_path = ?, is_active = 1, updated_at = ? WHERE id = ?",
+                (str(token_path), now, account_id),
+            )
+            conn.execute(
+                """INSERT OR IGNORE INTO user_provider_accounts
+                   (id, user_id, account_id, role, created_at)
+                   VALUES (?, ?, ?, 'owner', ?)""",
+                (str(uuid.uuid4()), uid, account_id, now),
+            )
+    else:
+        # Insert provider_accounts row
+        account_id = str(uuid.uuid4())
+        with get_connection() as conn:
+            conn.execute(
+                """INSERT INTO provider_accounts
+                   (id, customer_id, provider, account_type, email_address,
+                    auth_token_path, is_active, created_at, updated_at)
+                   VALUES (?, ?, 'gmail', 'email', ?, ?, 1, ?, ?)""",
+                (account_id, cid, google_email, str(token_path), now, now),
+            )
+            # Link to current user
+            conn.execute(
+                """INSERT INTO user_provider_accounts
+                   (id, user_id, account_id, role, created_at)
+                   VALUES (?, ?, ?, 'owner', ?)""",
+                (str(uuid.uuid4()), uid, account_id, now),
+            )
 
     # Redirect back to React app if initiated from there, otherwise HTMX page
+    flag = "reconnected=1" if reconnected else "connected=1"
     return_to = request.cookies.get("oauth_return_to", "")
     if return_to:
-        redirect_url = f"{return_to}?connected=1"
+        redirect_url = f"{return_to}?{flag}"
     else:
-        redirect_url = f"{accounts_url}?saved=1"
+        redirect_url = f"{accounts_url}?{'reconnected=1' if reconnected else 'saved=1'}"
 
     response = RedirectResponse(redirect_url, status_code=302)
     response.delete_cookie("oauth_state")

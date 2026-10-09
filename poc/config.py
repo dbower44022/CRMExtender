@@ -31,8 +31,12 @@ def token_path_for_account(email: str) -> Path:
 
 
 # Google API scopes
+# gmail.modify replaced gmail.readonly on 10-08-26 (Mail Client MAIL-06): the
+# mail client writes read/starred/label/trash state back to the mailbox.
+# Tokens granted under the old scope keep working read-only until the
+# account is reconnected; see auth.missing_scopes().
 GOOGLE_SCOPES = [
-    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.modify",
     "https://www.googleapis.com/auth/gmail.send",
     "https://www.googleapis.com/auth/contacts.readonly",
     "https://www.googleapis.com/auth/calendar.readonly",

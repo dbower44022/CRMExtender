@@ -183,6 +183,117 @@ def apply_mail_state(conn, communication_id: str, account_id: str, em: ParsedEma
 
 
 # ---------------------------------------------------------------------------
+# Incremental deltas (MAIL-10)
+# ---------------------------------------------------------------------------
+
+def _comm_id_for(conn, account_id: str, provider_message_id: str) -> str | None:
+    row = conn.execute(
+        "SELECT id FROM communications WHERE account_id = ? AND provider_message_id = ?",
+        (account_id, provider_message_id),
+    ).fetchone()
+    return row["id"] if row else None
+
+
+def apply_label_delta(
+    conn,
+    account_id: str,
+    label_changes: list[tuple[str, list[str], list[str]]],
+    flag_changes: list[tuple[str, dict[str, bool]]],
+) -> dict:
+    """Mirror a provider delta's label and flag changes onto stored rows.
+
+    ``label_changes`` is ``[(provider_message_id, added_label_ids,
+    removed_label_ids)]``; ``flag_changes`` is ``[(provider_message_id,
+    {"is_read": bool, "is_starred": bool})]`` with only the flags that
+    changed present. Messages not in the mirror are ignored (they are
+    either outside the window or arrived in the same delta with their
+    current labels). A ``TRASH`` label arriving sets the Communication's
+    CRM status to archived and its removal restores it (TDD D-05).
+
+    Returns ``{"labels_changed", "flags_changed", "trashed", "untrashed",
+    "unknown"}``.
+    """
+    now = _now_iso()
+    stats = {"labels_changed": 0, "flags_changed": 0, "trashed": 0, "untrashed": 0, "unknown": 0}
+
+    for pid, added, removed in label_changes:
+        comm_id = _comm_id_for(conn, account_id, pid)
+        if not comm_id:
+            stats["unknown"] += 1
+            continue
+        add_ids = [l for l in added if l not in _FLAG_LABELS]
+        rem_ids = [l for l in removed if l not in _FLAG_LABELS and l not in add_ids]
+        if add_ids:
+            mapping = ensure_labels(conn, account_id, add_ids)
+            conn.executemany(
+                "INSERT OR IGNORE INTO communication_labels (communication_id, label_id) VALUES (?, ?)",
+                [(comm_id, mapping[l]) for l in add_ids if l in mapping],
+            )
+        if rem_ids:
+            placeholders = ",".join("?" * len(rem_ids))
+            conn.execute(
+                f"""DELETE FROM communication_labels
+                    WHERE communication_id = ? AND label_id IN (
+                        SELECT id FROM mailbox_labels
+                        WHERE account_id = ? AND provider_label_id IN ({placeholders}))""",
+                (comm_id, account_id, *rem_ids),
+            )
+        if "TRASH" in add_ids:
+            conn.execute("UPDATE communications SET is_archived = 1 WHERE id = ?", (comm_id,))
+            stats["trashed"] += 1
+        elif "TRASH" in rem_ids:
+            conn.execute("UPDATE communications SET is_archived = 0 WHERE id = ?", (comm_id,))
+            stats["untrashed"] += 1
+        conn.execute(
+            "UPDATE communications SET mail_state_synced_at = ?, updated_at = ? WHERE id = ?",
+            (now, now, comm_id),
+        )
+        stats["labels_changed"] += 1
+
+    for pid, flags in flag_changes:
+        comm_id = _comm_id_for(conn, account_id, pid)
+        if not comm_id:
+            stats["unknown"] += 1
+            continue
+        sets, params = [], []
+        if "is_read" in flags:
+            sets.append("is_read = ?"); params.append(1 if flags["is_read"] else 0)
+        if "is_starred" in flags:
+            sets.append("is_starred = ?"); params.append(1 if flags["is_starred"] else 0)
+        if not sets:
+            continue
+        sets += ["mail_state_synced_at = ?", "updated_at = ?"]
+        params += [now, now, comm_id]
+        conn.execute(f"UPDATE communications SET {', '.join(sets)} WHERE id = ?", params)
+        stats["flags_changed"] += 1
+
+    return stats
+
+
+def archive_deleted(conn, account_id: str, provider_message_ids: list[str]) -> int:
+    """Provider says these messages are gone for good: archive them locally.
+
+    The Communication row and its conversation links survive (entity-base
+    PRD §4.1: provider deletion archives the record); label membership is
+    cleared because the message is in no folder any more. Returns the
+    number of rows archived.
+    """
+    now = _now_iso()
+    archived = 0
+    for pid in provider_message_ids:
+        comm_id = _comm_id_for(conn, account_id, pid)
+        if not comm_id:
+            continue
+        conn.execute("DELETE FROM communication_labels WHERE communication_id = ?", (comm_id,))
+        conn.execute(
+            "UPDATE communications SET is_archived = 1, mail_state_synced_at = ?, updated_at = ? WHERE id = ?",
+            (now, now, comm_id),
+        )
+        archived += 1
+    return archived
+
+
+# ---------------------------------------------------------------------------
 # Backfill of pre-v23 rows
 # ---------------------------------------------------------------------------
 

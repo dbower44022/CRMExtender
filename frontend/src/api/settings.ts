@@ -43,6 +43,11 @@ interface ProviderAccount {
   last_synced_at: string | null
   created_at: string
   updated_at: string
+  /** The saved token lacks a scope the app now requests (MAIL-06). */
+  needs_reauth: boolean
+  /** Short names of the missing scopes, e.g. ["gmail.modify"]. */
+  missing_scopes: string[]
+  token_present: boolean
 }
 
 export interface CalendarEntry {

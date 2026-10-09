@@ -236,7 +236,7 @@ Fields backed by correlated subqueries are marked `sortable=False` in the regist
 
 | API | Scope | Purpose |
 |---|---|---|
-| Gmail | gmail.readonly | Email thread sync with incremental history tracking |
+| Gmail | gmail.modify (was gmail.readonly until v10.8, Mail Client MAIL-06) | Email mirror with incremental history tracking; read/starred/label/trash write-back |
 | People | contacts.readonly | Contact sync, group membership |
 | Calendar | calendar.readonly | Event sync with attendee matching |
 | OAuth 2.0 | openid, email, profile | User authentication |

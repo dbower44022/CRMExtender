@@ -2810,6 +2810,18 @@ def settings_accounts(request: Request):
             ).fetchall()
             accounts = [dict(r) for r in rows]
 
+    # Scope state (Mail Client MAIL-06): an account whose saved token lacks a
+    # scope the application now requests must be reconnected before any
+    # write-back; the UI shows a "Needs reconnect" state from these fields.
+    from ...auth import missing_scopes as _missing_scopes
+
+    for a in accounts:
+        path = a.get("auth_token_path")
+        missing = _missing_scopes(Path(path)) if path else list(config.GOOGLE_SCOPES)
+        a["needs_reauth"] = bool(missing)
+        a["missing_scopes"] = [s.rsplit("/", 1)[-1] for s in missing]
+        a["token_present"] = bool(path) and Path(path).exists()
+
     # Strip sensitive fields
     for a in accounts:
         a.pop("auth_token_path", None)

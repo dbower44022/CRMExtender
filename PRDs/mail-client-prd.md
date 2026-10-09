@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-08-26 22:10
+**Last Updated:** 10-08-26 22:20
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -387,7 +387,7 @@ Mail actions on an account require the `owner` role on that provider account in 
 ```
 Phase 0 — Close the ledger
 - [x] MAIL-01: Commit the 2026-07-10 working-tree changes (CM-30/31/32, contact-view-prd.md, index V24.0) as a release after tests pass — v10.5 (ae941d6), 10-08-26
-- [ ] MAIL-02: Re-authorize douglas.bower@scorevolunteer.org into the correct mailbox and reactivate it
+- [x] MAIL-02: ~~Re-authorize douglas.bower@scorevolunteer.org into the correct mailbox and reactivate it~~ — **moot 10-08-26**: the mailbox has been closed. Row left inactive; its 1,314 communications stay as history with their pre-v23 state stamped as final.
 - [ ] MAIL-03: Rotate the Anthropic API key; remove the stray Google client secret from the parent folder
 - [x] MAIL-04: Product owner approves mail-client-prd.md, email-provider-sync-prd.md, mail-client-tdd.md; PRD index updated — approved 10-08-26
 
@@ -493,7 +493,7 @@ Phase 5 — Hardening
    | Address | Provider | Role | Unified inbox | Size |
    |---|---|---|---|---|
    | doug@dougbower.com | Google Workspace (own domain) | primary | yes | 11 years; 4,484 rows in the 90-day mirror |
-   | douglas.bower@scorevolunteer.org | Google Workspace | secondary | yes | unknown; 1,314 rows mirrored; account deactivated pending re-authorization |
+   | douglas.bower@scorevolunteer.org | Google Workspace | **closed** (mailbox shut down, owner 10-08-26) | no | 1,314 rows kept as history; row inactive; no reconnect possible |
    | doug.bower@cbmentors.org | Google Workspace | secondary | yes | ~200 messages |
    | dwb80@case.edu | Google Workspace for Education (university tenant) | secondary | yes | ~100 messages; the tenant may block third-party OAuth sign-in, to be found out at connect time |
 
@@ -507,6 +507,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.6 | 10-08-26 22:20 | Claude (Claude Code) | SCORE mailbox closed: inventory row marked closed, MAIL-02 moot. Web-connected accounts now take the tenant history window as their initial-sync query (v10.9). |
 | 1.5 | 10-08-26 22:10 | Claude (Claude Code) | MAIL-10 and MAIL-06 checked off (v10.8). |
 | 1.4 | 10-08-26 21:45 | Claude (Claude Code) | Account inventory recorded (§9.2); MAIL-41 closed; MAIL-42/43 deferred; MAIL-41a added; Phase 3 scope restated. |
 | 1.3 | 10-08-26 13:40 | Claude (Claude Code) | MAIL-07 and MAIL-08 checked off (v10.7). |

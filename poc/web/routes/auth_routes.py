@@ -402,15 +402,20 @@ async def _handle_add_account(
                 (str(uuid.uuid4()), uid, account_id, now),
             )
     else:
-        # Insert provider_accounts row
+        # Insert provider_accounts row. The initial-sync window follows the
+        # tenant's email history setting (Settings → System), the same
+        # window the CLI add-account uses; before 10-08-26 web-connected
+        # accounts fell back to the 7-day development default.
+        window = get_setting(cid, "email_history_window") or "90d"
+        backfill_query = "newer_than:50y" if window == "all" else f"newer_than:{window}"
         account_id = str(uuid.uuid4())
         with get_connection() as conn:
             conn.execute(
                 """INSERT INTO provider_accounts
                    (id, customer_id, provider, account_type, email_address,
-                    auth_token_path, is_active, created_at, updated_at)
-                   VALUES (?, ?, 'gmail', 'email', ?, ?, 1, ?, ?)""",
-                (account_id, cid, google_email, str(token_path), now, now),
+                    auth_token_path, backfill_query, is_active, created_at, updated_at)
+                   VALUES (?, ?, 'gmail', 'email', ?, ?, ?, 1, ?, ?)""",
+                (account_id, cid, google_email, str(token_path), backfill_query, now, now),
             )
             # Link to current user
             conn.execute(

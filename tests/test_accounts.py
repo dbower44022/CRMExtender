@@ -174,6 +174,9 @@ class TestAccountsCallback:
             assert row["provider"] == "gmail"
             assert row["customer_id"] == CUST_ID
             assert row["is_active"] == 1
+            # Initial-sync window follows the tenant history setting (default 90d),
+            # never the 7-day development default.
+            assert row["backfill_query"] == "newer_than:90d"
 
             # Verify user_provider_accounts link
             upa = conn.execute(

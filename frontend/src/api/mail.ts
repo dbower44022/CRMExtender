@@ -1,6 +1,6 @@
 /** Mail surface API client (Mail Client PRD; routes in poc/web/routes/api_mail.py). */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { get, post } from './client.ts'
 
 export interface FolderCount {
@@ -62,6 +62,9 @@ export interface ThreadSummary {
   participants: ThreadParticipant[]
   latest_message_id: string | null
 }
+
+/** Stable key for a thread row: a thread id is unique only within its account. */
+export const threadKey = (t: Pick<ThreadSummary, 'account_id' | 'thread_id'>) => `${t.account_id}:${t.thread_id}`
 
 export interface ThreadPage {
   total: number
@@ -139,6 +142,32 @@ export function useThreads(accountId: string, folder: string, q: string, limit =
   return useQuery({
     queryKey: ['mail', 'threads', accountId, folder, q, limit],
     queryFn: () => get<ThreadPage>(`/mail/threads?${params.toString()}`),
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  })
+}
+
+/** Infinite thread list (MAIL-23): pages of `limit` by offset; refetched on the poll interval. */
+export function useInfiniteThreads(accountId: string, folder: string, q: string, limit = 50) {
+  const isLabel = folder.startsWith('label:')
+  const base = new URLSearchParams()
+  if (isLabel) base.set('label_id', folder.slice('label:'.length))
+  else base.set('folder', folder)
+  if (accountId && accountId !== 'unified') base.set('account_id', accountId)
+  if (q) base.set('q', q)
+  base.set('limit', String(limit))
+  return useInfiniteQuery({
+    queryKey: ['mail', 'threads', 'infinite', accountId, folder, q, limit],
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams(base)
+      params.set('offset', String(pageParam))
+      return get<ThreadPage>(`/mail/threads?${params.toString()}`)
+    },
+    initialPageParam: 0,
+    getNextPageParam: (last) => {
+      const next = last.offset + last.items.length
+      return next < last.total && last.items.length > 0 ? next : undefined
+    },
     staleTime: 10_000,
     refetchInterval: 30_000,
   })

@@ -316,6 +316,12 @@ class TestContactMergePreview:
         assert set(preview["conflicts"]["name"]) == {"Alice", "Bob"}
         assert set(preview["conflicts"]["source"]) == {"gmail", "outlook"}
 
+    def test_preview_names_keep_request_order(self, tmp_db):
+        from poc.contact_merge import get_contact_merge_preview
+        ids = [_create_contact(n) for n in ("Mo Yahyaei", "Mohammad Yahyaei", "Mo Yahyaei")]
+        assert get_contact_merge_preview(ids)["conflicts"]["name"] == ["Mo Yahyaei", "Mohammad Yahyaei"]
+        assert get_contact_merge_preview([ids[1], ids[0], ids[2]])["conflicts"]["name"] == ["Mohammad Yahyaei", "Mo Yahyaei"]
+
     def test_preview_no_conflict_same_name(self, tmp_db):
         from poc.contact_merge import get_contact_merge_preview
         c1 = _create_contact("Alice", source="gmail")

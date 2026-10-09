@@ -142,9 +142,10 @@ def get_contact_merge_preview(contact_ids: list[str]) -> dict:
 
             contacts.append(c)
 
-        # Conflicts: distinct values for scalar fields
-        names = list({c["name"] for c in contacts if c.get("name")})
-        sources = list({c["source"] for c in contacts if c.get("source")})
+        # Conflicts: distinct values for scalar fields, in the order the
+        # contacts were given (a set would reorder them between requests).
+        names = list(dict.fromkeys(c["name"] for c in contacts if c.get("name")))
+        sources = list(dict.fromkeys(c["source"] for c in contacts if c.get("source")))
 
         # Combined identifier count (deduplicated by type+value)
         placeholders = ",".join("?" * len(contact_ids))

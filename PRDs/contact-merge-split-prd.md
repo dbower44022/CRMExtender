@@ -1,7 +1,7 @@
 # Contact — Merge & Split Sub-PRD
 
-**Version:** 2.0
-**Last Updated:** 2026-02-22
+**Version:** 2.1
+**Last Updated:** 10-09-26 11:42
 **Status:** Draft
 **Entity Base PRD:** [contact-entity-base-prd.md]
 **Referenced Entity PRDs:** [Company Management Entity Base PRD](company-management-prd.md), [Communications PRD](communications-prd.md), [Conversations PRD](conversations-prd.md)
@@ -69,7 +69,7 @@ Merge must transfer and deduplicate across all entity relationships:
 
 **Step 3 — Survivor selection:** The user selects which contact should be the survivor (which ID persists) via radio buttons. The survivor card is visually emphasized.
 
-**Step 4 — Conflict resolution:** For each conflicting field (name, source, etc.), the user selects which value the surviving contact should have via radio buttons. A "Combined Result" summary shows what the merged contact will look like.
+**Step 4 — Conflict resolution:** The name and source after the merge default to the surviving contact's own and follow the survivor when a different card is chosen. For each conflicting field (name, source, etc.), the user may pick another listed value, and the name may also be typed freely in the "Name after merge" field. A "Combined Result" summary shows what the merged contact will look like. *(v10.29, 10-09-26: before this, the default name came first in an unordered list and could silently replace the survivor's name.)*
 
 **Step 5 — Confirmation:** The user clicks "Confirm Merge." The system executes the merge atomically.
 
@@ -285,3 +285,10 @@ The merge history is accessible from the surviving contact's detail page via the
 - [ ] MERGE-T22: Post-merge communications remain linked to surviving contact after split
 - [ ] MERGE-T23: Split updates audit record to reflect the undo
 - [ ] MERGE-T24: Merge history shows all merges for a contact in chronological order
+
+## Change Log
+
+| Rev | Date (MM-DD-YY HH:MM) | Author | Change |
+|---|---|---|---|
+| 2.1 | 10-09-26 11:42 | Claude (Claude Code) | KP-1 step 4: name and source default to the chosen survivor; name may be typed (v10.29). Change log added. |
+| 2.0 | 02-22-26 | — | Prior revision (no change log kept before 2.1). |

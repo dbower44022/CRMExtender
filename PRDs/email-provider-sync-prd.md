@@ -1,6 +1,6 @@
 # Email Provider Sync — Channel Sub-PRD
 
-**Version:** 1.0
+**Version:** 1.1
 **Last Updated:** 10-08-26 13:05
 **Status:** Approved 10-08-26 by the product owner — not yet implemented
 **Parent Documents:** [communication-provider-sync-prd.md] (framework), [mail-client-prd.md] (functional area that consumes this contract)

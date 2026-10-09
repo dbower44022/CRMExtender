@@ -1,8 +1,8 @@
 # Mail Client — Functional Area PRD
 
-**Version:** 1.0
+**Version:** 1.29
 **Last Updated:** 10-09-26 12:57
-**Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
+**Status:** Approved 10-08-26 by the product owner — Phases 0–2 built through MAIL-40 (v10.26, 10-09-26) plus first-look fixes to v10.32; Phase 1 leftovers MAIL-11, 17, 18, 20 and Phases 3–5 not started
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
 **Parent Documents:** [communication-entity-base-prd.md], [communication-provider-sync-prd.md], [outbound-email-prd.md], [gui-functional-requirements-prd.md]

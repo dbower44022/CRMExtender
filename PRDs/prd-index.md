@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 25.0
-**Last Updated:** 10-08-26 12:33
+**Version:** 25.1
+**Last Updated:** 10-09-26 16:06
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V25.1 (10-09-26):** Mail Client build status recorded. Phases 0–2 of `mail-client-prd.md` are built through MAIL-40 (releases v10.5–v10.26, 10-08-26 to 10-09-26): provider adapter, mirror schema (v23–v28), outbox, scheduler, full-text search, the `/app/mail` surface with keyboard model, composer, live updates, accounts page, and notifications; decisions D-15–D-42 written back to `mail-client-tdd.md`. Owner first-look fixes v10.27–v10.32 (list splitter, account label colours, merge survivor name, inline grid editing switched off — `views-grid-prd.md` 6.1 — record preview collapsed in Mail, provider drafts kept out of conversations). Remaining: MAIL-11, 17, 18, 20 and Phases 3–5.
 
 > **V25.0 (10-08-26):** Added the Mail Client Functional Area PRD (`mail-client-prd.md`), its TDD (`mail-client-tdd.md`), and the long-planned Email Provider Sync channel sub-PRD (`email-provider-sync-prd.md`) — all APPROVED by the product owner on 10-08-26. Direction: CRMExtender becomes the owner's standard interface for all email accounts. Architecture decided by the product owner on 10-08-26: **local mirror with write-back** (every folder, label, and flag of every account stored locally; user actions queued back to the provider) — recorded as D-01 in the Mail Client TDD. Six delivery phases in `mail-client-prd.md` §5.3. A 10-08-26 review found the running system to be a mail watcher (read-only Gmail scope, no inbox, no write-back, no full-text search, no scheduler); the gap list is in `mail-client-prd.md` V1.0 note and the TDD.
 
@@ -78,7 +80,7 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | └ Contact Entity Base | 9.0 | `contact-entity-base-prd.md` | Draft — V2 methodology (field metadata, Key Processes) | 2026-02-23 |
 | &nbsp;&nbsp;└ Contact Entity TDD | 1.0 | `contact-entity-tdd.md` | Draft — Living document, 9 sections | 2026-02-23 |
 | └ Identity Resolution | 2.0 | `contact-identity-resolution-prd.md` | Draft — Key Processes added | 2026-02-23 |
-| └ Merge & Split | 2.0 | `contact-merge-split-prd.md` | Draft — Key Processes added | 2026-02-23 |
+| └ Merge & Split | 2.1 | `contact-merge-split-prd.md` | Draft — name after merge follows the chosen survivor, may be typed (v10.29) | 10-09-26 |
 | └ Import & Export | 2.0 | `contact-import-export-prd.md` | Draft — Key Processes added | 2026-02-23 |
 | └ Enrichment | 2.0 | `contact-enrichment-prd.md` | Draft — Key Processes added | 2026-02-23 |
 | └ AI Intelligence | 2.0 | `contact-ai-intelligence-prd.md` | Draft — Key Processes added | 2026-02-23 |
@@ -119,15 +121,15 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | &nbsp;&nbsp;└ Project Entity TDD | 1.0 | `project-entity-tdd.md` | Draft — Living document, 7 sections | 2026-02-23 |
 | └ Entity Relations & Aggregation | 1.0 | `project-relations-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Outbound Email | 2.0 | `outbound-email-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Views & Grid | 5.0 | `views-grid-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+| Views & Grid | 6.1 | `views-grid-prd.md` | Draft — inline cell editing switched off by owner decision (v10.30) | 10-09-26 |
 | Data Sources | 1.0 | `data-sources-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Permissions & Sharing | 2.0 | `permissions-sharing-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Adaptive Grid Intelligence | 2.0 | `adaptive-grid-intelligence-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Master Glossary | 4.0 | `glossary.md` | Active — Key Process, field metadata, † caching terms added | 2026-02-23 |
 | Email Parsing & Content Extraction | 1.0 | `email-stripping.md` | Technical spec — Mojibake cleaned | 2026-02-22 |
-| Mail Client | 1.0 | `mail-client-prd.md` | Draft — Functional Area PRD; unified inbox, folders, write-back actions, search, compose placement; 6 phases, MAIL-01–55 | 10-08-26 |
-| └ Mail Client TDD | 1.0 | `mail-client-tdd.md` | Draft — Living document; D-01 local mirror (owner decision), D-02–D-14 proposed | 10-08-26 |
-| └ Email Provider Sync | 1.0 | `email-provider-sync-prd.md` | Draft — Channel sub-PRD; MailProvider contract, Gmail / Microsoft Graph / IMAP-SMTP mappings, EPS-01–13 | 10-08-26 |
+| Mail Client | 1.29 | `mail-client-prd.md` | Approved — Phases 0–2 built through MAIL-40 (v10.26) plus first-look fixes to v10.32; MAIL-11/17/18/20 and Phases 3–5 open | 10-09-26 |
+| └ Mail Client TDD | 1.22 | `mail-client-tdd.md` | Approved — living document; D-01–D-42 recorded | 10-09-26 |
+| └ Email Provider Sync | 1.1 | `email-provider-sync-prd.md` | Approved — Gmail adapter built (EPS-01–07, 10); EPS-08/09 open; Graph and IMAP deferred until a non-Google account exists | 10-09-26 |
 | SMS/MMS | — | — | **Planned** — parent (Communications) complete | — |
 | Voice/VoIP | — | — | **Planned** — parent (Communications) complete | — |
 | Video Meetings | — | — | **Planned** — parent (Communications) complete | — |
@@ -240,7 +242,7 @@ Document version history is managed by Git. Previous versions of any document ca
 | Contact Entity Base PRD | `contact-entity-base-prd.md` | 9.0 | Entity definition, field registry with Editable/Sortable/Filterable metadata, relationships, lifecycle, Key Processes, action catalog |
 | Contact Entity TDD | `contact-entity-tdd.md` | 1.0 | Read model, identifier model, employment history, display name, status transitions, phone normalization. Living document with Claude Code placeholder section. |
 | Identity Resolution Sub-PRD | `contact-identity-resolution-prd.md` | 2.0 | Multi-identifier matching, confidence scoring, Key Processes |
-| Merge & Split Sub-PRD | `contact-merge-split-prd.md` | 2.0 | Contact merge/split workflows, audit trails, Key Processes |
+| Merge & Split Sub-PRD | `contact-merge-split-prd.md` | 2.1 | Contact merge/split workflows, audit trails, Key Processes |
 | Import & Export Sub-PRD | `contact-import-export-prd.md` | 2.0 | CSV import, Google Contacts sync, export formats, Key Processes |
 | Enrichment Sub-PRD | `contact-enrichment-prd.md` | 2.0 | Apollo/Clearbit/PDL adapters, enrichment pipeline, Key Processes |
 | AI Intelligence Sub-PRD | `contact-ai-intelligence-prd.md` | 2.0 | AI briefings, tag suggestions, NL search, Key Processes |

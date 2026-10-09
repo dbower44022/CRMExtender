@@ -1,8 +1,8 @@
 # Mail Client — TDD
 
-**Version:** 1.0
+**Version:** 1.22
 **Last Updated:** 10-09-26 12:43
-**Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
+**Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 approved, D-15–D-42 written back during the build and binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
 **Product TDD:** [product-tdd.md]

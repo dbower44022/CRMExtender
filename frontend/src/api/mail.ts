@@ -22,6 +22,8 @@ export interface MailAccountFolders {
   id: string
   email: string
   display_name: string | null
+  /** Label colour (#rrggbb) chosen on Settings → Accounts, or null. */
+  color: string | null
   provider: string
   is_active: boolean
   initial_sync_done: boolean
@@ -50,6 +52,7 @@ export interface ThreadParticipant {
 export interface ThreadSummary {
   account_id: string
   account_email: string
+  account_color?: string | null
   thread_id: string
   subject: string
   snippet: string

@@ -48,6 +48,8 @@ interface ProviderAccount {
   provider: string
   email_address: string
   display_name: string | null
+  /** Label colour (#rrggbb) for the account chip, or null. */
+  color: string | null
   is_active: number
   initial_sync_done: number
   last_synced_at: string | null
@@ -226,13 +228,15 @@ export function useUpdateAccount() {
   return useMutation({
     mutationFn: ({
       accountId,
-      display_name,
+      ...fields
     }: {
       accountId: string
-      display_name: string
-    }) => put<{ ok: boolean }>(`/settings/accounts/${accountId}`, { display_name }),
+      display_name?: string
+      color?: string | null
+    }) => put<{ ok: boolean }>(`/settings/accounts/${accountId}`, fields),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'accounts'] })
+      qc.invalidateQueries({ queryKey: ['mail'] })
     },
   })
 }

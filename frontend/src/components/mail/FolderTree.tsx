@@ -77,7 +77,8 @@ function AccountSection({
   return (
     <div className="mt-3">
       <div className="flex items-center gap-1 px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-surface-500">
-        <span className="min-w-0 flex-1 truncate" title={account.email}>
+        {account.color && <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: account.color }} aria-hidden="true" />}
+        <span className="min-w-0 flex-1 truncate" title={account.email} style={account.color ? { color: account.color } : undefined}>
           {account.display_name || account.email}
         </span>
         {syncing && <RefreshCw size={11} className="animate-spin text-surface-400" />}

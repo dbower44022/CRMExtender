@@ -2876,14 +2876,28 @@ def settings_accounts(request: Request):
 
 @router.put("/settings/accounts/{account_id}")
 async def settings_account_update(request: Request, account_id: str):
-    """Update a provider account's display name."""
+    """Update a provider account's display name and/or label colour."""
     try:
         body = await request.json()
     except Exception:
         return JSONResponse({"error": "Invalid JSON"}, status_code=400)
 
-    display_name = (body.get("display_name") or "").strip()
     now = datetime.now(timezone.utc).isoformat()
+    sets, vals = [], []
+    if "display_name" in body:
+        sets.append("display_name = ?")
+        vals.append((body.get("display_name") or "").strip() or None)
+    if "color" in body:
+        # Label colour for the account chip (#rrggbb) or null to clear it.
+        color = body.get("color")
+        if color is not None:
+            color = str(color).strip().lower()
+            if not re.fullmatch(r"#[0-9a-f]{6}", color):
+                return JSONResponse({"error": "color must be #rrggbb"}, status_code=400)
+        sets.append("color = ?")
+        vals.append(color)
+    if not sets:
+        return JSONResponse({"error": "Nothing to update"}, status_code=400)
 
     with get_connection() as conn:
         account = conn.execute(
@@ -2894,8 +2908,8 @@ async def settings_account_update(request: Request, account_id: str):
             return JSONResponse({"error": "Account not found"}, status_code=404)
 
         conn.execute(
-            "UPDATE provider_accounts SET display_name = ?, updated_at = ? WHERE id = ?",
-            (display_name or None, now, account_id),
+            f"UPDATE provider_accounts SET {', '.join(sets)}, updated_at = ? WHERE id = ?",
+            (*vals, now, account_id),
         )
 
     return {"ok": True}

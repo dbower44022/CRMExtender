@@ -68,4 +68,13 @@ describe('ThreadList (MAIL-23, MAIL-T14)', () => {
     setup([])
     expect(screen.getByText('Nothing here.')).toBeInTheDocument()
   })
+
+  it('colours the account chip in the unified view with the account colour', async () => {
+    setup([thread(1, { account_color: '#dc2626' }), thread(2, { account_email: 'me@case.edu', account_color: null })])
+    const chips = await screen.findAllByTestId('account-chip')
+    expect(chips[0]).toHaveTextContent('dougbower')
+    expect(chips[0].style.color).toBe('rgb(220, 38, 38)')
+    expect(chips[1]).toHaveTextContent('case')
+    expect(chips[1].style.color).toBe('')
+  })
 })

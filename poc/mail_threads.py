@@ -58,7 +58,7 @@ def _account_rows(conn, account_ids: list[str]) -> list[dict]:
         return []
     placeholders = ",".join("?" * len(account_ids))
     return [dict(r) for r in conn.execute(
-        f"SELECT id, email_address, display_name, provider, is_active, initial_sync_done, last_synced_at "
+        f"SELECT id, email_address, display_name, provider, is_active, initial_sync_done, last_synced_at, color "
         f"FROM provider_accounts WHERE id IN ({placeholders}) ORDER BY created_at", account_ids)]
 
 
@@ -128,6 +128,7 @@ def folders(conn, *, account_ids: list[str]) -> dict:
             unified[key]["unread"] += v["unread"]
         out_accounts.append({
             "id": acct["id"], "email": acct["email_address"], "display_name": acct["display_name"],
+            "color": acct.get("color"),
             "provider": acct["provider"], "is_active": bool(acct["is_active"]),
             "initial_sync_done": bool(acct["initial_sync_done"]), "last_synced_at": acct["last_synced_at"],
             "system": system, "labels": labels,
@@ -195,8 +196,9 @@ def _thread_summary(conn, g: dict) -> dict:
     has_attachments = bool(conn.execute(
         f"SELECT 1 FROM attachments WHERE communication_id IN ({placeholders}) LIMIT 1", ids
     ).fetchone()) if ids else False
-    account_email = conn.execute(
-        "SELECT email_address FROM provider_accounts WHERE id = ?", (account_id,)).fetchone()[0]
+    acct_row = conn.execute(
+        "SELECT email_address, color FROM provider_accounts WHERE id = ?", (account_id,)).fetchone()
+    account_email, account_color = acct_row[0], acct_row[1]
     # Distinct senders, newest first, as the row's participant line
     seen: list[dict] = []
     for m in msgs:
@@ -205,7 +207,7 @@ def _thread_summary(conn, g: dict) -> dict:
             seen.append({"address": key, "name": _display_name(m["sender_name"], key),
                          "is_me": key == account_email.lower()})
     return {
-        "account_id": account_id, "account_email": account_email, "thread_id": thread_id,
+        "account_id": account_id, "account_email": account_email, "account_color": account_color, "thread_id": thread_id,
         "subject": latest.get("subject") or "(no subject)", "snippet": _snippet(latest.get("snippet")),
         "last_at": g["last_at"], "message_count": len(msgs), "unread_count": sum(1 for m in msgs if not m["is_read"]),
         "starred": any(m["is_starred"] for m in msgs), "has_attachments": has_attachments,

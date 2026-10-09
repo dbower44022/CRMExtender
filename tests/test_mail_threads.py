@@ -116,6 +116,7 @@ class TestThreadList:
         assert t1["message_count"] == 3 and t1["unread_count"] == 2
         assert t1["subject"] == "Re: Lunch?" and t1["snippet"] == "thursday then"
         assert t1["account_email"] == OWNER_A and t1["labels"] == ["INBOX", "SENT"]
+        assert "account_color" in t1
         assert [p["is_me"] for p in t1["participants"]] == [False, True]
 
     def test_folders_and_labels_and_scope(self, mailbox):

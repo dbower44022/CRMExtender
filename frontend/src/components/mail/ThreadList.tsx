@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Paperclip, Star } from 'lucide-react'
 import { threadKey, type ThreadSummary } from '../../api/mail.ts'
+import { chipStyle } from '../../lib/accountColor.ts'
 
 export interface ThreadListProps {
   items: ThreadSummary[]
@@ -193,7 +194,12 @@ export function ThreadList(props: ThreadListProps) {
                         {participantsLine(t)}
                       </span>
                       {unified && (
-                        <span className="rounded bg-surface-100 px-1 text-[10px] uppercase tracking-wide text-surface-500" title={t.account_email}>
+                        <span
+                          className={`rounded px-1 text-[10px] uppercase tracking-wide ${t.account_color ? 'font-semibold' : 'bg-surface-100 text-surface-500'}`}
+                          style={chipStyle(t.account_color)}
+                          title={t.account_email}
+                          data-testid="account-chip"
+                        >
                           {accountChip(t.account_email)}
                         </span>
                       )}

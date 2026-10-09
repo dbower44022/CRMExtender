@@ -1227,6 +1227,18 @@ class TestSettingsAccounts:
         assert resp.status_code == 200
         assert resp.json()["ok"] is True
 
+    def test_update_account_color(self, client):
+        self._seed_account()
+        assert client.put("/api/v1/settings/accounts/acct-1", json={"color": "#1D4ED8"}).status_code == 200
+        acct = next(a for a in client.get("/api/v1/settings/accounts").json() if a["id"] == "acct-1")
+        assert acct["color"] == "#1d4ed8"
+        assert client.put("/api/v1/settings/accounts/acct-1", json={"color": "blue"}).status_code == 400
+        assert client.put("/api/v1/settings/accounts/acct-1", json={}).status_code == 400
+        assert client.put("/api/v1/settings/accounts/acct-1", json={"display_name": "Work"}).status_code == 200
+        assert client.put("/api/v1/settings/accounts/acct-1", json={"color": None}).status_code == 200
+        acct = next(a for a in client.get("/api/v1/settings/accounts").json() if a["id"] == "acct-1")
+        assert acct["color"] is None and acct["display_name"] == "Work"   # one field does not clear the other
+
     def test_toggle_account(self, client):
         self._seed_account()
         resp = client.post("/api/v1/settings/accounts/acct-1/toggle-active")

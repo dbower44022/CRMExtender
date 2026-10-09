@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 11:20
+**Last Updated:** 10-09-26 11:23
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -414,7 +414,7 @@ Phase 1 — Mail store foundation
 Phase 2 — Mail surface
 - [x] MAIL-21: /app/mail route, rail icon with unread badge, URL forms /app/mail/{account|unified}/{folder}[/{thread}] — v10.16, 10-09-26 (`stores/navigation.ts` mail state, `lib/appRoutes.ts` mail paths, `hooks/useUrlSync.ts`, `components/mail/MailView.tsx`, rail Inbox icon with unified-inbox unread badge refreshed each minute. TDD D-30)
 - [x] MAIL-22: Folder tree with unified set, per-account sections, unread counts, sync status per account — v10.16 (`components/mail/FolderTree.tsx`: unified Inbox/Starred/Snoozed/Drafts/Sent, per account Inbox/Starred/Sent/Drafts/Archive/Spam/Trash plus user labels, counts from `/mail/folders`, spinner while an account syncs and a warning mark on its last error)
-- [x] MAIL-23: Thread list in email rows with virtualization, selection model, account chips, attachment and star indicators — v10.17, 10-09-26 (`components/mail/ThreadList.tsx`: virtualized rows, offset paging as the user nears the end, selection with checkbox / `x` / Shift-click ranges / Ctrl+A, `j` `k` `Enter` `o` movement, unread weight, account chip in the unified view, star and attachment marks; selection is keyed by folder so changing folder clears it) **10-09-26, v10.27:** the list and the reading pane are split by a draggable bar (list 22–75 % of the width, default 38 %), remembered per browser.
+- [x] MAIL-23: Thread list in email rows with virtualization, selection model, account chips, attachment and star indicators — v10.17, 10-09-26 (`components/mail/ThreadList.tsx`: virtualized rows, offset paging as the user nears the end, selection with checkbox / `x` / Shift-click ranges / Ctrl+A, `j` `k` `Enter` `o` movement, unread weight, account chip in the unified view, star and attachment marks; selection is keyed by folder so changing folder clears it) **10-09-26, v10.27:** the list and the reading pane are split by a draggable bar (list 22–75 % of the width, default 38 %), remembered per browser. **v10.28:** each account can be given a label colour on Settings → Accounts (nine presets or a custom colour); the account chip on each row and the account heading in the folder tree take that colour.
 - [x] MAIL-24: Reading pane with collapsed older messages, expand/collapse, quoted-text collapse — v10.17, 10-09-26 (`components/mail/ReadingPane.tsx`: unread messages and the last one expanded, others collapsed to sender/snippet/date lines, click or `Shift+O` to expand, quoted text folded behind a `· · ·` toggle using the splitter shared with the Communication view, `lib/emailZones.ts`). Per-message reply arrives with MAIL-33
 - [x] MAIL-25: Isolated message rendering: DOMPurify + sandboxed iframe + content security policy; remote-image blocking with per-sender allow list — v10.18, 10-09-26 (`lib/mailRender.ts`, `components/mail/MessageFrame.tsx`: DOMPurify profile forbidding forms/frames/meta, remote `img` and CSS `url()` neutralized until "Load images" or "Always from this sender", srcdoc with a strict CSP in an `allow-scripts`-only sandbox (opaque origin), height and link clicks relayed by postMessage, links open in a new tab. The allow list is per browser (localStorage) in V1; a per-user server setting is deferred. TDD D-31)
 - [x] MAIL-26: Attachment preview (image, PDF) and download — v10.19, 10-09-26 (chips in the reading pane open images, PDFs, and text in a new tab and download everything else; a download button on every chip; inline `cid:` images render inside the message frame; inline parts are kept out of the chip row)
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.27 | 10-09-26 11:23 | Claude (Claude Code) | v10.28: per-account label colour (schema v28, live-migrated) on the account chip in the unified list and the folder tree; picker on Settings → Accounts (owner's request, 10-09-26). |
 | 1.26 | 10-09-26 11:20 | Claude (Claude Code) | v10.27: draggable splitter between the message list and the reading pane, width remembered per browser (owner's request on first look, 10-09-26). |
 | 1.25 | 10-09-26 10:07 | Claude (Claude Code) | MAIL-39 checked off (v10.26, same release as MAIL-38): new-mail pop-ups per account setting. |
 | 1.24 | 10-09-26 10:06 | Claude (Claude Code) | MAIL-38 checked off (v10.26): accounts page, needs_reauth on refresh failure, disconnect keep/delete, schema v27. |

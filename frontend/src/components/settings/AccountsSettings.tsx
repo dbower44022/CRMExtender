@@ -7,7 +7,8 @@
  */
 
 import { Fragment, useState, useEffect } from 'react'
-import { AlertTriangle, Loader2, RefreshCw, Unplug } from 'lucide-react'
+import { AlertTriangle, Check, Loader2, RefreshCw, Unplug } from 'lucide-react'
+import { ACCOUNT_COLORS, chipStyle } from '../../lib/accountColor.ts'
 import { toast } from 'sonner'
 import {
   useAccounts, useDisconnectAccount, useProfile, useReferenceData, useSetAccountNotifications, useSyncAccountNow,
@@ -61,6 +62,44 @@ function SyncInterval() {
           className="rounded bg-primary-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-primary-700"
         >
           Save
+        </button>
+      )}
+    </div>
+  )
+}
+
+function ColorPicker({ account, onPick }: { account: Account; onPick: (color: string | null) => void }) {
+  const current = account.color ?? null
+  const custom = current && !ACCOUNT_COLORS.some((c) => c.value === current)
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1" role="group" aria-label={`Label colour for ${account.email_address}`}>
+      {ACCOUNT_COLORS.map((c) => (
+        <button
+          key={c.value}
+          type="button"
+          title={c.name}
+          aria-label={`${c.name}${current === c.value ? ' (chosen)' : ''}`}
+          aria-pressed={current === c.value}
+          onClick={() => onPick(current === c.value ? null : c.value)}
+          className="flex h-4 w-4 items-center justify-center rounded-full ring-offset-1 hover:ring-2 hover:ring-surface-300"
+          style={{ backgroundColor: c.value }}
+        >
+          {current === c.value && <Check size={10} className="text-white" />}
+        </button>
+      ))}
+      <label className="relative flex h-4 w-4 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed border-surface-400" title="Custom colour">
+        <input
+          type="color"
+          aria-label="Custom colour"
+          value={current ?? '#2563eb'}
+          onChange={(e) => onPick(e.target.value)}
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        />
+        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: custom ? current : 'transparent' }} />
+      </label>
+      {current && (
+        <button type="button" onClick={() => onPick(null)} className="ml-1 text-[11px] text-surface-500 hover:text-surface-800">
+          Clear
         </button>
       )}
     </div>
@@ -224,7 +263,12 @@ export function AccountsSettings() {
                   <Fragment key={account.id}>
                   <tr className="hover:bg-surface-50 align-top">
                     <td className="px-4 py-2">
-                      <div className="font-medium text-surface-800">{account.email_address}</div>
+                      <div className="flex items-center gap-2 font-medium text-surface-800">
+                        {account.email_address}
+                        <span className={`rounded px-1 text-[10px] uppercase tracking-wide ${account.color ? 'font-semibold' : 'bg-surface-100 text-surface-500'}`} style={chipStyle(account.color)} title="How the account shows in the message list">
+                          {account.email_address.split('@')[1]?.split('.')[0] || account.email_address}
+                        </span>
+                      </div>
                       {editingId === account.id ? (
                         <div className="mt-1 flex items-center gap-1.5">
                           <input
@@ -245,6 +289,10 @@ export function AccountsSettings() {
                           {account.display_name ? `${account.display_name} · ` : ''}<span className="capitalize">{account.provider}</span>
                         </div>
                       )}
+                      <ColorPicker
+                        account={account}
+                        onPick={(color) => updateAccount.mutate({ accountId: account.id, color }, { onError: (err) => toast.error(err.message) })}
+                      />
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex flex-wrap items-center gap-1">

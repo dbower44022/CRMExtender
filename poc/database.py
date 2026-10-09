@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS provider_accounts (
     auth_error        TEXT,
     last_sync_error   TEXT,
     last_sync_error_at TEXT,
+    color             TEXT,                        -- label colour #rrggbb (v28)
     created_at        TEXT NOT NULL,
     updated_at        TEXT NOT NULL,
     UNIQUE(provider, email_address),

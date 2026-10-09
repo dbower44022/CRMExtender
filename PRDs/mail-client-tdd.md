@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 10:07
+**Last Updated:** 10-09-26 12:43
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -389,6 +389,18 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-39).
 
+### D-42 Provider drafts: kept for the Drafts folder, never part of a conversation, deleted when the provider drops them
+
+**Decision:** A message carrying the provider's Drafts label is stored like any other (so the Drafts folder shows drafts begun elsewhere) but is never linked to a conversation, never counted, and never summarized. When the provider reports such a message gone, it is deleted outright instead of archived — the only exception to D-22. A one-time `cleanup-drafts` command unlinked the 12 drafts that earlier code had placed in conversations and deleted the 2 autosave remnants that a sent message in the same thread had superseded within ten minutes; the 14 affected conversations were recounted and queued for a new summary. Older unlabelled outbound rows without such a sibling are left alone, since they may be mail sent and later deleted.
+
+**Rationale:** Gmail autosaves a draft under a new message id every few seconds and discards it on send; the sent message is the history, the draft is not. Storing drafts as activities produced a second "message" in the owner's "Next week demo" conversation (10-09-26), which the summarizer correctly called an incomplete draft of the first. Keeping drafts out of conversations rather than out of the store preserves the Drafts folder.
+
+**Alternatives Rejected (owner's choice, 10-09-26):** Option A — not storing provider drafts at all. Simpler, but a draft started in Gmail on the phone would not appear here.
+
+**Constraints/Tradeoffs:** The draft test is label membership at the moment the deletion is processed, so a draft whose label was stripped by an earlier delta in the same run would archive rather than delete; the next cleanup run would catch it. Draft rows still appear inside the thread when it is opened from a folder, as they do in Gmail.
+
+**Decided by:** Product owner (Option B), implemented by Claude Code, 10-09-26 (v10.31).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -415,6 +427,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.22 | 10-09-26 12:43 | Claude (Claude Code) | D-42: provider drafts never join conversations; a dropped draft is deleted (exception to D-22). v10.31. |
 | 1.21 | 10-09-26 10:07 | Claude (Claude Code) | Write-back for MAIL-39: D-41 (new-mail notifications). |
 | 1.20 | 10-09-26 10:06 | Claude (Claude Code) | Write-back for MAIL-38: D-40 (non-interactive credentials, parked accounts, disconnect modes). |
 | 1.19 | 10-09-26 09:58 | Claude (Claude Code) | Write-back for MAIL-37: D-39 (in-process broadcaster streamed as server-sent events). |

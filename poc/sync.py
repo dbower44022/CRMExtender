@@ -677,6 +677,7 @@ def _store_thread(
     # IGNORE below silently skips those, preventing duplicates.
     # ------------------------------------------------------------------
     new_comm_ids: list[str] = []
+    draft_ids: set[str] = set()     # provider drafts: stored for the Drafts folder, never linked (D-42)
     for em in thread_emails:
         comm_id = str(uuid.uuid4())
         row = em.to_row(
@@ -719,6 +720,8 @@ def _store_thread(
             "SELECT 1 FROM communications WHERE id = ?", (comm_id,)
         ).fetchone():
             new_comm_ids.append(comm_id)
+            if "DRAFT" in (em.label_ids or []):
+                draft_ids.add(comm_id)
 
             # Insert recipients into communication_participants
             for rec_row in em.recipient_rows(comm_id):
@@ -765,10 +768,11 @@ def _store_thread(
     conversation_created = False
     conversation_updated = False
 
+    link_ids = [cid for cid in new_comm_ids if cid not in draft_ids]
     if existing:
         # Conversation already exists — link new communications to it
         conv_id = existing["conversation_id"]
-        for cid in new_comm_ids:
+        for cid in link_ids:
             conn.execute(
                 """INSERT OR IGNORE INTO conversation_communications
                    (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at)
@@ -776,7 +780,7 @@ def _store_thread(
                 (conv_id, cid, now),
             )
 
-        if new_comm_ids:
+        if link_ids:
             # Update conversation counts and timestamps
             actual_count = conn.execute(
                 "SELECT COUNT(*) as cnt FROM conversation_communications WHERE conversation_id = ?",
@@ -803,11 +807,14 @@ def _store_thread(
         # ------------------------------------------------------------------
         # Step 3: No existing conversation — evaluate creation rules
         # ------------------------------------------------------------------
-        # Load ALL communications for this thread (including previously stored ones)
+        # Load ALL communications for this thread (including previously stored
+        # ones), leaving out provider drafts (D-42).
         all_thread_comms = conn.execute(
             """SELECT c.id, c.sender_address, c.direction
                FROM communications c
-               WHERE c.provider_thread_id = ?""",
+               WHERE c.provider_thread_id = ?
+                 AND NOT EXISTS (SELECT 1 FROM communication_labels cl JOIN mailbox_labels ml ON ml.id = cl.label_id
+                                 WHERE cl.communication_id = c.id AND (ml.provider_label_id = 'DRAFT' OR ml.kind = 'drafts'))""",
             (thread_id,),
         ).fetchall()
 
@@ -828,12 +835,12 @@ def _store_thread(
             all_comm_ids = [d["id"] for d in comm_dicts]
             total_count = len(all_comm_ids)
 
-            # Calculate date range from all thread communications
+            # Calculate date range from the linked communications
+            placeholders = ",".join("?" * len(all_comm_ids))
             date_row = conn.execute(
-                """SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
-                   FROM communications c
-                   WHERE c.provider_thread_id = ?""",
-                (thread_id,),
+                f"""SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
+                    FROM communications c WHERE c.id IN ({placeholders})""",
+                all_comm_ids,
             ).fetchone()
 
             conn.execute(

@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 11:23
+**Last Updated:** 10-09-26 12:43
 **Status:** Approved 10-08-26 by the product owner — Phase 0 in progress (MAIL-01, MAIL-04 done); nothing in Phases 1–5 is built
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.28 | 10-09-26 12:43 | Claude (Claude Code) | v10.31: provider drafts are kept out of conversations and deleted when the provider drops them (TDD D-42); one-time cleanup run on the live database. |
 | 1.27 | 10-09-26 11:23 | Claude (Claude Code) | v10.28: per-account label colour (schema v28, live-migrated) on the account chip in the unified list and the folder tree; picker on Settings → Accounts (owner's request, 10-09-26). |
 | 1.26 | 10-09-26 11:20 | Claude (Claude Code) | v10.27: draggable splitter between the message list and the reading pane, width remembered per browser (owner's request on first look, 10-09-26). |
 | 1.25 | 10-09-26 10:07 | Claude (Claude Code) | MAIL-39 checked off (v10.26, same release as MAIL-38): new-mail pop-ups per account setting. |

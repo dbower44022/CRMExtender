@@ -274,6 +274,15 @@ def apply_label_delta(
     return stats
 
 
+def is_provider_draft(conn, communication_id: str) -> bool:
+    """True while the message carries the provider's Drafts label."""
+    return conn.execute(
+        """SELECT 1 FROM communication_labels cl JOIN mailbox_labels ml ON ml.id = cl.label_id
+           WHERE cl.communication_id = ? AND (ml.provider_label_id = 'DRAFT' OR ml.kind = 'drafts') LIMIT 1""",
+        (communication_id,),
+    ).fetchone() is not None
+
+
 def archive_deleted(conn, account_id: str, provider_message_ids: list[str]) -> int:
     """Provider says these messages are gone for good: archive them locally.
 
@@ -281,12 +290,20 @@ def archive_deleted(conn, account_id: str, provider_message_ids: list[str]) -> i
     PRD §4.1: provider deletion archives the record); label membership is
     cleared because the message is in no folder any more. Returns the
     number of rows archived.
+
+    Exception (TDD D-42): a message that is a provider *draft* is deleted
+    outright. Gmail drops a draft's id every time it autosaves and when it
+    is sent, so a vanished draft is not history — the sent message is.
     """
     now = _now_iso()
     archived = 0
     for pid in provider_message_ids:
         comm_id = _comm_id_for(conn, account_id, pid)
         if not comm_id:
+            continue
+        if is_provider_draft(conn, comm_id):
+            conn.execute("DELETE FROM communications WHERE id = ?", (comm_id,))
+            log.info("Provider draft %s dropped; removed", pid)
             continue
         conn.execute("DELETE FROM communication_labels WHERE communication_id = ?", (comm_id,))
         conn.execute(
@@ -295,6 +312,63 @@ def archive_deleted(conn, account_id: str, provider_message_ids: list[str]) -> i
         )
         archived += 1
     return archived
+
+
+def recount_conversation(conn, conversation_id: str) -> None:
+    """Refresh a conversation's counts and activity span from its links and
+    ask for a fresh summary. Deletes the conversation when nothing is left."""
+    row = conn.execute(
+        """SELECT COUNT(*) AS n, MIN(c.timestamp) AS first_dt, MAX(c.timestamp) AS last_dt
+           FROM conversation_communications cc JOIN communications c ON c.id = cc.communication_id
+           WHERE cc.conversation_id = ?""", (conversation_id,)).fetchone()
+    if not row["n"]:
+        conn.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
+        return
+    conn.execute(
+        """UPDATE conversations SET communication_count = ?, message_count = ?, first_activity_at = ?,
+           last_activity_at = ?, ai_summarized_at = NULL, updated_at = ? WHERE id = ?""",
+        (row["n"], row["n"], row["first_dt"], row["last_dt"], _now_iso(), conversation_id))
+
+
+def cleanup_provider_drafts(conn, *, remnant_window_seconds: int = 600) -> dict:
+    """One-time repair for rows stored before D-42 (Mail Client, 10-09-26).
+
+    1. Current provider drafts leave any conversation they were linked to.
+    2. Outbound rows that have vanished at the provider (no labels) and are
+       followed within ``remnant_window_seconds`` by a SENT message in the
+       same thread are autosave remnants of that message: deleted.
+    Affected conversations are recounted and re-summarized.
+    """
+    touched: set[str] = set()
+    draft_links = conn.execute(
+        """SELECT cc.conversation_id, cc.communication_id FROM conversation_communications cc
+           WHERE EXISTS (SELECT 1 FROM communication_labels cl JOIN mailbox_labels ml ON ml.id = cl.label_id
+                         WHERE cl.communication_id = cc.communication_id
+                           AND (ml.provider_label_id = 'DRAFT' OR ml.kind = 'drafts'))""").fetchall()
+    for r in draft_links:
+        conn.execute("DELETE FROM conversation_communications WHERE conversation_id = ? AND communication_id = ?",
+                     (r["conversation_id"], r["communication_id"]))
+        touched.add(r["conversation_id"])
+    remnants = conn.execute(
+        """SELECT a.id, (SELECT conversation_id FROM conversation_communications WHERE communication_id = a.id) AS conv
+           FROM communications a
+           WHERE a.direction = 'outbound' AND a.is_current = 1 AND a.mail_state_synced_at IS NOT NULL
+             AND NOT EXISTS (SELECT 1 FROM communication_labels cl WHERE cl.communication_id = a.id)
+             AND EXISTS (SELECT 1 FROM communications b
+                         JOIN communication_labels cl2 ON cl2.communication_id = b.id
+                         JOIN mailbox_labels ml ON ml.id = cl2.label_id AND ml.provider_label_id = 'SENT'
+                         WHERE b.account_id = a.account_id AND b.provider_thread_id = a.provider_thread_id
+                           AND b.id <> a.id AND b.timestamp > a.timestamp
+                           AND (julianday(b.timestamp) - julianday(a.timestamp)) * 86400 <= ?)""",
+        (remnant_window_seconds,)).fetchall()
+    for r in remnants:
+        conn.execute("DELETE FROM communications WHERE id = ?", (r["id"],))
+        if r["conv"]:
+            touched.add(r["conv"])
+    for conv_id in touched:
+        recount_conversation(conn, conv_id)
+    return {"drafts_unlinked": len(draft_links), "remnants_deleted": len(remnants),
+            "conversations_recounted": len(touched)}
 
 
 # ---------------------------------------------------------------------------

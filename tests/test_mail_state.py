@@ -297,6 +297,86 @@ class TestLabelDelta:
             assert conn.execute("SELECT COUNT(*) FROM communications").fetchone()[0] == 1
             assert conn.execute("SELECT COUNT(*) FROM conversation_communications").fetchone()[0] == before
 
+    def _conversation_for(self, conn, comm_id: str) -> str:
+        """Seed a conversation holding one communication (rules bypassed)."""
+        conv_id = f"conv-{uuid.uuid4().hex[:8]}"
+        now = "2026-03-01T00:00:00+00:00"
+        conn.execute(
+            """INSERT INTO conversations (id, customer_id, account_id, title, subject, status, communication_count,
+               message_count, participant_count, first_activity_at, last_activity_at, created_at, updated_at)
+               VALUES (?, ?, ?, 't', 's', 'active', 1, 1, 1, ?, ?, ?, ?)""",
+            (conv_id, CUST_ID, ACCOUNT_ID, now, now, now, now))
+        conn.execute(
+            "INSERT INTO conversation_communications (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at) "
+            "VALUES (?, ?, 'sync', 1.0, 1, ?)", (conv_id, comm_id, now))
+        return conv_id
+
+    def _link_count(self, conn, conv_id: str) -> int:
+        return conn.execute("SELECT COUNT(*) FROM conversation_communications WHERE conversation_id = ?", (conv_id,)).fetchone()[0]
+
+    def test_provider_draft_is_stored_but_not_linked_and_deleted_when_dropped(self, tmp_db):
+        """D-42: a Gmail draft shows in Drafts, never joins a conversation,
+        and is removed (not archived) when the provider drops it."""
+        from poc.mail_state import archive_deleted, is_provider_draft
+
+        sent = self._stored(label_ids=["SENT"], is_read=True)
+        with get_connection() as conn:
+            conv_id = self._conversation_for(conn, _comm(conn, sent.message_id)["id"])
+        draft = self._stored(message_id="draft-1", thread_id=sent.thread_id, label_ids=["DRAFT"], is_read=True)
+        with get_connection() as conn:
+            drow = _comm(conn, draft.message_id)
+            assert is_provider_draft(conn, drow["id"]) is True
+            assert _labels_of(conn, drow["id"]) == ["DRAFT"]
+            assert self._link_count(conn, conv_id) == 1                 # the draft was not linked
+            assert archive_deleted(conn, ACCOUNT_ID, [draft.message_id]) == 0   # removed, not archived
+            assert conn.execute("SELECT COUNT(*) FROM communications WHERE provider_message_id = ?",
+                                (draft.message_id,)).fetchone()[0] == 0
+            assert _comm(conn, sent.message_id)["is_archived"] == 0
+
+    def test_cleanup_provider_drafts_repairs_old_rows(self, tmp_db):
+        from datetime import timedelta
+
+        from poc.mail_state import cleanup_provider_drafts
+
+        sent = self._stored(label_ids=["SENT"], is_read=True)
+        draft = self._stored(message_id="old-draft", thread_id=sent.thread_id, label_ids=["DRAFT"], is_read=True)
+        with get_connection() as conn:
+            sent_id = _comm(conn, sent.message_id)["id"]
+            conv_id = self._conversation_for(conn, sent_id)
+            # (1) a draft linked to the conversation by the old code
+            conn.execute("INSERT INTO conversation_communications (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at) "
+                         "VALUES (?, ?, 'sync', 1.0, 1, ?)", (conv_id, _comm(conn, draft.message_id)["id"], "2026-01-01T00:00:00+00:00"))
+            # (2) an autosave remnant: outbound, no labels, 90 s before the sent message
+            earlier = (sent.date - timedelta(seconds=90)).isoformat()
+            conn.execute(
+                """INSERT INTO communications (id, account_id, channel, timestamp, original_text, direction, source, sender_address,
+                   subject, provider_message_id, provider_thread_id, is_read, is_current, mail_state_synced_at, created_at, updated_at)
+                   VALUES ('remnant', ?, 'email', ?, 'Mo, why', 'outbound', 'auto_sync', ?, 's', 'pm-remnant', ?, 1, 1, ?, ?, ?)""",
+                (ACCOUNT_ID, earlier, OWNER, sent.thread_id, earlier, earlier, earlier))
+            conn.execute("INSERT INTO conversation_communications (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at) "
+                         "VALUES (?, 'remnant', 'sync', 1.0, 1, ?)", (conv_id, earlier))
+            # (3) an old deleted sent message an hour before: genuine history, stays
+            old = (sent.date - timedelta(hours=1)).isoformat()
+            conn.execute(
+                """INSERT INTO communications (id, account_id, channel, timestamp, original_text, direction, source, sender_address,
+                   subject, provider_message_id, provider_thread_id, is_read, is_current, mail_state_synced_at, created_at, updated_at)
+                   VALUES ('history', ?, 'email', ?, 'earlier note', 'outbound', 'auto_sync', ?, 's', 'pm-history', ?, 1, 1, ?, ?, ?)""",
+                (ACCOUNT_ID, old, OWNER, sent.thread_id, old, old, old))
+            conn.execute("INSERT INTO conversation_communications (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at) "
+                         "VALUES (?, 'history', 'sync', 1.0, 1, ?)", (conv_id, old))
+            conn.execute("UPDATE conversations SET communication_count = 4, ai_summarized_at = '2026-01-01T00:00:00+00:00' WHERE id = ?", (conv_id,))
+        with get_connection() as conn:
+            stats = cleanup_provider_drafts(conn)
+        assert stats == {"drafts_unlinked": 1, "remnants_deleted": 1, "conversations_recounted": 1}
+        with get_connection() as conn:
+            assert conn.execute("SELECT COUNT(*) FROM communications WHERE id = 'remnant'").fetchone()[0] == 0
+            assert conn.execute("SELECT COUNT(*) FROM communications WHERE id = 'history'").fetchone()[0] == 1
+            assert _comm(conn, draft.message_id) is not None                      # the draft itself stays in Drafts
+            conv = conn.execute("SELECT communication_count, ai_summarized_at FROM conversations WHERE id = ?", (conv_id,)).fetchone()
+            assert conv["communication_count"] == 2 and conv["ai_summarized_at"] is None
+            linked = {r[0] for r in conn.execute("SELECT communication_id FROM conversation_communications WHERE conversation_id = ?", (conv_id,))}
+            assert linked == {sent_id, "history"}
+
     def test_incremental_sync_applies_delta_end_to_end(self, tmp_db):
         """A recorded history page with label changes flows through
         incremental_sync into the mirror; deletions archive."""

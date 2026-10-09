@@ -892,6 +892,18 @@ def cmd_migrate_to_v8(args: argparse.Namespace) -> None:
     migrate(db_path, dry_run=args.dry_run)
 
 
+def cmd_cleanup_drafts(args) -> None:
+    """One-time repair after D-42: unlink provider drafts from conversations
+    and delete autosave remnants that were superseded by a sent message."""
+    from .database import get_connection
+    from .mail_state import cleanup_provider_drafts
+
+    with get_connection() as conn:
+        stats = cleanup_provider_drafts(conn)
+    console.print(f"[green]Drafts unlinked: {stats['drafts_unlinked']}, remnants deleted: "
+                  f"{stats['remnants_deleted']}, conversations recounted: {stats['conversations_recounted']}[/green]")
+
+
 def cmd_migrate(args: argparse.Namespace) -> None:
     """Run all pending database migrations to bring the schema up to date."""
     import importlib
@@ -1677,6 +1689,7 @@ def build_parser() -> argparse.ArgumentParser:
     bm.add_argument("--batch-size", type=int, default=100, help="Rows per provider batch (default 100)")
 
     # migrate (unified)
+    sub.add_parser("cleanup-drafts", help="Unlink provider drafts from conversations and delete autosave remnants (one-time, D-42)")
     mg = sub.add_parser("migrate", help="Run all pending migrations to bring the database up to date")
     mg.add_argument("--db", type=Path, help="Path to the SQLite database file")
     mg.add_argument("--dry-run", action="store_true",
@@ -1762,6 +1775,7 @@ def main() -> None:
         "score-companies": cmd_score_companies,
         "score-contacts": cmd_score_contacts,
         "migrate": cmd_migrate,
+        "cleanup-drafts": cmd_cleanup_drafts,
         "migrate-to-v4": cmd_migrate_to_v4,
         "migrate-to-v5": cmd_migrate_to_v5,
         "migrate-to-v6": cmd_migrate_to_v6,

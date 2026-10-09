@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
 **Version:** 1.0
-**Last Updated:** 10-09-26 02:20
+**Last Updated:** 10-09-26 02:25
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 are binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -323,6 +323,16 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Claude Code, 10-09-26 (MAIL-40).
 
+### D-36 Search narrows the folder; saved searches stay per browser for now
+
+**Decision:** The search box sends its query as `q` on the thread list request, so results are the current folder's threads that also match; a query carrying `in:` or `label:` overrides the folder (the parser's `in_` wins over the folder preset). The query is keyed by folder and clears when the folder changes. Saved searches are name/query pairs in the browser's localStorage, shown as chips under the box; promoting them to server-side views in the folder tree (PRD KP-MAIL-05 step 4) is deferred until the views system and mail share a model.
+
+**Rationale:** Narrowing the current folder is what users expect from a box inside a folder; a global search already exists (Ctrl+K). Per-browser saved searches ship the behavior now without a schema change.
+
+**Constraints/Tradeoffs:** Saved searches do not follow the user across browsers. The thread list total shown is the match count within the folder.
+
+**Decided by:** Claude Code, 10-09-26 (MAIL-31).
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -349,6 +359,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.16 | 10-09-26 02:25 | Claude (Claude Code) | Write-back for MAIL-31: D-36 (search narrows the folder; per-browser saved searches). |
 | 1.15 | 10-09-26 02:20 | Claude (Claude Code) | Write-back for MAIL-40: D-35 (harness choices). |
 | 1.14 | 10-09-26 02:15 | Claude (Claude Code) | Write-back for MAIL-30: D-34 (keyboard mechanics, whole-thread targets). |
 | 1.13 | 10-09-26 01:05 | Claude (Claude Code) | Write-back for MAIL-27: D-33 (action targets, server-owned optimism, dwell). |

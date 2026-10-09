@@ -93,7 +93,7 @@ export const SHORTCUT_ROWS: { keys: string; action: string; note?: string }[] = 
   { keys: 'Shift+O', action: 'Expand every message in the open thread' },
   { keys: 'g then i / s / t / d / Shift+A', action: 'Go to Inbox / Starred / Sent / Drafts / All mail' },
   { keys: '0, 1 … 9', action: 'Unified inbox, or the nth account' },
-  { keys: '/', action: 'Search mail', note: 'MAIL-31' },
+  { keys: '/', action: 'Search mail (Enter to run, Esc to clear)' },
   { keys: 'z', action: 'Snooze', note: 'MAIL-17' },
   { keys: 'l / v', action: 'Label / move', note: 'MAIL-29' },
   { keys: 'Ctrl+Enter', action: 'Send (in the composer)' },

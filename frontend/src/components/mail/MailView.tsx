@@ -6,11 +6,13 @@
  * folder with a selection model, and the reading pane.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useComposeStore } from '../../stores/compose.ts'
 import { useMailShortcuts } from '../../hooks/useMailShortcuts.ts'
 import { ShortcutSheet } from './ShortcutSheet.tsx'
+import { SearchBox } from './SearchBox.tsx'
+import { loadSavedSearches, storeSavedSearches, type SavedSearch } from '../../lib/mailSearchUi.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { threadKey, useInfiniteThreads, useMailAction, useMailFolders, useThread, type ThreadSummary } from '../../api/mail.ts'
 import { ActionBar } from './ActionBar.tsx'
@@ -26,7 +28,21 @@ export function MailView() {
   const setMailThread = useNavigationStore((s) => s.setMailThread)
 
   const folders = useMailFolders()
-  const threads = useInfiniteThreads(accountId, folder, '')
+  // Search (MAIL-31): a query narrows the current folder; it clears on folder change.
+  const [search, setSearch] = useState<{ key: string; q: string }>({ key: `${accountId}|${folder}`, q: '' })
+  const searchQ = search.key === `${accountId}|${folder}` ? search.q : ''
+  const setSearchQ = (q: string) => setSearch({ key: `${accountId}|${folder}`, q })
+  const searchRef = useRef<HTMLInputElement>(null)
+  const [saved, setSaved] = useState<SavedSearch[]>(() => loadSavedSearches())
+  const saveSearch = (entry: SavedSearch) => {
+    const next = [...saved.filter((x) => x.name !== entry.name), entry]
+    setSaved(next); storeSavedSearches(next)
+  }
+  const removeSaved = (name: string) => {
+    const next = saved.filter((x) => x.name !== name)
+    setSaved(next); storeSavedSearches(next)
+  }
+  const threads = useInfiniteThreads(accountId, folder, searchQ)
   const items = threads.data?.pages.flatMap((p) => p.items) ?? []
   const total = threads.data?.pages[0]?.total ?? 0
 
@@ -118,7 +134,7 @@ export function MailView() {
       const acct = folders.data?.accounts[n - 1]
       if (acct) setMailFolder(acct.id, 'inbox')
     },
-    focusSearch: () => toast.info('Mail search arrives with MAIL-31'),
+    focusSearch: () => searchRef.current?.focus(),
     toggleSheet: () => setSheetOpen((v) => !v),
   })
 
@@ -169,6 +185,7 @@ export function MailView() {
         />
       </aside>
       <section className="relative flex w-[400px] shrink-0 flex-col overflow-hidden border-r border-surface-200">
+        <SearchBox ref={searchRef} value={searchQ} onSearch={setSearchQ} saved={saved} onSaveSearch={saveSearch} onRemoveSaved={removeSaved} />
         <ActionBar targets={targets} onDone={clearSelection} />
         <ThreadList
           items={items}

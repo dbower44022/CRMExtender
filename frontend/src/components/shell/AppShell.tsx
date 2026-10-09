@@ -39,6 +39,7 @@ export function AppShell() {
   const openSearchModal = useLayoutStore((s) => s.openSearchModal)
   const activeViewId = useNavigationStore((s) => s.activeViewId)
   const settingsMode = useNavigationStore((s) => s.settingsMode)
+  const mailMode = useNavigationStore((s) => s.mailMode)
   const { data: viewConfig } = useViewConfig(activeViewId)
 
   useDefaultView()
@@ -88,7 +89,8 @@ export function AppShell() {
   useEffect(() => {
     const panel = detailRef.current
     if (!panel) return
-    if (settingsMode) {
+    if (settingsMode || mailMode) {
+      // Mail has its own reading pane; the record preview has no role there.
       panel.resize('0%')
     } else if (detailPanelExpanded && detailPanelVisible) {
       panel.resize('65%')
@@ -99,7 +101,7 @@ export function AppShell() {
     } else {
       panel.resize('0%')
     }
-  }, [detailPanelVisible, detailPanelExpanded, detailRef, viewConfig?.preview_panel_size, settingsMode])
+  }, [detailPanelVisible, detailPanelExpanded, detailRef, viewConfig?.preview_panel_size, settingsMode, mailMode])
 
   // Ctrl+K / Cmd+K to open search modal
   useEffect(() => {

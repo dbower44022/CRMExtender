@@ -702,7 +702,7 @@ All settings are loaded from environment variables.  Place them in the
 | `POC_GMAIL_QUERY`            | `newer_than:7d`            | Gmail search query for initial sync             |
 | `POC_GMAIL_MAX_THREADS`      | `50`                       | Max threads fetched per batch                   |
 | `POC_TARGET_CONVERSATIONS`   | `5`                        | Target number of conversations passing triage   |
-| `POC_CLAUDE_MODEL`           | `claude-sonnet-4-20250514` | Claude model used for summarization             |
+| `POC_CLAUDE_MODEL`           | `claude-opus-5-5` | Claude model used for summarization             |
 | `POC_GMAIL_RATE_LIMIT`       | `5`                        | Gmail API requests per second                   |
 | `POC_CLAUDE_RATE_LIMIT`      | `2`                        | Claude API requests per second                  |
 | `POC_MAX_CONVERSATION_CHARS` | `6000`                     | Max conversation characters sent to Claude      |

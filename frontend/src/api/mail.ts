@@ -64,6 +64,8 @@ export interface ThreadSummary {
   labels: string[]
   participants: ThreadParticipant[]
   latest_message_id: string | null
+  /** ISO return time while the thread is snoozed (MAIL-17); null or absent otherwise. */
+  snoozed_until?: string | null
 }
 
 /** Stable key for a thread row: a thread id is unique only within its account. */

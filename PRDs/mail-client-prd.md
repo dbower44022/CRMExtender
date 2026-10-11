@@ -1,8 +1,8 @@
 # Mail Client — Functional Area PRD
 
-**Version:** 1.30
-**Last Updated:** 10-11-26 14:14
-**Status:** Approved 10-08-26 by the product owner — Phase 1 complete (MAIL-05–20) and Phase 2 built through MAIL-40 (v10.36, 10-11-26) plus first-look fixes; Phases 3–5 not started
+**Version:** 1.31
+**Last Updated:** 10-11-26 18:53
+**Status:** Approved 10-08-26 by the product owner — Phases 0–2 complete through MAIL-40 (v10.37, 10-11-26) plus first-look fixes; Phases 3–5 not started
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
 **Parent Documents:** [communication-entity-base-prd.md], [communication-provider-sync-prd.md], [outbound-email-prd.md], [gui-functional-requirements-prd.md]
@@ -419,7 +419,7 @@ Phase 2 — Mail surface
 - [x] MAIL-25: Isolated message rendering: DOMPurify + sandboxed iframe + content security policy; remote-image blocking with per-sender allow list — v10.18, 10-09-26 (`lib/mailRender.ts`, `components/mail/MessageFrame.tsx`: DOMPurify profile forbidding forms/frames/meta, remote `img` and CSS `url()` neutralized until "Load images" or "Always from this sender", srcdoc with a strict CSP in an `allow-scripts`-only sandbox (opaque origin), height and link clicks relayed by postMessage, links open in a new tab. The allow list is per browser (localStorage) in V1; a per-user server setting is deferred. TDD D-31)
 - [x] MAIL-26: Attachment preview (image, PDF) and download — v10.19, 10-09-26 (chips in the reading pane open images, PDFs, and text in a new tab and download everything else; a download button on every chip; inline `cid:` images render inside the message frame; inline parts are kept out of the chip row)
 - [x] MAIL-27: Actions wired to the outbox API with optimistic updates and pending/failed indicators — v10.19, 10-09-26 (`components/mail/ActionBar.tsx` over the thread list: archive, trash, spam, star/unstar, mark read/unread for the selection or the open thread; opening a thread marks it read after `mail_mark_read_dwell_ms` (new system setting, default 1500, 0 disables); the bar shows pending and failed queue counts, with retry and discard-and-revert for failed rows. Keyboard bindings for these arrive with MAIL-30)
-- [ ] MAIL-28: Snooze picker and Snoozed folder
+- [x] MAIL-28: Snooze picker and Snoozed folder — v10.37, 10-11-26 (`components/mail/SnoozePicker.tsx` from the action bar's Snooze button or `z`: later today 6 pm, tomorrow / this weekend / next week 8 am, or a custom date and time, all in the viewer's local clock (`lib/snoozeTimes.ts`); the Snoozed folder lists threads with a return-time chip in place of the date and the bar offers Unsnooze; `g` then `z` goes to Snoozed; Esc closes the picker first)
 - [ ] MAIL-29: Label/move picker with label creation
 - [x] MAIL-30: Keyboard model (§5.1) via react-hotkeys-hook; shortcut sheet on ? — v10.20, 10-09-26 (`hooks/useMailShortcuts.ts`, `components/mail/ShortcutSheet.tsx`: j/k/Enter/o/x/Esc, e/#/!/s/u, r/a/f/c, g-then-i/s/t/d/Shift+A, 0–9 account switch, ? sheet; inert bindings z, l/v, / show a note until MAIL-17/29/31. Actions now target whole threads: `POST /mail/actions` accepts `threads` and expands to every message server-side, closing the D-33 gap)
 - [x] MAIL-31: Mail search box with operator highlighting, results list, saved searches — v10.22, 10-09-26 (`components/mail/SearchBox.tsx`, `lib/mailSearchUi.ts`: `/` focuses, Enter runs, Esc clears, operator chips as hints, highlighted operator tokens, results in the same thread list narrowed to the current folder (an `in:` in the query overrides the folder); saved searches are per browser in V1, not folder-tree views. TDD D-36)
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.31 | 10-11-26 18:53 | Claude (Claude Code) | MAIL-28 checked off (v10.37): snooze picker, Snoozed folder chip, Unsnooze. Phase 2 complete. |
 | 1.30 | 10-11-26 14:14 | Claude (Claude Code) | Phase 1 closed (v10.36): MAIL-11 backfill job, MAIL-17 snooze, MAIL-18 one HTML body, MAIL-20 tests checked off; status line updated. |
 | 1.29 | 10-09-26 12:57 | Claude (Claude Code) | v10.32: the shell's record preview panel collapses in mail mode (it showed an empty "Select a record to preview" column beside the reading pane); its empty state gains a close button. |
 | 1.28 | 10-09-26 12:43 | Claude (Claude Code) | v10.31: provider drafts are kept out of conversations and deleted when the provider drops them (TDD D-42); one-time cleanup run on the live database. |

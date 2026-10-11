@@ -64,6 +64,12 @@ describe('ThreadList (MAIL-23, MAIL-T14)', () => {
     expect(h.onRangeSelect).toHaveBeenCalledWith('a:t2', 'a:t3')
   })
 
+  it('shows the return time instead of the date on a snoozed thread (MAIL-28)', () => {
+    const until = new Date(Date.now() + 26 * 60 * 60 * 1000).toISOString()
+    setup([thread(1, { snoozed_until: until }), thread(2)])
+    expect(screen.getAllByTestId('snooze-chip')).toHaveLength(1)
+  })
+
   it('shows the empty state', () => {
     setup([])
     expect(screen.getByText('Nothing here.')).toBeInTheDocument()

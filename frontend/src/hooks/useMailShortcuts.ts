@@ -1,8 +1,8 @@
 /** The mail keyboard model (Mail Client PRD §5.1 "Keyboard navigation"; MAIL-30).
  *
  * Active only in mail mode and never while typing in a field. Bindings
- * not yet backed by a feature (snooze, label, move, search) are inert
- * until their task lands; the shortcut sheet marks them.
+ * not yet backed by a feature (label, move) are inert until their task
+ * lands; the shortcut sheet marks them.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -17,7 +17,9 @@ export interface ShortcutHandlers {
   act: (action: 'archive' | 'trash' | 'spam' | 'star' | 'mark_unread') => void
   reply: (mode: 'reply' | 'reply_all' | 'forward') => void
   compose: () => void
-  goFolder: (folder: 'inbox' | 'starred' | 'sent' | 'drafts' | 'all') => void
+  /** Open the snooze picker for the selection or the focused thread (MAIL-28). */
+  snooze: () => void
+  goFolder: (folder: 'inbox' | 'starred' | 'snoozed' | 'sent' | 'drafts' | 'all') => void
   goAccount: (index: number) => void   // 0 = unified, 1..9 = nth account
   focusSearch: () => void
   toggleSheet: () => void
@@ -55,7 +57,7 @@ export function useMailShortcuts(enabled: boolean, h: ShortcutHandlers) {
   useHotkeys('c', () => h.compose(), { ...OPTS, enabled }, [h])
   useHotkeys('slash', () => h.focusSearch(), { ...OPTS, enabled }, [h])
   useHotkeys('shift+slash', () => h.toggleSheet(), { ...OPTS, enabled }, [h])   // ?
-  useHotkeys('z', () => toast.info('Snooze arrives with MAIL-17'), { ...OPTS, enabled }, [h])
+  useHotkeys('z', () => { if (takeG()) h.goFolder('snoozed'); else h.snooze() }, { ...OPTS, enabled }, [h])
   useHotkeys('l, v', () => toast.info('Label and move pickers arrive with MAIL-29'), { ...OPTS, enabled }, [h])
 
   // "s" is star unless it follows "g"
@@ -91,10 +93,10 @@ export const SHORTCUT_ROWS: { keys: string; action: string; note?: string }[] = 
   { keys: 'r / a / f', action: 'Reply / reply all / forward the open thread' },
   { keys: 'c', action: 'Compose' },
   { keys: 'Shift+O', action: 'Expand every message in the open thread' },
-  { keys: 'g then i / s / t / d / Shift+A', action: 'Go to Inbox / Starred / Sent / Drafts / All mail' },
+  { keys: 'g then i / s / z / t / d / Shift+A', action: 'Go to Inbox / Starred / Snoozed / Sent / Drafts / All mail' },
   { keys: '0, 1 … 9', action: 'Unified inbox, or the nth account' },
   { keys: '/', action: 'Search mail (Enter to run, Esc to clear)' },
-  { keys: 'z', action: 'Snooze', note: 'MAIL-17' },
+  { keys: 'z', action: 'Snooze (picker: later today, tomorrow, weekend, next week, custom)' },
   { keys: 'l / v', action: 'Label / move', note: 'MAIL-29' },
   { keys: 'Ctrl+Enter', action: 'Send (in the composer)' },
   { keys: '?', action: 'This sheet' },

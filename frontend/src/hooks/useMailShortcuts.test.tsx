@@ -10,7 +10,7 @@ function Host({ h, enabled = true }: { h: ShortcutHandlers; enabled?: boolean })
 function handlers(): ShortcutHandlers {
   return {
     moveFocus: vi.fn(), openFocused: vi.fn(), toggleSelectFocused: vi.fn(), escape: vi.fn(),
-    act: vi.fn(), reply: vi.fn(), compose: vi.fn(), goFolder: vi.fn(), goAccount: vi.fn(),
+    act: vi.fn(), reply: vi.fn(), compose: vi.fn(), snooze: vi.fn(), goFolder: vi.fn(), goAccount: vi.fn(),
     focusSearch: vi.fn(), toggleSheet: vi.fn(),
   }
 }
@@ -40,6 +40,7 @@ describe('useMailShortcuts (MAIL-30)', () => {
     key('a'); expect(h.reply).toHaveBeenLastCalledWith('reply_all')
     key('f'); expect(h.reply).toHaveBeenLastCalledWith('forward')
     key('c'); expect(h.compose).toHaveBeenCalled()
+    key('z'); expect(h.snooze).toHaveBeenCalled()
     key('?', { shiftKey: true }); expect(h.toggleSheet).toHaveBeenCalled()
     key('Escape'); expect(h.escape).toHaveBeenCalled()
     key('0'); expect(h.goAccount).toHaveBeenLastCalledWith(0)
@@ -54,6 +55,8 @@ describe('useMailShortcuts (MAIL-30)', () => {
     expect(h.act).not.toHaveBeenCalled()
     key('g'); key('i'); expect(h.goFolder).toHaveBeenLastCalledWith('inbox')
     key('g'); key('t'); expect(h.goFolder).toHaveBeenLastCalledWith('sent')
+    key('g'); key('z'); expect(h.goFolder).toHaveBeenLastCalledWith('snoozed')
+    expect(h.snooze).not.toHaveBeenCalled()
   })
 
   it('stays silent inside form fields and when disabled', () => {

@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react'
-import { Archive, Trash2, ShieldAlert, Star, MailOpen, RotateCcw, X, Loader2 } from 'lucide-react'
+import { Archive, Trash2, ShieldAlert, Star, MailOpen, RotateCcw, X, Loader2, Clock, AlarmClockOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useMailAction, useMailActionQueue, useMailActionResolve, type ThreadSummary } from '../../api/mail.ts'
 
@@ -13,6 +13,8 @@ interface Props {
   /** Threads the actions apply to (the open thread, or the selection). */
   targets: ThreadSummary[]
   onDone?: () => void
+  /** Open the snooze picker for the targets (MAIL-28). */
+  onSnooze?: () => void
 }
 
 function Btn({ title, onClick, disabled, children }: { title: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
@@ -30,7 +32,7 @@ function Btn({ title, onClick, disabled, children }: { title: string; onClick: (
   )
 }
 
-export function ActionBar({ targets, onDone }: Props) {
+export function ActionBar({ targets, onDone, onSnooze }: Props) {
   const act = useMailAction()
   const queue = useMailActionQueue()
   const resolve = useMailActionResolve()
@@ -38,6 +40,7 @@ export function ActionBar({ targets, onDone }: Props) {
 
   const anyStarred = targets.some((t) => t.starred)
   const anyUnread = targets.some((t) => t.unread_count > 0)
+  const anySnoozed = targets.some((t) => !!t.snoozed_until)
   const disabled = targets.length === 0 || act.isPending
 
   const run = (action: string, label: string) => {
@@ -66,6 +69,11 @@ export function ActionBar({ targets, onDone }: Props) {
       <Btn title={anyUnread ? 'Mark read' : 'Mark unread (u)'} onClick={() => run(anyUnread ? 'mark_read' : 'mark_unread', anyUnread ? 'Marked read' : 'Marked unread')} disabled={disabled}>
         <MailOpen size={14} />
       </Btn>
+      {anySnoozed ? (
+        <Btn title="Back to inbox now" onClick={() => run('unsnooze', 'Back in the inbox')} disabled={disabled}><AlarmClockOff size={14} /> Unsnooze</Btn>
+      ) : (
+        <Btn title="Snooze (z)" onClick={() => onSnooze?.()} disabled={disabled || !onSnooze}><Clock size={14} /> Snooze</Btn>
+      )}
       {act.isPending && <Loader2 size={14} className="animate-spin text-surface-400" />}
       <div className="ml-auto flex items-center gap-2 text-xs">
         {counts.pending > 0 && (

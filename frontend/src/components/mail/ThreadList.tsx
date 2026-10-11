@@ -9,9 +9,10 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { Paperclip, Star } from 'lucide-react'
+import { Clock, Paperclip, Star } from 'lucide-react'
 import { threadKey, type ThreadSummary } from '../../api/mail.ts'
 import { chipStyle } from '../../lib/accountColor.ts'
+import { describeReturn } from '../../lib/snoozeTimes.ts'
 
 export interface ThreadListProps {
   items: ThreadSummary[]
@@ -203,7 +204,13 @@ export function ThreadList(props: ThreadListProps) {
                           {accountChip(t.account_email)}
                         </span>
                       )}
-                      <span className={`shrink-0 text-xs ${unread ? 'font-semibold text-primary-700' : 'text-surface-500'}`}>{fmtDate(t.last_at)}</span>
+                      {t.snoozed_until ? (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-50 px-1 text-[11px] text-amber-700" title={`Returns ${describeReturn(t.snoozed_until)}`} data-testid="snooze-chip">
+                          <Clock size={11} /> {describeReturn(t.snoozed_until)}
+                        </span>
+                      ) : (
+                        <span className={`shrink-0 text-xs ${unread ? 'font-semibold text-primary-700' : 'text-surface-500'}`}>{fmtDate(t.last_at)}</span>
+                      )}
                     </div>
                     <div className="mt-0.5 flex items-center gap-1.5">
                       <span className={`min-w-0 flex-1 truncate text-sm ${unread ? 'font-medium text-surface-900' : 'text-surface-700'}`}>

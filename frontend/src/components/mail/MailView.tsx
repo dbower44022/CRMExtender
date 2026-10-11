@@ -12,6 +12,8 @@ import { toast } from 'sonner'
 import { useComposeStore } from '../../stores/compose.ts'
 import { useMailShortcuts } from '../../hooks/useMailShortcuts.ts'
 import { ShortcutSheet } from './ShortcutSheet.tsx'
+import { SnoozePicker } from './SnoozePicker.tsx'
+import { describeReturn } from '../../lib/snoozeTimes.ts'
 import { SearchBox } from './SearchBox.tsx'
 import { loadSavedSearches, storeSavedSearches, type SavedSearch } from '../../lib/mailSearchUi.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
@@ -89,6 +91,8 @@ export function MailView() {
   const act = useMailAction()
   const openCompose = useComposeStore((s) => s.openCompose)
   const [sheetOpen, setSheetOpen] = useState(false)
+  // Snooze picker (MAIL-28): holds the threads it will apply to.
+  const [snoozeFor, setSnoozeFor] = useState<ThreadSummary[] | null>(null)
   const keys = items.map(threadKey)
   const focusedIndex = focusedKey ? keys.indexOf(focusedKey) : -1
   const shortcutTargets = selectedKeys.size > 0
@@ -104,7 +108,8 @@ export function MailView() {
     openFocused: () => { if (focusedIndex >= 0) onOpen(items[focusedIndex]) },
     toggleSelectFocused: () => { if (focusedKey) onToggleSelect(focusedKey) },
     escape: () => {
-      if (sheetOpen) setSheetOpen(false)
+      if (snoozeFor) setSnoozeFor(null)
+      else if (sheetOpen) setSheetOpen(false)
       else if (threadId) setMailThread(null)
       else if (selectedKeys.size > 0) clearSelection()
     },
@@ -131,6 +136,7 @@ export function MailView() {
       if (id === null) toast.info('Close a composer first (three are open)')
     },
     compose: () => { if (openCompose('new') === null) toast.info('Close a composer first (three are open)') },
+    snooze: () => { if (shortcutTargets.length > 0) setSnoozeFor(shortcutTargets); else toast.info('Focus or select a thread first') },
     goFolder: (f) => setMailFolder(accountId, f),
     goAccount: (n) => {
       if (n === 0) { setMailFolder('unified', 'inbox'); return }
@@ -144,6 +150,23 @@ export function MailView() {
   const onOpen = (t: ThreadSummary) => {
     setFocusedKey(threadKey(t))
     setMailThread(t.thread_id)
+  }
+
+  // Apply a chosen return time to the picker's threads; they leave the list like an archive.
+  const onSnoozePick = (returnAt: string) => {
+    const list = snoozeFor ?? []
+    setSnoozeFor(null)
+    if (list.length === 0) return
+    act.mutateAsync({ action: 'snooze', payload: { return_at: returnAt }, threads: list.map((t) => ({ account_id: t.account_id, thread_id: t.thread_id })) })
+      .then(() => {
+        toast.success(`Snoozed until ${describeReturn(returnAt)}${list.length > 1 ? ` · ${list.length} threads` : ''}`)
+        clearSelection()
+        if (focusedIndex >= 0 && list.some((t) => threadKey(t) === focusedKey)) {
+          setFocusedKey(keys[focusedIndex + 1] ?? keys[focusedIndex - 1] ?? null)
+        }
+        if (threadId && list.some((t) => t.thread_id === threadId)) setMailThread(null)
+      })
+      .catch((err) => toast.error(`Snooze failed: ${err instanceof Error ? err.message : String(err)}`))
   }
 
   const onToggleSelect = (key: string) => {
@@ -194,7 +217,7 @@ export function MailView() {
       <Panel id="mail-list" defaultSize="38%" minSize="22%" maxSize="75%">
       <section className="relative flex h-full flex-col overflow-hidden">
         <SearchBox ref={searchRef} value={searchQ} onSearch={setSearchQ} saved={saved} onSaveSearch={saveSearch} onRemoveSaved={removeSaved} />
-        <ActionBar targets={targets} onDone={clearSelection} />
+        <ActionBar targets={targets} onDone={clearSelection} onSnooze={() => setSnoozeFor(targets)} />
         {folder === 'drafts' && <LocalDrafts />}
         <ThreadList
           items={items}
@@ -224,6 +247,7 @@ export function MailView() {
       </Panel>
       </Group>
       {sheetOpen && <ShortcutSheet onClose={() => setSheetOpen(false)} />}
+      {snoozeFor && <SnoozePicker count={snoozeFor.length} onPick={onSnoozePick} onClose={() => setSnoozeFor(null)} />}
     </div>
   )
 }

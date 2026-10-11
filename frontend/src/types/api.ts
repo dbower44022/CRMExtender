@@ -7,6 +7,8 @@ export interface FieldDef {
   editable: boolean
   db_column: string | null
   select_options: string[] | null
+  /** False = never demoted for low value diversity (registry decides). */
+  demotable?: boolean
 }
 
 export interface EntityDef {

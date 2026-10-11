@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 25.2
-**Last Updated:** 10-11-26 12:21
+**Version:** 25.3
+**Last Updated:** 10-11-26 13:47
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V25.3 (10-11-26):** v10.34 — the adaptive grid collapsed the new Conversations Account column to a dot (few distinct mailboxes per page); `adaptive-grid-intelligence-prd.md` 2.1 adds a registry-declared demotion exemption and Account uses it.
 
 > **V25.2 (10-11-26):** Owner first-look fix v10.33 on the Conversations grid (`views-grid-prd.md` 6.2): Account column shows every contributing mailbox and is a sortable, filterable default column; AI Status filterable as a select and the quick filters corrected; view sort direction honoured (newest first); migration v29 repairs 560 conversations hidden by a missing customer id and adds the Account column to existing views.
 
@@ -126,7 +128,7 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | Views & Grid | 6.2 | `views-grid-prd.md` | Draft — conversations grid: account column, filters, sort direction fixed (v10.33) | 10-11-26 |
 | Data Sources | 1.0 | `data-sources-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Permissions & Sharing | 2.0 | `permissions-sharing-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Adaptive Grid Intelligence | 2.0 | `adaptive-grid-intelligence-prd.md` | Draft — Terminology standardized | 2026-02-22 |
+| Adaptive Grid Intelligence | 2.1 | `adaptive-grid-intelligence-prd.md` | Draft — registry-declared demotion exemption (v10.34) | 10-11-26 |
 | Master Glossary | 4.0 | `glossary.md` | Active — Key Process, field metadata, † caching terms added | 2026-02-23 |
 | Email Parsing & Content Extraction | 1.0 | `email-stripping.md` | Technical spec — Mojibake cleaned | 2026-02-22 |
 | Mail Client | 1.29 | `mail-client-prd.md` | Approved — Phases 0–2 built through MAIL-40 (v10.26) plus first-look fixes to v10.32; MAIL-11/17/18/20 and Phases 3–5 open | 10-09-26 |

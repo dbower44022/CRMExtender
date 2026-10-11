@@ -23,6 +23,11 @@ class FieldDef:
     editable: bool = False
     db_column: str | None = None  # actual DB column name for UPDATE
     select_options: list[str] | None = None  # valid options for select dropdowns
+    # False = the adaptive grid never collapses this column for low value
+    # diversity (Adaptive Grid Intelligence PRD §12.4). For columns whose
+    # job is to name a small set of categories the user must read at a
+    # glance, such as the mailbox a conversation came from.
+    demotable: bool = True
 
 
 @dataclass(frozen=True)
@@ -461,6 +466,7 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 type="text",
                 sortable=True,
                 filterable=True,
+                demotable=False,
             ),
             "initiator": FieldDef(
                 label="Initiator",

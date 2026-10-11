@@ -2,8 +2,9 @@
 
 ## CRMExtender — Display-Aware Layout Engine & Content-Intelligent Grid Optimization
 
-**Version:** 2.0
+**Version:** 2.1
 **Date:** 2026-02-21
+**Last Updated:** 10-11-26 13:47
 **Status:** Draft — Terminology framework update
 **Parent Document:** [CRMExtender PRD v1.1](PRD.md)
 
@@ -579,6 +580,7 @@ Certain columns are protected from demotion regardless of diversity score:
 - The **primary identifier column** (first text column) is never demoted.
 - Columns with **user overrides** (manually resized) are never demoted.
 - Columns marked as **pinned** are never demoted to hidden (but may receive collapsed treatment).
+- Columns the field registry marks **not demotable** (`FieldDef.demotable = False`) are never demoted. Used for columns whose purpose is to name one of a few categories the user must read on every row — the first is Account on Conversations, which collapsed to a dot because a mailbox appears on many rows (v10.34, 10-11-26).
 - The system's **default columns** for an entity type receive a 1-tier demotion buffer (they are demoted one tier less aggressively than the diversity score suggests).
 
 ### 12.5 Demotion Transparency
@@ -1214,3 +1216,11 @@ All general UI terms used in this PRD are defined in the **[Master Glossary V3](
 | **Significant resize** | A viewport dimension change exceeding 15% from the last auto-configuration, triggering a re-configuration event. |
 | **Space budget** | The total available pixels to be divided among flexible Workspace Layout zones (Action Panel, grid, Detail Panel). |
 | **Value diversity score** | A per-column metric (0.0–1.0) measuring the ratio of distinct values to total values, indicating how much differentiating information the column provides. |
+
+## Change Log
+
+| Rev | Date (MM-DD-YY HH:MM) | Author | Change |
+|---|---|---|---|
+| 2.1 | 10-11-26 13:47 | Claude (Claude Code) | §12.4: registry-declared demotion exemption (`demotable=False`), first used on the Conversations Account column (v10.34). Change log added. |
+| 2.0 | 02-21-26 | — | Terminology alignment (see header note). |
+| 1.0 | 02-20-26 | — | Initial specification. |

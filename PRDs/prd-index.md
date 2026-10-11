@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 25.3
-**Last Updated:** 10-11-26 13:47
+**Version:** 25.4
+**Last Updated:** 10-11-26 14:04
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V25.4 (10-11-26):** v10.35 — Gmail snippets stored HTML-escaped showed `&#39;` in the Conversations preview; unescaped at ingest (`email-provider-sync-prd.md` 1.2) and repaired by migration v30.
 
 > **V25.3 (10-11-26):** v10.34 — the adaptive grid collapsed the new Conversations Account column to a dot (few distinct mailboxes per page); `adaptive-grid-intelligence-prd.md` 2.1 adds a registry-declared demotion exemption and Account uses it.
 
@@ -133,7 +135,7 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | Email Parsing & Content Extraction | 1.0 | `email-stripping.md` | Technical spec — Mojibake cleaned | 2026-02-22 |
 | Mail Client | 1.29 | `mail-client-prd.md` | Approved — Phases 0–2 built through MAIL-40 (v10.26) plus first-look fixes to v10.32; MAIL-11/17/18/20 and Phases 3–5 open | 10-09-26 |
 | └ Mail Client TDD | 1.22 | `mail-client-tdd.md` | Approved — living document; D-01–D-42 recorded | 10-09-26 |
-| └ Email Provider Sync | 1.1 | `email-provider-sync-prd.md` | Approved — Gmail adapter built (EPS-01–07, 10); EPS-08/09 open; Graph and IMAP deferred until a non-Google account exists | 10-09-26 |
+| └ Email Provider Sync | 1.2 | `email-provider-sync-prd.md` | Approved — Gmail adapter built (EPS-01–07, 10); snippet unescape (v10.35); EPS-08/09 open; Graph and IMAP deferred until a non-Google account exists | 10-11-26 |
 | SMS/MMS | — | — | **Planned** — parent (Communications) complete | — |
 | Voice/VoIP | — | — | **Planned** — parent (Communications) complete | — |
 | Video Meetings | — | — | **Planned** — parent (Communications) complete | — |

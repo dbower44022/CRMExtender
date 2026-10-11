@@ -129,6 +129,12 @@ def _fixture_message() -> dict:
 
 
 class TestNormalization:
+    def test_snippet_is_html_unescaped(self):
+        """Gmail delivers snippets HTML-escaped; they are stored plain (v10.35)."""
+        msg = _fixture_message()
+        msg["snippet"] = "I&#39;ll check &amp; reply &quot;soon&quot;"
+        assert gmail_client._parse_message(msg).snippet == "I'll check & reply \"soon\""
+
     def test_headers_names_labels_flags_attachments(self):
         em = gmail_client._parse_message(_fixture_message())
 

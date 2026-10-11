@@ -1,7 +1,7 @@
 # Email Provider Sync — Channel Sub-PRD
 
-**Version:** 1.1
-**Last Updated:** 10-08-26 13:05
+**Version:** 1.2
+**Last Updated:** 10-11-26 14:04
 **Status:** Approved 10-08-26 by the product owner — not yet implemented
 **Parent Documents:** [communication-provider-sync-prd.md] (framework), [mail-client-prd.md] (functional area that consumes this contract)
 **Entity Base PRD:** [communication-entity-base-prd.md]
@@ -253,5 +253,6 @@ Adapters report what they can do; the mail client hides or adapts affordances ac
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-11-26 14:04 | Claude (Claude Code) | Gmail mapping note (v10.35): the provider's snippet field arrives HTML-escaped (`&#39;`, `&amp;`) and is unescaped at ingest; migration v30 repaired 4,772 stored rows that showed entity codes in the Conversations preview and grid. |
 | 1.1 | 10-08-26 12:33 | Claude (Claude Code) | Status set to Approved on the product owner's approval. |
 | 1.0 | 10-08-26 01:30 | Claude (Claude Code) | Initial draft for approval. |

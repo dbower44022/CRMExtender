@@ -235,7 +235,8 @@ def _parse_message(msg: dict) -> ParsedEmail:
         date=date,
         body_plain=body_plain,
         body_html=body_html,
-        snippet=msg.get("snippet", ""),
+        # Gmail delivers the snippet HTML-escaped (&#39; &amp; ...); store it plain.
+        snippet=html_mod.unescape(msg.get("snippet", "") or ""),
         bcc=_parse_address_list(bcc_raw),
         reply_to=_parse_address_list(reply_to_raw),
         participant_names=participant_names,

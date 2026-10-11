@@ -348,3 +348,44 @@ class TestApi:
         assert resp.status_code == 200, resp.text
         assert resp.json()["results"][OWNER]["pushed"] == 1
         assert resp.json()["counts"] == {"pending": 0, "failed": 0}
+
+
+class TestLifecycleRule:
+    """MAIL-T13 (§6.4): mail archive leaves the Communication active; provider trash archives it."""
+
+    def test_archive_action_keeps_record_active(self, tmp_db):
+        row = _store()
+        with get_connection() as conn:
+            enqueue(conn, account_id=ACCOUNT_ID, kind="archive", communication_ids=[row["id"]], created_by=USER_ID)
+        after = _comm(row["id"])
+        assert after["is_archived"] == 0 and after["is_current"] == 1
+        assert "INBOX" not in _labels(row["id"])
+
+    def test_provider_trash_archives_record(self, tmp_db):
+        from poc.mail_state import apply_label_delta
+        row = _store()
+        with get_connection() as conn:
+            apply_label_delta(conn, ACCOUNT_ID, [(row["provider_message_id"], ["TRASH"], ["INBOX"])], [])
+        assert _comm(row["id"])["is_archived"] == 1
+        with get_connection() as conn:
+            apply_label_delta(conn, ACCOUNT_ID, [(row["provider_message_id"], ["INBOX"], ["TRASH"])], [])
+        assert _comm(row["id"])["is_archived"] == 0
+
+
+class TestOneHtmlBody:
+    """MAIL-18 / TDD D-10: one stored body; readers fall back to original_html."""
+
+    def test_ingest_stores_original_only_and_api_falls_back(self, tmp_db):
+        from poc.web.routes.api import _comm_html_col
+        em = ParsedEmail(
+            message_id="pm-html", thread_id="t-html", subject="S", sender="A <a@x.com>", sender_email="a@x.com",
+            recipients=[OWNER], date=datetime(2026, 3, 1, tzinfo=timezone.utc), body_plain="hi",
+            body_html="<p>hi</p>", snippet="hi", label_ids=["INBOX"],
+        )
+        with get_connection() as conn:
+            _store_thread(conn, ACCOUNT_ID, OWNER, [em], load_contact_index(), customer_id=CUST_ID, created_by=USER_ID)
+            row = conn.execute("SELECT original_html, cleaned_html FROM communications WHERE provider_message_id='pm-html'").fetchone()
+            assert row["original_html"] == "<p>hi</p>" and row["cleaned_html"] is None
+            expr = _comm_html_col(conn)
+            got = conn.execute(f"SELECT {expr} AS cleaned_html FROM communications comm WHERE provider_message_id='pm-html'").fetchone()
+            assert got["cleaned_html"] == "<p>hi</p>"

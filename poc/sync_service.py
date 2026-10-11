@@ -158,6 +158,17 @@ def sync_account(
         log.warning("Email sync failed for %s: %s", email_addr, exc)
         out["errors"].append(f"{email_addr}: email sync failed ({exc})")
 
+    # One batch of historical mail per run, until the mailbox start (MAIL-11).
+    try:
+        from .mail_backfill import run_backfill_batch
+        bf = run_backfill_batch(account, creds, provider, customer_id=customer_id,
+                                user_id=user_id, rate_limiter=gmail_limiter)
+        if bf["status"] == "ran":
+            out["backfilled"] = bf["stored"]
+    except Exception as exc:
+        log.warning("Backfill failed for %s: %s", email_addr, exc)
+        out["errors"].append(f"{email_addr}: backfill failed ({exc})")
+
     return out
 
 

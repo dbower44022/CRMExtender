@@ -38,8 +38,8 @@ DEFAULT_RETRY_MAX = 8
 BACKOFF_BASE = timedelta(seconds=30)
 BACKOFF_CAP = timedelta(hours=1)
 
-#: Action kinds the outbox accepts from the API in V1. Snooze is MAIL-17,
-#: create_label is applied synchronously by MAIL-29.
+#: Action kinds the outbox accepts from the API. Snooze/unsnooze are
+#: MAIL-17 (payload ``return_at``); create_label is applied synchronously by MAIL-29.
 ENQUEUEABLE = {
     ActionKind.MARK_READ, ActionKind.MARK_UNREAD,
     ActionKind.STAR, ActionKind.UNSTAR,
@@ -47,6 +47,7 @@ ENQUEUEABLE = {
     ActionKind.TRASH, ActionKind.UNTRASH,
     ActionKind.SPAM, ActionKind.UNSPAM,
     ActionKind.ADD_LABEL, ActionKind.REMOVE_LABEL, ActionKind.MOVE,
+    ActionKind.SNOOZE, ActionKind.UNSNOOZE,
 }
 
 #: Each kind's local effect, as (flag updates, provider labels added, provider labels removed).
@@ -61,6 +62,10 @@ _LOCAL_EFFECT: dict[ActionKind, tuple[dict[str, int], list[str], list[str]]] = {
     ActionKind.UNTRASH:     ({"is_archived": 0}, ["INBOX"], ["TRASH"]),
     ActionKind.SPAM:        ({}, ["SPAM"], ["INBOX"]),
     ActionKind.UNSPAM:      ({}, ["INBOX"], ["SPAM"]),
+    # The provider-side snooze label is found or created by the adapter at
+    # push time; locally the Snoozed folder is the mail_snoozes table (MAIL-17).
+    ActionKind.SNOOZE:      ({}, [], ["INBOX"]),
+    ActionKind.UNSNOOZE:    ({"is_read": 0}, ["INBOX"], []),
 }
 
 _INVERSE: dict[ActionKind, ActionKind] = {
@@ -70,6 +75,7 @@ _INVERSE: dict[ActionKind, ActionKind] = {
     ActionKind.TRASH: ActionKind.UNTRASH, ActionKind.UNTRASH: ActionKind.TRASH,
     ActionKind.SPAM: ActionKind.UNSPAM, ActionKind.UNSPAM: ActionKind.SPAM,
     ActionKind.ADD_LABEL: ActionKind.REMOVE_LABEL, ActionKind.REMOVE_LABEL: ActionKind.ADD_LABEL,
+    ActionKind.SNOOZE: ActionKind.UNSNOOZE, ActionKind.UNSNOOZE: ActionKind.SNOOZE,
 }
 
 
@@ -215,8 +221,22 @@ def enqueue(
     if k is ActionKind.MOVE:
         payload = dict(payload or {})
         payload.setdefault("to_label_id", label_id)
+    return_at: str | None = None
+    if k is ActionKind.SNOOZE:
+        from .mail_snooze import SnoozeError, parse_return_at
+        try:
+            return_at = parse_return_at((payload or {}).get("return_at"))
+        except SnoozeError as exc:
+            raise MailActionError(str(exc)) from exc
+        payload = dict(payload or {}, return_at=return_at)
 
     apply_local(conn, account_id, k, targets, label_id=label_id, payload=payload)
+    if k is ActionKind.SNOOZE:
+        from .mail_snooze import record_snooze
+        record_snooze(conn, account_id, targets, return_at, created_by)
+    elif k is ActionKind.UNSNOOZE:
+        from .mail_snooze import clear_snooze
+        clear_snooze(conn, account_id, targets)
 
     now = _now_iso()
     action_id = str(uuid.uuid4())

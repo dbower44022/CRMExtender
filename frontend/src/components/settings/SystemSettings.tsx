@@ -30,6 +30,8 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
   const [settleMinutes, setSettleMinutes] = useState(settings.summarize_settle_minutes ?? '15')
   const [maxPerSync, setMaxPerSync] = useState(settings.summarize_max_per_sync ?? '500')
   const [syncInterval, setSyncInterval] = useState(settings.mail_sync_interval_seconds ?? '120')
+  const [backfillEnabled, setBackfillEnabled] = useState((settings.mail_backfill_enabled ?? 'true') === 'true')
+  const [backfillBatch, setBackfillBatch] = useState(settings.mail_backfill_batch_size ?? '200')
   const [syncEnabled, setSyncEnabled] = useState(settings.sync_enabled === 'true')
   const [allowSelfReg, setAllowSelfReg] = useState(settings.allow_self_registration === 'true')
 
@@ -43,6 +45,8 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
         summarize_settle_minutes: settleMinutes,
         summarize_max_per_sync: maxPerSync,
         mail_sync_interval_seconds: syncInterval,
+        mail_backfill_enabled: backfillEnabled ? 'true' : 'false',
+        mail_backfill_batch_size: backfillBatch,
         sync_enabled: syncEnabled ? 'true' : 'false',
         allow_self_registration: allowSelfReg ? 'true' : 'false',
       },
@@ -189,6 +193,37 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
           />
           <p className="mt-1 text-xs text-surface-500">
             Each account syncs on its own timer in the background; minimum 60 seconds. Turning Sync enabled off stops the timers but Sync Now still works.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <label className="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              checked={backfillEnabled}
+              onChange={(e) => setBackfillEnabled(e.target.checked)}
+              className="peer sr-only"
+            />
+            <div className="peer h-5 w-9 rounded-full bg-surface-300 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-600 peer-checked:after:translate-x-full" />
+          </label>
+          <span className="text-sm text-surface-700">Backfill older mail</span>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700">
+            Backfill batch (messages per sync)
+          </label>
+          <input
+            type="number"
+            min={10}
+            max={500}
+            step={10}
+            value={backfillBatch}
+            onChange={(e) => setBackfillBatch(e.target.value)}
+            className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            After the initial window, each sync run fetches this many older messages until the whole mailbox is stored. Switching backfill off stops at the next checkpoint; switching it on resumes there. Backfilled conversations are summarized like new ones, which costs AI calls.
           </p>
         </div>
 

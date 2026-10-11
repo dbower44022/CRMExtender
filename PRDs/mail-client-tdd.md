@@ -1,8 +1,8 @@
 # Mail Client — TDD
 
-**Version:** 1.22
-**Last Updated:** 10-09-26 12:43
-**Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 approved, D-15–D-42 written back during the build and binding until revised here
+**Version:** 1.23
+**Last Updated:** 10-11-26 14:14
+**Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 approved, D-15–D-45 written back during the build and binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
 **Product TDD:** [product-tdd.md]
@@ -401,6 +401,30 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Decided by:** Product owner (Option B), implemented by Claude Code, 10-09-26 (v10.31).
 
+### D-43 Historical backfill: one batch per sync run, checkpoint on the account row
+
+**Decision:** The backfill job (MAIL-11) runs inside each account's scheduled sync, after the incremental delta, and fetches one batch (`mail_backfill_batch_size`, default 200, clamped 10–500) through `MailProvider.fetch_backfill`. The checkpoint is `provider_accounts.backfill_cursor`, initialised to `"<oldest stored epoch>|"` on first use; `backfill_done` is set when the adapter returns no next cursor. `mail_backfill_enabled=false` stops the job at the checkpoint. Backfilled messages dedupe by provider message id like any re-seen message, and the new-mail notification ignores mail whose own timestamp is more than a day before the run, so history never pops up as news.
+
+**Rationale:** Running inside the account worker guarantees the same account never syncs and backfills concurrently (D-07) without a second scheduler. A batch per run at the default 120-second interval stores about 6,000 messages an hour, which is slow enough for the Gmail quota and the summarizer's per-pass cap (D-25) and fast enough to finish a 20,000-message mailbox overnight.
+
+**Constraints/Tradeoffs:** Each backfilled thread may create a conversation and so a summary; the owner controls that cost with the enabled switch and `summarize_max_per_sync`. The live setting was shipped **off** on 10-11-26 for that reason. Gmail's `before:` query is exclusive at second resolution, so the boundary message is re-fetched once and deduped.
+
+### D-44 Snooze: a local table drives the folder; the provider label is for other clients
+
+**Decision:** `mail_snoozes` (account, thread, return_at, status) is the source of truth for the Snoozed folder and its count; the `CRMExtender/Snoozed` label exists so Gmail and other clients show the state, and the adapter finds or creates it at push time (D-12). `snooze` and `unsnooze` are ordinary outbox actions: the local effect of `snooze` removes Inbox; of `unsnooze` restores Inbox and marks unread. The scheduler's tick (D-07) runs the return pass: each due row queues `unsnooze` for the thread's current messages and publishes `mail.new` (reason `snooze_returned`, `known_contact=true`) so the existing pop-up path announces it. A second snooze on a thread replaces the first.
+
+**Rationale:** Keeping the folder on a local table makes snooze work instantly and offline from the provider, and avoids a round trip to learn the label id before the thread can leave the inbox. Reusing `mail.new` means no new browser event type for MAIL-39.
+
+**Constraints/Tradeoffs:** Until MAIL-28 there is no picker; the API takes `payload.return_at` (ISO 8601, future). If the provider push of `snooze` dead-letters, the thread is still hidden locally and shown in the outbox's failed list.
+
+### D-45 One HTML body (D-10 delivered in v31)
+
+**Decision:** D-10 shipped in schema v31 instead of v23: `cleaned_html` is NULL unless a cleaning step produced something different from `original_html`; ingest writes `original_html` only; every reader (`mail_threads`, `outbound`, the record and conversation APIs) takes `COALESCE(cleaned_html, original_html)`. The migration nulls the duplicate and VACUUMs the file.
+
+**Rationale:** On 10-11-26 all 11,821 live rows held an identical second copy, 401 MB of 914 MB. Nothing in the code base ever wrote a different `cleaned_html`.
+
+**Constraints/Tradeoffs:** VACUUM needs the database idle and free space equal to the file; the migration skips it when locked and `python -m poc.migrate_to_v31 --vacuum-only` finishes the job after a server stop.
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -427,6 +451,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.23 | 10-11-26 14:14 | Claude (Claude Code) | Write-back for Phase 1 close-out (v10.36): D-43 backfill job, D-44 snooze, D-45 one HTML body (D-10 delivered). |
 | 1.22 | 10-09-26 12:43 | Claude (Claude Code) | D-42: provider drafts never join conversations; a dropped draft is deleted (exception to D-22). v10.31. |
 | 1.21 | 10-09-26 10:07 | Claude (Claude Code) | Write-back for MAIL-39: D-41 (new-mail notifications). |
 | 1.20 | 10-09-26 10:06 | Claude (Claude Code) | Write-back for MAIL-38: D-40 (non-interactive credentials, parked accounts, disconnect modes). |

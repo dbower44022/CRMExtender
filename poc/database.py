@@ -59,6 +59,10 @@ CREATE TABLE IF NOT EXISTS provider_accounts (
     last_sync_error   TEXT,
     last_sync_error_at TEXT,
     color             TEXT,                        -- label colour #rrggbb (v28)
+    backfill_cursor   TEXT,                        -- historical backfill checkpoint (v31, MAIL-11)
+    backfill_done     INTEGER NOT NULL DEFAULT 0,  -- 1 once the mailbox start was reached
+    backfill_messages INTEGER NOT NULL DEFAULT 0,  -- messages stored by the backfill job
+    backfill_updated_at TEXT,
     created_at        TEXT NOT NULL,
     updated_at        TEXT NOT NULL,
     UNIQUE(provider, email_address),
@@ -369,6 +373,21 @@ CREATE TABLE IF NOT EXISTS mail_actions (
     created_at      TEXT NOT NULL,
     updated_at      TEXT NOT NULL
 );
+
+-- Snoozed threads: hidden from the inbox until return_at (v31, MAIL-17)
+CREATE TABLE IF NOT EXISTS mail_snoozes (
+    id              TEXT PRIMARY KEY,
+    account_id      TEXT NOT NULL REFERENCES provider_accounts(id) ON DELETE CASCADE,
+    thread_id       TEXT NOT NULL,
+    return_at       TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'snoozed'
+                    CHECK (status IN ('snoozed', 'returned', 'cancelled')),
+    created_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at      TEXT NOT NULL,
+    returned_at     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_mail_snoozes_due ON mail_snoozes(status, return_at);
+CREATE INDEX IF NOT EXISTS idx_mail_snoozes_thread ON mail_snoozes(account_id, thread_id, status);
 
 -- Conversation ↔ Communication M:N join
 CREATE TABLE IF NOT EXISTS conversation_communications (

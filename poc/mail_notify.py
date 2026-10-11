@@ -31,6 +31,10 @@ def set_notification_mode(customer_id: str, user_id: str, account_id: str, mode:
 def new_inbox_messages(conn, account_id: str, since_iso: str, *, limit: int = MAX_ITEMS) -> dict:
     """Unread inbound inbox messages stored for ``account_id`` since ``since_iso``.
 
+    Only mail sent within a day of ``since_iso`` counts: the historical
+    backfill (MAIL-11) stores old messages with a fresh ``created_at``, and
+    history is not news.
+
     Returns ``{"count": n, "items": [...]}`` with at most ``limit`` items,
     newest first; each item carries the thread id for a deep link, the
     sender, subject, snippet, and whether the sender is a known contact.
@@ -39,11 +43,12 @@ def new_inbox_messages(conn, account_id: str, since_iso: str, *, limit: int = MA
         """SELECT c.id, c.provider_thread_id, c.sender_address, c.sender_name, c.subject, c.snippet, c.timestamp
            FROM communications c
            WHERE c.account_id = ? AND c.created_at >= ? AND c.is_current = 1
+             AND c.timestamp >= datetime(?, '-1 day')
              AND c.direction = 'inbound' AND c.is_read = 0
              AND EXISTS (SELECT 1 FROM communication_labels cl JOIN mailbox_labels ml ON ml.id = cl.label_id
                          WHERE cl.communication_id = c.id AND ml.kind = 'inbox')
            ORDER BY c.timestamp DESC""",
-        (account_id, since_iso),
+        (account_id, since_iso, since_iso),
     ).fetchall()
     count = len(rows)
     rows = rows[:limit]

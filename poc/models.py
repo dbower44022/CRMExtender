@@ -153,7 +153,9 @@ class ParsedEmail:
             "timestamp": self.date.isoformat() if self.date else now,
             "original_text": self.body_plain,
             "original_html": self.body_html,
-            "cleaned_html": self.body_html,
+            # One stored body (Mail Client TDD D-10): cleaned_html is only
+            # written when a cleaning step produces something different.
+            "cleaned_html": None,
             "search_text": self.body_plain,
             "direction": direction,
             "source": "auto_sync",

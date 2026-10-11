@@ -31,6 +31,9 @@ _HARDCODED_DEFAULTS = {
     "mail_mark_read_dwell_ms": "1500",
     # Seconds a sent message waits (and can be undone) before it goes out (MAIL-35)
     "mail_undo_send_seconds": "10",
+    # Historical backfill beyond the initial window: on/off and messages per batch (MAIL-11)
+    "mail_backfill_enabled": "true",
+    "mail_backfill_batch_size": "200",
 }
 
 

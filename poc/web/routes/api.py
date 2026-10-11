@@ -54,12 +54,17 @@ def _has_pending_candidate(contact_id: str, customer_id: str) -> bool:
 
 
 def _comm_html_col(conn) -> str:
-    """Return the column name for cleaned HTML content in communications.
+    """Return the SQL expression for a communication's HTML body (alias ``comm``).
 
-    v18+ schema uses 'cleaned_html'; pre-v18 uses 'body_html'.
+    v18+ stores ``original_html`` and, only when a cleaning step changed
+    it, ``cleaned_html`` (Mail Client TDD D-10, v10.36); readers take the
+    cleaned copy when present and fall back to the original. Pre-v18
+    schemas have a single ``body_html``.
     """
     cols = {r[1] for r in conn.execute("PRAGMA table_info(communications)").fetchall()}
-    return "cleaned_html" if "cleaned_html" in cols else "body_html"
+    if "cleaned_html" in cols:
+        return "COALESCE(comm.cleaned_html, comm.original_html)"
+    return "comm.body_html"
 
 
 def _conversation_children(conn, conversation_id: str, html_col: str) -> list[dict]:
@@ -80,7 +85,7 @@ def _conversation_children(conn, conversation_id: str, html_col: str) -> list[di
     for ch in children_rows:
         latest_comm = conn.execute(
             "SELECT comm.channel, comm.sender_name, comm.timestamp, "
-            f"       comm.{html_col} AS cleaned_html, comm.snippet "
+            f"       {html_col} AS cleaned_html, comm.snippet "
             "FROM communications comm "
             "JOIN conversation_communications cc ON cc.communication_id = comm.id "
             "WHERE cc.conversation_id = ? "
@@ -1399,7 +1404,7 @@ def conversation_preview_api(request: Request, conversation_id: str):
         recent_comms = conn.execute(
             "SELECT comm.id, comm.channel, comm.subject, comm.sender_name, "
             "       comm.sender_address, comm.timestamp, comm.snippet, "
-            f"       comm.direction, comm.{html_col} AS cleaned_html, "
+            f"       comm.direction, {html_col} AS cleaned_html, "
             "       (SELECT cp.contact_id FROM communication_participants cp "
             "        WHERE cp.communication_id = comm.id AND cp.role = 'from' "
             "        LIMIT 1) AS sender_contact_id, "
@@ -1564,7 +1569,7 @@ def conversation_full_api(request: Request, conversation_id: str):
         comms = conn.execute(
             "SELECT comm.id, comm.channel, comm.direction, comm.subject, "
             "       comm.sender_name, comm.sender_address, comm.timestamp, "
-            f"       comm.snippet, comm.{html_col} AS cleaned_html, comm.ai_summary, "
+            f"       comm.snippet, {html_col} AS cleaned_html, comm.ai_summary, "
             "       cc.is_primary, cc.assignment_source, "
             "       (SELECT cp.contact_id FROM communication_participants cp "
             "        WHERE cp.communication_id = comm.id AND cp.role = 'from' "
@@ -2636,6 +2641,8 @@ def settings_system(request: Request):
         "mail_sync_interval_seconds": get_setting(cid, "mail_sync_interval_seconds") or "120",
         "mail_mark_read_dwell_ms": get_setting(cid, "mail_mark_read_dwell_ms") or "1500",
         "mail_undo_send_seconds": get_setting(cid, "mail_undo_send_seconds") or "10",
+        "mail_backfill_enabled": get_setting(cid, "mail_backfill_enabled") or "true",
+        "mail_backfill_batch_size": get_setting(cid, "mail_backfill_batch_size") or "200",
     }
 
 
@@ -2659,18 +2666,23 @@ async def settings_system_update(request: Request):
         "default_phone_country", "allow_self_registration", "email_history_window",
         "summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds",
         "mail_mark_read_dwell_ms", "mail_undo_send_seconds",
+        "mail_backfill_enabled", "mail_backfill_batch_size",
     ]
     for key in _SYSTEM_KEYS:
         val = body.get(key)
         if val is None:
             continue
-        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds", "mail_mark_read_dwell_ms", "mail_undo_send_seconds"):
+        if key == "mail_backfill_enabled":
+            val = "true" if str(val).lower() in ("true", "1", "yes") else "false"
+        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds", "mail_mark_read_dwell_ms", "mail_undo_send_seconds", "mail_backfill_batch_size"):
             try:
                 val = max(0, int(val))
             except (TypeError, ValueError):
                 return JSONResponse({"error": f"{key} must be a whole number"}, status_code=400)
             if key == "mail_sync_interval_seconds":
                 val = max(60, val)
+            if key == "mail_backfill_batch_size":
+                val = min(500, max(10, val))
         set_setting(cid, key, str(val), scope="system")
 
     return {"ok": True}

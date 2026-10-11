@@ -99,6 +99,9 @@ def folders(conn, *, account_ids: list[str]) -> dict:
 
     label_rows = [dict(r) for r in conn.execute(
         f"SELECT * FROM mailbox_labels WHERE account_id IN ({placeholders}) ORDER BY kind, name", account_ids)]
+    snooze_counts = {r["account_id"]: r["n"] for r in conn.execute(
+        f"SELECT account_id, COUNT(*) AS n FROM mail_snoozes WHERE status = 'snoozed' "
+        f"AND account_id IN ({placeholders}) GROUP BY account_id", account_ids)}
 
     unified = {k: {"total": 0, "unread": 0} for k in ("inbox", "starred", "snoozed", "drafts", "sent", "archive")}
     out_accounts = []
@@ -107,7 +110,7 @@ def folders(conn, *, account_ids: list[str]) -> dict:
         system = {
             "starred": {"total": fc.get("starred", 0) or 0, "unread": fc.get("starred_unread", 0) or 0},
             "archive": {"total": fc.get("archive", 0) or 0, "unread": fc.get("archive_unread", 0) or 0},
-            "snoozed": {"total": 0, "unread": 0},
+            "snoozed": {"total": snooze_counts.get(acct["id"], 0), "unread": 0},
         }
         labels = []
         for lr in label_rows:
@@ -159,9 +162,14 @@ def thread_list(conn, *, account_ids: list[str], folder: str | None = "inbox",
     """Threads newest-activity first. ``folder`` is a SYSTEM_FOLDERS key,
     or ``label_row_id`` selects a user label; ``q`` narrows further."""
     sq = _query_for(folder, label_row_id, q)
-    if sq.in_ == "snoozed":
-        return {"total": 0, "items": [], "limit": limit, "offset": offset}
+    snoozed_only = sq.in_ == "snoozed"
+    if snoozed_only:
+        # The Snoozed folder is the local snooze table, not a provider label (MAIL-17).
+        sq.in_ = None
     joins, where, params = predicates(sq, account_ids=account_ids)
+    if snoozed_only:
+        where.append("EXISTS (SELECT 1 FROM mail_snoozes ms WHERE ms.account_id = c.account_id "
+                     "AND ms.thread_id = COALESCE(c.provider_thread_id, c.id) AND ms.status = 'snoozed')")
     matched = (f"SELECT c.id, c.account_id, COALESCE(c.provider_thread_id, c.id) AS thread_id, "
                f"c.timestamp, c.is_read, c.is_starred FROM communications c {' '.join(joins)} "
                f"WHERE {' AND '.join(where)}")
@@ -176,6 +184,10 @@ def thread_list(conn, *, account_ids: list[str], folder: str | None = "inbox",
             ORDER BY last_at DESC LIMIT ? OFFSET ?""",
         params + [max(1, min(int(limit), 200)), max(0, int(offset))])]
     items = [_thread_summary(conn, g) for g in groups]
+    from .mail_snooze import active_snoozes
+    snoozes = active_snoozes(conn, account_ids)
+    for it in items:
+        it["snoozed_until"] = snoozes.get((it["account_id"], it["thread_id"]))
     return {"total": total, "items": items, "limit": limit, "offset": offset}
 
 

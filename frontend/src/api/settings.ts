@@ -30,6 +30,10 @@ export interface SystemSettings {
   mail_mark_read_dwell_ms: string
   /** Seconds a sent message can be undone before it goes out; "0" sends at once (MAIL-35). */
   mail_undo_send_seconds: string
+  /** "true" while the historical backfill fetches older mail one batch per sync (MAIL-11). */
+  mail_backfill_enabled?: string
+  /** Messages fetched per backfill batch, 10–500 (MAIL-11). */
+  mail_backfill_batch_size?: string
 }
 
 interface UserRecord {

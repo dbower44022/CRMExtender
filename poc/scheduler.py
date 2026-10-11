@@ -233,6 +233,12 @@ class SyncScheduler:
                                    communication_id=r.get("communication_id"), error=r.get("failure_reason"))
         except Exception:
             log.exception("Queued send failed")
+        # Snoozed threads whose return time has passed (MAIL-17)
+        try:
+            from .mail_snooze import return_due
+            return_due(now_iso=now.isoformat())
+        except Exception:
+            log.exception("Snooze return pass failed")
         return started
 
     def _start_account(self, account: dict, st: dict) -> None:

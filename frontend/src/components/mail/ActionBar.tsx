@@ -5,9 +5,9 @@
  */
 
 import { useState } from 'react'
-import { Archive, Trash2, ShieldAlert, Star, MailOpen, RotateCcw, X, Loader2, Clock, AlarmClockOff } from 'lucide-react'
+import { Archive, Trash2, ShieldAlert, Star, MailOpen, RotateCcw, X, Loader2, Clock, AlarmClockOff, Hourglass, BellOff } from 'lucide-react'
 import { toast } from 'sonner'
-import { useMailAction, useMailActionQueue, useMailActionResolve, type ThreadSummary } from '../../api/mail.ts'
+import { useMailAction, useMailActionQueue, useMailActionResolve, useMailAwaitingDismiss, type ThreadSummary } from '../../api/mail.ts'
 
 interface Props {
   /** Threads the actions apply to (the open thread, or the selection). */
@@ -15,6 +15,8 @@ interface Props {
   onDone?: () => void
   /** Open the snooze picker for the targets (MAIL-28). */
   onSnooze?: () => void
+  /** Open a follow-up to the single awaiting-reply target (MAIL-47). */
+  onNudge?: (t: ThreadSummary) => void
 }
 
 function Btn({ title, onClick, disabled, children }: { title: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
@@ -32,8 +34,9 @@ function Btn({ title, onClick, disabled, children }: { title: string; onClick: (
   )
 }
 
-export function ActionBar({ targets, onDone, onSnooze }: Props) {
+export function ActionBar({ targets, onDone, onSnooze, onNudge }: Props) {
   const act = useMailAction()
+  const awaitingOp = useMailAwaitingDismiss()
   const queue = useMailActionQueue()
   const resolve = useMailActionResolve()
   const [showQueue, setShowQueue] = useState(false)
@@ -41,6 +44,7 @@ export function ActionBar({ targets, onDone, onSnooze }: Props) {
   const anyStarred = targets.some((t) => t.starred)
   const anyUnread = targets.some((t) => t.unread_count > 0)
   const anySnoozed = targets.some((t) => !!t.snoozed_until)
+  const awaiting = targets.filter((t) => typeof t.awaiting_days === 'number')
   const disabled = targets.length === 0 || act.isPending
 
   const run = (action: string, label: string) => {
@@ -73,6 +77,24 @@ export function ActionBar({ targets, onDone, onSnooze }: Props) {
         <Btn title="Back to inbox now" onClick={() => run('unsnooze', 'Back in the inbox')} disabled={disabled}><AlarmClockOff size={14} /> Unsnooze</Btn>
       ) : (
         <Btn title="Snooze (z)" onClick={() => onSnooze?.()} disabled={disabled || !onSnooze}><Clock size={14} /> Snooze</Btn>
+      )}
+      {awaiting.length > 0 && (
+        <>
+          <Btn title="Follow up: a reply-all to your last message" onClick={() => onNudge?.(awaiting[0])} disabled={awaiting.length !== 1 || !onNudge}>
+            <Hourglass size={14} /> Nudge
+          </Btn>
+          <Btn
+            title="Stop waiting for a reply on this thread"
+            disabled={awaitingOp.isPending}
+            onClick={() =>
+              Promise.all(awaiting.map((t) => awaitingOp.mutateAsync({ account_id: t.account_id, thread_id: t.thread_id, op: 'dismiss' })))
+                .then(() => { toast.success(`Stopped waiting${awaiting.length > 1 ? ` · ${awaiting.length} threads` : ''}`); onDone?.() })
+                .catch((err) => toast.error(err instanceof Error ? err.message : String(err)))
+            }
+          >
+            <BellOff size={14} /> Stop waiting
+          </Btn>
+        </>
       )}
       {act.isPending && <Loader2 size={14} className="animate-spin text-surface-400" />}
       <div className="ml-auto flex items-center gap-2 text-xs">

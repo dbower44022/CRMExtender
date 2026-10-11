@@ -2643,6 +2643,8 @@ def settings_system(request: Request):
         "mail_undo_send_seconds": get_setting(cid, "mail_undo_send_seconds") or "10",
         "mail_backfill_enabled": get_setting(cid, "mail_backfill_enabled") or "true",
         "mail_backfill_batch_size": get_setting(cid, "mail_backfill_batch_size") or "200",
+        "mail_awaiting_reply_days": get_setting(cid, "mail_awaiting_reply_days") or "3",
+        "mail_awaiting_window_days": get_setting(cid, "mail_awaiting_window_days") or "30",
     }
 
 
@@ -2666,7 +2668,8 @@ async def settings_system_update(request: Request):
         "default_phone_country", "allow_self_registration", "email_history_window",
         "summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds",
         "mail_mark_read_dwell_ms", "mail_undo_send_seconds",
-        "mail_backfill_enabled", "mail_backfill_batch_size",
+        "mail_backfill_enabled", "mail_backfill_batch_size", "mail_awaiting_reply_days",
+        "mail_awaiting_window_days",
     ]
     for key in _SYSTEM_KEYS:
         val = body.get(key)
@@ -2674,7 +2677,7 @@ async def settings_system_update(request: Request):
             continue
         if key == "mail_backfill_enabled":
             val = "true" if str(val).lower() in ("true", "1", "yes") else "false"
-        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds", "mail_mark_read_dwell_ms", "mail_undo_send_seconds", "mail_backfill_batch_size"):
+        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds", "mail_mark_read_dwell_ms", "mail_undo_send_seconds", "mail_backfill_batch_size", "mail_awaiting_reply_days", "mail_awaiting_window_days"):
             try:
                 val = max(0, int(val))
             except (TypeError, ValueError):
@@ -2683,6 +2686,10 @@ async def settings_system_update(request: Request):
                 val = max(60, val)
             if key == "mail_backfill_batch_size":
                 val = min(500, max(10, val))
+            if key == "mail_awaiting_reply_days":
+                val = min(60, max(1, val))
+            if key == "mail_awaiting_window_days":
+                val = min(365, max(7, val))
         set_setting(cid, key, str(val), scope="system")
 
     return {"ok": True}

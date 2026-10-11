@@ -152,6 +152,16 @@ export function MailView() {
     setMailThread(t.thread_id)
   }
 
+  // Nudge (MAIL-47): open the thread and start a reply-all to the owner's last
+  // message, which the reply context addresses to its original recipients.
+  const onNudge = (t: ThreadSummary) => {
+    if (!t.latest_message_id) { toast.info('Open the thread and reply from there'); return }
+    setFocusedKey(threadKey(t))
+    setMailThread(t.thread_id)
+    const id = openCompose('reply_all', { communicationId: t.latest_message_id, threadKey: threadKey(t) }, 'inline')
+    if (id === null) toast.info('Close a composer first (three are open)')
+  }
+
   // Apply a chosen return time to the picker's threads; they leave the list like an archive.
   const onSnoozePick = (returnAt: string) => {
     const list = snoozeFor ?? []
@@ -217,7 +227,7 @@ export function MailView() {
       <Panel id="mail-list" defaultSize="38%" minSize="22%" maxSize="75%">
       <section className="relative flex h-full flex-col overflow-hidden">
         <SearchBox ref={searchRef} value={searchQ} onSearch={setSearchQ} saved={saved} onSaveSearch={saveSearch} onRemoveSaved={removeSaved} />
-        <ActionBar targets={targets} onDone={clearSelection} onSnooze={() => setSnoozeFor(targets)} />
+        <ActionBar targets={targets} onDone={clearSelection} onSnooze={() => setSnoozeFor(targets)} onNudge={onNudge} />
         {folder === 'drafts' && <LocalDrafts />}
         <ThreadList
           items={items}

@@ -70,6 +70,11 @@ describe('ThreadList (MAIL-23, MAIL-T14)', () => {
     expect(screen.getAllByTestId('snooze-chip')).toHaveLength(1)
   })
 
+  it('shows days waiting on an awaiting-reply thread (MAIL-47)', () => {
+    setup([thread(1, { awaiting_days: 4, awaiting_since: '2026-10-07T12:00:00+00:00' })])
+    expect(screen.getByTestId('awaiting-chip')).toHaveTextContent('4 days')
+  })
+
   it('shows the empty state', () => {
     setup([])
     expect(screen.getByText('Nothing here.')).toBeInTheDocument()

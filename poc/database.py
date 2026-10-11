@@ -389,6 +389,15 @@ CREATE TABLE IF NOT EXISTS mail_snoozes (
 CREATE INDEX IF NOT EXISTS idx_mail_snoozes_due ON mail_snoozes(status, return_at);
 CREATE INDEX IF NOT EXISTS idx_mail_snoozes_thread ON mail_snoozes(account_id, thread_id, status);
 
+-- Threads the owner stopped tracking in the awaiting-reply list (v32, MAIL-47)
+CREATE TABLE IF NOT EXISTS mail_awaiting_dismissed (
+    account_id   TEXT NOT NULL REFERENCES provider_accounts(id) ON DELETE CASCADE,
+    thread_id    TEXT NOT NULL,
+    dismissed_at TEXT NOT NULL,
+    created_by   TEXT REFERENCES users(id) ON DELETE SET NULL,
+    PRIMARY KEY (account_id, thread_id)
+);
+
 -- Conversation ↔ Communication M:N join
 CREATE TABLE IF NOT EXISTS conversation_communications (
     conversation_id   TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,

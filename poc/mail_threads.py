@@ -46,6 +46,7 @@ SYSTEM_FOLDERS = {
     "inbox": "inbox", "starred": "starred", "sent": "sent", "drafts": "drafts",
     "archive": "archive", "all": "anywhere", "trash": "trash", "spam": "spam",
     "important": "important", "unread": "unread", "snoozed": "snoozed",
+    "awaiting": "awaiting",
 }
 
 
@@ -62,7 +63,8 @@ def _account_rows(conn, account_ids: list[str]) -> list[dict]:
         f"FROM provider_accounts WHERE id IN ({placeholders}) ORDER BY created_at", account_ids)]
 
 
-def folders(conn, *, account_ids: list[str]) -> dict:
+def folders(conn, *, account_ids: list[str], awaiting_days: int | None = None,
+            awaiting_window: int | None = None) -> dict:
     """``{"accounts": [...], "unified": {...}}`` with locally computed counts."""
     accounts = _account_rows(conn, account_ids)
     if not accounts:
@@ -99,11 +101,13 @@ def folders(conn, *, account_ids: list[str]) -> dict:
 
     label_rows = [dict(r) for r in conn.execute(
         f"SELECT * FROM mailbox_labels WHERE account_id IN ({placeholders}) ORDER BY kind, name", account_ids)]
+    from .mail_awaiting import DEFAULT_DAYS, counts as awaiting_counts
+    awaiting = awaiting_counts(conn, account_ids, awaiting_days or DEFAULT_DAYS, awaiting_window)
     snooze_counts = {r["account_id"]: r["n"] for r in conn.execute(
         f"SELECT account_id, COUNT(*) AS n FROM mail_snoozes WHERE status = 'snoozed' "
         f"AND account_id IN ({placeholders}) GROUP BY account_id", account_ids)}
 
-    unified = {k: {"total": 0, "unread": 0} for k in ("inbox", "starred", "snoozed", "drafts", "sent", "archive")}
+    unified = {k: {"total": 0, "unread": 0} for k in ("inbox", "starred", "snoozed", "awaiting", "drafts", "sent", "archive")}
     out_accounts = []
     for acct in accounts:
         fc = flag_counts.get(acct["id"], {})
@@ -111,6 +115,7 @@ def folders(conn, *, account_ids: list[str]) -> dict:
             "starred": {"total": fc.get("starred", 0) or 0, "unread": fc.get("starred_unread", 0) or 0},
             "archive": {"total": fc.get("archive", 0) or 0, "unread": fc.get("archive_unread", 0) or 0},
             "snoozed": {"total": snooze_counts.get(acct["id"], 0), "unread": 0},
+            "awaiting": {"total": awaiting.get(acct["id"], 0), "unread": 0},
         }
         labels = []
         for lr in label_rows:
@@ -125,7 +130,7 @@ def folders(conn, *, account_ids: list[str]) -> dict:
             labels.append(entry)
             if lr["kind"] in ("inbox", "sent", "drafts", "trash", "spam", "important"):
                 system[lr["kind"]] = {"total": c["total"], "unread": c["unread"]}
-        for key in ("inbox", "starred", "snoozed", "drafts", "sent", "archive"):
+        for key in ("inbox", "starred", "snoozed", "awaiting", "drafts", "sent", "archive"):
             v = system.get(key, {"total": 0, "unread": 0})
             unified[key]["total"] += v["total"]
             unified[key]["unread"] += v["unread"]
@@ -158,18 +163,25 @@ def _query_for(folder: str | None, label_row_id: str | None, q: str | None) -> S
 
 def thread_list(conn, *, account_ids: list[str], folder: str | None = "inbox",
                 label_row_id: str | None = None, q: str | None = None,
-                limit: int = 50, offset: int = 0) -> dict:
+                limit: int = 50, offset: int = 0, awaiting_days: int | None = None,
+                awaiting_window: int | None = None) -> dict:
     """Threads newest-activity first. ``folder`` is a SYSTEM_FOLDERS key,
-    or ``label_row_id`` selects a user label; ``q`` narrows further."""
+    or ``label_row_id`` selects a user label; ``q`` narrows further.
+    ``awaiting_days`` / ``awaiting_window`` bound the Awaiting reply folder (MAIL-47)."""
     sq = _query_for(folder, label_row_id, q)
     snoozed_only = sq.in_ == "snoozed"
-    if snoozed_only:
-        # The Snoozed folder is the local snooze table, not a provider label (MAIL-17).
+    awaiting_only = sq.in_ == "awaiting"
+    if snoozed_only or awaiting_only:
+        # These folders come from local state, not a provider label (MAIL-17, MAIL-47).
         sq.in_ = None
     joins, where, params = predicates(sq, account_ids=account_ids)
     if snoozed_only:
         where.append("EXISTS (SELECT 1 FROM mail_snoozes ms WHERE ms.account_id = c.account_id "
                      "AND ms.thread_id = COALESCE(c.provider_thread_id, c.id) AND ms.status = 'snoozed')")
+    if awaiting_only:
+        from .mail_awaiting import AWAITING_PREDICATE, DEFAULT_DAYS, bounds
+        where.append(f"({AWAITING_PREDICATE})")
+        params.extend(bounds(awaiting_days or DEFAULT_DAYS, awaiting_window))
     matched = (f"SELECT c.id, c.account_id, COALESCE(c.provider_thread_id, c.id) AS thread_id, "
                f"c.timestamp, c.is_read, c.is_starred FROM communications c {' '.join(joins)} "
                f"WHERE {' AND '.join(where)}")
@@ -188,6 +200,11 @@ def thread_list(conn, *, account_ids: list[str], folder: str | None = "inbox",
     snoozes = active_snoozes(conn, account_ids)
     for it in items:
         it["snoozed_until"] = snoozes.get((it["account_id"], it["thread_id"]))
+    if awaiting_only:
+        from .mail_awaiting import days_waiting
+        for it, g in zip(items, groups):
+            it["awaiting_since"] = g["last_at"]
+            it["awaiting_days"] = days_waiting(g["last_at"])
     return {"total": total, "items": items, "limit": limit, "offset": offset}
 
 

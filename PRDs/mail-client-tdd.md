@@ -1,8 +1,8 @@
 # Mail Client — TDD
 
-**Version:** 1.23
-**Last Updated:** 10-11-26 14:14
-**Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 approved, D-15–D-45 written back during the build and binding until revised here
+**Version:** 1.24
+**Last Updated:** 10-11-26 19:32
+**Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 approved, D-15–D-46 written back during the build and binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
 **Product TDD:** [product-tdd.md]
@@ -425,6 +425,16 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Constraints/Tradeoffs:** VACUUM needs the database idle and free space equal to the file; the migration skips it when locked and `python -m poc.migrate_to_v31 --vacuum-only` finishes the job after a server stop.
 
+### D-46 Awaiting reply: computed from the mirror, opt-outs stored
+
+**Decision:** The Awaiting reply list (MAIL-47) is a query, not a table: a thread is listed when its newest current message is outbound from the owner, has at least one To or Cc recipient, is older than `mail_awaiting_reply_days` (system setting, default 3, clamped 1–60) but sent within `mail_awaiting_window_days` (default 30, clamped 7–365; on the live database 622 threads were unanswered at three days across eleven years of sent mail, 10-11-26), carries no trash, spam, or draft label, and the thread is not in `mail_awaiting_dismissed`. The folder appears in the unified set and per account with its thread count as the badge. "Nudge" opens the composer as a reply-all to the owner's last message, which the existing reply context addresses to that message's original To and Cc. "Stop waiting" writes the opt-out row; "restore" deletes it.
+
+**Rationale:** Computing on read means a reply clears the entry the moment the sync stores it, with no state to keep in step and nothing for the scheduler to do. Two tunables: how long silence must last, and how far back a sent message can be before silence stops being a reminder.
+
+**Alternatives Rejected:** An AI-drafted nudge body — that is MAIL-48's territory and spends tokens; the plain composer with the quoted message is enough. A per-thread reminder time — snooze already covers "remind me later".
+
+**Constraints/Tradeoffs:** Automated recipients (newsletters, no-reply addresses) the owner writes to will be listed until dismissed; a rule layer can exclude them when MAIL-46 lands. A thread the owner re-sends to is re-listed after the threshold, as intended.
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -451,6 +461,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.24 | 10-11-26 19:32 | Claude (Claude Code) | Write-back for MAIL-47: D-46 (awaiting reply computed on read; opt-outs stored). |
 | 1.23 | 10-11-26 14:14 | Claude (Claude Code) | Write-back for Phase 1 close-out (v10.36): D-43 backfill job, D-44 snooze, D-45 one HTML body (D-10 delivered). |
 | 1.22 | 10-09-26 12:43 | Claude (Claude Code) | D-42: provider drafts never join conversations; a dropped draft is deleted (exception to D-22). v10.31. |
 | 1.21 | 10-09-26 10:07 | Claude (Claude Code) | Write-back for MAIL-39: D-41 (new-mail notifications). |

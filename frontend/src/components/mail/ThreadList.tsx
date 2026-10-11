@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { Clock, Paperclip, Star } from 'lucide-react'
+import { Clock, Hourglass, Paperclip, Star } from 'lucide-react'
 import { threadKey, type ThreadSummary } from '../../api/mail.ts'
 import { chipStyle } from '../../lib/accountColor.ts'
 import { describeReturn } from '../../lib/snoozeTimes.ts'
@@ -207,6 +207,10 @@ export function ThreadList(props: ThreadListProps) {
                       {t.snoozed_until ? (
                         <span className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-50 px-1 text-[11px] text-amber-700" title={`Returns ${describeReturn(t.snoozed_until)}`} data-testid="snooze-chip">
                           <Clock size={11} /> {describeReturn(t.snoozed_until)}
+                        </span>
+                      ) : typeof t.awaiting_days === 'number' ? (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded bg-surface-100 px-1 text-[11px] text-surface-600" title={`Sent ${fmtDate(t.last_at)}, no reply yet`} data-testid="awaiting-chip">
+                          <Hourglass size={11} /> {t.awaiting_days === 0 ? 'today' : `${t.awaiting_days} day${t.awaiting_days === 1 ? '' : 's'}`}
                         </span>
                       ) : (
                         <span className={`shrink-0 text-xs ${unread ? 'font-semibold text-primary-700' : 'text-surface-500'}`}>{fmtDate(t.last_at)}</span>

@@ -19,7 +19,7 @@ export interface ShortcutHandlers {
   compose: () => void
   /** Open the snooze picker for the selection or the focused thread (MAIL-28). */
   snooze: () => void
-  goFolder: (folder: 'inbox' | 'starred' | 'snoozed' | 'sent' | 'drafts' | 'all') => void
+  goFolder: (folder: 'inbox' | 'starred' | 'snoozed' | 'awaiting' | 'sent' | 'drafts' | 'all') => void
   goAccount: (index: number) => void   // 0 = unified, 1..9 = nth account
   focusSearch: () => void
   toggleSheet: () => void
@@ -65,6 +65,7 @@ export function useMailShortcuts(enabled: boolean, h: ShortcutHandlers) {
   useHotkeys('g', () => { takeG(); armG() }, { ...OPTS, enabled }, [h])
   useHotkeys('i', () => { if (takeG()) h.goFolder('inbox') }, { ...OPTS, enabled }, [h])
   useHotkeys('t', () => { if (takeG()) h.goFolder('sent') }, { ...OPTS, enabled }, [h])
+  useHotkeys('w', () => { if (takeG()) h.goFolder('awaiting') }, { ...OPTS, enabled }, [h])
   useHotkeys('d', () => { if (takeG()) h.goFolder('drafts') }, { ...OPTS, enabled }, [h])
   useHotkeys('shift+o', () => { /* handled by the reading pane (expand all) */ }, { enabled: false }, [])
 
@@ -93,7 +94,7 @@ export const SHORTCUT_ROWS: { keys: string; action: string; note?: string }[] = 
   { keys: 'r / a / f', action: 'Reply / reply all / forward the open thread' },
   { keys: 'c', action: 'Compose' },
   { keys: 'Shift+O', action: 'Expand every message in the open thread' },
-  { keys: 'g then i / s / z / t / d / Shift+A', action: 'Go to Inbox / Starred / Snoozed / Sent / Drafts / All mail' },
+  { keys: 'g then i / s / z / w / t / d / Shift+A', action: 'Go to Inbox / Starred / Snoozed / Awaiting reply / Sent / Drafts / All mail' },
   { keys: '0, 1 … 9', action: 'Unified inbox, or the nth account' },
   { keys: '/', action: 'Search mail (Enter to run, Esc to clear)' },
   { keys: 'z', action: 'Snooze (picker: later today, tomorrow, weekend, next week, custom)' },

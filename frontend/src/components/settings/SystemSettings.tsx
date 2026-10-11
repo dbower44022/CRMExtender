@@ -32,6 +32,8 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
   const [syncInterval, setSyncInterval] = useState(settings.mail_sync_interval_seconds ?? '120')
   const [backfillEnabled, setBackfillEnabled] = useState((settings.mail_backfill_enabled ?? 'true') === 'true')
   const [backfillBatch, setBackfillBatch] = useState(settings.mail_backfill_batch_size ?? '200')
+  const [awaitingDays, setAwaitingDays] = useState(settings.mail_awaiting_reply_days ?? '3')
+  const [awaitingWindow, setAwaitingWindow] = useState(settings.mail_awaiting_window_days ?? '30')
   const [syncEnabled, setSyncEnabled] = useState(settings.sync_enabled === 'true')
   const [allowSelfReg, setAllowSelfReg] = useState(settings.allow_self_registration === 'true')
 
@@ -47,6 +49,8 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
         mail_sync_interval_seconds: syncInterval,
         mail_backfill_enabled: backfillEnabled ? 'true' : 'false',
         mail_backfill_batch_size: backfillBatch,
+        mail_awaiting_reply_days: awaitingDays,
+        mail_awaiting_window_days: awaitingWindow,
         sync_enabled: syncEnabled ? 'true' : 'false',
         allow_self_registration: allowSelfReg ? 'true' : 'false',
       },
@@ -224,6 +228,40 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
           />
           <p className="mt-1 text-xs text-surface-500">
             After the initial window, each sync run fetches this many older messages until the whole mailbox is stored. Switching backfill off stops at the next checkpoint; switching it on resumes there. Backfilled conversations are summarized like new ones, which costs AI calls.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700">
+            Awaiting reply after (days)
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={60}
+            value={awaitingDays}
+            onChange={(e) => setAwaitingDays(e.target.value)}
+            className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            A thread you wrote to last, with no answer for this many days, appears under Awaiting reply in Mail.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700">
+            Awaiting reply window (days)
+          </label>
+          <input
+            type="number"
+            min={7}
+            max={365}
+            value={awaitingWindow}
+            onChange={(e) => setAwaitingWindow(e.target.value)}
+            className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            Only messages you sent within this many days are listed. Older unanswered mail is history, not a reminder.
           </p>
         </div>
 

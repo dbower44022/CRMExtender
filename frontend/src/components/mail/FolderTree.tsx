@@ -1,6 +1,6 @@
 /** Folder tree: unified set on top, then one section per account (MAIL-22). */
 
-import { Inbox, Star, Clock, FileText, Send, Archive, Trash2, ShieldAlert, Tag, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Inbox, Star, Clock, Hourglass, FileText, Send, Archive, Trash2, ShieldAlert, Tag, RefreshCw, AlertTriangle } from 'lucide-react'
 import type { MailAccountFolders, MailFolders } from '../../api/mail.ts'
 import { useLiveStore } from '../../stores/live.ts'
 
@@ -8,6 +8,7 @@ const UNIFIED: { key: string; label: string; icon: typeof Inbox }[] = [
   { key: 'inbox', label: 'Inbox', icon: Inbox },
   { key: 'starred', label: 'Starred', icon: Star },
   { key: 'snoozed', label: 'Snoozed', icon: Clock },
+  { key: 'awaiting', label: 'Awaiting reply', icon: Hourglass },
   { key: 'drafts', label: 'Drafts', icon: FileText },
   { key: 'sent', label: 'Sent', icon: Send },
 ]
@@ -15,6 +16,7 @@ const UNIFIED: { key: string; label: string; icon: typeof Inbox }[] = [
 const PER_ACCOUNT: { key: string; label: string; icon: typeof Inbox }[] = [
   { key: 'inbox', label: 'Inbox', icon: Inbox },
   { key: 'starred', label: 'Starred', icon: Star },
+  { key: 'awaiting', label: 'Awaiting reply', icon: Hourglass },
   { key: 'sent', label: 'Sent', icon: Send },
   { key: 'drafts', label: 'Drafts', icon: FileText },
   { key: 'archive', label: 'Archive', icon: Archive },
@@ -97,7 +99,7 @@ function AccountSection({
             active={isActiveAccount && activeFolder === f.key}
             label={f.label}
             icon={f.icon}
-            unread={c?.unread}
+            unread={f.key === 'awaiting' ? c?.total : c?.unread}
             total={c?.total}
             onClick={() => onSelect(account.id, f.key)}
           />
@@ -157,7 +159,7 @@ export function FolderTree({ data, loading, activeAccountId, activeFolder, onSel
             active={unifiedActive && activeFolder === f.key}
             label={f.label}
             icon={f.icon}
-            unread={c?.unread}
+            unread={f.key === 'awaiting' ? c?.total : c?.unread}
             total={c?.total}
             onClick={() => onSelect('unified', f.key)}
           />

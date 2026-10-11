@@ -56,6 +56,7 @@ describe('useMailShortcuts (MAIL-30)', () => {
     key('g'); key('i'); expect(h.goFolder).toHaveBeenLastCalledWith('inbox')
     key('g'); key('t'); expect(h.goFolder).toHaveBeenLastCalledWith('sent')
     key('g'); key('z'); expect(h.goFolder).toHaveBeenLastCalledWith('snoozed')
+    key('g'); key('w'); expect(h.goFolder).toHaveBeenLastCalledWith('awaiting')
     expect(h.snooze).not.toHaveBeenCalled()
   })
 

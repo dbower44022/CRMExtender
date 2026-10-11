@@ -34,6 +34,10 @@ export interface SystemSettings {
   mail_backfill_enabled?: string
   /** Messages fetched per backfill batch, 10–500 (MAIL-11). */
   mail_backfill_batch_size?: string
+  /** Days without an answer before a sent thread is listed under Awaiting reply, 1–60 (MAIL-47). */
+  mail_awaiting_reply_days?: string
+  /** Only messages sent within this many days count as awaiting, 7–365 (MAIL-47). */
+  mail_awaiting_window_days?: string
 }
 
 interface UserRecord {

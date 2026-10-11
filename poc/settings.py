@@ -34,6 +34,10 @@ _HARDCODED_DEFAULTS = {
     # Historical backfill beyond the initial window: on/off and messages per batch (MAIL-11)
     "mail_backfill_enabled": "true",
     "mail_backfill_batch_size": "200",
+    # Days without an answer before a sent thread is listed as awaiting a reply (MAIL-47)
+    "mail_awaiting_reply_days": "3",
+    # ...and only messages sent within this many days count; older silence is history
+    "mail_awaiting_window_days": "30",
 }
 
 

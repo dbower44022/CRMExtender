@@ -136,8 +136,12 @@ def mail_folders(request: Request):
     from ...mail_threads import folders
     from ...scheduler import get_scheduler
 
+    from ...mail_awaiting import awaiting_days, awaiting_window
+
+    cid = request.state.customer_id
     with get_connection() as conn:
-        out = folders(conn, account_ids=_visible_account_ids(request))
+        out = folders(conn, account_ids=_visible_account_ids(request),
+                      awaiting_days=awaiting_days(cid), awaiting_window=awaiting_window(cid))
     sched = get_scheduler()
     st = sched.status()["accounts"] if (sched is not None and sched.running) else {}
     for a in out["accounts"]:
@@ -150,19 +154,44 @@ def mail_folders(request: Request):
 @router.get("/mail/threads")
 def mail_threads(request: Request, folder: str = "inbox", account_id: str | None = None,
                  label_id: str | None = None, q: str | None = None, limit: int = 50, offset: int = 0):
-    """Threads in a folder (``inbox``, ``starred``, ``sent``, ``drafts``,
-    ``archive``, ``all``, ``trash``, ``spam``, ``important``, ``unread``) or
+    """Threads in a folder (``inbox``, ``starred``, ``snoozed``, ``awaiting``, ``sent``,
+    ``drafts``, ``archive``, ``all``, ``trash``, ``spam``, ``important``, ``unread``) or
     under a user label (``label_id`` = mailbox_labels.id), newest first.
     ``account_id`` narrows to one account; omitted or ``unified`` means all."""
+    from ...mail_awaiting import awaiting_days, awaiting_window
     from ...mail_threads import thread_list
 
     accounts = _scope(request, account_id)
+    cid = request.state.customer_id
     with get_connection() as conn:
         try:
             return thread_list(conn, account_ids=accounts, folder=None if label_id else folder,
-                               label_row_id=label_id, q=q, limit=limit, offset=offset)
+                               label_row_id=label_id, q=q, limit=limit, offset=offset,
+                               awaiting_days=awaiting_days(cid), awaiting_window=awaiting_window(cid))
         except ValueError as exc:
             return _err(str(exc))
+
+
+@router.post("/mail/awaiting/{account_id}/{thread_id}/dismiss")
+def mail_awaiting_dismiss(request: Request, account_id: str, thread_id: str):
+    """Stop listing a thread under Awaiting reply (MAIL-47). Owner only."""
+    from ...mail_awaiting import dismiss
+    if _account_role(request, account_id) != "owner":
+        return _err("Only the account owner can change its awaiting list", 403)
+    with get_connection() as conn:
+        dismiss(conn, account_id, thread_id, request.state.user["id"])
+    return {"ok": True, "account_id": account_id, "thread_id": thread_id, "dismissed": True}
+
+
+@router.post("/mail/awaiting/{account_id}/{thread_id}/restore")
+def mail_awaiting_restore(request: Request, account_id: str, thread_id: str):
+    """Track a dismissed thread again (MAIL-47). Owner only."""
+    from ...mail_awaiting import restore
+    if _account_role(request, account_id) != "owner":
+        return _err("Only the account owner can change its awaiting list", 403)
+    with get_connection() as conn:
+        n = restore(conn, account_id, thread_id)
+    return {"ok": True, "account_id": account_id, "thread_id": thread_id, "dismissed": False, "restored": n}
 
 
 @router.get("/mail/threads/{account_id}/{thread_id}")

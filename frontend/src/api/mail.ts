@@ -66,6 +66,9 @@ export interface ThreadSummary {
   latest_message_id: string | null
   /** ISO return time while the thread is snoozed (MAIL-17); null or absent otherwise. */
   snoozed_until?: string | null
+  /** In the Awaiting reply folder: when the owner's unanswered message went out, and how many days ago (MAIL-47). */
+  awaiting_since?: string | null
+  awaiting_days?: number | null
 }
 
 /** Stable key for a thread row: a thread id is unique only within its account. */
@@ -213,6 +216,16 @@ export function useMailAction() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mail'] })
     },
+  })
+}
+
+/** Stop or resume tracking a thread in the Awaiting reply folder (MAIL-47). */
+export function useMailAwaitingDismiss() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ account_id, thread_id, op }: { account_id: string; thread_id: string; op: 'dismiss' | 'restore' }) =>
+      post<{ ok: boolean }>(`/mail/awaiting/${encodeURIComponent(account_id)}/${encodeURIComponent(thread_id)}/${op}`, {}),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['mail'] }) },
   })
 }
 

@@ -1,8 +1,8 @@
 # Mail Client — Functional Area PRD
 
-**Version:** 1.32
-**Last Updated:** 10-11-26 19:09
-**Status:** Approved 10-08-26 by the product owner — Phases 0–2 complete through MAIL-40 (v10.37, 10-11-26) plus first-look fixes; Phases 3–5 not started
+**Version:** 1.33
+**Last Updated:** 10-11-26 19:32
+**Status:** Approved 10-08-26 by the product owner — Phases 0–2 complete; Phase 3 started with MAIL-47 (v10.39, 10-11-26) plus first-look fixes; Phases 3–5 not started
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
 **Parent Documents:** [communication-entity-base-prd.md], [communication-provider-sync-prd.md], [outbound-email-prd.md], [gui-functional-requirements-prd.md]
@@ -443,10 +443,10 @@ Phase 3 — Every account
 
 Phase 4 — CRM-only intelligence
 - [ ] MAIL-46: Priority inbox: rule layer (known contact, direct address, owner replied) then AI classifier with per-sync token budget
-- [ ] MAIL-47: Awaiting-reply tracking from sent mail without an answer; reminder list and nudge action
+- [x] MAIL-47: Awaiting-reply tracking from sent mail without an answer; reminder list and nudge action — v10.39, 10-11-26 (`poc/mail_awaiting.py`: a thread whose newest message is the owner's, sent to someone, older than `mail_awaiting_reply_days` (default 3) but sent within `mail_awaiting_window_days` (default 30), both on Settings → System, with nothing since is listed under the new **Awaiting reply** folder (unified and per account, count badge, `g` then `w`); computed on read, so a stored reply clears it; trash, spam, and drafts never count. Thread rows show days waiting; the bar offers **Nudge** (opens a reply-all to the owner's last message, addressed to its original recipients) and **Stop waiting** (`mail_awaiting_dismissed`, schema v32; `POST /mail/awaiting/{account}/{thread}/dismiss|restore`, owner-only). TDD D-46)
 - [ ] MAIL-48: AI reply draft from conversation summary and thread, inserted into the composer for review
 - [ ] MAIL-49: Batch API use for backfill summarization; token accounting visible in Settings → System
-- [ ] MAIL-50: Tests for MAIL-46–49
+- [ ] MAIL-50: Tests for MAIL-46–49 (MAIL-47 covered by `tests/test_mail_awaiting.py`, 10-11-26)
 
 Phase 5 — Hardening
 - [ ] MAIL-51: Encrypted credential storage replacing token files
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.33 | 10-11-26 19:32 | Claude (Claude Code) | MAIL-47 checked off (v10.39): Awaiting reply folder, Nudge, Stop waiting, threshold setting. First Phase 3 task. |
 | 1.32 | 10-11-26 19:09 | Claude (Claude Code) | v10.38 first-look fix on MAIL-25: the message frame never shows its own vertical scrollbar (a dark bar down the reading pane on wide promotional mail under a dark desktop theme); height is measured from the body plus any horizontal scrollbar; frame controls forced light. |
 | 1.31 | 10-11-26 18:53 | Claude (Claude Code) | MAIL-28 checked off (v10.37): snooze picker, Snoozed folder chip, Unsnooze. Phase 2 complete. |
 | 1.30 | 10-11-26 14:14 | Claude (Claude Code) | Phase 1 closed (v10.36): MAIL-11 backfill job, MAIL-17 snooze, MAIL-18 one HTML body, MAIL-20 tests checked off; status line updated. |

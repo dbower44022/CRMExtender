@@ -15,8 +15,10 @@ const QUICK_FILTERS: Record<string, QuickFilterDef[]> = {
     { label: 'Active', filter: { field_key: 'status', operator: 'equals', value: 'active' } },
   ],
   conversation: [
-    { label: 'Open', filter: { field_key: 'status', operator: 'equals', value: 'open' } },
-    { label: 'Closed', filter: { field_key: 'status', operator: 'equals', value: 'closed' } },
+    // ai_status carries open/closed/uncertain; `status` is the record state ('active').
+    { label: 'Open', filter: { field_key: 'ai_status', operator: 'equals', value: 'open' } },
+    { label: 'Closed', filter: { field_key: 'ai_status', operator: 'equals', value: 'closed' } },
+    { label: 'Uncertain', filter: { field_key: 'ai_status', operator: 'equals', value: 'uncertain' } },
   ],
   event: [
     { label: 'Upcoming', filter: { field_key: 'start', operator: 'is_after', value: new Date().toISOString().slice(0, 10) } },

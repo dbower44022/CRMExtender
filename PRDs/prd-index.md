@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 25.1
-**Last Updated:** 10-09-26 16:06
+**Version:** 25.2
+**Last Updated:** 10-11-26 12:21
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V25.2 (10-11-26):** Owner first-look fix v10.33 on the Conversations grid (`views-grid-prd.md` 6.2): Account column shows every contributing mailbox and is a sortable, filterable default column; AI Status filterable as a select and the quick filters corrected; view sort direction honoured (newest first); migration v29 repairs 560 conversations hidden by a missing customer id and adds the Account column to existing views.
 
 > **V25.1 (10-09-26):** Mail Client build status recorded. Phases 0–2 of `mail-client-prd.md` are built through MAIL-40 (releases v10.5–v10.26, 10-08-26 to 10-09-26): provider adapter, mirror schema (v23–v28), outbox, scheduler, full-text search, the `/app/mail` surface with keyboard model, composer, live updates, accounts page, and notifications; decisions D-15–D-42 written back to `mail-client-tdd.md`. Owner first-look fixes v10.27–v10.32 (list splitter, account label colours, merge survivor name, inline grid editing switched off — `views-grid-prd.md` 6.1 — record preview collapsed in Mail, provider drafts kept out of conversations). Remaining: MAIL-11, 17, 18, 20 and Phases 3–5.
 
@@ -121,7 +123,7 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | &nbsp;&nbsp;└ Project Entity TDD | 1.0 | `project-entity-tdd.md` | Draft — Living document, 7 sections | 2026-02-23 |
 | └ Entity Relations & Aggregation | 1.0 | `project-relations-prd.md` | Draft — Key Processes, task/test plan | 2026-02-23 |
 | Outbound Email | 2.0 | `outbound-email-prd.md` | Draft — Terminology standardized | 2026-02-22 |
-| Views & Grid | 6.1 | `views-grid-prd.md` | Draft — inline cell editing switched off by owner decision (v10.30) | 10-09-26 |
+| Views & Grid | 6.2 | `views-grid-prd.md` | Draft — conversations grid: account column, filters, sort direction fixed (v10.33) | 10-11-26 |
 | Data Sources | 1.0 | `data-sources-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Permissions & Sharing | 2.0 | `permissions-sharing-prd.md` | Draft — Terminology standardized | 2026-02-22 |
 | Adaptive Grid Intelligence | 2.0 | `adaptive-grid-intelligence-prd.md` | Draft — Terminology standardized | 2026-02-22 |

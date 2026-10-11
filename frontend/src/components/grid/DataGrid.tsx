@@ -66,7 +66,10 @@ export function DataGrid() {
   } = useInfiniteViewData({
     viewId: activeViewId,
     sort: sort ?? viewConfig?.sort_field,
-    sortDirection: sortDirection ?? (viewConfig?.sort_direction as 'asc' | 'desc'),
+    // The store's direction only applies to a column the user clicked; with no
+    // user sort the view's own direction rules (it was being overridden by the
+    // store's 'asc' default, so "newest first" views listed oldest first).
+    sortDirection: sort ? sortDirection : (viewConfig?.sort_direction as 'asc' | 'desc' | undefined),
     search,
     quickFilters,
     searchFilters,

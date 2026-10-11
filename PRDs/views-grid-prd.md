@@ -2,9 +2,9 @@
 
 ## CRMExtender — Polymorphic View & Grid Subsystem
 
-**Version:** 6.1
+**Version:** 6.2
 **Date:** 02-22-26
-**Last Updated:** 10-09-26 12:33
+**Last Updated:** 10-11-26 12:21
 **Status:** Draft
 **Parent Document:** [CRMExtender PRD v1.1](PRD.md)
 
@@ -1796,5 +1796,6 @@ General UI terms (Entity Bar, Detail Panel, Docked Window, Card-Based Architectu
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 6.2 | 10-11-26 12:21 | Claude (Claude Code) | Conversations grid first-look fixes (v10.33): the Account column lists every mailbox that contributed a message and is sortable and filterable, and is a default column (existing conversation views gain it via migration v29); AI Status is a select filter (open/closed/uncertain) and the Open/Closed quick filters use it (they filtered the always-'active' record status and matched nothing); activity dates and counts are filterable; a view's own sort direction is honoured when no column sort is active (the grid sent 'asc' for every view, so newest-first views listed oldest first); 560 conversations with no customer id, invisible under the visibility rule, repaired by migration v29. |
 | 6.1 | 10-09-26 12:33 | Claude (Claude Code) | Inline cell editing switched off at the owner's request (v10.30): Core Principle 6 and US-V22 annotated; row-menu Edit opens the record form. Change log added. |
 | 6.0 | 02-22-26 | — | Prior revision (no change log kept before 6.1). |

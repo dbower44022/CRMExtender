@@ -909,8 +909,8 @@ def cmd_migrate(args: argparse.Namespace) -> None:
     import importlib
     import sqlite3 as _sqlite3
 
-    LATEST_VERSION = 28
-    MIGRATIONS = list(range(2, LATEST_VERSION + 1))  # [2, 3, ..., 28]
+    LATEST_VERSION = 29
+    MIGRATIONS = list(range(2, LATEST_VERSION + 1))  # [2, 3, ..., 29]
 
     db_path = args.db
     if not db_path:
@@ -928,7 +928,8 @@ def cmd_migrate(args: argparse.Namespace) -> None:
 
     # Fresh databases (created by init_db) have user_version=0 but already
     # have the latest schema.  Detect this by checking for a table that
-    # only exists in v25+ and a column that only exists in v28+.
+    # only exists in v25+ and a column that only exists in v28+ (v29 is a
+    # data repair with no schema marker; a fresh init_db has nothing to repair).
     if current == 0:
         conn = _sqlite3.connect(str(db_path))
         try:

@@ -71,7 +71,7 @@ _DEFAULT_COLUMNS = {
     "contact": ["name", "email", "company_name", "company_id", "score", "source"],
     "company": ["name", "domain", "industry", "score", "status"],
     "conversation": ["title", "initiator", "initiator_contact_id", "ai_status", "status",
-                      "topic_name", "communication_count", "last_activity_at"],
+                      "account_name", "topic_name", "communication_count", "last_activity_at"],
     "communication": ["channel", "sender_name", "sender_address", "to_addresses",
                        "subject", "conversation_id", "conversation_title",
                        "timestamp", "direction", "snippet"],

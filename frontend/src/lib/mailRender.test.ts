@@ -39,6 +39,13 @@ describe('buildFrameDocument', () => {
     expect(doc).toContain('src="/api/v1/mail/attachments/cid/m1/abc%40x"')
     expect(doc).toContain('var FRAME_ID="f1"')
   })
+
+  it('never scrolls vertically inside the frame and keeps light controls', () => {
+    const doc = buildFrameDocument('<p>x</p>', 'f2')
+    expect(doc).toContain('html{overflow-y:hidden;overflow-x:auto;}')
+    expect(doc).toContain('<meta name="color-scheme" content="light">')
+    expect(doc).toContain('getBoundingClientRect')
+  })
 })
 
 describe('per-sender allow list', () => {

@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
-**Version:** 1.31
-**Last Updated:** 10-11-26 18:53
+**Version:** 1.32
+**Last Updated:** 10-11-26 19:09
 **Status:** Approved 10-08-26 by the product owner — Phases 0–2 complete through MAIL-40 (v10.37, 10-11-26) plus first-look fixes; Phases 3–5 not started
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.32 | 10-11-26 19:09 | Claude (Claude Code) | v10.38 first-look fix on MAIL-25: the message frame never shows its own vertical scrollbar (a dark bar down the reading pane on wide promotional mail under a dark desktop theme); height is measured from the body plus any horizontal scrollbar; frame controls forced light. |
 | 1.31 | 10-11-26 18:53 | Claude (Claude Code) | MAIL-28 checked off (v10.37): snooze picker, Snoozed folder chip, Unsnooze. Phase 2 complete. |
 | 1.30 | 10-11-26 14:14 | Claude (Claude Code) | Phase 1 closed (v10.36): MAIL-11 backfill job, MAIL-17 snooze, MAIL-18 one HTML body, MAIL-20 tests checked off; status line updated. |
 | 1.29 | 10-09-26 12:57 | Claude (Claude Code) | v10.32: the shell's record preview panel collapses in mail mode (it showed an empty "Select a record to preview" column beside the reading pane); its empty state gains a close button. |

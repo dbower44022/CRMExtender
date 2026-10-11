@@ -69,7 +69,15 @@ const FRAME_SCRIPT = `
 (function () {
   var last = 0;
   function report() {
-    var h = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0);
+    // Measure the content, not the viewport: scrollHeight is never below the
+    // frame's own height, which would grow the frame by its margin forever.
+    var body = document.body;
+    var h = body ? Math.ceil(body.getBoundingClientRect().height) : 0;
+    if (!h) { h = document.documentElement.scrollHeight; }
+    // A horizontal scrollbar (wide promotional layouts) takes height from the
+    // viewport; add its thickness so the content never needs a vertical one.
+    var root = document.documentElement;
+    if (root.scrollWidth > root.clientWidth) { h += Math.max(0, window.innerHeight - root.clientHeight); }
     if (h !== last) { last = h; parent.postMessage({ type: '${FRAME_MESSAGE_TYPE}', kind: 'height', id: FRAME_ID, height: h }, '*'); }
   }
   document.addEventListener('click', function (e) {
@@ -79,7 +87,12 @@ const FRAME_SCRIPT = `
     parent.postMessage({ type: '${FRAME_MESSAGE_TYPE}', kind: 'link', id: FRAME_ID, href: a.getAttribute('href') }, '*');
   }, true);
   window.addEventListener('load', report);
-  if (window.ResizeObserver) { new ResizeObserver(report).observe(document.documentElement); }
+  window.addEventListener('resize', report);
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(report);
+    ro.observe(document.documentElement);
+    if (document.body) { ro.observe(document.body); }
+  }
   setTimeout(report, 50); setTimeout(report, 500);
 })();
 `
@@ -102,8 +115,14 @@ export function buildFrameDocument(bodyHtml: string, frameId: string, opts: { ci
   return (
     '<!doctype html><html><head><meta charset="utf-8">' +
     `<meta http-equiv="Content-Security-Policy" content="${csp}">` +
+    // Light controls and scrollbars whatever the desktop theme (a dark GTK
+    // theme painted the frame's scrollbar as a black bar, 10-11-26).
+    '<meta name="color-scheme" content="light">' +
     '<style>' +
     'html,body{margin:0;padding:0;background:transparent;color:#1f2326;}' +
+    // The reading pane scrolls; the frame never shows a vertical scrollbar.
+    // Wide layouts may scroll sideways inside the frame.
+    'html{overflow-y:hidden;overflow-x:auto;}' +
     'body{font:14px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;word-wrap:break-word;overflow-wrap:anywhere;padding:1px 0;}' +
     'img{max-width:100%;height:auto;}' +
     'blockquote{margin:0 0 0 .5em;padding-left:.75em;border-left:2px solid #d8d3c6;color:#5d6670;}' +

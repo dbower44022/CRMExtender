@@ -194,16 +194,17 @@ export function ThreadList(props: ThreadListProps) {
                       <span className={`min-w-0 flex-1 truncate text-sm ${unread ? 'font-semibold text-surface-900' : 'text-surface-700'}`}>
                         {participantsLine(t)}
                       </span>
-                      {unified && (
+                      {unified && (t.accounts && t.accounts.length > 0 ? t.accounts : [{ id: t.account_id, email: t.account_email, color: t.account_color ?? null }]).map((a) => (
                         <span
-                          className={`rounded px-1 text-[10px] uppercase tracking-wide ${t.account_color ? 'font-semibold' : 'bg-surface-100 text-surface-500'}`}
-                          style={chipStyle(t.account_color)}
-                          title={t.account_email}
+                          key={a.id}
+                          className={`rounded px-1 text-[10px] uppercase tracking-wide ${a.color ? 'font-semibold' : 'bg-surface-100 text-surface-500'}`}
+                          style={chipStyle(a.color)}
+                          title={a.email}
                           data-testid="account-chip"
                         >
-                          {accountChip(t.account_email)}
+                          {accountChip(a.email)}
                         </span>
-                      )}
+                      ))}
                       {t.snoozed_until ? (
                         <span className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-50 px-1 text-[11px] text-amber-700" title={`Returns ${describeReturn(t.snoozed_until)}`} data-testid="snooze-chip">
                           <Clock size={11} /> {describeReturn(t.snoozed_until)}

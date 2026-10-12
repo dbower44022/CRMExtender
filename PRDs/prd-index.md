@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 25.8
-**Last Updated:** 10-11-26 22:58
+**Version:** 25.9
+**Last Updated:** 10-12-26 17:28
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V25.9 (10-12-26):** v10.42 — MAIL-44 cross-account duplicates shown as one thread in the unified views (schema v33; `mail-client-prd.md` 1.34, `mail-client-tdd.md` 1.25 D-47). Also on 10-12-26: live database corruption recovered (two bad WAL pages), the live file moved out of Dropbox to `~/crmextender-data/` (`POC_DB_PATH`), nightly `python -m poc backup` to `~/db-archive/CRMExtender/` (v10.41, 03:00 cron), and v10.40 quieted draft-autosave fetch warnings.
 
 > **V25.8 (10-11-26):** Session close. Releases v10.33–v10.39 on 10-11-26, all verified by the product owner: Conversations grid fixes (account column, sort, filters, 560 hidden conversations restored, v29), snippet entity codes (v30), Mail Phase 1 close-out (v31: backfill job, snooze, one HTML body, tests), snooze picker (Phase 2 complete), reading-pane frame fix, MAIL-47 awaiting reply (v32). Schema v32. Live settings: backfill off pending the owner's cost decision. Next design: conversation Done state — kickoff prompt at `docs/prompts/conversation-done-state-kickoff.md`; the specification already exists in `conversation-entity-base-prd.md` §6 and is unimplemented. Mail Phase 3 remaining: MAIL-44, 46, 48, 49, 50; Phase 5: MAIL-51–55.
 
@@ -141,8 +143,8 @@ CRMExtender (also called Contact Intelligence Manager) is a comprehensive CRM pl
 | Adaptive Grid Intelligence | 2.1 | `adaptive-grid-intelligence-prd.md` | Draft — registry-declared demotion exemption (v10.34) | 10-11-26 |
 | Master Glossary | 4.0 | `glossary.md` | Active — Key Process, field metadata, † caching terms added | 2026-02-23 |
 | Email Parsing & Content Extraction | 1.0 | `email-stripping.md` | Technical spec — Mojibake cleaned | 2026-02-22 |
-| Mail Client | 1.33 | `mail-client-prd.md` | Approved — Phases 0–2 complete; Phase 3 started (MAIL-47, v10.39) | 10-11-26 |
-| └ Mail Client TDD | 1.24 | `mail-client-tdd.md` | Approved — living document; D-01–D-46 recorded | 10-11-26 |
+| Mail Client | 1.34 | `mail-client-prd.md` | Approved — Phases 0–2 complete; Phase 3: MAIL-47, MAIL-44 done (v10.42) | 10-12-26 |
+| └ Mail Client TDD | 1.25 | `mail-client-tdd.md` | Approved — living document; D-01–D-47 recorded | 10-12-26 |
 | └ Email Provider Sync | 1.2 | `email-provider-sync-prd.md` | Approved — Gmail adapter built (EPS-01–07, 10); snippet unescape (v10.35); EPS-08/09 open; Graph and IMAP deferred until a non-Google account exists | 10-11-26 |
 | SMS/MMS | — | — | **Planned** — parent (Communications) complete | — |
 | Voice/VoIP | — | — | **Planned** — parent (Communications) complete | — |

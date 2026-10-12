@@ -752,6 +752,13 @@ def _store_thread(
             if existing:
                 apply_mail_state(conn, existing["id"], account_id, em)
 
+    # Cross-account duplicates (MAIL-44): the same Message-ID in another
+    # account means the same conversation; record the link.
+    header_ids = [em.header_message_id for em in thread_emails if em.header_message_id]
+    if header_ids:
+        from .mail_links import link_thread
+        link_thread(conn, account_id, thread_id, header_ids)
+
     # ------------------------------------------------------------------
     # Step 2: Check for existing conversation
     # ------------------------------------------------------------------

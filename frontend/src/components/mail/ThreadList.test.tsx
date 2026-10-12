@@ -75,6 +75,12 @@ describe('ThreadList (MAIL-23, MAIL-T14)', () => {
     expect(screen.getByTestId('awaiting-chip')).toHaveTextContent('4 days')
   })
 
+  it('shows one chip per account on a thread mirrored in two mailboxes (MAIL-44, MAIL-T21)', () => {
+    setup([thread(1, { accounts: [{ id: 'a', email: 'me@dougbower.com', color: null }, { id: 'b', email: 'doug.bower@cbmentors.org', color: '#445566' }] })])
+    const chips = screen.getAllByTestId('account-chip')
+    expect(chips.map((c) => c.textContent)).toEqual(['dougbower', 'cbmentors'])
+  })
+
   it('shows the empty state', () => {
     setup([])
     expect(screen.getByText('Nothing here.')).toBeInTheDocument()

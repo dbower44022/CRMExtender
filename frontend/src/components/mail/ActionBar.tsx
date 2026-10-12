@@ -7,7 +7,7 @@
 import { useState } from 'react'
 import { Archive, Trash2, ShieldAlert, Star, MailOpen, RotateCcw, X, Loader2, Clock, AlarmClockOff, Hourglass, BellOff } from 'lucide-react'
 import { toast } from 'sonner'
-import { useMailAction, useMailActionQueue, useMailActionResolve, useMailAwaitingDismiss, type ThreadSummary } from '../../api/mail.ts'
+import { threadTargets, useMailAction, useMailActionQueue, useMailActionResolve, useMailAwaitingDismiss, type ThreadSummary } from '../../api/mail.ts'
 
 interface Props {
   /** Threads the actions apply to (the open thread, or the selection). */
@@ -51,7 +51,7 @@ export function ActionBar({ targets, onDone, onSnooze, onNudge }: Props) {
     if (targets.length === 0) return
     // Whole threads: the server expands each to all of its messages and
     // queues one action per account (D-33).
-    act.mutateAsync({ action, threads: targets.map((t) => ({ account_id: t.account_id, thread_id: t.thread_id })) })
+    act.mutateAsync({ action, threads: targets.flatMap(threadTargets) })
       .then(() => {
         toast.success(`${label}${targets.length > 1 ? ` · ${targets.length} threads` : ''}`)
         onDone?.()

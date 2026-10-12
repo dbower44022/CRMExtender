@@ -186,7 +186,7 @@ export function ReadingPane({ accountId, threadId }: Props) {
         <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-surface-500">
           <span>{t.message_count} message{t.message_count === 1 ? '' : 's'}</span>
           <span>·</span>
-          <span>{t.account_email}</span>
+          <span>{(t.accounts && t.accounts.length > 1) ? t.accounts.map((a) => a.email).join(' + ') : t.account_email}</span>
           {t.labels.map((l) => (
             <span key={l} className="rounded bg-surface-100 px-1 text-[11px] text-surface-600">{l}</span>
           ))}
@@ -223,6 +223,11 @@ export function ReadingPane({ accountId, threadId }: Props) {
                       </button>
                       {!m.sender.is_me && m.sender.address && (
                         <span className="ml-1 text-xs text-surface-500">&lt;{m.sender.address}&gt;</span>
+                      )}
+                      {t.accounts && t.accounts.length > 1 && m.account_email && (
+                        <span className="ml-1 rounded bg-surface-100 px-1 text-[10px] uppercase tracking-wide text-surface-500" title={`Copy held in ${m.account_email}`}>
+                          {m.account_email.split('@')[1]?.split('.')[0] ?? m.account_email}
+                        </span>
                       )}
                       <div className="truncate pl-5 text-xs text-surface-500">to {toLine || '—'}</div>
                     </div>

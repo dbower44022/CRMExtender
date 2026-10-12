@@ -200,10 +200,11 @@ def mail_thread_detail(request: Request, account_id: str, thread_id: str):
     labels, attachments, and the CRM conversation it belongs to."""
     from ...mail_threads import thread_detail
 
-    if account_id not in _visible_account_ids(request):
+    visible = _visible_account_ids(request)
+    if account_id not in visible:
         return _err("Not found", 404)
     with get_connection() as conn:
-        out = thread_detail(conn, account_id=account_id, thread_id=thread_id)
+        out = thread_detail(conn, account_id=account_id, thread_id=thread_id, account_ids=visible)
     return out if out else _err("Not found", 404)
 
 

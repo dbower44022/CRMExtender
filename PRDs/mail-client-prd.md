@@ -1,8 +1,8 @@
 # Mail Client — Functional Area PRD
 
-**Version:** 1.33
-**Last Updated:** 10-11-26 19:32
-**Status:** Approved 10-08-26 by the product owner — Phases 0–2 complete; Phase 3 started with MAIL-47 (v10.39, 10-11-26) plus first-look fixes; Phases 3–5 not started
+**Version:** 1.34
+**Last Updated:** 10-12-26 17:28
+**Status:** Approved 10-08-26 by the product owner — Phases 0–2 complete; Phase 3 in progress — MAIL-47, MAIL-44 done (v10.42, 10-12-26) plus first-look fixes; Phases 3–5 not started
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
 **Parent Documents:** [communication-entity-base-prd.md], [communication-provider-sync-prd.md], [outbound-email-prd.md], [gui-functional-requirements-prd.md]
@@ -438,7 +438,7 @@ Phase 3 — Every account
 - [ ] MAIL-42: Microsoft Graph provider (OAuth, delta queries, folders, flags, send) — DEFERRED until a non-Google account is added (§9.2)
 - [ ] MAIL-43: IMAP/SMTP provider (IDLE or polling, folders, flags, UIDVALIDITY handling, SMTP send) with provider detection by domain — DEFERRED until a non-Google account is added (§9.2)
 - [ ] MAIL-41a: Connect doug.bower@cbmentors.org and dwb80@case.edu (after MAIL-06, so they are authorized with the modify scope once)
-- [ ] MAIL-44: Cross-account duplicate detection (same Message-ID in two accounts) with a single thread presentation
+- [x] MAIL-44: Cross-account duplicate detection (same Message-ID in two accounts) with a single thread presentation — v10.42, 10-12-26 (`poc/mail_links.py` + `mail_thread_links` (schema v33, filled from stored mail): provider threads in different accounts that share an RFC 5322 Message-ID form one group, maintained in `_store_thread`. In the unified views a group is one row with a chip per account, counts over one copy per Message-ID, and actions sent to every member thread (D-33 expands per account); thread detail merges the group's messages, each tagged with its account; the row opens the account holding the newest message. Per-account views and counts are unchanged. MAIL-T21 in `tests/test_mail_links.py`. TDD D-47)
 - [ ] MAIL-45: Tests per provider against recorded fixtures
 
 Phase 4 — CRM-only intelligence
@@ -509,6 +509,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.34 | 10-12-26 17:28 | Claude (Claude Code) | MAIL-44 checked off (v10.42): cross-account duplicates shown as one thread in unified views. |
 | 1.33 | 10-11-26 19:32 | Claude (Claude Code) | MAIL-47 checked off (v10.39): Awaiting reply folder, Nudge, Stop waiting, threshold setting. First Phase 3 task. |
 | 1.32 | 10-11-26 19:09 | Claude (Claude Code) | v10.38 first-look fix on MAIL-25: the message frame never shows its own vertical scrollbar (a dark bar down the reading pane on wide promotional mail under a dark desktop theme); height is measured from the body plus any horizontal scrollbar; frame controls forced light. |
 | 1.31 | 10-11-26 18:53 | Claude (Claude Code) | MAIL-28 checked off (v10.37): snooze picker, Snoozed folder chip, Unsnooze. Phase 2 complete. |

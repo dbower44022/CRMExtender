@@ -17,7 +17,7 @@ import { describeReturn } from '../../lib/snoozeTimes.ts'
 import { SearchBox } from './SearchBox.tsx'
 import { loadSavedSearches, storeSavedSearches, type SavedSearch } from '../../lib/mailSearchUi.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
-import { threadKey, useInfiniteThreads, useMailAction, useMailFolders, useThread, type ThreadSummary } from '../../api/mail.ts'
+import { threadKey, threadTargets, useInfiniteThreads, useMailAction, useMailFolders, useThread, type ThreadSummary } from '../../api/mail.ts'
 import { ActionBar } from './ActionBar.tsx'
 import { FolderTree } from './FolderTree.tsx'
 import { ThreadList } from './ThreadList.tsx'
@@ -117,7 +117,7 @@ export function MailView() {
       if (shortcutTargets.length === 0) return
       const starred = shortcutTargets.some((t) => t.starred)
       const kind = action === 'star' && starred ? 'unstar' : action
-      act.mutateAsync({ action: kind, threads: shortcutTargets.map((t) => ({ account_id: t.account_id, thread_id: t.thread_id })) })
+      act.mutateAsync({ action: kind, threads: shortcutTargets.flatMap(threadTargets) })
         .then(() => {
           if (selectedKeys.size > 0) clearSelection()
           // Archive/trash/spam remove the thread from most folders: advance focus so j/k keep flowing.
@@ -167,7 +167,7 @@ export function MailView() {
     const list = snoozeFor ?? []
     setSnoozeFor(null)
     if (list.length === 0) return
-    act.mutateAsync({ action: 'snooze', payload: { return_at: returnAt }, threads: list.map((t) => ({ account_id: t.account_id, thread_id: t.thread_id })) })
+    act.mutateAsync({ action: 'snooze', payload: { return_at: returnAt }, threads: list.flatMap(threadTargets) })
       .then(() => {
         toast.success(`Snoozed until ${describeReturn(returnAt)}${list.length > 1 ? ` · ${list.length} threads` : ''}`)
         clearSelection()

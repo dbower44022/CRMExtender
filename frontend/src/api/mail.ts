@@ -69,7 +69,15 @@ export interface ThreadSummary {
   /** In the Awaiting reply folder: when the owner's unanswered message went out, and how many days ago (MAIL-47). */
   awaiting_since?: string | null
   awaiting_days?: number | null
+  /** Every account holding this thread; more than one when the same Message-ID is in two mailboxes (MAIL-44). */
+  accounts?: { id: string; email: string; color: string | null }[]
+  /** The (account, thread) pairs an action on this row must cover (MAIL-44). */
+  members?: { account_id: string; thread_id: string }[]
 }
+
+/** The thread targets an action must cover: every linked member, or the row itself. */
+export const threadTargets = (t: ThreadSummary) =>
+  t.members && t.members.length > 0 ? t.members : [{ account_id: t.account_id, thread_id: t.thread_id }]
 
 /** Stable key for a thread row: a thread id is unique only within its account. */
 export const threadKey = (t: Pick<ThreadSummary, 'account_id' | 'thread_id'>) => `${t.account_id}:${t.thread_id}`
@@ -113,6 +121,9 @@ export interface MailMessage {
   attachments: MailAttachment[]
   header_message_id: string | null
   provider_message_id: string | null
+  /** The mailbox this copy lives in (MAIL-44). */
+  account_id?: string
+  account_email?: string
 }
 
 export interface ThreadDetail {
@@ -125,6 +136,8 @@ export interface ThreadDetail {
   unread_count: number
   conversation: { id: string; title: string | null; ai_summary: string | null; ai_status: string | null } | null
   messages: MailMessage[]
+  accounts?: { id: string; email: string; color: string | null }[]
+  members?: { account_id: string; thread_id: string }[]
 }
 
 export function useMailFolders(enabled = true) {

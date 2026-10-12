@@ -1,8 +1,8 @@
 # Mail Client — TDD
 
-**Version:** 1.24
-**Last Updated:** 10-11-26 19:32
-**Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 approved, D-15–D-46 written back during the build and binding until revised here
+**Version:** 1.25
+**Last Updated:** 10-12-26 17:28
+**Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 approved, D-15–D-47 written back during the build and binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
 **Product TDD:** [product-tdd.md]
@@ -435,6 +435,16 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Constraints/Tradeoffs:** Automated recipients (newsletters, no-reply addresses) the owner writes to will be listed until dismissed; a rule layer can exclude them when MAIL-46 lands. A thread the owner re-sends to is re-listed after the threshold, as intended.
 
+### D-47 Cross-account duplicates: a link table of thread groups, merged only in multi-account views
+
+**Decision:** `mail_thread_links (account_id, thread_id, group_id)` records which provider threads in different accounts are one conversation, keyed on a shared RFC 5322 Message-ID. The store path links a thread whenever one of its Message-IDs already exists in another account; groups merge transitively; migration v33 rebuilt the table from stored mail. A scope of more than one account (the unified folders) groups rows by `COALESCE(link.group_id, account:thread)`, presents one row with every account's chip, counts one copy per Message-ID in the unified badges, opens the account holding the newest message, and sends actions to every member thread. Thread detail merges the group's messages, one per Message-ID, with the requested account's copy winning and each message tagged with its account. A single-account scope ignores the links entirely.
+
+**Rationale:** Connected groups cannot be computed in one SQL pass at read time, and the store path already sees every message once; a small link table is cheaper than rewriting the thread model. Keeping per-account views untouched preserves the one-to-one mirror of each mailbox, which the snooze, awaiting-reply, and outbox code rely on.
+
+**Alternatives Rejected:** Collapsing duplicates at ingest (store one copy) — breaks the mirror: each mailbox's labels, flags, and provider ids differ and must be pushed back separately. Grouping by the first message's id — fails when one account joined the thread late.
+
+**Constraints/Tradeoffs:** Flags shown for a merged row are the winning copy's; reading a message in one mailbox does not mark its twin read in the other until the owner acts on the merged row (the action then covers both). Search results and new-mail pop-ups still work per account. On the live database the rebuild found 33 shared Message-IDs forming 28 groups over 56 threads among the three active accounts (10-12-26); the retired SCORE mailbox's rows carry no Message-ID header (their pre-v23 state was frozen) and so never link.
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -461,6 +471,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.25 | 10-12-26 17:28 | Claude (Claude Code) | Write-back for MAIL-44: D-47 (thread groups by shared Message-ID; merged only in multi-account views). |
 | 1.24 | 10-11-26 19:32 | Claude (Claude Code) | Write-back for MAIL-47: D-46 (awaiting reply computed on read; opt-outs stored). |
 | 1.23 | 10-11-26 14:14 | Claude (Claude Code) | Write-back for Phase 1 close-out (v10.36): D-43 backfill job, D-44 snooze, D-45 one HTML body (D-10 delivered). |
 | 1.22 | 10-09-26 12:43 | Claude (Claude Code) | D-42: provider drafts never join conversations; a dropped draft is deleted (exception to D-22). v10.31. |

@@ -63,6 +63,35 @@ def _account_rows(conn, account_ids: list[str]) -> list[dict]:
         f"FROM provider_accounts WHERE id IN ({placeholders}) ORDER BY created_at", account_ids)]
 
 
+def _duplicate_overcount(conn, account_ids: list[str]) -> dict[str, tuple[int, int]]:
+    """``{folder_key: (extra_total, extra_unread)}``: how many unified-count
+    entries are second copies of a message held in more than one account
+    (same Message-ID; MAIL-44). Inbox, sent, drafts by label; starred by flag."""
+    placeholders = ",".join("?" * len(account_ids))
+    out: dict[str, tuple[int, int]] = {}
+    for r in conn.execute(
+        f"""SELECT ml.kind,
+                   COUNT(*) - COUNT(DISTINCT COALESCE(c.header_message_id, c.id)) AS extra,
+                   SUM(CASE WHEN c.is_read = 0 THEN 1 ELSE 0 END)
+                     - COUNT(DISTINCT CASE WHEN c.is_read = 0 THEN COALESCE(c.header_message_id, c.id) END) AS extra_unread
+            FROM communications c
+            JOIN communication_labels cl ON cl.communication_id = c.id
+            JOIN mailbox_labels ml ON ml.id = cl.label_id AND ml.kind IN ('inbox', 'sent', 'drafts')
+            WHERE c.is_current = 1 AND c.account_id IN ({placeholders})
+            GROUP BY ml.kind""", account_ids):
+        out[r["kind"]] = (r["extra"] or 0, r["extra_unread"] or 0)
+    r = conn.execute(
+        f"""SELECT COUNT(*) - COUNT(DISTINCT COALESCE(c.header_message_id, c.id)) AS extra,
+                   SUM(CASE WHEN c.is_read = 0 THEN 1 ELSE 0 END)
+                     - COUNT(DISTINCT CASE WHEN c.is_read = 0 THEN COALESCE(c.header_message_id, c.id) END) AS extra_unread
+            FROM communications c
+            WHERE c.is_current = 1 AND c.is_starred = 1 AND c.is_archived = 0 AND c.account_id IN ({placeholders})""",
+        account_ids).fetchone()
+    if r and r["extra"]:
+        out["starred"] = (r["extra"], r["extra_unread"] or 0)
+    return out
+
+
 def folders(conn, *, account_ids: list[str], awaiting_days: int | None = None,
             awaiting_window: int | None = None) -> dict:
     """``{"accounts": [...], "unified": {...}}`` with locally computed counts."""
@@ -108,6 +137,7 @@ def folders(conn, *, account_ids: list[str], awaiting_days: int | None = None,
         f"AND account_id IN ({placeholders}) GROUP BY account_id", account_ids)}
 
     unified = {k: {"total": 0, "unread": 0} for k in ("inbox", "starred", "snoozed", "awaiting", "drafts", "sent", "archive")}
+    overcount = _duplicate_overcount(conn, account_ids) if len(account_ids) > 1 else {}
     out_accounts = []
     for acct in accounts:
         fc = flag_counts.get(acct["id"], {})
@@ -141,6 +171,11 @@ def folders(conn, *, account_ids: list[str], awaiting_days: int | None = None,
             "initial_sync_done": bool(acct["initial_sync_done"]), "last_synced_at": acct["last_synced_at"],
             "system": system, "labels": labels,
         })
+    # Unified counts: a message held in two accounts counts once (MAIL-44).
+    for key, (extra_total, extra_unread) in overcount.items():
+        if key in unified:
+            unified[key]["total"] = max(0, unified[key]["total"] - extra_total)
+            unified[key]["unread"] = max(0, unified[key]["unread"] - extra_unread)
     return {"accounts": out_accounts, "unified": unified}
 
 
@@ -182,19 +217,39 @@ def thread_list(conn, *, account_ids: list[str], folder: str | None = "inbox",
         from .mail_awaiting import AWAITING_PREDICATE, DEFAULT_DAYS, bounds
         where.append(f"({AWAITING_PREDICATE})")
         params.extend(bounds(awaiting_days or DEFAULT_DAYS, awaiting_window))
-    matched = (f"SELECT c.id, c.account_id, COALESCE(c.provider_thread_id, c.id) AS thread_id, "
-               f"c.timestamp, c.is_read, c.is_starred FROM communications c {' '.join(joins)} "
+    # In a multi-account scope, threads linked across accounts (same
+    # Message-ID; MAIL-44) collapse into one row keyed by their group.
+    merged_scope = len(account_ids) > 1
+    gkey = ("COALESCE(tl.group_id, c.account_id || ':' || COALESCE(c.provider_thread_id, c.id))"
+            if merged_scope else "c.account_id || ':' || COALESCE(c.provider_thread_id, c.id)")
+    link_join = ("LEFT JOIN mail_thread_links tl ON tl.account_id = c.account_id "
+                 "AND tl.thread_id = COALESCE(c.provider_thread_id, c.id)") if merged_scope else ""
+    matched = (f"SELECT c.id, c.account_id, COALESCE(c.provider_thread_id, c.id) AS thread_id, {gkey} AS gkey, "
+               f"c.timestamp, c.is_read, c.is_starred FROM communications c {' '.join(joins)} {link_join} "
                f"WHERE {' AND '.join(where)}")
     total = conn.execute(
-        f"SELECT COUNT(*) AS n FROM (SELECT DISTINCT account_id, thread_id FROM ({matched}))", params
+        f"SELECT COUNT(*) AS n FROM (SELECT DISTINCT gkey FROM ({matched}))", params
     ).fetchone()["n"]
     groups = [dict(r) for r in conn.execute(
-        f"""SELECT account_id, thread_id, MAX(timestamp) AS last_at, COUNT(*) AS matched_count,
+        f"""SELECT gkey, MAX(timestamp) AS last_at, COUNT(*) AS matched_count,
                    SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) AS unread_count,
                    MAX(is_starred) AS starred
-            FROM ({matched}) GROUP BY account_id, thread_id
+            FROM ({matched}) GROUP BY gkey
             ORDER BY last_at DESC LIMIT ? OFFSET ?""",
         params + [max(1, min(int(limit), 200)), max(0, int(offset))])]
+    from .mail_links import group_members
+    for g in groups:
+        acct, _, tid = g["gkey"].partition(":")
+        if tid and acct in account_ids:
+            # an unlinked thread: the key is account:thread
+            g["account_id"], g["thread_id"] = acct, tid
+            g["members"] = [{"account_id": acct, "thread_id": tid}]
+        else:
+            rows = [dict(r) for r in conn.execute(
+                "SELECT account_id, thread_id FROM mail_thread_links WHERE group_id = ? ORDER BY created_at",
+                (g["gkey"],)) if r["account_id"] in account_ids]
+            g["members"] = rows or [{"account_id": acct, "thread_id": tid}]
+            g["account_id"], g["thread_id"] = g["members"][0]["account_id"], g["members"][0]["thread_id"]
     items = [_thread_summary(conn, g) for g in groups]
     from .mail_snooze import active_snoozes
     snoozes = active_snoozes(conn, account_ids)
@@ -208,15 +263,40 @@ def thread_list(conn, *, account_ids: list[str], folder: str | None = "inbox",
     return {"total": total, "items": items, "limit": limit, "offset": offset}
 
 
+def _member_messages(conn, members: list[dict], cols: str) -> list[dict]:
+    """Current messages of every member thread, newest first, one copy per
+    Message-ID (the first member's copy wins, so the requested account's
+    flags and ids are the ones shown)."""
+    out: list[dict] = []
+    seen: set[str] = set()
+    for i, m in enumerate(members):
+        for r in conn.execute(
+                f"""SELECT {cols}, c.header_message_id, c.account_id FROM communications c
+                    WHERE c.account_id = ? AND COALESCE(c.provider_thread_id, c.id) = ? AND c.is_current = 1
+                    ORDER BY c.timestamp DESC""", (m["account_id"], m["thread_id"])):
+            d = dict(r)
+            key = d.get("header_message_id") or f"{d['account_id']}:{d['id']}"
+            if key in seen:
+                continue
+            seen.add(key)
+            d["_member"] = i
+            out.append(d)
+    out.sort(key=lambda d: d["timestamp"] or "", reverse=True)
+    return out
+
+
 def _thread_summary(conn, g: dict) -> dict:
     account_id, thread_id = g["account_id"], g["thread_id"]
-    msgs = [dict(r) for r in conn.execute(
-        """SELECT c.id, c.timestamp, c.subject, c.snippet, c.sender_address, c.sender_name,
-                  c.direction, c.is_read, c.is_starred, c.is_archived
-           FROM communications c
-           WHERE c.account_id = ? AND COALESCE(c.provider_thread_id, c.id) = ? AND c.is_current = 1
-           ORDER BY c.timestamp DESC""", (account_id, thread_id))]
+    members = g.get("members") or [{"account_id": account_id, "thread_id": thread_id}]
+    msgs = _member_messages(
+        conn, members,
+        "c.id, c.timestamp, c.subject, c.snippet, c.sender_address, c.sender_name, "
+        "c.direction, c.is_read, c.is_starred, c.is_archived")
     latest = msgs[0] if msgs else {}
+    if latest and len(members) > 1:
+        # the row opens the account that holds the newest message
+        account_id = latest["account_id"]
+        thread_id = next(m["thread_id"] for m in members if m["account_id"] == account_id)
     ids = [m["id"] for m in msgs]
     placeholders = ",".join("?" * len(ids)) if ids else "''"
     labels = sorted({r[0] for r in conn.execute(
@@ -228,6 +308,9 @@ def _thread_summary(conn, g: dict) -> dict:
     acct_row = conn.execute(
         "SELECT email_address, color FROM provider_accounts WHERE id = ?", (account_id,)).fetchone()
     account_email, account_color = acct_row[0], acct_row[1]
+    accounts = [dict(r) for r in conn.execute(
+        f"SELECT id, email_address AS email, color FROM provider_accounts WHERE id IN "
+        f"({','.join('?' * len(members))}) ORDER BY created_at", [m["account_id"] for m in members])]
     # Distinct senders, newest first, as the row's participant line
     seen: list[dict] = []
     for m in msgs:
@@ -241,6 +324,10 @@ def _thread_summary(conn, g: dict) -> dict:
         "last_at": g["last_at"], "message_count": len(msgs), "unread_count": sum(1 for m in msgs if not m["is_read"]),
         "starred": any(m["is_starred"] for m in msgs), "has_attachments": has_attachments,
         "labels": labels, "participants": seen[:4], "latest_message_id": latest.get("id"),
+        # Cross-account group (MAIL-44): every account holding this thread, and
+        # the (account, thread) pairs an action must cover.
+        "accounts": accounts,
+        "members": [{"account_id": m["account_id"], "thread_id": m["thread_id"]} for m in members],
     }
 
 
@@ -248,12 +335,28 @@ def _thread_summary(conn, g: dict) -> dict:
 # Thread detail
 # ---------------------------------------------------------------------------
 
-def thread_detail(conn, *, account_id: str, thread_id: str) -> dict | None:
-    rows = [dict(r) for r in conn.execute(
-        """SELECT c.*, pa.email_address AS account_email FROM communications c
-           JOIN provider_accounts pa ON pa.id = c.account_id
-           WHERE c.account_id = ? AND COALESCE(c.provider_thread_id, c.id) = ? AND c.is_current = 1
-           ORDER BY c.timestamp ASC""", (account_id, thread_id))]
+def thread_detail(conn, *, account_id: str, thread_id: str, account_ids: list[str] | None = None) -> dict | None:
+    """One thread with its messages. When the thread is linked to the same
+    conversation in other accounts (MAIL-44), those accounts' messages are
+    merged in, one copy per Message-ID, each tagged with its account;
+    ``account_ids`` limits the merge to the accounts the caller may see."""
+    from .mail_links import group_members
+    members = group_members(conn, account_id, thread_id, account_ids=account_ids)
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for m in members:
+        for r in conn.execute(
+                """SELECT c.*, pa.email_address AS account_email FROM communications c
+                   JOIN provider_accounts pa ON pa.id = c.account_id
+                   WHERE c.account_id = ? AND COALESCE(c.provider_thread_id, c.id) = ? AND c.is_current = 1
+                   ORDER BY c.timestamp ASC""", (m["account_id"], m["thread_id"])):
+            d = dict(r)
+            key = d.get("header_message_id") or f"{d['account_id']}:{d['id']}"
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(d)
+    rows.sort(key=lambda d: d["timestamp"] or "")
     if not rows:
         return None
     ids = [r["id"] for r in rows]
@@ -319,11 +422,17 @@ def thread_detail(conn, *, account_id: str, thread_id: str) -> dict | None:
             "attachments": atts.get(r["id"], []),
             "header_message_id": r.get("header_message_id"),
             "provider_message_id": r.get("provider_message_id"),
+            "account_id": r["account_id"], "account_email": r["account_email"],
         })
 
     thread_labels = sorted({l["name"] for ls in labels.values() for l in ls})
+    acct_email = conn.execute("SELECT email_address FROM provider_accounts WHERE id = ?", (account_id,)).fetchone()
+    accounts = [dict(r) for r in conn.execute(
+        f"SELECT id, email_address AS email, color FROM provider_accounts WHERE id IN "
+        f"({','.join('?' * len(members))}) ORDER BY created_at", [m["account_id"] for m in members])]
     return {
-        "account_id": account_id, "account_email": rows[0]["account_email"], "thread_id": thread_id,
+        "account_id": account_id, "account_email": acct_email[0] if acct_email else rows[0]["account_email"],
+        "thread_id": thread_id, "accounts": accounts, "members": members,
         # the thread's subject is the first message's (before any "Re:")
         "subject": next((m["subject"] for m in messages if m["subject"]), "(no subject)"),
         "labels": thread_labels, "message_count": len(messages),

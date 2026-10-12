@@ -904,6 +904,22 @@ def cmd_cleanup_drafts(args) -> None:
                   f"{stats['remnants_deleted']}, conversations recounted: {stats['conversations_recounted']}[/green]")
 
 
+def cmd_backup(args: argparse.Namespace) -> None:
+    """Write a verified copy of the live database into the archive folder and prune old copies."""
+    from .backup import DEFAULT_ARCHIVE_DIR, DEFAULT_KEEP, BackupError, make_backup
+
+    db_path = args.db or config.DB_PATH
+    archive = args.dir or DEFAULT_ARCHIVE_DIR
+    try:
+        result = make_backup(db_path, archive, keep=args.keep if args.keep is not None else DEFAULT_KEEP)
+    except BackupError as exc:
+        console.print(f"[red]Backup failed:[/red] {exc}")
+        raise SystemExit(1)
+    console.print(f"[green]Backup written:[/green] {result['path']} ({result['bytes'] // 1_000_000} MB)")
+    for p in result["removed"]:
+        console.print(f"  removed old copy {p.name}")
+
+
 def cmd_migrate(args: argparse.Namespace) -> None:
     """Run all pending database migrations to bring the schema up to date."""
     import importlib
@@ -1690,6 +1706,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     # migrate (unified)
     sub.add_parser("cleanup-drafts", help="Unlink provider drafts from conversations and delete autosave remnants (one-time, D-42)")
+    bk = sub.add_parser("backup", help="Write a verified copy of the live database to the archive folder (default ~/db-archive/CRMExtender, newest 7 kept)")
+    bk.add_argument("--db", type=Path, help="Database to copy (default: the configured live database)")
+    bk.add_argument("--dir", type=Path, help="Archive folder (default ~/db-archive/CRMExtender)")
+    bk.add_argument("--keep", type=int, help="How many timestamped copies to keep (default 7)")
     mg = sub.add_parser("migrate", help="Run all pending migrations to bring the database up to date")
     mg.add_argument("--db", type=Path, help="Path to the SQLite database file")
     mg.add_argument("--dry-run", action="store_true",
@@ -1775,6 +1795,7 @@ def main() -> None:
         "score-companies": cmd_score_companies,
         "score-contacts": cmd_score_contacts,
         "migrate": cmd_migrate,
+        "backup": cmd_backup,
         "cleanup-drafts": cmd_cleanup_drafts,
         "migrate-to-v4": cmd_migrate_to_v4,
         "migrate-to-v5": cmd_migrate_to_v5,

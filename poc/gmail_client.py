@@ -567,6 +567,7 @@ def fetch_messages(
     service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     emails: list[ParsedEmail] = []
     fmt = "metadata" if metadata_only else "full"
+    gone = 0
 
     for mid in message_ids:
         try:
@@ -580,10 +581,23 @@ def fetch_messages(
                 .execute()
             )
             emails.append(_parse_message(msg))
+        except HttpError as exc:
+            if _http_status(exc) == 404:
+                # The history named a message that no longer exists: Gmail
+                # draft autosaves create and drop an id every few seconds,
+                # and mail deleted before the fetch does the same. Routine.
+                gone += 1
+                log.debug("Message %s no longer exists at Gmail", mid)
+            else:
+                log.warning("Failed to fetch message %s: %s", mid, exc)
         except Exception as exc:
             log.warning("Failed to fetch message %s: %s", mid, exc)
 
-    log.info("Fetched %d/%d messages", len(emails), len(message_ids))
+    if gone:
+        log.info("Fetched %d/%d messages (%d no longer exist at Gmail: draft autosaves or deleted)",
+                 len(emails), len(message_ids), gone)
+    else:
+        log.info("Fetched %d/%d messages", len(emails), len(message_ids))
     return emails
 
 

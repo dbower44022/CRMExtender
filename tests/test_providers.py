@@ -202,6 +202,22 @@ class TestIncremental:
         assert dict(delta.flag_changes)["r1"] == {"is_read": True, "is_starred": True}
         assert "r2" not in dict(delta.flag_changes)
 
+    def test_missing_messages_are_counted_not_warned(self, caplog):
+        """A 404 on messages.get is a draft autosave or a deletion: one summary line, no warning (v10.40)."""
+        import logging
+        import httplib2
+        from googleapiclient.errors import HttpError
+
+        resp = httplib2.Response({"status": "404"})
+        resp.reason = "notFound"
+        service = MagicMock()
+        service.users().messages().get().execute.side_effect = [HttpError(resp, b""), _fixture_message()]
+        with patch("poc.gmail_client.build", return_value=service), caplog.at_level(logging.INFO, logger="poc.gmail_client"):
+            got = gmail_client.fetch_messages(MagicMock(), ["gone-1", "m1"])
+        assert [e.message_id for e in got] == ["m1"]
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert any("1 no longer exist" in r.getMessage() for r in caplog.records)
+
     def test_expired_cursor_raises_provider_neutral_error(self):
         import httplib2
         from googleapiclient.errors import HttpError

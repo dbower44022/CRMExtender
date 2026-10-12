@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 25.7
-**Last Updated:** 10-11-26 19:32
+**Version:** 25.8
+**Last Updated:** 10-11-26 22:58
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V25.8 (10-11-26):** Session close. Releases v10.33–v10.39 on 10-11-26, all verified by the product owner: Conversations grid fixes (account column, sort, filters, 560 hidden conversations restored, v29), snippet entity codes (v30), Mail Phase 1 close-out (v31: backfill job, snooze, one HTML body, tests), snooze picker (Phase 2 complete), reading-pane frame fix, MAIL-47 awaiting reply (v32). Schema v32. Live settings: backfill off pending the owner's cost decision. Next design: conversation Done state — kickoff prompt at `docs/prompts/conversation-done-state-kickoff.md`; the specification already exists in `conversation-entity-base-prd.md` §6 and is unimplemented. Mail Phase 3 remaining: MAIL-44, 46, 48, 49, 50; Phase 5: MAIL-51–55.
 
 > **V25.7 (10-11-26):** v10.39 — MAIL-47 awaiting-reply tracking (Awaiting reply folder, Nudge, Stop waiting; schema v32; `mail-client-prd.md` 1.33, `mail-client-tdd.md` 1.24 D-46). Phase 3 started.
 

@@ -123,8 +123,8 @@ def health():
 
 @router.get("/version")
 def version_api(request: Request):
-    from ...version import get_version
-    return get_version()
+    from ...version import get_build_id, get_version
+    return {**get_version(), "build": get_build_id()}
 
 
 # ------------------------------------------------------------------

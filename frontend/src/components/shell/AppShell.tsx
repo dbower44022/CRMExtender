@@ -20,6 +20,7 @@ import { ComposeDock } from '../compose/ComposeDock.tsx'
 import { useDefaultView } from '../../hooks/useDefaultView.ts'
 import { useUrlSync } from '../../hooks/useUrlSync.ts'
 import { useMailEvents } from '../../hooks/useMailEvents.ts'
+import { useVersionWatch } from '../../hooks/useVersionWatch.ts'
 import { useProfile } from '../../api/settings.ts'
 import { setDatePrefs } from '../../lib/datePrefs.ts'
 
@@ -45,6 +46,7 @@ export function AppShell() {
   useDefaultView()
   useUrlSync()
   useMailEvents()
+  useVersionWatch()
 
   // Date rendering follows profile preferences (timezone + date format)
   const { data: profileData } = useProfile()

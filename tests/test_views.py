@@ -847,3 +847,14 @@ class TestDemotable:
     def test_default_is_demotable(self):
         from poc.views.registry import ENTITY_TYPES
         assert ENTITY_TYPES["conversation"].fields["title"].demotable is True
+
+
+class TestBuildId:
+    """v10.43: the version route names the served bundle so the page can reload itself."""
+
+    def test_build_id_from_index_html(self, tmp_path):
+        from poc.version import get_build_id
+        idx = tmp_path / "index.html"
+        idx.write_text('<script type="module" crossorigin src="/app/assets/index-Cu-zHl_g.js"></script>')
+        assert get_build_id(idx) == "index-Cu-zHl_g"
+        assert get_build_id(tmp_path / "missing.html") is None

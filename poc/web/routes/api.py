@@ -1502,6 +1502,9 @@ def conversation_preview_api(request: Request, conversation_id: str):
         "ai_status": conv.get("ai_status"),
         "triage_result": conv.get("triage_result"),
         "dismissed": bool(conv.get("dismissed")),
+        "done_at": conv.get("done_at"),
+        "reopened_at": conv.get("reopened_at"),
+        "reopened_reason": conv.get("reopened_reason"),
         "channel_breakdown": channel_breakdown,
         "account_owner_email": account_owner_email,
         "participants": participants,
@@ -1735,6 +1738,14 @@ def conversation_full_api(request: Request, conversation_id: str):
             if u:
                 updated_by_name = u["name"]
 
+        done_by_name = None
+        if conv.get("done_by"):
+            u = conn.execute(
+                "SELECT name FROM users WHERE id = ?", (conv["done_by"],)
+            ).fetchone()
+            if u:
+                done_by_name = u["name"]
+
         # Children (for aggregate conversations)
         is_aggregate = bool(conv.get("is_aggregate"))
         children = (
@@ -1838,6 +1849,10 @@ def conversation_full_api(request: Request, conversation_id: str):
         "dismissed": bool(conv.get("dismissed")),
         "dismissed_reason": conv.get("dismissed_reason"),
         "dismissed_at": conv.get("dismissed_at"),
+        "done_at": conv.get("done_at"),
+        "done_by_name": done_by_name,
+        "reopened_at": conv.get("reopened_at"),
+        "reopened_reason": conv.get("reopened_reason"),
         "stale_after_days": conv.get("stale_after_days"),
         "closed_after_days": conv.get("closed_after_days"),
         "channel_breakdown": channel_breakdown,

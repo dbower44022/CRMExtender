@@ -24,6 +24,8 @@ import {
   Sparkles,
   UserCheck,
   Settings2,
+  CheckCircle2,
+  RotateCcw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigationStore } from '../../stores/navigation.ts'
@@ -41,6 +43,7 @@ import { AddContactModal } from './AddContactModal.tsx'
 import { AddCompanyModal } from './AddCompanyModal.tsx'
 import { GridDisplaySettings } from './GridDisplaySettings.tsx'
 import { ToolbarContextMenu } from './ToolbarContextMenu.tsx'
+import { markConversationsDone, reopenConversations } from '../../lib/conversationDone.ts'
 import {
   AddEventModal,
   AddProjectModal,
@@ -457,8 +460,32 @@ function EntityActions() {
         })
         .catch(() => toast.error('Archive failed'))
     }
+    // Conversation Done state (Base PRD §8.11): the toolbar and the context
+    // menu offer the same bulk actions.
+    const handleBulkDone = () => {
+      void markConversationsDone(Array.from(selectedRowIds), queryClient).then((ok) => {
+        if (ok) useNavigationStore.getState().deselectAllRows()
+      })
+    }
+    const handleBulkReopen = () => {
+      void reopenConversations(Array.from(selectedRowIds), queryClient).then((ok) => {
+        if (ok) useNavigationStore.getState().deselectAllRows()
+      })
+    }
     return (
       <div className="flex items-center gap-2">
+        {activeEntityType === 'conversation' && (
+          <>
+            <button onClick={handleBulkDone} className={btnClass}>
+              <CheckCircle2 size={14} />
+              Mark Done ({selectedCount})
+            </button>
+            <button onClick={handleBulkReopen} className={btnClass}>
+              <RotateCcw size={14} />
+              Reopen ({selectedCount})
+            </button>
+          </>
+        )}
         {activeEntityType === 'communication' && (
           <>
             <button onClick={handleBulkArchive} className={btnClass}>

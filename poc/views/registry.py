@@ -439,7 +439,22 @@ ENTITY_TYPES: dict[str, EntityDef] = {
             "status": FieldDef(
                 label="Status",
                 sql="conv.status",
-                type="text",
+                type="select",
+                sortable=True,
+                filterable=True,
+                select_options=["active", "stale", "done"],
+            ),
+            "done_at": FieldDef(
+                label="Done At",
+                sql="conv.done_at",
+                type="datetime",
+                sortable=True,
+                filterable=True,
+            ),
+            "reopened_at": FieldDef(
+                label="Reopened At",
+                sql="conv.reopened_at",
+                type="datetime",
                 sortable=True,
                 filterable=True,
             ),

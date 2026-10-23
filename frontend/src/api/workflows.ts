@@ -31,6 +31,14 @@ export const workflows = {
   unassignTopic: (conversationId: string) =>
     del(`/conversations/${conversationId}/topic`),
 
+  // Conversation Done state (Base PRD §8.9–8.10)
+  markConversationsDone: (ids: string[]) =>
+    post<{ done: number; ids: string[]; skipped_unchanged: number; skipped_foreign: number }>(
+      '/conversations/done', { ids }),
+  reopenConversations: (ids: string[]) =>
+    post<{ reopened: number; ids: string[]; skipped_unchanged: number; skipped_foreign: number }>(
+      '/conversations/reopen', { ids }),
+
   // Communications bulk
   assignTargets: (q: string) =>
     get<{ conversations: { id: string; title: string; last_activity_at: string }[] }>(

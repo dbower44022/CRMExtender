@@ -654,26 +654,14 @@ def _create_communication_record(
             (comm_id, email_addr, addr_obj.get("name"), addr_obj.get("contact_id")),
         )
 
-    # Link to conversation if one exists
+    # Link to conversation if one exists. The shared helper refreshes the
+    # conversation's counts and activity and queues a fresh summary; an
+    # outbound message never reopens a done conversation (TDD §9.9, §9.10).
     conv_id = queue_record.get("conversation_id")
     if conv_id:
-        conn.execute(
-            """INSERT OR IGNORE INTO conversation_communications
-               (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at)
-               VALUES (?, ?, 'composed', 1.0, 1, ?)""",
-            (conv_id, comm_id, now),
-        )
-        # Update conversation stats
-        actual_count = conn.execute(
-            "SELECT COUNT(*) as cnt FROM conversation_communications WHERE conversation_id = ?",
-            (conv_id,),
-        ).fetchone()["cnt"]
-        conn.execute(
-            """UPDATE conversations
-               SET communication_count = ?, last_activity_at = ?,
-                   last_message_at = ?, updated_at = ?
-               WHERE id = ?""",
-            (actual_count, now, now, now, conv_id),
+        from .conversation_links import link_communications
+        link_communications(
+            conn, conv_id, [comm_id], assignment_source="composed", reviewed=1, now=now,
         )
 
     return comm_id

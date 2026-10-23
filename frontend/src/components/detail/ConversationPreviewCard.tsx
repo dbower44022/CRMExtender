@@ -4,7 +4,14 @@ import { formatPreviewTimestamp } from '../../lib/formatTimestamp.ts'
 import { buildParticipantColorMap } from '../../lib/participantColors.ts'
 import { ChannelBreakdown } from '../shared/ChannelBreakdown.tsx'
 import { useNavigationStore } from '../../stores/navigation.ts'
-import { MessageSquare, FolderOpen, Paperclip } from 'lucide-react'
+import { MessageSquare, FolderOpen, Paperclip, CheckCircle2, RotateCcw } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { markConversationsDone, reopenConversations } from '../../lib/conversationDone.ts'
+import {
+  conversationStatusClass,
+  conversationStatusLabel,
+  isConversationDone,
+} from '../../lib/conversationStatus.ts'
 import type { ConversationPreviewCommunication, ConversationChildPreview } from '../../types/api.ts'
 import type { ParticipantColorMap } from '../../lib/participantColors.ts'
 
@@ -14,6 +21,7 @@ interface ConversationPreviewCardProps {
 
 export function ConversationPreviewCard({ entityId }: ConversationPreviewCardProps) {
   const { data, isLoading, error } = useConversationPreview(entityId)
+  const queryClient = useQueryClient()
   const setActiveEntityType = useNavigationStore((s) => s.setActiveEntityType)
   const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
 
@@ -33,6 +41,7 @@ export function ConversationPreviewCard({ entityId }: ConversationPreviewCardPro
   )
 
   const TypeIcon = data.is_aggregate ? FolderOpen : MessageSquare
+  const done = isConversationDone(data.status)
 
   return (
     <div className="flex h-full flex-col">
@@ -46,10 +55,23 @@ export function ConversationPreviewCard({ entityId }: ConversationPreviewCardPro
         </div>
         <div className="mt-1 flex items-center gap-2 text-xs text-surface-400">
           {data.status && (
-            <span className="rounded bg-surface-100 px-1.5 py-0.5 capitalize text-surface-500">
-              {data.status}
+            <span className={`rounded px-1.5 py-0.5 ${conversationStatusClass(data.status)}`}>
+              {conversationStatusLabel(data.status)}
             </span>
           )}
+          <button
+            type="button"
+            onClick={() => {
+              void (done
+                ? reopenConversations([data.id], queryClient)
+                : markConversationsDone([data.id], queryClient))
+            }}
+            className="flex items-center gap-1 rounded border border-surface-200 bg-surface-0 px-1.5 py-0.5 text-xs font-medium text-surface-600 hover:bg-surface-100"
+            title={done ? 'Return this conversation to active' : 'Mark this conversation done'}
+          >
+            {done ? <RotateCcw size={11} /> : <CheckCircle2 size={11} />}
+            {done ? 'Reopen' : 'Mark Done'}
+          </button>
           {data.ai_status && (
             <span className={`rounded px-1.5 py-0.5 capitalize ${
               data.ai_status === 'open' ? 'bg-green-50 text-green-700' :

@@ -488,6 +488,9 @@ export interface ConversationPreviewData {
   ai_status: string | null
   triage_result: string | null
   dismissed: boolean
+  done_at: string | null
+  reopened_at: string | null
+  reopened_reason: string | null
   channel_breakdown: Record<string, number>
   account_owner_email: string | null
   participants: ConversationPreviewParticipant[]
@@ -610,6 +613,10 @@ export interface ConversationFullData {
   dismissed: boolean
   dismissed_reason: string | null
   dismissed_at: string | null
+  done_at: string | null
+  done_by_name: string | null
+  reopened_at: string | null
+  reopened_reason: string | null
   stale_after_days: number | null
   closed_after_days: number | null
   channel_breakdown: Record<string, number>

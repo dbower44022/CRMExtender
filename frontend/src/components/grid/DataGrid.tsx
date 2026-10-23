@@ -911,6 +911,7 @@ export function DataGrid() {
           rowIndex={contextMenu.rowIndex}
           entityType={activeEntityType}
           selectedRowIds={selectedRowIds}
+          rowStatus={(rows.find((r) => (r as { id?: string }).id === contextMenu.rowId) as { status?: string | null } | undefined)?.status ?? null}
           onClose={() => setContextMenu(null)}
           onOpenDetail={() => {
             setSelectedRow(contextMenu.rowId, contextMenu.rowIndex)

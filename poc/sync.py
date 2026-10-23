@@ -38,6 +38,7 @@ from .domain_resolver import (
 from .providers import CursorInvalid, get_provider
 from .rate_limiter import RateLimiter
 from .summarizer import summarize_conversation
+from .conversation_links import link_communications
 from .triage import AUTOMATED_SENDER_PATTERNS
 
 log = logging.getLogger(__name__)
@@ -777,39 +778,16 @@ def _store_thread(
 
     link_ids = [cid for cid in new_comm_ids if cid not in draft_ids]
     if existing:
-        # Conversation already exists — link new communications to it
+        # Conversation already exists — link new communications to it.
+        # The helper refreshes counts and activity, clears the summary
+        # stamp, and reopens a done conversation on inbound mail (TDD §9.9).
         conv_id = existing["conversation_id"]
-        for cid in link_ids:
-            conn.execute(
-                """INSERT OR IGNORE INTO conversation_communications
-                   (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at)
-                   VALUES (?, ?, 'sync', 1.0, 1, ?)""",
-                (conv_id, cid, now),
-            )
-
         if link_ids:
-            # Update conversation counts and timestamps
-            actual_count = conn.execute(
-                "SELECT COUNT(*) as cnt FROM conversation_communications WHERE conversation_id = ?",
-                (conv_id,),
-            ).fetchone()["cnt"]
-
-            date_row = conn.execute(
-                """SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
-                   FROM communications c
-                   JOIN conversation_communications cc ON cc.communication_id = c.id
-                   WHERE cc.conversation_id = ?""",
-                (conv_id,),
-            ).fetchone()
-
-            conn.execute(
-                """UPDATE conversations
-                   SET communication_count = ?, first_activity_at = ?, last_activity_at = ?,
-                       ai_summarized_at = NULL, updated_at = ?
-                   WHERE id = ?""",
-                (actual_count, date_row["first_dt"], date_row["last_dt"], now, conv_id),
+            result = link_communications(
+                conn, conv_id, link_ids, assignment_source="sync", reviewed=1, now=now,
             )
-            conversation_updated = True
+            if result["linked"]:
+                conversation_updated = True
     else:
         # ------------------------------------------------------------------
         # Step 3: No existing conversation — evaluate creation rules

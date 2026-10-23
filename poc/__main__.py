@@ -925,8 +925,8 @@ def cmd_migrate(args: argparse.Namespace) -> None:
     import importlib
     import sqlite3 as _sqlite3
 
-    LATEST_VERSION = 33
-    MIGRATIONS = list(range(2, LATEST_VERSION + 1))  # [2, 3, ..., 33]
+    LATEST_VERSION = 34
+    MIGRATIONS = list(range(2, LATEST_VERSION + 1))  # [2, 3, ..., 34]
 
     db_path = args.db
     if not db_path:
@@ -944,7 +944,7 @@ def cmd_migrate(args: argparse.Namespace) -> None:
 
     # Fresh databases (created by init_db) have user_version=0 but already
     # have the latest schema.  Detect this by checking for a table that
-    # only exists in v33+ and a column that only exists in v31+.
+    # only exists in v33+ and a column that only exists in v34+.
     if current == 0:
         conn = _sqlite3.connect(str(db_path))
         try:
@@ -955,13 +955,13 @@ def cmd_migrate(args: argparse.Namespace) -> None:
         finally:
             conn.close()
         cols = set()
-        if "provider_accounts" in tables:
+        if "conversations" in tables:
             conn2 = _sqlite3.connect(str(db_path))
             try:
-                cols = {r[1] for r in conn2.execute("PRAGMA table_info(provider_accounts)")}
+                cols = {r[1] for r in conn2.execute("PRAGMA table_info(conversations)")}
             finally:
                 conn2.close()
-        if "mail_thread_links" in tables and "backfill_cursor" in cols:
+        if "mail_thread_links" in tables and "done_at" in cols:
             console.print(
                 f"[green]Database is already at the latest schema (v{LATEST_VERSION}).[/green]"
             )

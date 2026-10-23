@@ -118,6 +118,13 @@ def execute_view(
         where_parts.append("comm.is_current = 1")
         where_parts.append("comm.is_archived = 0")
 
+    # Conversation-specific: done conversations are hidden unless a filter
+    # (saved or quick) names the status field (Base PRD §6.4, TDD §9.11).
+    if entity_type == "conversation" and not any(
+        f.get("field_key") == "status" for f in filters
+    ):
+        where_parts.append("(conv.status IS NULL OR conv.status != 'done')")
+
     # Extra WHERE clauses from the caller (status tabs, topic filters, etc.)
     if extra_where:
         for sql_frag, ew_params in extra_where:

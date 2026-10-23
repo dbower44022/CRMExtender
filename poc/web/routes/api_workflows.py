@@ -27,6 +27,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from ...database import get_connection
+from ...conversation_links import link_communications, mark_done, reopen
 
 router = APIRouter()
 log = logging.getLogger(__name__)
@@ -676,24 +677,58 @@ async def communications_assign_api(request: Request):
         return _err("ids and conversation_id are required")
 
     now = _now()
-    assigned = 0
-    skipped = 0
     with get_connection() as conn:
         if not _owned_conversation(conn, request, conversation_id):
             return _err("Conversation not found", 404)
         owned = _communications_owned(conn, request, ids)
-        for comm_id in owned:
-            cur = conn.execute(
-                "INSERT OR IGNORE INTO conversation_communications "
-                "(conversation_id, communication_id, assignment_source, "
-                " confidence, created_at) VALUES (?, ?, 'manual', 1.0, ?)",
-                (conversation_id, comm_id, now),
-            )
-            if cur.rowcount:
-                assigned += 1
-            else:
-                skipped += 1
-    return {"assigned": assigned, "skipped_existing": skipped,
+        # The shared helper links, recomputes counts and activity, clears
+        # the summary stamp, and reopens a done conversation on inbound
+        # mail (TDD §9.9). Manual links carry no reviewed flag.
+        result = link_communications(
+            conn, conversation_id, owned,
+            assignment_source="manual", reviewed=None, now=now,
+        )
+    assigned = result["linked"]
+    return {"assigned": assigned, "skipped_existing": len(owned) - assigned,
+            "skipped_foreign": len(ids) - len(owned),
+            "reopened": result["reopened"]}
+
+
+# ---------------------------------------------------------------------------
+# Conversation Done state (Base PRD §6.4, §8.9–8.10; TDD §9.13)
+# ---------------------------------------------------------------------------
+
+def _owned_conversations(conn, request: Request, ids: list[str]) -> list[str]:
+    return [cid for cid in ids if _owned_conversation(conn, request, cid)]
+
+
+@router.post("/conversations/done")
+async def conversations_done_api(request: Request):
+    """Mark one or more conversations Done. Already-done rows are skipped."""
+    body = await request.json()
+    ids = [str(i) for i in (body.get("ids") or []) if i]
+    if not ids:
+        return _err("ids is required")
+    with get_connection() as conn:
+        owned = _owned_conversations(conn, request, ids)
+        changed = mark_done(conn, owned, user_id=_uid(request), now=_now())
+    return {"done": len(changed), "ids": changed,
+            "skipped_unchanged": len(owned) - len(changed),
+            "skipped_foreign": len(ids) - len(owned)}
+
+
+@router.post("/conversations/reopen")
+async def conversations_reopen_api(request: Request):
+    """Reopen one or more done conversations by user action."""
+    body = await request.json()
+    ids = [str(i) for i in (body.get("ids") or []) if i]
+    if not ids:
+        return _err("ids is required")
+    with get_connection() as conn:
+        owned = _owned_conversations(conn, request, ids)
+        changed = reopen(conn, owned, user_id=_uid(request), now=_now())
+    return {"reopened": len(changed), "ids": changed,
+            "skipped_unchanged": len(owned) - len(changed),
             "skipped_foreign": len(ids) - len(owned)}
 
 

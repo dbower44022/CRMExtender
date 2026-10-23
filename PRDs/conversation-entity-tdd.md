@@ -1,8 +1,8 @@
 # Conversation Entity — TDD
 
-**Version:** 1.1
-**Last Updated:** 2026-07-07
-**Status:** Draft — Section 9 added (PoC implementation write-back, schema v20)
+**Version:** 1.2
+**Last Updated:** 10-22-26 22:58
+**Status:** Draft — Section 9 extended with the Done state decisions (schema v34, release v10.44)
 **Scope:** Entity
 **Parent Document:** [conversation-entity-base-prd.md]
 **Product TDD:** [product-tdd.md]
@@ -276,7 +276,7 @@ ORDER BY comm.timestamp DESC;
 
 ---
 
-## 9. PoC Implementation Decisions (Schema v20, 2026-07-07)
+## 9. PoC Implementation Decisions (Schema v20, 2026-07-07; §9.8–9.14 schema v34, 10-22-26)
 
 Write-back from the Conversation View implementation (`docs/conversation_view_implementation.md`, migration `poc/migrate_to_v20.py`). The PoC runs on SQLite; sections 2–7 above describe the target PostgreSQL design and are unchanged. This section records what the PoC actually built and where it diverges, so future sessions implement against reality.
 
@@ -316,4 +316,82 @@ Implemented `conversations` uses `status` (not `system_status`), `ai_topics` (no
 
 ### 9.7 Not implemented (unchanged open items)
 
-Segments (§4), event sourcing (§5), virtual schema (§6.1), all §7 write endpoints, and the §8 decisions on count roll-up, acyclic checking, fan-out batching, and stale/closed transitions — the last is moot until something mutates `stale_after_days`/`closed_after_days`, which are display-only in the PoC.
+Segments (§4), event sourcing (§5), virtual schema (§6.1), the §7 write endpoints other than §9.13, and the §8 decisions on count roll-up, acyclic checking, fan-out batching, and the timed stale/close transitions — the last is deferred as CONV-DN-09 (§9.14); `stale_after_days`/`closed_after_days` remain display-only.
+
+### 9.8 Done is a value of `status` (schema v34)
+
+**Decision:** The user-marked Done state is stored as `status = 'done'` in the existing `conversations.status` column, alongside `active` and the reserved `stale`. The Base PRD V1.0 value name `closed` is retired. Four audit columns are added: `done_at`, `done_by` (user reference), `reopened_at`, `reopened_reason` (`inbound` | `user`). Migration `poc/migrate_to_v34.py`; fresh-database DDL in `poc/database.py`.
+
+**Rationale:** One column, one word, stored and displayed the same. The grid's Status column, the filter builder, saved-view filter values and exports all show the raw value, so a stored `closed` labelled "Done" would leak on every one of those surfaces. "closed" is already the AI Status vocabulary and the triage statistics endpoint already uses "closed" to mean dismissed.
+
+**Alternatives Rejected:** (a) Store `closed`, label it Done — a value-to-label map on every surface, and three meanings of "closed". (b) Reuse the `dismissed*` columns — they already mean "emptied by a communications-grid archive" (`api_workflows.communications_archive_api`), the summarizer and assign picker skip them, and nothing clears them. (c) Separate `done_at`/`done_by` with `status` untouched — a fourth status dimension against the PRD's three.
+
+**Constraints/Tradeoffs:** `closed_after_days` keeps its name; it is display-only and is renamed only if CONV-DN-09 makes it live. The `status` column still does double duty against the Base PRD §1.4, which lists a separate record-lifecycle Status (`active` | `archived`); conversation archive is unbuilt, so `archived` is reserved and the collision is recorded, not resolved.
+
+**Decided by:** Doug, 10-22-26 (decision 1 of the Done-state session).
+
+### 9.9 One link helper, three callers
+
+**Decision:** `poc/conversation_links.py` owns `link_communications(conn, conversation_id, communication_ids, *, assignment_source, reviewed, now)`. It inserts the `conversation_communications` rows (INSERT OR IGNORE), recomputes `communication_count`, `first_activity_at`, `last_activity_at`, `first_message_at`, `last_message_at` from the linked set, clears `ai_summarized_at`, and if the conversation is `done` and any newly linked communication is inbound, sets `status = 'active'`, `reopened_at`, `reopened_reason = 'inbound'` and clears `done_at`/`done_by`. Callers: `sync._store_thread` (existing-conversation branch), `outbound` (composed message), `api_workflows.communications_assign_api` (manual). The same module owns `mark_done(conn, ids, user_id, now)` and `reopen(conn, ids, user_id, now)`.
+
+**Rationale:** Before v10.44 the three join points each did a different subset: sync refreshed counts, activity and the summary stamp; outbound refreshed counts and last activity only; manual assign touched nothing on the conversation. Reactivation needs one rule at all three, and one function is the only way to keep it one rule.
+
+**Constraints/Tradeoffs:** Two behaviors change beyond Done itself. A composed outbound message now clears `ai_summarized_at`, so the user's own sends queue a fresh summary (Base PRD §6.4 "Summaries"). Manual assignment now recomputes counts and activity, which the Base PRD §8.4 of the Communication entity always required. Both are intended.
+
+**Decided by:** Claude Code, 10-22-26; approved as decision 2's mechanism.
+
+### 9.10 Reactivation is inbound-only, read from `communications.direction`
+
+**Decision:** A newly linked communication reopens a done conversation only when `direction = 'inbound'`. Outbound never reopens. No sender-pattern check is applied: an automated sender already in the thread reopens the conversation.
+
+**Rationale:** The value of Done is trust that nothing needing an answer is hidden. A rule that could bury a human reply from a new address (the literal "anyone already in the conversation" reading) breaks that trust once and is never trusted again. Excluding the user's own sends matches how a mail client treats an archived thread. `direction` is populated on every row of the live database (10,581 inbound, 1,535 outbound on 10-22-26).
+
+**Alternatives Rejected:** Any communication reopens (Base PRD V1.0) — the user's courtesy sign-off reopens the conversation they just finished. Known-participant-only — silently ignores a new participant's reply.
+
+**Constraints/Tradeoffs:** Automated confirmations reopen. The mail rule layer (MAIL-46) can exclude them later without touching this rule.
+
+**Decided by:** Doug, 10-22-26 (decision 2).
+
+### 9.11 Default-view exclusion lives in the query engine
+
+**Decision:** `views/engine.execute_view` adds `conv.status != 'done'` for the conversation entity when no filter in the merged list (saved view filters plus quick filters, as assembled by `GET /api/v1/views/{id}/data`) has `field_key == 'status'`. The registry's `status` field becomes a select with options `active`, `stale`, `done`; `done_at` and `reopened_at` are added as optional datetime columns.
+
+**Rationale:** The grid must be cleaned without the user configuring it. A saved filter on the default view would conflict with the Done quick chip (status != done AND status = done → empty) because quick filters are appended, not substituted. The engine already carries one such rule (archived communications), so the pattern exists.
+
+**Constraints/Tradeoffs:** A rule the filter builder does not display. The front end shows a one-line note under the quick chips. Footer counts drop for anyone used to the total.
+
+**Decided by:** Doug, 10-22-26 (decision 4).
+
+### 9.12 Audit is four columns, last occurrence only
+
+**Decision:** `done_at`, `done_by`, `reopened_at`, `reopened_reason` on the conversation row, overwritten on each transition. `updated_by` is also set on Mark Done and Reopen. No event log.
+
+**Rationale:** A reopen the user did not do must be explainable from the Metadata card. Event sourcing (§5) is unbuilt and this feature does not justify starting it.
+
+**Constraints/Tradeoffs:** A conversation done and reopened three times keeps only the latest pair. Full history waits for §5.
+
+**Decided by:** Doug, 10-22-26 (decision 6).
+
+### 9.13 Mark Done and Reopen endpoints
+
+**Decision:** `POST /api/v1/conversations/done` and `POST /api/v1/conversations/reopen`, body `{"ids": [...]}`, in `poc/web/routes/api_workflows.py`. Each checks tenant ownership per id (`_owned_conversation`), applies the transition only where it changes state, and returns `{done|reopened, skipped_unchanged, skipped_foreign}`. Single-row actions send one id. The preview and full payloads gain `done_at`, `done_by_name`, `reopened_at`, `reopened_reason`.
+
+**Rationale:** One bulk-capable endpoint per transition serves the context menu, the toolbar, the cards and the Undo link alike, and matches the existing communications bulk endpoints in shape.
+
+**Decided by:** Claude Code, 10-22-26.
+
+### 9.14 Deferred: timers and dismissed clean-up
+
+**CONV-DN-09 (timers):** The scheduler tick is the natural home for stale and timed-close transitions against `last_activity_at`. Open question to settle first: whether a timed close writes `done` (one word, two meanings, told apart only by `done_by IS NULL`) or a value of its own. On the live database the default thresholds would move roughly two thousand of 2,188 conversations on the first pass.
+
+**CONV-DN-10 (dismissed):** Hide `dismissed = 1` rows in the grid the way archived communications are hidden, and have `communications_archive_api` recompute counts and activity through §9.9's helper after unlinking. Also note for a future unarchive: the grid archive path deletes the `conversation_communications` row, so restoring membership needs a different record than the Communication Base PRD assumes; the mail client's `is_archived` means trashed or deleted at the provider and keeps the link (Mail Client TDD D-22).
+
+---
+
+## 10. Change Log
+
+| Rev | Date (MM-DD-YY HH:MM) | Author | Change |
+|---|---|---|---|
+| 1.2 | 10-22-26 22:58 | Claude (Claude Code) | §9.8–9.14: Done state decisions (status value, link helper, inbound-only reactivation, engine exclusion, audit columns, endpoints, deferred items). Schema v34, release v10.44. |
+| 1.1 | 07-07-26 | Claude (Claude Code) | §9 PoC implementation write-back, schema v20. |
+| 1.0 | 02-23-26 | Doug (Claude.ai) | Original document. |

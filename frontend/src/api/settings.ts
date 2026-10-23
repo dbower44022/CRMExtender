@@ -38,6 +38,12 @@ export interface SystemSettings {
   mail_awaiting_reply_days?: string
   /** Only messages sent within this many days count as awaiting, 7–365 (MAIL-47). */
   mail_awaiting_window_days?: string
+  /** Days of silence before a conversation is stale, 1–365 (Conversation Base PRD §6.4). */
+  conversation_stale_days?: string
+  /** Days of silence before a conversation is done, 1–365, never below stale. */
+  conversation_done_days?: string
+  /** "true" while the hourly timer pass runs. */
+  conversation_timers_enabled?: string
 }
 
 interface UserRecord {

@@ -38,6 +38,10 @@ _HARDCODED_DEFAULTS = {
     "mail_awaiting_reply_days": "3",
     # ...and only messages sent within this many days count; older silence is history
     "mail_awaiting_window_days": "30",
+    # Conversation timers (Conversation Base PRD §6.4): silence before stale / done, and the switch
+    "conversation_stale_days": "14",
+    "conversation_done_days": "30",
+    "conversation_timers_enabled": "true",
 }
 
 

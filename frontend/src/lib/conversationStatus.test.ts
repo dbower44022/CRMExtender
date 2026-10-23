@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   conversationStatusClass,
   conversationStatusLabel,
+  doneReasonLabel,
   isConversationDone,
   reopenReasonLabel,
 } from './conversationStatus.ts'
@@ -24,6 +25,14 @@ describe('conversation status display (CONV-DNT-12)', () => {
     expect(conversationStatusLabel('odd')).toBe('Odd')
     expect(conversationStatusClass(undefined)).toBe('bg-surface-100 text-surface-500')
     expect(isConversationDone(null)).toBe(false)
+  })
+
+  it('renders stale as Stale in the amber style and names the done reasons (CONV-DNT-18)', () => {
+    expect(conversationStatusLabel('stale')).toBe('Stale')
+    expect(conversationStatusClass('stale')).toBe('bg-amber-50 text-amber-700')
+    expect(doneReasonLabel('timer')).toBe('Silent past the done threshold')
+    expect(doneReasonLabel('user')).toBe('Marked done')
+    expect(doneReasonLabel(null)).toBe('')
   })
 
   it('names the reopen reasons', () => {

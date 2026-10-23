@@ -1738,6 +1738,9 @@ def conversation_full_api(request: Request, conversation_id: str):
             if u:
                 updated_by_name = u["name"]
 
+        from ...conversation_lifecycle import thresholds_for
+        lifecycle_thresholds = thresholds_for(conv.get("customer_id"))
+
         done_by_name = None
         if conv.get("done_by"):
             u = conn.execute(
@@ -1851,10 +1854,13 @@ def conversation_full_api(request: Request, conversation_id: str):
         "dismissed_at": conv.get("dismissed_at"),
         "done_at": conv.get("done_at"),
         "done_by_name": done_by_name,
+        "done_reason": conv.get("done_reason"),
         "reopened_at": conv.get("reopened_at"),
         "reopened_reason": conv.get("reopened_reason"),
         "stale_after_days": conv.get("stale_after_days"),
         "closed_after_days": conv.get("closed_after_days"),
+        "stale_after_days_default": lifecycle_thresholds["stale_days"],
+        "closed_after_days_default": lifecycle_thresholds["done_days"],
         "channel_breakdown": channel_breakdown,
         "account_owner_email": provider_account["email_address"] if provider_account else None,
         "participants": participants,
@@ -2660,6 +2666,9 @@ def settings_system(request: Request):
         "mail_backfill_batch_size": get_setting(cid, "mail_backfill_batch_size") or "200",
         "mail_awaiting_reply_days": get_setting(cid, "mail_awaiting_reply_days") or "3",
         "mail_awaiting_window_days": get_setting(cid, "mail_awaiting_window_days") or "30",
+        "conversation_stale_days": get_setting(cid, "conversation_stale_days") or "14",
+        "conversation_done_days": get_setting(cid, "conversation_done_days") or "30",
+        "conversation_timers_enabled": get_setting(cid, "conversation_timers_enabled") or "true",
     }
 
 
@@ -2669,7 +2678,7 @@ async def settings_system_update(request: Request):
     if request.state.user["role"] != "admin":
         return JSONResponse({"error": "Forbidden"}, status_code=403)
 
-    from ...settings import set_setting
+    from ...settings import get_setting, set_setting
 
     cid = request.state.customer_id
 
@@ -2685,12 +2694,28 @@ async def settings_system_update(request: Request):
         "mail_mark_read_dwell_ms", "mail_undo_send_seconds",
         "mail_backfill_enabled", "mail_backfill_batch_size", "mail_awaiting_reply_days",
         "mail_awaiting_window_days",
+        "conversation_stale_days", "conversation_done_days", "conversation_timers_enabled",
     ]
+    # Conversation timers: the done threshold is never below the stale threshold (TDD §9.16).
+    from ...conversation_lifecycle import clamp_days
+    if body.get("conversation_stale_days") is not None or body.get("conversation_done_days") is not None:
+        for key in ("conversation_stale_days", "conversation_done_days"):
+            if body.get(key) is not None:
+                try:
+                    int(body[key])
+                except (TypeError, ValueError):
+                    return JSONResponse({"error": f"{key} must be a whole number"}, status_code=400)
+        stale_days = clamp_days(
+            body.get("conversation_stale_days", get_setting(cid, "conversation_stale_days")), 14)
+        done_days = clamp_days(
+            body.get("conversation_done_days", get_setting(cid, "conversation_done_days")), 30)
+        body["conversation_stale_days"] = stale_days
+        body["conversation_done_days"] = max(done_days, stale_days)
     for key in _SYSTEM_KEYS:
         val = body.get(key)
         if val is None:
             continue
-        if key == "mail_backfill_enabled":
+        if key in ("mail_backfill_enabled", "conversation_timers_enabled"):
             val = "true" if str(val).lower() in ("true", "1", "yes") else "false"
         if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds", "mail_mark_read_dwell_ms", "mail_undo_send_seconds", "mail_backfill_batch_size", "mail_awaiting_reply_days", "mail_awaiting_window_days"):
             try:

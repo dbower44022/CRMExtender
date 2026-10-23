@@ -23,6 +23,7 @@ export const QUICK_FILTERS: Record<string, QuickFilterDef[]> = {
     // `status` is System Status (active | stale | done; Base PRD §6.1). The grid
     // hides done rows unless a filter names status, so Done is the way in.
     { label: 'Active', filter: { field_key: 'status', operator: 'equals', value: 'active' } },
+    { label: 'Stale', filter: { field_key: 'status', operator: 'equals', value: 'stale' } },
     { label: 'Done', filter: { field_key: 'status', operator: 'equals', value: 'done' } },
     // ai_status is the summarizer's verdict; prefixed so Done and AI closed differ on sight.
     { label: 'AI open', filter: { field_key: 'ai_status', operator: 'equals', value: 'open' } },

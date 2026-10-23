@@ -1,8 +1,8 @@
 # Conversation Entity — TDD
 
-**Version:** 1.2
-**Last Updated:** 10-22-26 22:58
-**Status:** Draft — Section 9 extended with the Done state decisions (schema v34, release v10.44)
+**Version:** 1.3
+**Last Updated:** 10-23-26 01:12
+**Status:** Draft — Section 9 extended with the timer decisions (schema v35, release v10.45)
 **Scope:** Entity
 **Parent Document:** [conversation-entity-base-prd.md]
 **Product TDD:** [product-tdd.md]
@@ -276,7 +276,7 @@ ORDER BY comm.timestamp DESC;
 
 ---
 
-## 9. PoC Implementation Decisions (Schema v20, 2026-07-07; §9.8–9.14 schema v34, 10-22-26)
+## 9. PoC Implementation Decisions (Schema v20, 2026-07-07; §9.8–9.14 schema v34, 10-22-26; §9.15–9.18 schema v35, 10-23-26)
 
 Write-back from the Conversation View implementation (`docs/conversation_view_implementation.md`, migration `poc/migrate_to_v20.py`). The PoC runs on SQLite; sections 2–7 above describe the target PostgreSQL design and are unchanged. This section records what the PoC actually built and where it diverges, so future sessions implement against reality.
 
@@ -380,11 +380,49 @@ Segments (§4), event sourcing (§5), virtual schema (§6.1), the §7 write endp
 
 **Decided by:** Claude Code, 10-22-26.
 
-### 9.14 Deferred: timers and dismissed clean-up
+### 9.14 Deferred: dismissed clean-up
 
-**CONV-DN-09 (timers):** The scheduler tick is the natural home for stale and timed-close transitions against `last_activity_at`. Open question to settle first: whether a timed close writes `done` (one word, two meanings, told apart only by `done_by IS NULL`) or a value of its own. On the live database the default thresholds would move roughly two thousand of 2,188 conversations on the first pass.
+**CONV-DN-09 (timers)** was decided on 10-23-26 and built in v10.45; see §9.15–9.18.
 
 **CONV-DN-10 (dismissed):** Hide `dismissed = 1` rows in the grid the way archived communications are hidden, and have `communications_archive_api` recompute counts and activity through §9.9's helper after unlinking. Also note for a future unarchive: the grid archive path deletes the `conversation_communications` row, so restoring membership needs a different record than the Communication Base PRD assumes; the mail client's `is_archived` means trashed or deleted at the provider and keeps the link (Mail Client TDD D-22).
+
+### 9.15 A timed close writes `done`, with `done_reason` (schema v35)
+
+**Decision:** The timer pass sets `status = 'done'`, `done_at`, `done_by = NULL`, `done_reason = 'timer'`. Mark Done sets `done_reason = 'user'`. Reopen clears all four. Migration `poc/migrate_to_v35.py` adds `done_reason` and stamps `user` on existing done rows that carry a `done_by`.
+
+**Rationale:** Everything built for done in v10.44 (engine rule, chips, menus, cards, reopen on inbound, Undo) works unchanged. The two meanings of done are told apart on the record by `done_reason`, and in queries by `done_by IS NULL`.
+
+**Alternatives Rejected:** Stale only (grid never cleans itself). A third hidden value such as `expired` (every done surface would need a second value).
+
+**Decided by:** Doug, 10-23-26 (timer decision 1).
+
+### 9.16 Thresholds are system settings with a per-conversation override
+
+**Decision:** Three system settings in `poc/settings.py` and on the Settings page: `conversation_stale_days` (default 14), `conversation_done_days` (default 30), `conversation_timers_enabled` (default true). The settings API clamps the two day values to 1–365 and raises `conversation_done_days` to `conversation_stale_days` when it is set lower. `conversations.stale_after_days` / `closed_after_days` become overrides: NULL means the setting applies, and the effective value is `COALESCE(row, setting)`. The v35 migration blanks the copies of the old column defaults (14 / 30) that every row carried, so a value left standing is a genuine override; the fresh-database DDL drops the column defaults.
+
+**Rationale:** A threshold nobody can reach is not configurable; before v10.45 the only way to change 30 days was an update across every row. The Base PRD's design decision that conversations have different cadences is kept through the override. Per-conversation editing stays in the deferred full View write path (View Sub-PRD V1.4).
+
+**Constraints/Tradeoffs:** The full payload now carries `stale_after_days_default` and `closed_after_days_default` beside the override columns so the Metadata card can say "(default)". A row whose override happens to equal the old default was blanked by the migration; on the live database every row held exactly 14 / 30, so nothing was lost.
+
+**Decided by:** Doug, 10-23-26 (timer decision 2).
+
+### 9.17 The timer pass: where, how often, and what it touches
+
+**Decision:** `poc/conversation_lifecycle.py` owns `run_lifecycle_pass(now_iso=None)`. `SyncScheduler.tick` calls it beside the snooze-return pass, throttled to once per `LIFECYCLE_INTERVAL_SECONDS` (3,600) per process, with the first run on the first tick after start. The pass selects `status IN ('active', 'stale') AND dismissed = 0` and groups by `customer_id` to read that tenant's settings once. Silence is measured from `MAX(last_activity_at, reopened_at WHERE reopened_reason = 'user')`; rows with no `last_activity_at` are skipped. Transitions: silence ≥ done threshold → `done` (`timer`); else silence ≥ stale threshold → `stale`; else `stale` → `active`. Done rows are never read. The pass returns `{checked, stale, reactivated, done}` and logs when anything moved.
+
+**Rationale:** The tick already carries time-based passes (queued send, snooze return) and runs whether or not mail arrived, which the post-sync pass does not. An hour is far finer than the day-scale thresholds and costs one query over ~2,000 rows. Measuring from a user Reopen is what stops the timer from undoing the user an hour later; measuring from `last_activity_at` alone would.
+
+**Constraints/Tradeoffs:** The pass runs on the scheduler thread, so it must stay cheap; at ten times today's row count it is still a single indexed scan. A second server process would run its own pass; the transitions are idempotent, so that is harmless.
+
+**Decided by:** Claude Code, 10-23-26, announced with the two decisions.
+
+### 9.18 Stale clears on any new communication; done still reopens on inbound only
+
+**Decision:** `link_communications` (§9.9) now also sets `stale → active` whenever it links anything, inbound or outbound, without touching the reopen audit pair. The `done → active` rule of §9.10 is unchanged.
+
+**Rationale:** Stale measures silence, so the user's own message ends it. Done measures the user's intent, so only the other side's message ends it.
+
+**Decided by:** Claude Code, 10-23-26, announced with the two decisions.
 
 ---
 
@@ -392,6 +430,7 @@ Segments (§4), event sourcing (§5), virtual schema (§6.1), the §7 write endp
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.3 | 10-23-26 01:12 | Claude (Claude Code) | §9.14 narrowed to the dismissed clean-up; §9.15–9.18 timer decisions (done_reason, settings with override, hourly pass and silence clock, stale clears on any activity). Schema v35, release v10.45. |
 | 1.2 | 10-22-26 22:58 | Claude (Claude Code) | §9.8–9.14: Done state decisions (status value, link helper, inbound-only reactivation, engine exclusion, audit columns, endpoints, deferred items). Schema v34, release v10.44. |
 | 1.1 | 07-07-26 | Claude (Claude Code) | §9 PoC implementation write-back, schema v20. |
 | 1.0 | 02-23-26 | Doug (Claude.ai) | Original document. |

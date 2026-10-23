@@ -615,10 +615,15 @@ export interface ConversationFullData {
   dismissed_at: string | null
   done_at: string | null
   done_by_name: string | null
+  done_reason: string | null
   reopened_at: string | null
   reopened_reason: string | null
+  /** Per-conversation overrides; null means the system setting applies. */
   stale_after_days: number | null
   closed_after_days: number | null
+  /** The effective tenant thresholds (system settings). */
+  stale_after_days_default: number
+  closed_after_days_default: number
   channel_breakdown: Record<string, number>
   account_owner_email: string | null
   participants: ConversationFullParticipant[]

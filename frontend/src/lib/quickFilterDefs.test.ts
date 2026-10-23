@@ -7,6 +7,7 @@ describe('conversation quick filters (CONV-DNT-11)', () => {
   it('offers Active and Done chips on System Status', () => {
     const byLabel = Object.fromEntries(defs.map((d) => [d.label, d.filter]))
     expect(byLabel.Active).toEqual({ field_key: 'status', operator: 'equals', value: 'active' })
+    expect(byLabel.Stale).toEqual({ field_key: 'status', operator: 'equals', value: 'stale' })
     expect(byLabel.Done).toEqual({ field_key: 'status', operator: 'equals', value: 'done' })
   })
 
@@ -16,7 +17,7 @@ describe('conversation quick filters (CONV-DNT-11)', () => {
     expect(aiChips.map((d) => d.filter.value)).toEqual(['open', 'closed', 'uncertain'])
   })
 
-  it('lists the status chips before the AI chips', () => {
-    expect(defs.map((d) => d.label).slice(0, 2)).toEqual(['Active', 'Done'])
+  it('lists the status chips before the AI chips (CONV-DNT-18)', () => {
+    expect(defs.map((d) => d.label).slice(0, 3)).toEqual(['Active', 'Stale', 'Done'])
   })
 })

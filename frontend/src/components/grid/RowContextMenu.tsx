@@ -9,12 +9,16 @@ import {
   Download,
   Tag,
   Archive,
+  CheckCircle2,
+  RotateCcw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { deleteEntity, recomputeScore } from '../../api/subresources.ts'
 import { workflows } from '../../api/workflows.ts'
 import { useNavigationStore } from '../../stores/navigation.ts'
+import { markConversationsDone, reopenConversations } from '../../lib/conversationDone.ts'
+import { isConversationDone } from '../../lib/conversationStatus.ts'
 
 interface RowContextMenuProps {
   x: number
@@ -23,6 +27,8 @@ interface RowContextMenuProps {
   rowIndex: number
   entityType: string
   selectedRowIds: Set<string>
+  /** System Status of the right-clicked row, when the grid knows it (conversations). */
+  rowStatus?: string | null
   onClose: () => void
   onOpenDetail: () => void
   onOpenModal: () => void
@@ -40,6 +46,7 @@ export function RowContextMenu({
   rowId,
   entityType,
   selectedRowIds,
+  rowStatus,
   onClose,
   onOpenDetail,
   onOpenModal,
@@ -49,6 +56,21 @@ export function RowContextMenu({
   const queryClient = useQueryClient()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const canMutate = entityType === 'contact' || entityType === 'company'
+  const isConversation = entityType === 'conversation'
+
+  // Conversation Done state (Base PRD §8.9–8.11): one row, or the selection set.
+  const handleDone = (ids: string[]) => {
+    onClose()
+    void markConversationsDone(ids, queryClient).then((ok) => {
+      if (ok && ids.length > 1) useNavigationStore.getState().deselectAllRows()
+    })
+  }
+  const handleReopen = (ids: string[]) => {
+    onClose()
+    void reopenConversations(ids, queryClient).then((ok) => {
+      if (ok && ids.length > 1) useNavigationStore.getState().deselectAllRows()
+    })
+  }
 
   const handleDelete = async () => {
     if (!confirmingDelete) {
@@ -116,6 +138,19 @@ export function RowContextMenu({
     >
       {isBulkMode ? (
         <>
+          {isConversation && (
+            <>
+              <button onClick={() => handleDone(Array.from(selectedRowIds))} className={menuItemClass}>
+                <CheckCircle2 size={12} />
+                Mark Done ({selectedRowIds.size})
+              </button>
+              <button onClick={() => handleReopen(Array.from(selectedRowIds))} className={menuItemClass}>
+                <RotateCcw size={12} />
+                Reopen ({selectedRowIds.size})
+              </button>
+              <div className="my-1 border-t border-surface-200" />
+            </>
+          )}
           <button onClick={() => { comingSoon(); onClose() }} className={menuItemClass}>
             <Pencil size={12} />
             Bulk Edit ({selectedRowIds.size})
@@ -152,6 +187,19 @@ export function RowContextMenu({
             <Pencil size={12} />
             Edit
           </button>
+          {isConversation && (
+            isConversationDone(rowStatus) ? (
+              <button onClick={() => handleReopen([rowId])} className={menuItemClass}>
+                <RotateCcw size={12} />
+                Reopen
+              </button>
+            ) : (
+              <button onClick={() => handleDone([rowId])} className={menuItemClass}>
+                <CheckCircle2 size={12} />
+                Mark Done
+              </button>
+            )
+          )}
           {canMutate ? (
             <button
               onClick={handleDelete}

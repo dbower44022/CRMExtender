@@ -23,6 +23,11 @@ class FieldDef:
     editable: bool = False
     db_column: str | None = None  # actual DB column name for UPDATE
     select_options: list[str] | None = None  # valid options for select dropdowns
+    # False = the adaptive grid never collapses this column for low value
+    # diversity (Adaptive Grid Intelligence PRD §12.4). For columns whose
+    # job is to name a small set of categories the user must read at a
+    # glance, such as the mailbox a conversation came from.
+    demotable: bool = True
 
 
 @dataclass(frozen=True)
@@ -434,7 +439,22 @@ ENTITY_TYPES: dict[str, EntityDef] = {
             "status": FieldDef(
                 label="Status",
                 sql="conv.status",
-                type="text",
+                type="select",
+                sortable=True,
+                filterable=True,
+                select_options=["active", "stale", "done"],
+            ),
+            "done_at": FieldDef(
+                label="Done At",
+                sql="conv.done_at",
+                type="datetime",
+                sortable=True,
+                filterable=True,
+            ),
+            "reopened_at": FieldDef(
+                label="Reopened At",
+                sql="conv.reopened_at",
+                type="datetime",
                 sortable=True,
                 filterable=True,
             ),
@@ -447,14 +467,21 @@ ENTITY_TYPES: dict[str, EntityDef] = {
             ),
             "account_name": FieldDef(
                 label="Account",
+                # Every mailbox that contributed a message, comma-separated,
+                # so a conversation mirrored in two accounts names both
+                # (v10.33: was the first account only, unsortable, unfilterable).
                 sql=(
-                    "(SELECT COALESCE(pa.display_name, pa.email_address, pa.phone_number) "
+                    "(SELECT GROUP_CONCAT(acct, ', ') FROM ("
+                    "SELECT DISTINCT COALESCE(pa.display_name, pa.email_address, pa.phone_number) AS acct "
                     "FROM conversation_communications cc2 "
                     "JOIN communications comm2 ON comm2.id = cc2.communication_id "
                     "JOIN provider_accounts pa ON pa.id = comm2.account_id "
-                    "WHERE cc2.conversation_id = conv.id LIMIT 1)"
+                    "WHERE cc2.conversation_id = conv.id ORDER BY acct))"
                 ),
                 type="text",
+                sortable=True,
+                filterable=True,
+                demotable=False,
             ),
             "initiator": FieldDef(
                 label="Initiator",
@@ -496,18 +523,22 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 sql="conv.communication_count",
                 type="number",
                 sortable=True,
+                filterable=True,
             ),
             "ai_status": FieldDef(
                 label="AI Status",
                 sql="conv.ai_status",
-                type="text",
+                type="select",
                 sortable=True,
+                filterable=True,
+                select_options=["open", "closed", "uncertain"],
             ),
             "message_count": FieldDef(
                 label="Messages",
                 sql="conv.message_count",
                 type="number",
                 sortable=True,
+                filterable=True,
             ),
             "participant_count": FieldDef(
                 label="Participants",
@@ -520,12 +551,14 @@ ENTITY_TYPES: dict[str, EntityDef] = {
                 sql="conv.first_activity_at",
                 type="datetime",
                 sortable=True,
+                filterable=True,
             ),
             "last_activity_at": FieldDef(
                 label="Last Activity",
                 sql="conv.last_activity_at",
                 type="datetime",
                 sortable=True,
+                filterable=True,
             ),
             "ai_summary": FieldDef(
                 label="AI Summary",
@@ -598,7 +631,7 @@ ENTITY_TYPES: dict[str, EntityDef] = {
         },
         default_columns=[
             "title", "initiator", "initiator_contact_id", "ai_status", "status",
-            "topic_name", "communication_count", "last_activity_at",
+            "account_name", "topic_name", "communication_count", "last_activity_at",
         ],
         default_sort=("last_activity_at", "desc"),
         search_fields=["conv.title"],

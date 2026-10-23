@@ -42,10 +42,24 @@ async def lifespan(app: FastAPI):
         init_db()
     except Exception as exc:
         log.warning("init_db had issues (may need migration): %s", exc)
-    yield
+    scheduler = None
+    if config.SCHEDULER_ENABLED:
+        from ..scheduler import start_scheduler
+        scheduler = start_scheduler()
+    try:
+        yield
+    finally:
+        if scheduler is not None:
+            from ..scheduler import stop_scheduler
+            stop_scheduler()
 
 
 def create_app() -> FastAPI:
+    # A token that will not refresh must never open a browser from inside
+    # the server; the account is marked needs_reauth instead (MAIL-38).
+    from .. import auth as _auth
+    _auth.set_interactive(False)
+
     app = FastAPI(title="CRM Extender", lifespan=lifespan)
 
     app.mount(
@@ -68,6 +82,7 @@ def create_app() -> FastAPI:
 
     from .routes import (
         api,
+        api_mail,
         api_notes,
         api_subresources,
         api_workflows,
@@ -76,6 +91,8 @@ def create_app() -> FastAPI:
     )
 
     # JSON API for React frontend
+    # api_mail: /mail/* (Mail Client PRD); literal paths, registered first
+    app.include_router(api_mail.router, prefix="/api/v1")
     # api_notes first: its literal /notes/* paths must match before
     # api.py's GET /notes/{note_id}
     app.include_router(api_notes.router, prefix="/api/v1")

@@ -18,33 +18,113 @@ from .gmail_client import get_user_email
 log = logging.getLogger(__name__)
 
 
-def get_credentials_for_account(token_path: Path) -> Credentials:
+class ReauthRequired(Exception):
+    """The saved sign-in cannot be used and no browser flow may run here.
+
+    Raised in non-interactive mode (the web server, Mail Client MAIL-38)
+    when a token is missing, unreadable, or fails to refresh. Callers mark
+    the account ``needs_reauth`` and the owner reconnects it from
+    Settings → Accounts.
+    """
+
+    def __init__(self, token_path: Path, reason: str):
+        super().__init__(f"Sign-in needed for {token_path.name}: {reason}")
+        self.token_path = token_path
+        self.reason = reason
+
+
+#: Whether a failed or missing token may start the local-browser consent
+#: flow. The CLI leaves this on; the web server turns it off at startup.
+_INTERACTIVE = True
+
+
+def set_interactive(enabled: bool) -> None:
+    global _INTERACTIVE
+    _INTERACTIVE = enabled
+
+
+#: Scopes that satisfy a required scope without being spelled the same.
+_SCOPE_SUPERSETS = {
+    "https://www.googleapis.com/auth/gmail.readonly": {
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://mail.google.com/",
+    },
+    "https://www.googleapis.com/auth/gmail.modify": {"https://mail.google.com/"},
+    "https://www.googleapis.com/auth/gmail.send": {"https://mail.google.com/"},
+}
+
+
+def token_scopes(token_path: Path) -> list[str]:
+    """The scopes recorded in a saved token file ([] if unreadable or absent)."""
+    try:
+        data = json.loads(Path(token_path).read_text())
+    except (OSError, json.JSONDecodeError, ValueError):
+        return []
+    scopes = data.get("scopes") or []
+    if isinstance(scopes, str):
+        scopes = scopes.split()
+    return [s for s in scopes if isinstance(s, str)]
+
+
+def missing_scopes(token_path: Path, required: list[str] | None = None) -> list[str]:
+    """Scopes in ``required`` (default ``config.GOOGLE_SCOPES``) that the
+    saved token does not grant. Non-empty means the account needs to be
+    reconnected before write-back can work (Mail Client MAIL-06).
+    """
+    granted = set(token_scopes(token_path))
+    missing: list[str] = []
+    for scope in required or config.GOOGLE_SCOPES:
+        if scope in granted or granted & _SCOPE_SUPERSETS.get(scope, set()):
+            continue
+        missing.append(scope)
+    return missing
+
+
+def get_credentials_for_account(token_path: Path, *, interactive: bool | None = None) -> Credentials:
     """Return valid Google OAuth credentials for a specific account token path.
 
     Handles load/refresh/re-authorize cycle and persists the token.
     Also performs one-time migration if token_path is the old generic path.
+    With ``interactive`` false (the web server's default, see
+    :func:`set_interactive`) a token that is missing or will not refresh
+    raises :class:`ReauthRequired` instead of opening a browser.
+
+    The saved token is loaded with the scopes *it* was granted, not the
+    scopes the application now requests: google-auth refuses to refresh
+    when requested scopes exceed granted ones, which would turn every
+    scope upgrade into a forced re-authorization. Accounts whose token
+    lacks a current scope are reported by :func:`missing_scopes` and keep
+    working within their old grant until reconnected (TDD D-23).
     """
     creds: Credentials | None = None
+    if interactive is None:
+        interactive = _INTERACTIVE
+    reason = "no saved sign-in"
 
     # Try loading saved token
     if token_path.exists():
         try:
-            creds = Credentials.from_authorized_user_file(
-                str(token_path), config.GOOGLE_SCOPES
-            )
+            creds = Credentials.from_authorized_user_file(str(token_path))
         except (json.JSONDecodeError, ValueError) as exc:
             log.warning("Saved token is invalid, re-authenticating: %s", exc)
+            reason = f"saved sign-in unreadable ({exc})"
             creds = None
 
     # Refresh or re-authorize
     if creds and creds.expired and creds.refresh_token:
         try:
             creds.refresh(Request())
-        except Exception:
-            log.warning("Token refresh failed, re-authenticating")
+            token_path.write_text(creds.to_json())
+        except Exception as exc:
+            log.warning("Token refresh failed for %s: %s", token_path.name, exc)
+            reason = f"refresh failed ({exc})"
             creds = None
 
     if not creds or not creds.valid:
+        if creds and not creds.valid and reason == "no saved sign-in":
+            reason = "saved sign-in expired and cannot be refreshed"
+        if not interactive:
+            raise ReauthRequired(token_path, reason)
         if not config.CLIENT_SECRET_PATH.exists():
             raise FileNotFoundError(
                 f"OAuth client secret not found at {config.CLIENT_SECRET_PATH}. "

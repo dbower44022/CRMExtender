@@ -702,7 +702,7 @@ All settings are loaded from environment variables.  Place them in the
 | `POC_GMAIL_QUERY`            | `newer_than:7d`            | Gmail search query for initial sync             |
 | `POC_GMAIL_MAX_THREADS`      | `50`                       | Max threads fetched per batch                   |
 | `POC_TARGET_CONVERSATIONS`   | `5`                        | Target number of conversations passing triage   |
-| `POC_CLAUDE_MODEL`           | `claude-sonnet-4-20250514` | Claude model used for summarization             |
+| `POC_CLAUDE_MODEL`           | `claude-opus-5-5` | Claude model used for summarization             |
 | `POC_GMAIL_RATE_LIMIT`       | `5`                        | Gmail API requests per second                   |
 | `POC_CLAUDE_RATE_LIMIT`      | `2`                        | Claude API requests per second                  |
 | `POC_MAX_CONVERSATION_CHARS` | `6000`                     | Max conversation characters sent to Claude      |
@@ -1180,7 +1180,7 @@ Under **APIs & Services > OAuth consent screen**, ensure:
 
 - The app is configured (Internal or External with test users)
 - The scopes include:
-  - `https://www.googleapis.com/auth/gmail.readonly`
+  - `https://www.googleapis.com/auth/gmail.modify` (replaced `gmail.readonly` in v10.8; the mail client writes read, starred, label, and trash state back to the mailbox — accounts authorized before v10.8 show **Needs reconnect** in Settings → Accounts until re-authorized)
   - `https://www.googleapis.com/auth/contacts.readonly`
   - `https://www.googleapis.com/auth/calendar.readonly`
 

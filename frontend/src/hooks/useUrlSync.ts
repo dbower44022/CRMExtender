@@ -8,13 +8,17 @@
 
 import { useEffect, useRef } from 'react'
 import { useNavigationStore } from '../stores/navigation.ts'
-import { buildAppPath, parseAppPath } from '../lib/appRoutes.ts'
+import { buildAppPath, buildMailPath, parseAppPath, parseMailPath } from '../lib/appRoutes.ts'
 
 export function useUrlSync() {
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)
   const selectedRowId = useNavigationStore((s) => s.selectedRowId)
   const dashboardMode = useNavigationStore((s) => s.dashboardMode)
   const reviewMode = useNavigationStore((s) => s.reviewMode)
+  const mailMode = useNavigationStore((s) => s.mailMode)
+  const mailAccountId = useNavigationStore((s) => s.mailAccountId)
+  const mailFolder = useNavigationStore((s) => s.mailFolder)
+  const mailThreadId = useNavigationStore((s) => s.mailThreadId)
   // True while we are applying a URL to the store (boot/popstate), so the
   // store→URL effect doesn't push a duplicate history entry.
   const applyingUrl = useRef(false)
@@ -39,11 +43,21 @@ export function useUrlSync() {
         })
         return
       }
+      const mail = parseMailPath(window.location.pathname)
+      if (mail) {
+        applyingUrl.current = true
+        nav.openMail(mail.accountId, mail.folder, mail.threadId)
+        queueMicrotask(() => {
+          applyingUrl.current = false
+        })
+        return
+      }
       const route = parseAppPath(window.location.pathname)
       if (!route) return
       applyingUrl.current = true
       if (nav.dashboardMode) nav.closeDashboard()
       if (nav.reviewMode) nav.closeReview()
+      if (nav.mailMode) nav.closeMail()
       if (nav.activeEntityType !== route.entityType) {
         nav.setActiveEntityType(route.entityType)
       }
@@ -73,16 +87,21 @@ export function useUrlSync() {
       ? '/app/dashboard'
       : reviewMode
         ? '/app/review'
-        : buildAppPath(activeEntityType, selectedRowId)
+        : mailMode
+          ? buildMailPath(mailAccountId, mailFolder, mailThreadId)
+          : buildAppPath(activeEntityType, selectedRowId)
     if (window.location.pathname === path) return
     // Selecting a row within the same entity replaces (arrow-key browsing
-    // shouldn't flood history); switching entity type pushes.
+    // shouldn't flood history); switching entity type pushes. Likewise a
+    // thread within the same mail folder replaces.
     const current = parseAppPath(window.location.pathname)
-    const sameEntity = !dashboardMode && !reviewMode && current?.entityType === activeEntityType
-    if (sameEntity && current?.entityId && selectedRowId) {
+    const sameEntity = !dashboardMode && !reviewMode && !mailMode && current?.entityType === activeEntityType
+    const currentMail = parseMailPath(window.location.pathname)
+    const sameFolder = mailMode && currentMail?.accountId === mailAccountId && currentMail?.folder === mailFolder
+    if ((sameEntity && current?.entityId && selectedRowId) || (sameFolder && currentMail?.threadId && mailThreadId)) {
       window.history.replaceState({}, '', path)
     } else {
       window.history.pushState({}, '', path)
     }
-  }, [activeEntityType, selectedRowId, dashboardMode, reviewMode])
+  }, [activeEntityType, selectedRowId, dashboardMode, reviewMode, mailMode, mailAccountId, mailFolder, mailThreadId])
 }

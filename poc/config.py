@@ -31,8 +31,12 @@ def token_path_for_account(email: str) -> Path:
 
 
 # Google API scopes
+# gmail.modify replaced gmail.readonly on 10-08-26 (Mail Client MAIL-06): the
+# mail client writes read/starred/label/trash state back to the mailbox.
+# Tokens granted under the old scope keep working read-only until the
+# account is reconnected; see auth.missing_scopes().
 GOOGLE_SCOPES = [
-    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.modify",
     "https://www.googleapis.com/auth/gmail.send",
     "https://www.googleapis.com/auth/contacts.readonly",
     "https://www.googleapis.com/auth/calendar.readonly",
@@ -47,7 +51,9 @@ GMAIL_MAX_THREADS = int(_env("POC_GMAIL_MAX_THREADS", "50"))
 
 # Anthropic
 ANTHROPIC_API_KEY = _env("ANTHROPIC_API_KEY")
-CLAUDE_MODEL = _env("POC_CLAUDE_MODEL", "claude-sonnet-4-20250514")
+# claude-sonnet-4-20250514 was retired by 10-08-26 (404 from the API); the
+# default follows the current Opus generation.
+CLAUDE_MODEL = _env("POC_CLAUDE_MODEL", "claude-opus-5-5")
 
 # Conversation target — keep fetching batches until this many pass triage
 TARGET_CONVERSATIONS = int(_env("POC_TARGET_CONVERSATIONS", "5"))
@@ -72,6 +78,9 @@ except (KeyError, Exception):
 
 # Authentication
 CRM_AUTH_ENABLED = _env("CRM_AUTH_ENABLED", "true").lower() in ("true", "1", "yes")
+# Background per-account sync scheduler in the web server (Mail Client MAIL-13).
+# Set CRM_SCHEDULER_ENABLED=false to run the server without timed syncs.
+SCHEDULER_ENABLED = _env("CRM_SCHEDULER_ENABLED", "true").lower() in ("true", "1", "yes")
 SESSION_SECRET_KEY = _env("SESSION_SECRET_KEY", "change-me-in-production")
 SESSION_TTL_HOURS = int(_env("SESSION_TTL_HOURS", "720"))
 
@@ -92,6 +101,8 @@ MAX_CONVERSATION_CHARS = int(_env("POC_MAX_CONVERSATION_CHARS", "6000"))
 
 # File uploads (notes attachments)
 UPLOAD_DIR = Path(_env("CRM_UPLOAD_DIR", "") or str(_PROJECT_ROOT / "data" / "uploads"))
+# Mail attachment cache (Mail Client MAIL-15): bytes fetched from the provider on demand
+ATTACHMENT_CACHE_DIR = Path(_env("CRM_ATTACHMENT_CACHE_DIR", "") or str(_PROJECT_ROOT / "data" / "attachments"))
 MAX_UPLOAD_SIZE_MB = int(_env("CRM_MAX_UPLOAD_SIZE_MB", "10"))
 ALLOWED_UPLOAD_TYPES = {
     "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",

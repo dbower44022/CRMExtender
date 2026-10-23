@@ -20,9 +20,17 @@ from googleapiclient.errors import HttpError
 
 from . import config
 from .models import ParsedEmail
+from .providers.base import CursorInvalid
 from .rate_limiter import RateLimiter
 
 log = logging.getLogger(__name__)
+
+
+def _http_status(exc: HttpError) -> int:
+    status = getattr(exc, "status_code", None) or getattr(
+        getattr(exc, "resp", None), "status", None
+    )
+    return int(status or 0)
 
 
 def _decode_header_value(raw: str) -> str:
@@ -53,6 +61,17 @@ def _parse_address_list(raw: str) -> list[str]:
         return []
     pairs = email.utils.getaddresses([raw])
     return [addr.lower() for _, addr in pairs if addr]
+
+
+def _parse_address_names(raw: str) -> dict[str, str]:
+    """Extract {address: display name} for entries that carry a name."""
+    if not raw:
+        return {}
+    names: dict[str, str] = {}
+    for name, addr in email.utils.getaddresses([raw]):
+        if addr and name:
+            names[addr.lower()] = _decode_header_value(name)
+    return names
 
 
 def _get_header(headers: list[dict], name: str) -> str:
@@ -87,6 +106,38 @@ def _decode_body(payload: dict) -> tuple[str, str]:
             html = h
 
     return plain, html
+
+
+def _collect_attachments(payload: dict) -> list[dict]:
+    """Walk the MIME tree and return attachment metadata (no bytes).
+
+    A part counts as an attachment when Gmail gave it an ``attachmentId``
+    or a filename. Inline images carry a ``Content-ID`` header, which the
+    viewer uses to resolve ``cid:`` references (MAIL-15).
+    """
+    found: list[dict] = []
+
+    def walk(part: dict) -> None:
+        body = part.get("body", {}) or {}
+        filename = part.get("filename") or ""
+        attachment_id = body.get("attachmentId")
+        if attachment_id or filename:
+            headers = part.get("headers", []) or []
+            content_id = _get_header(headers, "Content-ID").strip("<>") or None
+            disposition = _get_header(headers, "Content-Disposition").lower()
+            found.append({
+                "attachment_id": attachment_id,
+                "filename": filename or None,
+                "mime_type": part.get("mimeType") or "application/octet-stream",
+                "size": int(body.get("size") or 0),
+                "content_id": content_id,
+                "is_inline": bool(content_id) or disposition.startswith("inline"),
+            })
+        for child in part.get("parts", []) or []:
+            walk(child)
+
+    walk(payload)
+    return found
 
 
 # Patterns for _html_to_text — compiled once at module level
@@ -160,24 +211,48 @@ def _parse_message(msg: dict) -> ParsedEmail:
     if not body_plain and body_html:
         body_plain = _html_to_text(body_html)
 
+    to_raw = _get_header(headers, "To")
+    cc_raw = _get_header(headers, "Cc")
+    bcc_raw = _get_header(headers, "Bcc")
+    reply_to_raw = _get_header(headers, "Reply-To")
+
+    participant_names: dict[str, str] = {}
+    if sender_name and sender_email:
+        participant_names[sender_email] = sender_name
+    for raw in (to_raw, cc_raw, bcc_raw, reply_to_raw):
+        participant_names.update(_parse_address_names(raw))
+
+    label_ids = list(msg.get("labelIds", []) or [])
+
     return ParsedEmail(
         message_id=msg.get("id", ""),
         thread_id=msg.get("threadId", ""),
         subject=_decode_header_value(_get_header(headers, "Subject")),
         sender=sender_display,
         sender_email=sender_email,
-        recipients=_parse_address_list(_get_header(headers, "To")),
-        cc=_parse_address_list(_get_header(headers, "Cc")),
+        recipients=_parse_address_list(to_raw),
+        cc=_parse_address_list(cc_raw),
         date=date,
         body_plain=body_plain,
         body_html=body_html,
-        snippet=msg.get("snippet", ""),
+        # Gmail delivers the snippet HTML-escaped (&#39; &amp; ...); store it plain.
+        snippet=html_mod.unescape(msg.get("snippet", "") or ""),
+        bcc=_parse_address_list(bcc_raw),
+        reply_to=_parse_address_list(reply_to_raw),
+        participant_names=participant_names,
+        header_message_id=_get_header(headers, "Message-ID").strip() or None,
+        header_in_reply_to=_get_header(headers, "In-Reply-To").strip() or None,
+        header_references=" ".join(_get_header(headers, "References").split()) or None,
+        label_ids=label_ids,
+        is_read="UNREAD" not in label_ids,
+        is_starred="STARRED" in label_ids,
+        attachments=_collect_attachments(payload),
     )
 
 
 def get_user_email(creds: Credentials) -> str:
     """Return the authenticated user's email address from the Gmail profile."""
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     profile = service.users().getProfile(userId="me").execute()
     return profile["emailAddress"].lower()
 
@@ -195,7 +270,7 @@ def fetch_threads(
     each thread being a list of ParsedEmail sorted by date ascending.
     The next_page_token can be passed back to continue fetching.
     """
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     query = query or config.GMAIL_QUERY
     max_threads = max_threads or config.GMAIL_MAX_THREADS
 
@@ -264,17 +339,19 @@ def fetch_threads(
 
 def get_history_id(creds: Credentials) -> str:
     """Return the current Gmail historyId for the authenticated user."""
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     profile = service.users().getProfile(userId="me").execute()
     return str(profile["historyId"])
 
 
-class HistoryExpiredError(Exception):
+class HistoryExpiredError(CursorInvalid):
     """The stored Gmail history cursor is too old for the history API.
 
     Gmail only retains history for a limited period (typically about a
     week) and returns 404 for older historyIds. Callers must backfill by
     query instead of advancing the cursor, or the gap is silently lost.
+    Subclasses the provider-neutral :class:`CursorInvalid` so the sync
+    engine can catch one type for every provider.
     """
 
 
@@ -282,19 +359,29 @@ def fetch_history(
     creds: Credentials,
     start_history_id: str,
     rate_limiter: RateLimiter | None = None,
-) -> tuple[list[str], list[str]]:
+    *,
+    include_labels: bool = False,
+) -> tuple[list[str], list[str]] | tuple[list[str], list[str], list[dict]]:
     """Fetch Gmail history changes since start_history_id.
 
-    Returns (added_message_ids, deleted_message_ids).
+    Returns (added_message_ids, deleted_message_ids). With
+    ``include_labels=True`` a third element is returned: a list of
+    ``{"id", "added": [label ids], "removed": [label ids]}`` dicts, one
+    per message whose labels changed (MAIL-10 consumes these).
 
     Raises HistoryExpiredError when the cursor is too old (Gmail 404),
     and propagates other API errors so the caller aborts without
     advancing its cursor.
     """
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     added: list[str] = []
     deleted: list[str] = []
+    label_changes: dict[str, dict] = {}
     page_token: str | None = None
+
+    history_types = ["messageAdded", "messageDeleted"]
+    if include_labels:
+        history_types += ["labelAdded", "labelRemoved"]
 
     while True:
         if rate_limiter:
@@ -304,17 +391,14 @@ def fetch_history(
             params: dict = {
                 "userId": "me",
                 "startHistoryId": start_history_id,
-                "historyTypes": ["messageAdded", "messageDeleted"],
+                "historyTypes": history_types,
             }
             if page_token:
                 params["pageToken"] = page_token
 
             result = service.users().history().list(**params).execute()
         except HttpError as exc:
-            status = getattr(exc, "status_code", None) or getattr(
-                getattr(exc, "resp", None), "status", None
-            )
-            if int(status or 0) == 404:
+            if _http_status(exc) == 404:
                 raise HistoryExpiredError(
                     f"Gmail history cursor {start_history_id} has expired"
                 ) from exc
@@ -330,27 +414,160 @@ def fetch_history(
                 mid = msg_deleted.get("message", {}).get("id")
                 if mid:
                     deleted.append(mid)
+            if include_labels:
+                for change in record.get("labelsAdded", []):
+                    mid = change.get("message", {}).get("id")
+                    if mid:
+                        entry = label_changes.setdefault(mid, {"id": mid, "added": [], "removed": []})
+                        entry["added"].extend(change.get("labelIds", []))
+                for change in record.get("labelsRemoved", []):
+                    mid = change.get("message", {}).get("id")
+                    if mid:
+                        entry = label_changes.setdefault(mid, {"id": mid, "added": [], "removed": []})
+                        entry["removed"].extend(change.get("labelIds", []))
 
         page_token = result.get("nextPageToken")
         if not page_token:
             break
 
-    log.info("History since %s: %d added, %d deleted",
-             start_history_id, len(added), len(deleted))
+    log.info("History since %s: %d added, %d deleted, %d label changes",
+             start_history_id, len(added), len(deleted), len(label_changes))
+    if include_labels:
+        return added, deleted, list(label_changes.values())
     return added, deleted
+
+
+def list_labels(creds: Credentials, rate_limiter: RateLimiter | None = None) -> list[dict]:
+    """Return the raw Gmail label resources for the mailbox."""
+    if rate_limiter:
+        rate_limiter.acquire()
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+    result = service.users().labels().list(userId="me").execute()
+    return list(result.get("labels", []))
+
+
+def list_message_ids(
+    creds: Credentials,
+    query: str,
+    *,
+    max_results: int = 200,
+    page_token: str | None = None,
+    rate_limiter: RateLimiter | None = None,
+) -> tuple[list[str], str | None]:
+    """One page of message ids matching ``query`` (newest first)."""
+    if rate_limiter:
+        rate_limiter.acquire()
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+    params: dict = {"userId": "me", "q": query, "maxResults": max_results}
+    if page_token:
+        params["pageToken"] = page_token
+    result = service.users().messages().list(**params).execute()
+    ids = [m["id"] for m in result.get("messages", []) if m.get("id")]
+    return ids, result.get("nextPageToken")
+
+
+def fetch_attachment(
+    creds: Credentials,
+    message_id: str,
+    attachment_id: str,
+    rate_limiter: RateLimiter | None = None,
+) -> bytes:
+    """Return the decoded bytes of one attachment part."""
+    if rate_limiter:
+        rate_limiter.acquire()
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+    result = (
+        service.users()
+        .messages()
+        .attachments()
+        .get(userId="me", messageId=message_id, id=attachment_id)
+        .execute()
+    )
+    return base64.urlsafe_b64decode(result.get("data", ""))
+
+
+def modify_labels(
+    creds: Credentials,
+    message_ids: list[str],
+    *,
+    add: list[str] | None = None,
+    remove: list[str] | None = None,
+    rate_limiter: RateLimiter | None = None,
+) -> None:
+    """Add and/or remove labels on a batch of messages (``batchModify``).
+
+    Raises HttpError on failure; a 404 means at least one target is gone.
+    """
+    if not message_ids or not (add or remove):
+        return
+    if rate_limiter:
+        rate_limiter.acquire()
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+    body: dict = {"ids": list(message_ids)}
+    if add:
+        body["addLabelIds"] = list(add)
+    if remove:
+        body["removeLabelIds"] = list(remove)
+    service.users().messages().batchModify(userId="me", body=body).execute()
+
+
+def trash_messages(
+    creds: Credentials,
+    message_ids: list[str],
+    *,
+    untrash: bool = False,
+    rate_limiter: RateLimiter | None = None,
+) -> None:
+    """Move messages to or out of Trash (one request per message)."""
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+    for mid in message_ids:
+        if rate_limiter:
+            rate_limiter.acquire()
+        call = service.users().messages()
+        (call.untrash if untrash else call.trash)(userId="me", id=mid).execute()
+
+
+def create_label(
+    creds: Credentials,
+    name: str,
+    rate_limiter: RateLimiter | None = None,
+) -> dict:
+    """Create a user label; nested labels use ``Parent/Child`` names."""
+    if rate_limiter:
+        rate_limiter.acquire()
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+    body = {
+        "name": name,
+        "labelListVisibility": "labelShow",
+        "messageListVisibility": "show",
+    }
+    return service.users().labels().create(userId="me", body=body).execute()
+
+
+def get_profile(creds: Credentials) -> dict:
+    """Return the raw Gmail profile (emailAddress, historyId, counts)."""
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+    return service.users().getProfile(userId="me").execute()
 
 
 def fetch_messages(
     creds: Credentials,
     message_ids: list[str],
     rate_limiter: RateLimiter | None = None,
+    *,
+    metadata_only: bool = False,
 ) -> list[ParsedEmail]:
     """Fetch full message data for a list of message IDs.
 
-    Returns parsed emails (skips failures).
+    Returns parsed emails (skips failures). With ``metadata_only=True``
+    the ``metadata`` format is requested: headers, labels, and flags come
+    back but bodies and attachment parts do not (used by the mail-state
+    backfill, which must not overwrite stored bodies).
     """
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     emails: list[ParsedEmail] = []
+    fmt = "metadata" if metadata_only else "full"
+    gone = 0
 
     for mid in message_ids:
         try:
@@ -360,14 +577,27 @@ def fetch_messages(
             msg = (
                 service.users()
                 .messages()
-                .get(userId="me", id=mid, format="full")
+                .get(userId="me", id=mid, format=fmt)
                 .execute()
             )
             emails.append(_parse_message(msg))
+        except HttpError as exc:
+            if _http_status(exc) == 404:
+                # The history named a message that no longer exists: Gmail
+                # draft autosaves create and drop an id every few seconds,
+                # and mail deleted before the fetch does the same. Routine.
+                gone += 1
+                log.debug("Message %s no longer exists at Gmail", mid)
+            else:
+                log.warning("Failed to fetch message %s: %s", mid, exc)
         except Exception as exc:
             log.warning("Failed to fetch message %s: %s", mid, exc)
 
-    log.info("Fetched %d/%d messages", len(emails), len(message_ids))
+    if gone:
+        log.info("Fetched %d/%d messages (%d no longer exist at Gmail: draft autosaves or deleted)",
+                 len(emails), len(message_ids), gone)
+    else:
+        log.info("Fetched %d/%d messages", len(emails), len(message_ids))
     return emails
 
 
@@ -434,7 +664,7 @@ def send_message(
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
 
     # Send via Gmail API
-    service = build("gmail", "v1", credentials=creds)
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
     send_body: dict = {"raw": raw}
     if thread_id:
         send_body["threadId"] = thread_id

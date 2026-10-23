@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=CRMExtender
+GenericName=Relationship Intelligence
+Comment=Open CRMExtender: contacts, companies, conversations and mail
+Exec=@LAUNCHER@
+Icon=crmextender
+Terminal=false
+Categories=Office;ContactManagement;Email;
+Keywords=CRM;Mail;Contacts;Companies;Conversations;
+StartupNotify=false

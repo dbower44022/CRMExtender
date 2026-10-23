@@ -110,7 +110,8 @@ export function computeLayout(options: ComputeLayoutOptions): ComputedLayout {
     const m = metricsMap.get(fk)!
     const priority = priorities.get(fk)!
     const hasOverride = fk in colOverrides
-    if (demotionEnabled) {
+    const exempt = entityDef.fields[fk]?.demotable === false
+    if (demotionEnabled && !exempt) {
       demotions.set(fk, computeDemotion(m, priority, hasOverride))
     } else {
       demotions.set(fk, 'normal')

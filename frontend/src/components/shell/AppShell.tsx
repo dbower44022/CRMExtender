@@ -16,9 +16,11 @@ import { ActionPanel } from './ActionPanel.tsx'
 import { ContentArea } from './ContentArea.tsx'
 import { DetailPanel } from './DetailPanel.tsx'
 import { GlobalSearchModal } from '../search/GlobalSearchModal.tsx'
-import { ComposePanel } from '../compose/ComposePanel.tsx'
+import { ComposeDock } from '../compose/ComposeDock.tsx'
 import { useDefaultView } from '../../hooks/useDefaultView.ts'
 import { useUrlSync } from '../../hooks/useUrlSync.ts'
+import { useMailEvents } from '../../hooks/useMailEvents.ts'
+import { useVersionWatch } from '../../hooks/useVersionWatch.ts'
 import { useProfile } from '../../api/settings.ts'
 import { setDatePrefs } from '../../lib/datePrefs.ts'
 
@@ -38,10 +40,13 @@ export function AppShell() {
   const openSearchModal = useLayoutStore((s) => s.openSearchModal)
   const activeViewId = useNavigationStore((s) => s.activeViewId)
   const settingsMode = useNavigationStore((s) => s.settingsMode)
+  const mailMode = useNavigationStore((s) => s.mailMode)
   const { data: viewConfig } = useViewConfig(activeViewId)
 
   useDefaultView()
   useUrlSync()
+  useMailEvents()
+  useVersionWatch()
 
   // Date rendering follows profile preferences (timezone + date format)
   const { data: profileData } = useProfile()
@@ -86,7 +91,8 @@ export function AppShell() {
   useEffect(() => {
     const panel = detailRef.current
     if (!panel) return
-    if (settingsMode) {
+    if (settingsMode || mailMode) {
+      // Mail has its own reading pane; the record preview has no role there.
       panel.resize('0%')
     } else if (detailPanelExpanded && detailPanelVisible) {
       panel.resize('65%')
@@ -97,7 +103,7 @@ export function AppShell() {
     } else {
       panel.resize('0%')
     }
-  }, [detailPanelVisible, detailPanelExpanded, detailRef, viewConfig?.preview_panel_size, settingsMode])
+  }, [detailPanelVisible, detailPanelExpanded, detailRef, viewConfig?.preview_panel_size, settingsMode, mailMode])
 
   // Ctrl+K / Cmd+K to open search modal
   useEffect(() => {
@@ -154,7 +160,7 @@ export function AppShell() {
       </div>
     </div>
     {searchModalOpen && <GlobalSearchModal />}
-    <ComposePanel />
+    <ComposeDock />
     </>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { formatTimestamp } from '../../lib/formatTimestamp.ts'
+import { reopenReasonLabel } from '../../lib/conversationStatus.ts'
 import type { ConversationFullData } from '../../types/api.ts'
 
 interface ConversationMetadataCardProps {
@@ -25,6 +26,18 @@ export function ConversationMetadataCard({ data }: ConversationMetadataCardProps
             <MetadataRow label="Type" value={data.is_aggregate ? 'Aggregate Conversation' : 'Standard Conversation'} />
             <MetadataRow label="First Activity" value={formatTimestamp(data.first_activity_at)} />
             <MetadataRow label="Last Activity" value={formatTimestamp(data.last_activity_at)} />
+            {data.done_at && (
+              <MetadataRow label="Done" value={formatTimestamp(data.done_at)} />
+            )}
+            {data.done_by_name && (
+              <MetadataRow label="Done by" value={data.done_by_name} />
+            )}
+            {data.reopened_at && (
+              <MetadataRow label="Reopened" value={formatTimestamp(data.reopened_at)} />
+            )}
+            {data.reopened_reason && (
+              <MetadataRow label="Reopen reason" value={reopenReasonLabel(data.reopened_reason)} />
+            )}
             {data.provider_account && (
               <>
                 <MetadataRow label="Provider" value={data.provider_account.provider} />

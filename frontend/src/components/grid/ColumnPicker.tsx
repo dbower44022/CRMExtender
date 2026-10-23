@@ -6,21 +6,42 @@ import { useViewConfig, useUpdateViewColumns } from '../../api/views.ts'
 import { useLayoutOverrides } from '../../api/layoutOverrides.ts'
 import { useGridIntelligenceStore } from '../../stores/gridIntelligence.ts'
 import { buildDisplayProfile } from '../../lib/displayProfile.ts'
-import type { ViewColumn, FieldDef, CellAlignment } from '../../types/api.ts'
+import type { EntityDef, ViewColumn, FieldDef, CellAlignment } from '../../types/api.ts'
 
 export function ColumnPicker({ onClose }: { onClose: () => void }) {
   const activeViewId = useNavigationStore((s) => s.activeViewId)
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)
   const { data: registry } = useEntityRegistry()
   const { data: viewConfig } = useViewConfig(activeViewId)
-  const updateColumns = useUpdateViewColumns(activeViewId ?? '')
-  const ref = useRef<HTMLDivElement>(null)
 
   const entityDef = registry?.[activeEntityType]
-  const viewColumns = viewConfig?.columns ?? []
+  if (!entityDef || !activeViewId || !viewConfig) return null
+
+  // Keyed on the view so switching views re-seeds the draft ordering from scratch.
+  return (
+    <ColumnPickerForm
+      key={activeViewId}
+      viewId={activeViewId}
+      entityDef={entityDef}
+      viewColumns={viewConfig.columns ?? []}
+      onClose={onClose}
+    />
+  )
+}
+
+interface ColumnPickerFormProps {
+  viewId: string
+  entityDef: EntityDef
+  viewColumns: ViewColumn[]
+  onClose: () => void
+}
+
+function ColumnPickerForm({ viewId, entityDef, viewColumns, onClose }: ColumnPickerFormProps) {
+  const updateColumns = useUpdateViewColumns(viewId)
+  const ref = useRef<HTMLDivElement>(null)
 
   // Layout overrides + computed layout for alignment state
-  const { data: overrides } = useLayoutOverrides(activeViewId)
+  const { data: overrides } = useLayoutOverrides(viewId)
   const computedLayout = useGridIntelligenceStore((s) => s.computedLayout)
   const saveAlignmentOverride = useGridIntelligenceStore((s) => s.saveAlignmentOverride)
 
@@ -60,24 +81,18 @@ export function ColumnPicker({ onClose }: { onClose: () => void }) {
   // Local state for ordering
   const [columns, setColumns] = useState<
     { key: string; label?: string; width?: number }[]
-  >([])
-
-  useEffect(() => {
-    if (viewColumns.length > 0 && entityDef) {
-      setColumns(
-        viewColumns
-          .filter((vc: ViewColumn) => {
-            const fd = entityDef.fields[vc.field_key]
-            return fd && fd.type !== 'hidden'
-          })
-          .map((vc: ViewColumn) => ({
-            key: vc.field_key,
-            label: vc.label_override || undefined,
-            width: vc.width_px || undefined,
-          })),
-      )
-    }
-  }, [viewColumns, entityDef])
+  >(() =>
+    viewColumns
+      .filter((vc: ViewColumn) => {
+        const fd = entityDef.fields[vc.field_key]
+        return fd && fd.type !== 'hidden'
+      })
+      .map((vc: ViewColumn) => ({
+        key: vc.field_key,
+        label: vc.label_override || undefined,
+        width: vc.width_px || undefined,
+      })),
+  )
 
   // Close on outside click
   useEffect(() => {
@@ -89,8 +104,6 @@ export function ColumnPicker({ onClose }: { onClose: () => void }) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [onClose])
-
-  if (!entityDef) return null
 
   const selectedKeys = new Set(columns.map((c) => c.key))
   const availableFields = Object.entries(entityDef.fields)

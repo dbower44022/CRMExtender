@@ -43,3 +43,23 @@ def _template_init_db(tmp_path_factory):
     yield
     for mod in patched:
         mod.init_db = _REAL_INIT_DB
+
+
+@pytest.fixture(autouse=True)
+def _no_background_scheduler(monkeypatch):
+    """The web server starts the per-account sync scheduler in its
+    lifespan (MAIL-13). Tests must never spawn it: a TestClient used as a
+    context manager would otherwise start timed syncs against the test
+    database. Scheduler tests construct SyncScheduler directly."""
+    monkeypatch.setattr("poc.config.SCHEDULER_ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
+def _no_network_label_refresh(monkeypatch):
+    """The sync orchestrators refresh the mailbox label list from the
+    provider before syncing (MAIL-08). That is an HTTP call; tests that
+    exercise the orchestrators with mock credentials must not reach the
+    network, so the Gmail label listing is stubbed to empty here. A test
+    that wants labels patches ``poc.gmail_client.list_labels`` itself."""
+    import poc.gmail_client as _gc
+    monkeypatch.setattr(_gc, "list_labels", lambda creds, rate_limiter=None: [])

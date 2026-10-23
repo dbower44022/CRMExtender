@@ -12,13 +12,13 @@ from . import config
 from .contacts_client import fetch_contact_groups, fetch_contacts
 from .database import get_connection
 from .email_parser import strip_quotes
-from .gmail_client import (
-    HistoryExpiredError,
-    fetch_history,
-    fetch_messages,
-    fetch_threads,
-    get_history_id,
-    get_user_email,
+from .mail_attachments import store_attachment_rows
+from .mail_state import (
+    apply_label_delta,
+    apply_mail_state,
+    archive_deleted,
+    ensure_labels,
+    set_communication_labels,
 )
 from .models import (
     Conversation,
@@ -35,8 +35,10 @@ from .domain_resolver import (
     is_public_domain,
     resolve_company_by_domain,
 )
+from .providers import CursorInvalid, get_provider
 from .rate_limiter import RateLimiter
 from .summarizer import summarize_conversation
+from .conversation_links import link_communications
 from .triage import AUTOMATED_SENDER_PATTERNS
 
 log = logging.getLogger(__name__)
@@ -82,7 +84,7 @@ def register_account(
 
     Returns the account_id (UUID).
     """
-    user_email = get_user_email(creds)
+    user_email = get_provider(provider).get_user_email(creds)
     token_path = token_path or str(config.TOKEN_PATH)
     now = _now_iso()
 
@@ -524,11 +526,12 @@ def sync_contact_email(
         except Exception:
             log.warning("Could not load credentials for account %s", account_id)
             continue
+        provider = get_provider(acct.get("provider") or "gmail")
 
         # Fetch all pages
         page_token: str | None = None
         while True:
-            threads, page_token = fetch_threads(
+            threads, page_token = provider.fetch_initial(
                 creds,
                 query=full_query,
                 max_threads=500,
@@ -675,6 +678,7 @@ def _store_thread(
     # IGNORE below silently skips those, preventing duplicates.
     # ------------------------------------------------------------------
     new_comm_ids: list[str] = []
+    draft_ids: set[str] = set()     # provider drafts: stored for the Drafts folder, never linked (D-42)
     for em in thread_emails:
         comm_id = str(uuid.uuid4())
         row = em.to_row(
@@ -691,8 +695,9 @@ def _store_thread(
                     sender_address, sender_name, subject, snippet,
                     provider_message_id, provider_thread_id,
                     header_message_id, header_references, header_in_reply_to,
-                    is_read, is_current, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    header_reply_to, is_read, is_starred, mail_state_synced_at,
+                    is_current, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     row["id"], row["account_id"], row["channel"],
                     row["timestamp"],
@@ -703,7 +708,8 @@ def _store_thread(
                     row["subject"], row["snippet"],
                     row["provider_message_id"], row["provider_thread_id"],
                     row["header_message_id"], row["header_references"],
-                    row["header_in_reply_to"], row["is_read"],
+                    row["header_in_reply_to"], row["header_reply_to"],
+                    row["is_read"], row["is_starred"], now,
                     row["is_current"], row["created_at"], row["updated_at"],
                 ),
             )
@@ -715,6 +721,8 @@ def _store_thread(
             "SELECT 1 FROM communications WHERE id = ?", (comm_id,)
         ).fetchone():
             new_comm_ids.append(comm_id)
+            if "DRAFT" in (em.label_ids or []):
+                draft_ids.add(comm_id)
 
             # Insert recipients into communication_participants
             for rec_row in em.recipient_rows(comm_id):
@@ -725,6 +733,32 @@ def _store_thread(
                     (rec_row["communication_id"], rec_row["address"],
                      rec_row["name"], rec_row["role"]),
                 )
+            # Label membership (MAIL-08); flags and headers went in above.
+            if em.label_ids:
+                mapping = ensure_labels(conn, account_id, em.label_ids)
+                set_communication_labels(
+                    conn, comm_id, [mapping[l] for l in em.label_ids if l in mapping])
+            # Attachment metadata (MAIL-15); bytes are fetched on demand.
+            if em.attachments:
+                store_attachment_rows(conn, comm_id, em)
+        else:
+            # Already stored (re-fetch, backfill overlap, or a CRM-composed
+            # message now seen from the provider): the provider is
+            # authoritative for mailbox state, so refresh flags, headers,
+            # labels, and participant names without touching bodies.
+            existing = conn.execute(
+                "SELECT id FROM communications WHERE account_id = ? AND provider_message_id = ?",
+                (account_id, em.message_id),
+            ).fetchone()
+            if existing:
+                apply_mail_state(conn, existing["id"], account_id, em)
+
+    # Cross-account duplicates (MAIL-44): the same Message-ID in another
+    # account means the same conversation; record the link.
+    header_ids = [em.header_message_id for em in thread_emails if em.header_message_id]
+    if header_ids:
+        from .mail_links import link_thread
+        link_thread(conn, account_id, thread_id, header_ids)
 
     # ------------------------------------------------------------------
     # Step 2: Check for existing conversation
@@ -742,49 +776,30 @@ def _store_thread(
     conversation_created = False
     conversation_updated = False
 
+    link_ids = [cid for cid in new_comm_ids if cid not in draft_ids]
     if existing:
-        # Conversation already exists — link new communications to it
+        # Conversation already exists — link new communications to it.
+        # The helper refreshes counts and activity, clears the summary
+        # stamp, and reopens a done conversation on inbound mail (TDD §9.9).
         conv_id = existing["conversation_id"]
-        for cid in new_comm_ids:
-            conn.execute(
-                """INSERT OR IGNORE INTO conversation_communications
-                   (conversation_id, communication_id, assignment_source, confidence, reviewed, created_at)
-                   VALUES (?, ?, 'sync', 1.0, 1, ?)""",
-                (conv_id, cid, now),
+        if link_ids:
+            result = link_communications(
+                conn, conv_id, link_ids, assignment_source="sync", reviewed=1, now=now,
             )
-
-        if new_comm_ids:
-            # Update conversation counts and timestamps
-            actual_count = conn.execute(
-                "SELECT COUNT(*) as cnt FROM conversation_communications WHERE conversation_id = ?",
-                (conv_id,),
-            ).fetchone()["cnt"]
-
-            date_row = conn.execute(
-                """SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
-                   FROM communications c
-                   JOIN conversation_communications cc ON cc.communication_id = c.id
-                   WHERE cc.conversation_id = ?""",
-                (conv_id,),
-            ).fetchone()
-
-            conn.execute(
-                """UPDATE conversations
-                   SET communication_count = ?, first_activity_at = ?, last_activity_at = ?,
-                       ai_summarized_at = NULL, updated_at = ?
-                   WHERE id = ?""",
-                (actual_count, date_row["first_dt"], date_row["last_dt"], now, conv_id),
-            )
-            conversation_updated = True
+            if result["linked"]:
+                conversation_updated = True
     else:
         # ------------------------------------------------------------------
         # Step 3: No existing conversation — evaluate creation rules
         # ------------------------------------------------------------------
-        # Load ALL communications for this thread (including previously stored ones)
+        # Load ALL communications for this thread (including previously stored
+        # ones), leaving out provider drafts (D-42).
         all_thread_comms = conn.execute(
             """SELECT c.id, c.sender_address, c.direction
                FROM communications c
-               WHERE c.provider_thread_id = ?""",
+               WHERE c.provider_thread_id = ?
+                 AND NOT EXISTS (SELECT 1 FROM communication_labels cl JOIN mailbox_labels ml ON ml.id = cl.label_id
+                                 WHERE cl.communication_id = c.id AND (ml.provider_label_id = 'DRAFT' OR ml.kind = 'drafts'))""",
             (thread_id,),
         ).fetchall()
 
@@ -805,12 +820,12 @@ def _store_thread(
             all_comm_ids = [d["id"] for d in comm_dicts]
             total_count = len(all_comm_ids)
 
-            # Calculate date range from all thread communications
+            # Calculate date range from the linked communications
+            placeholders = ",".join("?" * len(all_comm_ids))
             date_row = conn.execute(
-                """SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
-                   FROM communications c
-                   WHERE c.provider_thread_id = ?""",
-                (thread_id,),
+                f"""SELECT MIN(c.timestamp) as first_dt, MAX(c.timestamp) as last_dt
+                    FROM communications c WHERE c.id IN ({placeholders})""",
+                all_comm_ids,
             ).fetchone()
 
             conn.execute(
@@ -937,6 +952,7 @@ def initial_sync(
 
     account_email = account["email_address"]
     query = account["backfill_query"] or config.GMAIL_QUERY
+    provider = get_provider(account.get("provider") or "gmail")
 
     # Start sync log
     sync_id = str(uuid.uuid4())
@@ -960,7 +976,7 @@ def initial_sync(
     page_token: str | None = None
 
     while True:
-        threads, page_token = fetch_threads(
+        threads, page_token = provider.fetch_initial(
             creds,
             query=query,
             max_threads=config.GMAIL_MAX_THREADS,
@@ -995,7 +1011,7 @@ def initial_sync(
             break
 
     # Record sync cursor (current historyId)
-    history_id = get_history_id(creds)
+    history_id = provider.get_cursor(creds)
     now = _now_iso()
 
     with get_connection() as conn:
@@ -1052,6 +1068,7 @@ def incremental_sync(
 
     account_email = account["email_address"]
     cursor_before = account["sync_cursor"]
+    provider = get_provider(account.get("provider") or "gmail")
 
     if not cursor_before:
         raise ValueError(f"Account {account_id} has no sync_cursor; run initial_sync first")
@@ -1075,11 +1092,14 @@ def incremental_sync(
     # message instead of advancing the cursor over the gap. Any other
     # error aborts the sync with the cursor untouched, so the next run
     # retries the same window.
+    # Label and flag changes in the delta are ignored here until MAIL-10
+    # teaches the engine to mirror them.
     try:
-        added_ids, deleted_ids = fetch_history(
+        delta, history_id = provider.fetch_incremental(
             creds, cursor_before, rate_limiter=rate_limiter,
         )
-    except HistoryExpiredError:
+        added_ids, deleted_ids = delta.added_ids, delta.deleted_ids
+    except CursorInvalid:
         log.warning(
             "Sync cursor %s expired for account %s — backfilling by query",
             cursor_before, account_email,
@@ -1087,7 +1107,7 @@ def incremental_sync(
         return _backfill_sync(
             account_id, account_email, creds, sync_id, cursor_before,
             contact_index, rate_limiter=rate_limiter,
-            customer_id=customer_id, user_id=user_id,
+            customer_id=customer_id, user_id=user_id, provider=provider,
         )
     except Exception:
         with get_connection() as conn:
@@ -1104,7 +1124,7 @@ def incremental_sync(
 
     # Process additions: fetch full messages and store
     if added_ids:
-        new_emails = fetch_messages(creds, added_ids, rate_limiter=rate_limiter)
+        new_emails = provider.fetch_messages(creds, added_ids, rate_limiter=rate_limiter)
 
         # Group by thread_id
         threads_map: dict[str, list[ParsedEmail]] = {}
@@ -1127,42 +1147,27 @@ def incremental_sync(
                     conversations_updated += 1
                 messages_stored += len(thread_emails)
 
-    # Process deletions
+    # Process deletions: the provider has permanently removed these, so the
+    # local record is archived, not deleted (entity-base PRD §4.1, TDD D-22).
+    # Conversation membership and counts are unchanged.
+    messages_archived = 0
     if deleted_ids:
         with get_connection() as conn:
-            for mid in deleted_ids:
-                # Find the communication and its conversation
-                comm_row = conn.execute(
-                    "SELECT id FROM communications WHERE account_id = ? AND provider_message_id = ?",
-                    (account_id, mid),
-                ).fetchone()
-                if comm_row:
-                    comm_id = comm_row["id"]
-                    # Find conversation via join table
-                    cc_row = conn.execute(
-                        "SELECT conversation_id FROM conversation_communications WHERE communication_id = ?",
-                        (comm_id,),
-                    ).fetchone()
-                    conv_id = cc_row["conversation_id"] if cc_row else None
+            messages_archived = archive_deleted(conn, account_id, deleted_ids)
 
-                    # Delete the communication (CASCADE removes join rows)
-                    conn.execute(
-                        "DELETE FROM communications WHERE id = ?",
-                        (comm_id,),
-                    )
-                    # Update conversation communication count
-                    if conv_id:
-                        actual_count = conn.execute(
-                            "SELECT COUNT(*) as cnt FROM conversation_communications WHERE conversation_id = ?",
-                            (conv_id,),
-                        ).fetchone()["cnt"]
-                        conn.execute(
-                            "UPDATE conversations SET communication_count = ?, updated_at = ? WHERE id = ?",
-                            (actual_count, _now_iso(), conv_id),
-                        )
+    # Mirror label and flag changes (MAIL-10). Messages added in this same
+    # delta were stored above with their current labels, so the engine
+    # skips them here without harm.
+    label_stats: dict = {}
+    if delta.label_changes or delta.flag_changes:
+        with get_connection() as conn:
+            label_stats = apply_label_delta(
+                conn, account_id, delta.label_changes, delta.flag_changes,
+            )
 
-    # Update sync cursor
-    history_id = get_history_id(creds)
+    # Update sync cursor to the position the delta was fetched at (not
+    # "now"), so changes that landed while this run was processing are
+    # picked up by the next run instead of being skipped (TDD D-17).
     now = _now_iso()
 
     with get_connection() as conn:
@@ -1190,6 +1195,9 @@ def incremental_sync(
         "messages_stored": messages_stored,
         "conversations_created": conversations_created,
         "conversations_updated": conversations_updated,
+        "messages_archived": messages_archived,
+        "labels_changed": label_stats.get("labels_changed", 0),
+        "flags_changed": label_stats.get("flags_changed", 0),
         "cursor_before": cursor_before,
         "history_id": history_id,
     }
@@ -1208,6 +1216,7 @@ def _backfill_sync(
     *,
     customer_id: str | None = None,
     user_id: str | None = None,
+    provider=None,
 ) -> dict:
     """Recover from an expired history cursor by re-fetching threads by query.
 
@@ -1235,6 +1244,10 @@ def _backfill_sync(
 
     log.info("Backfill for %s using query %r", account_email, query)
 
+    if provider is None:
+        acct_row = get_account(account_id) or {}
+        provider = get_provider(acct_row.get("provider") or "gmail")
+
     messages_fetched = 0
     messages_stored = 0
     conversations_created = 0
@@ -1242,7 +1255,7 @@ def _backfill_sync(
     page_token: str | None = None
 
     while True:
-        threads, page_token = fetch_threads(
+        threads, page_token = provider.fetch_initial(
             creds,
             query=query,
             max_threads=config.GMAIL_MAX_THREADS,
@@ -1268,7 +1281,7 @@ def _backfill_sync(
         if not page_token:
             break
 
-    history_id = get_history_id(creds)
+    history_id = provider.get_cursor(creds)
     now = _now_iso()
 
     with get_connection() as conn:
@@ -1308,35 +1321,88 @@ def _backfill_sync(
 # Conversation processing (summarize)
 # ---------------------------------------------------------------------------
 
+#: Defaults for the summarization cost controls (Mail Client MAIL-19).
+#: Overridable per tenant through the settings cascade
+#: (``summarize_settle_minutes``, ``summarize_max_per_sync``).
+SUMMARIZE_SETTLE_MINUTES = 15
+SUMMARIZE_MAX_PER_SYNC = 500
+
+
+def _conversation_owner_email(conn, conversation_id: str) -> str | None:
+    """The mailbox address a conversation was captured through.
+
+    Used when summarization runs once for all accounts (MAIL-19) and the
+    prompt still needs to know which address is "you" in each thread.
+    """
+    row = conn.execute(
+        """SELECT pa.email_address
+           FROM conversation_communications cc
+           JOIN communications c ON c.id = cc.communication_id
+           JOIN provider_accounts pa ON pa.id = c.account_id
+           WHERE cc.conversation_id = ?
+           ORDER BY c.timestamp DESC LIMIT 1""",
+        (conversation_id,),
+    ).fetchone()
+    return row["email_address"] if row else None
+
+
 def process_conversations(
-    account_id: str,
-    creds: Credentials,
-    user_email: str,
+    account_id: str | None,
+    creds: Credentials | None,
+    user_email: str | None,
     rate_limiter: RateLimiter | None = None,
     claude_limiter: RateLimiter | None = None,
+    *,
+    settle_minutes: int | None = None,
+    max_per_run: int | None = None,
 ) -> tuple[int, int, int]:
     """Summarize conversations that need processing.
 
     Triage is no longer needed here — conversations are pre-filtered at
     creation time by ``_should_create_conversation()``.
 
+    Cost controls (MAIL-19, TDD D-25): a conversation is summarized only
+    once it has been quiet for ``settle_minutes`` (default
+    ``SUMMARIZE_SETTLE_MINUTES``), so an active thread costs one call
+    when it settles rather than one per message; and at most
+    ``max_per_run`` conversations (default ``SUMMARIZE_MAX_PER_SYNC``, 0
+    means unlimited) are summarized per call, newest first, so a large
+    backlog is worked off across runs instead of in one unbounded bill.
+
+    ``account_id``, ``creds``, and ``user_email`` may be ``None``: the
+    pass is global across accounts, and when ``user_email`` is ``None``
+    each conversation's owning mailbox address is looked up for the
+    prompt.
+
     Returns (triaged_count, summarized_count, tag_count).
     triaged_count is always 0 (kept for backward-compatible return signature).
     """
     import anthropic
+    from datetime import timedelta
 
-    # Find conversations needing summarization
+    settle = SUMMARIZE_SETTLE_MINUTES if settle_minutes is None else max(0, int(settle_minutes))
+    cap = SUMMARIZE_MAX_PER_SYNC if max_per_run is None else max(0, int(max_per_run))
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=settle)).isoformat()
+
+    # Find conversations needing summarization that have settled
     with get_connection() as conn:
         rows = conn.execute(
             """SELECT * FROM conversations
                WHERE ai_summarized_at IS NULL
                  AND dismissed = 0
+                 AND (last_activity_at IS NULL OR last_activity_at <= ?)
                ORDER BY last_activity_at DESC""",
+            (cutoff,),
         ).fetchall()
 
     if not rows:
         log.info("No conversations need processing")
         return 0, 0, 0
+
+    skipped = 0
+    if cap and len(rows) > cap:
+        skipped = len(rows) - cap
+        rows = rows[:cap]
 
     summarized_count = 0
     tag_count = 0
@@ -1382,8 +1448,13 @@ def process_conversations(
                 all_participants[p] = None
         conv.participants = list(all_participants.keys())
 
+        owner_email = user_email
+        if not owner_email:
+            with get_connection() as conn:
+                owner_email = _conversation_owner_email(conn, conv_id) or ""
+
         client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        summary = summarize_conversation(conv, client, user_email, claude_limiter)
+        summary = summarize_conversation(conv, client, owner_email, claude_limiter)
 
         if not summary.error:
             update = summary.to_update_dict()
@@ -1406,8 +1477,8 @@ def process_conversations(
                 tag_count += _store_tags(conv_id, summary.key_topics)
 
     log.info(
-        "Processing complete: %d summarized, %d tags",
-        summarized_count, tag_count,
+        "Processing complete: %d summarized, %d tags, %d deferred to the next run",
+        summarized_count, tag_count, skipped,
     )
     return 0, summarized_count, tag_count
 

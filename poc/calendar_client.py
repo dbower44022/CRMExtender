@@ -39,7 +39,7 @@ def list_calendars(
 ) -> list[dict]:
     """Fetch all calendars the user has access to."""
     _check_calendar_scope(creds)
-    service = build("calendar", "v3", credentials=creds)
+    service = build("calendar", "v3", credentials=creds, cache_discovery=False)
     calendars: list[dict] = []
     page_token: str | None = None
 
@@ -82,7 +82,7 @@ def fetch_events(
     If sync_token returns HTTP 410, raises SyncTokenExpiredError.
     """
     _check_calendar_scope(creds)
-    service = build("calendar", "v3", credentials=creds)
+    service = build("calendar", "v3", credentials=creds, cache_discovery=False)
     events: list[dict] = []
     page_token: str | None = None
     next_sync_token: str | None = None

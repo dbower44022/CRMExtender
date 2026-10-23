@@ -55,7 +55,7 @@ from ...hierarchy import (
     update_email_address,
     update_phone_number,
 )
-from ...phone_utils import format_phone, resolve_country_code
+from ...phone_utils import format_phone, normalize_phone, resolve_country_code
 
 router = APIRouter()
 
@@ -100,6 +100,42 @@ def _child_of(table: str, child_id: str, where: str, params: tuple) -> bool:
             (child_id, *params),
         ).fetchone()
     return row is not None
+
+
+def _is_admin(request: Request) -> bool:
+    user = getattr(request.state, "user", None)
+    return bool(user) and user.get("role") == "admin"
+
+
+# Fields a non-admin may change on a sub-resource PUT. Everything else is a
+# value correction reserved for administrators (contact-view-prd.md rules 1-3):
+# identifier values are never edited, and phone/address values are admin-only.
+# Users retain the lifecycle actions — mark inactive, set primary.
+_LIFECYCLE_ONLY = {"is_current", "is_primary"}
+
+
+def _forbid_nonadmin_delete(request: Request) -> JSONResponse | None:
+    """No sub-resource is user-deletable. Deletion is admin-only; users mark
+    records inactive instead (contact-view-prd.md rule 2)."""
+    if _is_admin(request):
+        return None
+    return _err(
+        "Only an administrator can delete this. Mark it inactive instead.", 403
+    )
+
+
+def _forbid_nonadmin_value_edit(request: Request, body: dict) -> JSONResponse | None:
+    """A non-admin may only toggle lifecycle flags, not correct stored values
+    (contact-view-prd.md rule 3). Returns a 403 response if a non-admin sends
+    any field outside ``_LIFECYCLE_ONLY``, else None."""
+    if _is_admin(request):
+        return None
+    if set(body) - _LIFECYCLE_ONLY:
+        return _err(
+            "Only an administrator can change these details. "
+            "You can mark it inactive instead.", 403,
+        )
+    return None
 
 
 def _set_exclusive_primary(table: str, row_id: str, scope_where: str, scope_params: tuple) -> None:
@@ -211,6 +247,8 @@ async def contact_identifier_update(request: Request, contact_id: str, identifie
     if not _child_of("contact_identifiers", identifier_id, "contact_id = ?", (contact_id,)):
         return _err("Not found", 404)
     body = await request.json()
+    if (blocked := _forbid_nonadmin_value_edit(request, body)) is not None:
+        return blocked
     fields = {k: body[k] for k in ("label", "started_at", "ended_at") if k in body}
     if "is_current" in body:
         fields["is_current"] = _bool_int(body["is_current"], 1)
@@ -233,6 +271,8 @@ async def contact_identifier_update(request: Request, contact_id: str, identifie
 
 @router.delete("/contacts/{contact_id}/identifiers/{identifier_id}")
 def contact_identifier_delete(request: Request, contact_id: str, identifier_id: str):
+    if (blocked := _forbid_nonadmin_delete(request)) is not None:
+        return blocked
     if not _owned_entity(request, "contact", contact_id):
         return _err("Not found", 404)
     if not _child_of("contact_identifiers", identifier_id, "contact_id = ?", (contact_id,)):
@@ -275,7 +315,18 @@ def _phone_routes(entity_type: str, entity_plural: str):
                          "entity_type = ? AND entity_id = ?", (entity_type, entity_id)):
             return _err("Not found", 404)
         body = await request.json()
+        if (blocked := _forbid_nonadmin_value_edit(request, body)) is not None:
+            return blocked
         fields = {k: body[k] for k in ("phone_type", "started_at", "ended_at") if k in body}
+        if "number" in body:
+            # Admin-only value correction (non-admins are blocked above).
+            country = resolve_country_code(
+                entity_type, entity_id, customer_id=request.state.customer_id
+            )
+            normalized = normalize_phone(body["number"], country)
+            if normalized is None:
+                return _err("Invalid phone number", 400)
+            fields["number"] = normalized
         if "is_current" in body:
             fields["is_current"] = _bool_int(body["is_current"], 1)
         row = update_phone_number(phone_id, **fields) if fields else None
@@ -292,6 +343,8 @@ def _phone_routes(entity_type: str, entity_plural: str):
 
     @router.delete(f"/{entity_plural}/{{entity_id}}/phones/{{phone_id}}")
     def phone_delete(request: Request, entity_id: str, phone_id: str):
+        if (blocked := _forbid_nonadmin_delete(request)) is not None:
+            return blocked
         if not _owned_entity(request, entity_type, entity_id):
             return _err("Not found", 404)
         if not _child_of("phone_numbers", phone_id,
@@ -333,6 +386,8 @@ def _address_routes(entity_type: str, entity_plural: str):
                          "entity_type = ? AND entity_id = ?", (entity_type, entity_id)):
             return _err("Not found", 404)
         body = await request.json()
+        if (blocked := _forbid_nonadmin_value_edit(request, body)) is not None:
+            return blocked
         fields = {k: body[k] for k in (*_ADDRESS_FIELDS, "started_at", "ended_at") if k in body}
         if "is_current" in body:
             fields["is_current"] = _bool_int(body["is_current"], 1)
@@ -350,6 +405,8 @@ def _address_routes(entity_type: str, entity_plural: str):
 
     @router.delete(f"/{entity_plural}/{{entity_id}}/addresses/{{address_id}}")
     def address_delete(request: Request, entity_id: str, address_id: str):
+        if (blocked := _forbid_nonadmin_delete(request)) is not None:
+            return blocked
         if not _owned_entity(request, entity_type, entity_id):
             return _err("Not found", 404)
         if not _child_of("addresses", address_id,
@@ -389,6 +446,8 @@ async def company_email_update(request: Request, company_id: str, email_id: str)
                      "entity_type = 'company' AND entity_id = ?", (company_id,)):
         return _err("Not found", 404)
     body = await request.json()
+    if (blocked := _forbid_nonadmin_value_edit(request, body)) is not None:
+        return blocked
     fields = {k: body[k] for k in ("email_type", "started_at", "ended_at") if k in body}
     if "is_current" in body:
         fields["is_current"] = _bool_int(body["is_current"], 1)
@@ -407,6 +466,8 @@ async def company_email_update(request: Request, company_id: str, email_id: str)
 
 @router.delete("/companies/{company_id}/emails/{email_id}")
 def company_email_delete(request: Request, company_id: str, email_id: str):
+    if (blocked := _forbid_nonadmin_delete(request)) is not None:
+        return blocked
     if not _owned_entity(request, "company", company_id):
         return _err("Not found", 404)
     if not _child_of("email_addresses", email_id,
@@ -450,6 +511,8 @@ async def company_identifier_add(request: Request, company_id: str):
 
 @router.delete("/companies/{company_id}/identifiers/{identifier_id}")
 def company_identifier_delete(request: Request, company_id: str, identifier_id: str):
+    if (blocked := _forbid_nonadmin_delete(request)) is not None:
+        return blocked
     if not _owned_entity(request, "company", company_id):
         return _err("Not found", 404)
     if not _child_of("company_identifiers", identifier_id, "company_id = ?", (company_id,)):
@@ -509,6 +572,8 @@ async def affiliation_update(request: Request, contact_id: str, affiliation_id: 
 
 @router.delete("/contacts/{contact_id}/affiliations/{affiliation_id}")
 def affiliation_delete(request: Request, contact_id: str, affiliation_id: str):
+    if (blocked := _forbid_nonadmin_delete(request)) is not None:
+        return blocked
     if not _owned_entity(request, "contact", contact_id):
         return _err("Not found", 404)
     if not _child_of("contact_companies", affiliation_id, "contact_id = ?", (contact_id,)):

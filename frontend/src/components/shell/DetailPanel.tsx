@@ -55,7 +55,16 @@ export function DetailPanel() {
 
   if (!selectedRowId) {
     return (
-      <div className="flex h-full items-center justify-center bg-surface-50 p-6 text-center">
+      <div className="relative flex h-full items-center justify-center bg-surface-50 p-6 text-center">
+        <button
+          type="button"
+          onClick={hideDetailPanel}
+          aria-label="Close preview panel"
+          title="Close preview panel"
+          className="absolute right-2 top-2 rounded p-1 text-surface-400 hover:bg-surface-100 hover:text-surface-600"
+        >
+          <X size={16} />
+        </button>
         <p className="text-sm text-surface-400">
           Select a record to preview
         </p>

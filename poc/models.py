@@ -98,7 +98,13 @@ class KnownContact:
 
 @dataclass
 class ParsedEmail:
-    """A single email message parsed from Gmail API."""
+    """A single normalized email message as delivered by a MailProvider.
+
+    This is the ``MailMessage`` type of the provider contract
+    (poc/providers/base.py; Mail Client TDD D-15). The fields after
+    ``snippet`` carry mailbox state and RFC headers; they default empty so
+    older call sites and tests are unaffected. Storing them is MAIL-07.
+    """
 
     message_id: str
     thread_id: str
@@ -111,6 +117,19 @@ class ParsedEmail:
     body_plain: str = ""
     body_html: str = ""
     snippet: str = ""
+    # --- mailbox state and headers (provider contract; stored by MAIL-07) ---
+    bcc: list[str] = field(default_factory=list)
+    reply_to: list[str] = field(default_factory=list)
+    #: address → display name for every participant that had one
+    participant_names: dict[str, str] = field(default_factory=dict)
+    header_message_id: str | None = None
+    header_in_reply_to: str | None = None
+    header_references: str | None = None
+    label_ids: list[str] = field(default_factory=list)
+    is_read: bool = True
+    is_starred: bool = False
+    #: dicts with keys: attachment_id, filename, mime_type, size, content_id, is_inline
+    attachments: list[dict] = field(default_factory=list)
 
     @property
     def all_participants(self) -> list[str]:
@@ -134,7 +153,9 @@ class ParsedEmail:
             "timestamp": self.date.isoformat() if self.date else now,
             "original_text": self.body_plain,
             "original_html": self.body_html,
-            "cleaned_html": self.body_html,
+            # One stored body (Mail Client TDD D-10): cleaned_html is only
+            # written when a cleaning step produces something different.
+            "cleaned_html": None,
             "search_text": self.body_plain,
             "direction": direction,
             "source": "auto_sync",
@@ -144,22 +165,45 @@ class ParsedEmail:
             "snippet": self.snippet,
             "provider_message_id": self.message_id,
             "provider_thread_id": self.thread_id,
-            "header_message_id": None,
-            "header_references": None,
-            "header_in_reply_to": None,
-            "is_read": 0,
+            "header_message_id": self.header_message_id,
+            "header_references": self.header_references,
+            "header_in_reply_to": self.header_in_reply_to,
+            "header_reply_to": ", ".join(self.reply_to) or None,
+            "is_read": 1 if self.is_read else 0,
+            "is_starred": 1 if self.is_starred else 0,
             "is_current": 1,
             "created_at": now,
             "updated_at": now,
         }
 
+    def mail_state(self) -> dict:
+        """The provider-mirrored subset of ``to_row`` (headers, flags).
+
+        Used when a message already exists locally and only its mailbox
+        state is refreshed from the provider (MAIL-07 backfill, re-fetch).
+        """
+        return {
+            "header_message_id": self.header_message_id,
+            "header_references": self.header_references,
+            "header_in_reply_to": self.header_in_reply_to,
+            "header_reply_to": ", ".join(self.reply_to) or None,
+            "is_read": 1 if self.is_read else 0,
+            "is_starred": 1 if self.is_starred else 0,
+        }
+
     def recipient_rows(self, communication_id: str) -> list[dict]:
         """Return rows for the communication_participants table."""
         rows: list[dict] = []
-        for addr in self.recipients:
-            rows.append({"communication_id": communication_id, "address": addr.lower(), "name": None, "role": "to"})
-        for addr in self.cc:
-            rows.append({"communication_id": communication_id, "address": addr.lower(), "name": None, "role": "cc"})
+        names = self.participant_names
+        for role, addrs in (("to", self.recipients), ("cc", self.cc), ("bcc", self.bcc)):
+            for addr in addrs:
+                key = addr.lower()
+                rows.append({
+                    "communication_id": communication_id,
+                    "address": key,
+                    "name": names.get(key) or None,
+                    "role": role,
+                })
         return rows
 
     @classmethod
@@ -168,6 +212,8 @@ class ParsedEmail:
         r = dict(row)
         to_addrs = []
         cc_addrs = []
+        bcc_addrs = []
+        names: dict[str, str] = {}
         if recipients:
             for rec in recipients:
                 rec = dict(rec)
@@ -175,6 +221,10 @@ class ParsedEmail:
                     to_addrs.append(rec["address"])
                 elif rec["role"] == "cc":
                     cc_addrs.append(rec["address"])
+                elif rec["role"] == "bcc":
+                    bcc_addrs.append(rec["address"])
+                if rec.get("name"):
+                    names[rec["address"]] = rec["name"]
 
         date_val = None
         raw_date = r.get("timestamp") or r.get("date")
@@ -196,6 +246,14 @@ class ParsedEmail:
             body_plain=r.get("original_text") or r.get("content") or r.get("body_text") or "",
             body_html=r.get("original_html") or r.get("body_html") or "",
             snippet=r.get("snippet") or "",
+            bcc=bcc_addrs,
+            reply_to=[a.strip() for a in (r.get("header_reply_to") or "").split(",") if a.strip()],
+            participant_names=names,
+            header_message_id=r.get("header_message_id"),
+            header_in_reply_to=r.get("header_in_reply_to"),
+            header_references=r.get("header_references"),
+            is_read=bool(r.get("is_read", 1)),
+            is_starred=bool(r.get("is_starred", 0)),
         )
 
 

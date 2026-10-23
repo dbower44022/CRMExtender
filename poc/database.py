@@ -54,6 +54,15 @@ CREATE TABLE IF NOT EXISTS provider_accounts (
     initial_sync_done INTEGER DEFAULT 0,
     is_active         INTEGER DEFAULT 1,
     backfill_query    TEXT DEFAULT 'newer_than:90d',
+    auth_status       TEXT NOT NULL DEFAULT 'ok',   -- ok | needs_reauth | disconnected (v27)
+    auth_error        TEXT,
+    last_sync_error   TEXT,
+    last_sync_error_at TEXT,
+    color             TEXT,                        -- label colour #rrggbb (v28)
+    backfill_cursor   TEXT,                        -- historical backfill checkpoint (v31, MAIL-11)
+    backfill_done     INTEGER NOT NULL DEFAULT 0,  -- 1 once the mailbox start was reached
+    backfill_messages INTEGER NOT NULL DEFAULT 0,  -- messages stored by the backfill job
+    backfill_updated_at TEXT,
     created_at        TEXT NOT NULL,
     updated_at        TEXT NOT NULL,
     UNIQUE(provider, email_address),
@@ -238,6 +247,10 @@ CREATE TABLE IF NOT EXISTS conversations (
     description         TEXT,
     stale_after_days    INTEGER DEFAULT 14,
     closed_after_days   INTEGER DEFAULT 30,
+    done_at             TEXT,
+    done_by             TEXT REFERENCES users(id) ON DELETE SET NULL,
+    reopened_at         TEXT,
+    reopened_reason     TEXT,
     created_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
     updated_by          TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at          TEXT NOT NULL,
@@ -290,7 +303,10 @@ CREATE TABLE IF NOT EXISTS communications (
     header_message_id   TEXT,
     header_references   TEXT,
     header_in_reply_to  TEXT,
+    header_reply_to     TEXT,
     is_read             INTEGER DEFAULT 0,
+    is_starred          INTEGER NOT NULL DEFAULT 0,
+    mail_state_synced_at TEXT,
     phone_number_from   TEXT,
     phone_number_to     TEXT,
     duration_seconds    INTEGER,
@@ -320,6 +336,82 @@ CREATE TABLE IF NOT EXISTS communication_participants (
     PRIMARY KEY (communication_id, address, role)
 );
 
+-- Mailbox labels / folders per provider account (Mail Client TDD D-03)
+CREATE TABLE IF NOT EXISTS mailbox_labels (
+    id                TEXT PRIMARY KEY,
+    account_id        TEXT NOT NULL REFERENCES provider_accounts(id) ON DELETE CASCADE,
+    provider_label_id TEXT NOT NULL,
+    name              TEXT NOT NULL,
+    kind              TEXT NOT NULL DEFAULT 'user',
+    parent_id         TEXT,
+    unread_count      INTEGER,
+    total_count       INTEGER,
+    created_at        TEXT NOT NULL,
+    updated_at        TEXT NOT NULL,
+    UNIQUE (account_id, provider_label_id)
+);
+
+-- Communication ↔ label membership (a folder is a single label row)
+CREATE TABLE IF NOT EXISTS communication_labels (
+    communication_id TEXT NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
+    label_id         TEXT NOT NULL REFERENCES mailbox_labels(id) ON DELETE CASCADE,
+    PRIMARY KEY (communication_id, label_id)
+);
+
+-- Mail action outbox: user actions applied locally at once and pushed to
+-- the provider in order with retry (Mail Client TDD D-04)
+CREATE TABLE IF NOT EXISTS mail_actions (
+    id              TEXT PRIMARY KEY,
+    account_id      TEXT NOT NULL REFERENCES provider_accounts(id) ON DELETE CASCADE,
+    action          TEXT NOT NULL,
+    target_ids      TEXT NOT NULL,
+    label_id        TEXT,
+    payload         TEXT,
+    created_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
+    status          TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'pushed', 'gone', 'failed', 'discarded')),
+    attempts        INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at TEXT,
+    error           TEXT,
+    pushed_at       TEXT,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+
+-- Snoozed threads: hidden from the inbox until return_at (v31, MAIL-17)
+CREATE TABLE IF NOT EXISTS mail_snoozes (
+    id              TEXT PRIMARY KEY,
+    account_id      TEXT NOT NULL REFERENCES provider_accounts(id) ON DELETE CASCADE,
+    thread_id       TEXT NOT NULL,
+    return_at       TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'snoozed'
+                    CHECK (status IN ('snoozed', 'returned', 'cancelled')),
+    created_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at      TEXT NOT NULL,
+    returned_at     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_mail_snoozes_due ON mail_snoozes(status, return_at);
+CREATE INDEX IF NOT EXISTS idx_mail_snoozes_thread ON mail_snoozes(account_id, thread_id, status);
+
+-- Provider threads in different accounts that are one conversation (v33, MAIL-44)
+CREATE TABLE IF NOT EXISTS mail_thread_links (
+    account_id  TEXT NOT NULL REFERENCES provider_accounts(id) ON DELETE CASCADE,
+    thread_id   TEXT NOT NULL,
+    group_id    TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    PRIMARY KEY (account_id, thread_id)
+);
+CREATE INDEX IF NOT EXISTS idx_mail_thread_links_group ON mail_thread_links(group_id);
+
+-- Threads the owner stopped tracking in the awaiting-reply list (v32, MAIL-47)
+CREATE TABLE IF NOT EXISTS mail_awaiting_dismissed (
+    account_id   TEXT NOT NULL REFERENCES provider_accounts(id) ON DELETE CASCADE,
+    thread_id    TEXT NOT NULL,
+    dismissed_at TEXT NOT NULL,
+    created_by   TEXT REFERENCES users(id) ON DELETE SET NULL,
+    PRIMARY KEY (account_id, thread_id)
+);
+
 -- Conversation ↔ Communication M:N join
 CREATE TABLE IF NOT EXISTS conversation_communications (
     conversation_id   TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -343,7 +435,10 @@ CREATE TABLE IF NOT EXISTS attachments (
     size_bytes       INTEGER,
     storage_ref      TEXT,
     source           TEXT,
-    created_at       TEXT NOT NULL
+    created_at       TEXT NOT NULL,
+    provider_attachment_id TEXT,
+    content_id       TEXT,
+    is_inline        INTEGER NOT NULL DEFAULT 0
 );
 
 -- Tags (AI-extracted keyword phrases; distinct from hierarchy topics)
@@ -1036,6 +1131,11 @@ CREATE INDEX IF NOT EXISTS idx_comm_thread         ON communications(provider_th
 CREATE INDEX IF NOT EXISTS idx_comm_header_msg_id  ON communications(header_message_id);
 CREATE INDEX IF NOT EXISTS idx_comm_current        ON communications(is_current);
 CREATE INDEX IF NOT EXISTS idx_comm_archived       ON communications(is_archived);
+CREATE INDEX IF NOT EXISTS idx_comm_mail_state     ON communications(mail_state_synced_at);
+CREATE INDEX IF NOT EXISTS idx_mlabel_account      ON mailbox_labels(account_id);
+CREATE INDEX IF NOT EXISTS idx_clabel_label        ON communication_labels(label_id);
+CREATE INDEX IF NOT EXISTS idx_mail_actions_queue  ON mail_actions(account_id, status, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_attachments_provider ON attachments(communication_id, provider_attachment_id);
 
 -- Conversations
 CREATE INDEX IF NOT EXISTS idx_conv_topic          ON conversations(topic_id);
@@ -1277,6 +1377,9 @@ def init_db(db_path: Path | None = None) -> None:
             "CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5("
             "note_id UNINDEXED, title, content_text, tokenize='porter unicode61')"
         )
+        # Mail full-text index + maintenance triggers (Mail Client MAIL-12)
+        from .mail_search import FTS_SCHEMA_SQL
+        conn.executescript(FTS_SCHEMA_SQL)
         # Defensive: add is_archived column for existing DBs
         cols = {r[1] for r in conn.execute("PRAGMA table_info(communications)")}
         if "is_archived" not in cols:

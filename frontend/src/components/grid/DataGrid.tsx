@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useRef, useEffect, useState } from 'react'
+import { INLINE_CELL_EDITING } from '../../lib/gridConfig.ts'
 import {
   useReactTable,
   getCoreRowModel,
@@ -65,7 +66,10 @@ export function DataGrid() {
   } = useInfiniteViewData({
     viewId: activeViewId,
     sort: sort ?? viewConfig?.sort_field,
-    sortDirection: sortDirection ?? (viewConfig?.sort_direction as 'asc' | 'desc'),
+    // The store's direction only applies to a column the user clicked; with no
+    // user sort the view's own direction rules (it was being overridden by the
+    // store's 'asc' default, so "newest first" views listed oldest first).
+    sortDirection: sort ? sortDirection : (viewConfig?.sort_direction as 'asc' | 'desc' | undefined),
     search,
     quickFilters,
     searchFilters,
@@ -790,6 +794,7 @@ export function DataGrid() {
 
                     const fd = entityDef?.fields[fieldKey]
                     const isEditable =
+                      INLINE_CELL_EDITING &&
                       fd?.editable &&
                       (activeEntityType === 'contact' ||
                         activeEntityType === 'company')
@@ -906,6 +911,7 @@ export function DataGrid() {
           rowIndex={contextMenu.rowIndex}
           entityType={activeEntityType}
           selectedRowIds={selectedRowIds}
+          rowStatus={(rows.find((r) => (r as { id?: string }).id === contextMenu.rowId) as { status?: string | null } | undefined)?.status ?? null}
           onClose={() => setContextMenu(null)}
           onOpenDetail={() => {
             setSelectedRow(contextMenu.rowId, contextMenu.rowIndex)
@@ -922,13 +928,19 @@ export function DataGrid() {
             setContextMenu(null)
           }}
           onEdit={() => {
-            // Find first editable field
-            const firstEditable = visibleColumnKeys.find((k) => {
+            // Find first editable field; without inline editing, open the record form.
+            const firstEditable = INLINE_CELL_EDITING ? visibleColumnKeys.find((k) => {
               const fd = entityDef?.fields[k]
               return fd?.editable && (activeEntityType === 'contact' || activeEntityType === 'company')
-            })
+            }) : undefined
             if (firstEditable) {
               setEditingCell({ rowId: contextMenu.rowId, fieldKey: firstEditable })
+            } else if (activeEntityType === 'communication') {
+              const idx = rows.findIndex((r) => (r as { id?: string }).id === contextMenu.rowId)
+              setSelectedRow(contextMenu.rowId, idx)
+              expandDetailPanel()
+            } else {
+              setRecordModal({ entityType: activeEntityType, entityId: contextMenu.rowId })
             }
             setContextMenu(null)
           }}

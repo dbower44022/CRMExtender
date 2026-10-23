@@ -26,6 +26,34 @@ export function parseAppPath(pathname: string): AppRoute | null {
   return { entityType, entityId: m[2] ?? null }
 }
 
+// --- Mail surface (Mail Client PRD MAIL-21) ---------------------------------
+
+export interface MailRoute {
+  accountId: string
+  folder: string
+  threadId: string | null
+}
+
+/** /app/mail/{account|unified}/{folder}[/{thread}]; folder may be `label:<id>`. */
+export function buildMailPath(accountId: string, folder: string, threadId?: string | null): string {
+  const base = `/app/mail/${encodeURIComponent(accountId)}/${encodeURIComponent(folder)}`
+  return threadId ? `${base}/${encodeURIComponent(threadId)}` : base
+}
+
+/** Parse a mail path. `/app/mail` alone means the unified inbox. */
+export function parseMailPath(pathname: string): MailRoute | null {
+  if (pathname === '/app/mail' || pathname === '/app/mail/') {
+    return { accountId: 'unified', folder: 'inbox', threadId: null }
+  }
+  const m = pathname.match(/^\/app\/mail\/([^/]+)\/([^/]+)(?:\/([^/?#]+))?\/?$/)
+  if (!m) return null
+  return {
+    accountId: decodeURIComponent(m[1]),
+    folder: decodeURIComponent(m[2]),
+    threadId: m[3] ? decodeURIComponent(m[3]) : null,
+  }
+}
+
 /**
  * Interpret a legacy server-rendered detail URL (e.g. /contacts/{id}) as an
  * in-app route. Returns null when the href is not a legacy entity page.

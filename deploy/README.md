@@ -150,3 +150,42 @@ docker compose restart app    # Restart just the app
 ```bash
 docker compose exec app bash
 ```
+
+---
+
+## Linux Desktop Deployment (start-menu launcher)
+
+For the owner's own Linux desktop, the application runs as a **systemd user service** that starts at login, restarts itself after a crash, and is opened from the desktop menu. Files live in `deploy/desktop/`:
+
+| File | Purpose |
+|---|---|
+| `crmextender.service` | systemd user unit: `python -m poc serve --host 127.0.0.1 --port 8000` from the repository, with the repository's `.env` |
+| `crmextender-launch.sh` | Menu action: starts the service if stopped, waits until `/app/` answers (30 s), opens the default browser |
+| `crmextender.desktop` | Menu entry (Office category), icon `crmextender` |
+| `crmextender.svg` | Application icon |
+| `install-desktop.sh` | Installer and day-to-day control |
+
+### Install
+
+```bash
+deploy/desktop/install-desktop.sh install
+```
+
+Requires an existing `.venv` in the repository. The installer copies the launcher to `~/.local/bin/crmextender-launch`, the menu entry to `~/.local/share/applications/`, the icon to `~/.local/share/icons/hicolor/scalable/apps/`, and the unit to `~/.config/systemd/user/`, then enables and starts the service. The repository path is written into the unit at install time, so re-run `install` if the repository moves.
+
+### Operate
+
+```bash
+deploy/desktop/install-desktop.sh restart     # after pulling or editing backend code
+deploy/desktop/install-desktop.sh status
+deploy/desktop/install-desktop.sh logs        # last 50 journal lines
+deploy/desktop/install-desktop.sh uninstall
+```
+
+Logs go to the systemd journal: `journalctl --user -u crmextender -f`.
+
+### Consequences
+
+- Port 8000 is held whenever you are logged in. Run a hand-started development server on another port (for example `--port 8009`).
+- The service runs the working tree. A backend change takes effect only after `restart`; a frontend rebuild (`npm run build`) is picked up by the running server and the open page reloads itself (v10.43).
+- If the server does not answer within 30 seconds the launcher shows a desktop notification pointing at the journal.

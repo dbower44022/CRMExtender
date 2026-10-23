@@ -306,6 +306,26 @@ class TestStoreThreadRule1:
             assert _count_conversations(conn) == 1
             assert _count_communications(conn) == 1
 
+    def test_provider_draft_does_not_count_or_link(self, tmp_db):
+        """D-42: a draft alone creates nothing; with a real message it stays unlinked."""
+        _create_contact("Alice", "alice@acme.com")
+        idx = _build_contact_index()
+        thread_id = "thread-r1-draft"
+        draft = _make_email(thread_id, ACCOUNT_EMAIL, ["alice@acme.com"], message_id="d1")
+        draft.label_ids = ["DRAFT"]
+        with get_connection() as conn:
+            created, _ = _store_thread(conn, ACCOUNT_ID, ACCOUNT_EMAIL, [draft], idx,
+                                       customer_id=CUST_ID, created_by=USER_ID)
+            assert created is False and _count_conversations(conn) == 0
+            assert _count_communications(conn) == 1                    # stored for the Drafts folder
+            inbound = _make_email(thread_id, "alice@acme.com", [ACCOUNT_EMAIL])
+            created, _ = _store_thread(conn, ACCOUNT_ID, ACCOUNT_EMAIL, [inbound], idx,
+                                       customer_id=CUST_ID, created_by=USER_ID)
+            assert created is True
+            conv_id = conn.execute("SELECT id FROM conversations").fetchone()[0]
+            assert _count_conv_comms(conn, conv_id) == 1               # the draft is not linked
+            assert conn.execute("SELECT communication_count FROM conversations").fetchone()[0] == 1
+
     def test_unknown_sender_no_conversation(self, tmp_db):
         idx = _build_contact_index()  # empty
         thread_id = "thread-r1-unknown"

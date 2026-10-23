@@ -1,39 +1,41 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import {
   useSystemSettings,
   useUpdateSystemSettings,
   useReferenceData,
+  type SystemSettings as SystemSettingsData,
 } from '../../api/settings.ts'
 import { DuplicateThresholds } from './DuplicateThresholds.tsx'
 import { VersionInfo } from './VersionInfo.tsx'
 
 export function SystemSettings() {
   const { data: settings, isLoading } = useSystemSettings()
+
+  if (isLoading || !settings) {
+    return <div className="text-sm text-surface-500">Loading...</div>
+  }
+
+  return <SystemSettingsForm settings={settings} />
+}
+
+function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
   const { data: refData } = useReferenceData()
   const updateSettings = useUpdateSystemSettings()
 
-  const [companyName, setCompanyName] = useState('')
-  const [defaultTz, setDefaultTz] = useState('UTC')
-  const [defaultPhoneCountry, setDefaultPhoneCountry] = useState('US')
-  const [emailHistoryWindow, setEmailHistoryWindow] = useState('90d')
-  const [syncEnabled, setSyncEnabled] = useState(true)
-  const [allowSelfReg, setAllowSelfReg] = useState(false)
-
-  useEffect(() => {
-    if (settings) {
-      setCompanyName(settings.company_name)
-      setDefaultTz(settings.default_timezone)
-      setDefaultPhoneCountry(settings.default_phone_country)
-      setEmailHistoryWindow(settings.email_history_window)
-      setSyncEnabled(settings.sync_enabled === 'true')
-      setAllowSelfReg(settings.allow_self_registration === 'true')
-    }
-  }, [settings])
-
-  if (isLoading) {
-    return <div className="text-sm text-surface-500">Loading...</div>
-  }
+  const [companyName, setCompanyName] = useState(settings.company_name)
+  const [defaultTz, setDefaultTz] = useState(settings.default_timezone)
+  const [defaultPhoneCountry, setDefaultPhoneCountry] = useState(settings.default_phone_country)
+  const [emailHistoryWindow, setEmailHistoryWindow] = useState(settings.email_history_window)
+  const [settleMinutes, setSettleMinutes] = useState(settings.summarize_settle_minutes ?? '15')
+  const [maxPerSync, setMaxPerSync] = useState(settings.summarize_max_per_sync ?? '500')
+  const [syncInterval, setSyncInterval] = useState(settings.mail_sync_interval_seconds ?? '120')
+  const [backfillEnabled, setBackfillEnabled] = useState((settings.mail_backfill_enabled ?? 'true') === 'true')
+  const [backfillBatch, setBackfillBatch] = useState(settings.mail_backfill_batch_size ?? '200')
+  const [awaitingDays, setAwaitingDays] = useState(settings.mail_awaiting_reply_days ?? '3')
+  const [awaitingWindow, setAwaitingWindow] = useState(settings.mail_awaiting_window_days ?? '30')
+  const [syncEnabled, setSyncEnabled] = useState(settings.sync_enabled === 'true')
+  const [allowSelfReg, setAllowSelfReg] = useState(settings.allow_self_registration === 'true')
 
   const handleSave = () => {
     updateSettings.mutate(
@@ -42,6 +44,13 @@ export function SystemSettings() {
         default_timezone: defaultTz,
         default_phone_country: defaultPhoneCountry,
         email_history_window: emailHistoryWindow,
+        summarize_settle_minutes: settleMinutes,
+        summarize_max_per_sync: maxPerSync,
+        mail_sync_interval_seconds: syncInterval,
+        mail_backfill_enabled: backfillEnabled ? 'true' : 'false',
+        mail_backfill_batch_size: backfillBatch,
+        mail_awaiting_reply_days: awaitingDays,
+        mail_awaiting_window_days: awaitingWindow,
         sync_enabled: syncEnabled ? 'true' : 'false',
         allow_self_registration: allowSelfReg ? 'true' : 'false',
       },
@@ -126,6 +135,41 @@ export function SystemSettings() {
           </select>
         </div>
 
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-surface-700">
+              Summarize after quiet (minutes)
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={settleMinutes}
+              onChange={(e) => setSettleMinutes(e.target.value)}
+              className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+            />
+            <p className="mt-1 text-xs text-surface-500">
+              A thread is summarized once it has had no new mail for this long, not on every message.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-surface-700">
+              Max summaries per sync
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={maxPerSync}
+              onChange={(e) => setMaxPerSync(e.target.value)}
+              className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+            />
+            <p className="mt-1 text-xs text-surface-500">
+              Newest threads first; the rest wait for the next sync. 0 means no limit.
+            </p>
+          </div>
+        </div>
+
         <div className="flex items-center gap-3">
           <label className="relative inline-flex cursor-pointer items-center">
             <input
@@ -137,6 +181,88 @@ export function SystemSettings() {
             <div className="peer h-5 w-9 rounded-full bg-surface-300 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-600 peer-checked:after:translate-x-full" />
           </label>
           <span className="text-sm text-surface-700">Sync enabled</span>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700">
+            Sync every (seconds)
+          </label>
+          <input
+            type="number"
+            min={60}
+            step={30}
+            value={syncInterval}
+            onChange={(e) => setSyncInterval(e.target.value)}
+            className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            Each account syncs on its own timer in the background; minimum 60 seconds. Turning Sync enabled off stops the timers but Sync Now still works.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <label className="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              checked={backfillEnabled}
+              onChange={(e) => setBackfillEnabled(e.target.checked)}
+              className="peer sr-only"
+            />
+            <div className="peer h-5 w-9 rounded-full bg-surface-300 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-600 peer-checked:after:translate-x-full" />
+          </label>
+          <span className="text-sm text-surface-700">Backfill older mail</span>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700">
+            Backfill batch (messages per sync)
+          </label>
+          <input
+            type="number"
+            min={10}
+            max={500}
+            step={10}
+            value={backfillBatch}
+            onChange={(e) => setBackfillBatch(e.target.value)}
+            className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            After the initial window, each sync run fetches this many older messages until the whole mailbox is stored. Switching backfill off stops at the next checkpoint; switching it on resumes there. Backfilled conversations are summarized like new ones, which costs AI calls.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700">
+            Awaiting reply after (days)
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={60}
+            value={awaitingDays}
+            onChange={(e) => setAwaitingDays(e.target.value)}
+            className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            A thread you wrote to last, with no answer for this many days, appears under Awaiting reply in Mail.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700">
+            Awaiting reply window (days)
+          </label>
+          <input
+            type="number"
+            min={7}
+            max={365}
+            value={awaitingWindow}
+            onChange={(e) => setAwaitingWindow(e.target.value)}
+            className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            Only messages you sent within this many days are listed. Older unanswered mail is history, not a reminder.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">

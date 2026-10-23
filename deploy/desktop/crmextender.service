@@ -1,0 +1,17 @@
+# CRMExtender web server — systemd user service.
+# Installed by deploy/desktop/install-desktop.sh, which replaces @REPO@
+# with the repository path. Logs: journalctl --user -u crmextender
+[Unit]
+Description=CRMExtender web server
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@REPO@
+ExecStart=@REPO@/.venv/bin/python -m poc serve --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

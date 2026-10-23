@@ -68,3 +68,23 @@ def get_version() -> dict:
         "message": None,
         "sha_source": "unavailable",
     }
+
+
+_DIST_INDEX = Path(__file__).resolve().parent.parent / "frontend" / "dist" / "index.html"
+
+
+def get_build_id(index_html: Path | None = None) -> str | None:
+    """The hashed name of the page bundle the server serves (``index-XXXX``).
+
+    The browser compares it with the bundle it loaded; a difference means
+    the server was restarted on a newer build and the page reloads itself
+    (v10.43), so a restart no longer needs a hard reload by hand.
+    """
+    import re
+    path = index_html or _DIST_INDEX
+    try:
+        m = re.search(r"/assets/(index-[A-Za-z0-9_-]+)\.js", path.read_text(encoding="utf-8"))
+    except OSError:
+        return None
+    return m.group(1) if m else None
+

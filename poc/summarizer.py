@@ -118,9 +118,13 @@ def summarize_conversation(
         if rate_limiter:
             rate_limiter.acquire()
 
+        # Current-generation models think before answering and the thinking
+        # tokens count against max_tokens, so the cap is well above the
+        # ~300-token JSON answer. Effort is low: this is routine
+        # summarization. extra_body keeps the call valid on the installed SDK.
         response = client.messages.create(
             model=config.CLAUDE_MODEL,
-            max_tokens=512,
+            max_tokens=2048,
             system=system_prompt,
             messages=[
                 {
@@ -128,9 +132,13 @@ def summarize_conversation(
                     "content": f"Analyze this email conversation:\n\n{thread_text}",
                 }
             ],
+            extra_body={"output_config": {"effort": "low"}},
         )
 
-        raw_text = response.content[0].text.strip()
+        # The first block may be a thinking block; take the first text block.
+        raw_text = next(
+            (b.text for b in response.content if getattr(b, "type", "") == "text"), ""
+        ).strip()
 
         # Parse JSON response — handle markdown code fences if present
         json_text = raw_text

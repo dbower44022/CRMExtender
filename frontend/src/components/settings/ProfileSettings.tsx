@@ -1,41 +1,38 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import {
   useProfile,
   useUpdateProfile,
   useChangePassword,
   useReferenceData,
+  type Profile,
 } from '../../api/settings.ts'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
 export function ProfileSettings() {
   const { data: profile, isLoading } = useProfile()
+
+  if (isLoading || !profile) {
+    return <div className="text-sm text-surface-500">Loading...</div>
+  }
+
+  return <ProfileSettingsForm profile={profile} />
+}
+
+function ProfileSettingsForm({ profile }: { profile: Profile }) {
   const { data: refData } = useReferenceData()
   const updateProfile = useUpdateProfile()
   const changePassword = useChangePassword()
 
-  const [name, setName] = useState('')
-  const [timezone, setTimezone] = useState('')
-  const [startOfWeek, setStartOfWeek] = useState('monday')
-  const [dateFormat, setDateFormat] = useState('')
+  const [name, setName] = useState(profile.name)
+  const [timezone, setTimezone] = useState(profile.timezone ?? '')
+  const [startOfWeek, setStartOfWeek] = useState(profile.start_of_week)
+  const [dateFormat, setDateFormat] = useState(profile.date_format ?? '')
 
   const [showPwSection, setShowPwSection] = useState(false)
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
-
-  useEffect(() => {
-    if (profile) {
-      setName(profile.name)
-      setTimezone(profile.timezone ?? '')
-      setStartOfWeek(profile.start_of_week)
-      setDateFormat(profile.date_format ?? '')
-    }
-  }, [profile])
-
-  if (isLoading) {
-    return <div className="text-sm text-surface-500">Loading...</div>
-  }
 
   const handleSave = () => {
     updateProfile.mutate(
@@ -84,7 +81,7 @@ export function ProfileSettings() {
 
       <div className="space-y-4">
         <div className="text-sm text-surface-500">
-          {profile?.email}
+          {profile.email}
         </div>
 
         <div>

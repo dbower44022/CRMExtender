@@ -1,8 +1,9 @@
-import { Home, Settings, Users } from 'lucide-react'
+import { Home, Inbox, Settings, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigationStore } from '../../stores/navigation.ts'
 import { useLayoutStore } from '../../stores/layout.ts'
 import { identity } from '../../api/workflows.ts'
+import { useMailUnread } from '../../api/mail.ts'
 import { ENTITY_ICONS, ENTITY_LABELS } from '../../lib/entityIcons.ts'
 
 const NAV_ITEMS = Object.entries(ENTITY_ICONS).map(([key, icon]) => ({
@@ -20,6 +21,9 @@ export function IconRail() {
   const openDashboard = useNavigationStore((s) => s.openDashboard)
   const reviewMode = useNavigationStore((s) => s.reviewMode)
   const openReview = useNavigationStore((s) => s.openReview)
+  const mailMode = useNavigationStore((s) => s.mailMode)
+  const openMail = useNavigationStore((s) => s.openMail)
+  const { data: mailUnread } = useMailUnread()
   const { data: reviewData } = useQuery({
     queryKey: ['review-count'],
     queryFn: () => identity.reviewQueue(),
@@ -30,7 +34,7 @@ export function IconRail() {
   const toggleActionPanel = useLayoutStore((s) => s.toggleActionPanel)
 
   const handleClick = (key: string) => {
-    if (key === activeEntityType && !settingsMode && !dashboardMode && !reviewMode) {
+    if (key === activeEntityType && !settingsMode && !dashboardMode && !reviewMode && !mailMode) {
       toggleActionPanel()
     } else {
       setActiveEntityType(key)
@@ -60,6 +64,22 @@ export function IconRail() {
         >
           <Home size={20} strokeWidth={dashboardMode ? 2.2 : 1.8} />
         </button>
+        <button
+          onClick={() => openMail()}
+          title="Mail"
+          className={`relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+            mailMode
+              ? 'bg-primary-100 text-primary-700'
+              : 'text-surface-500 hover:bg-surface-100 hover:text-surface-700'
+          }`}
+        >
+          <Inbox size={20} strokeWidth={mailMode ? 2.2 : 1.8} />
+          {(mailUnread ?? 0) > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-semibold text-white">
+              {(mailUnread ?? 0) > 99 ? '99+' : mailUnread}
+            </span>
+          )}
+        </button>
         <div className="mx-auto my-1 h-px w-6 bg-surface-200" />
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
@@ -70,12 +90,12 @@ export function IconRail() {
               onClick={() => handleClick(item.key)}
               title={item.label}
               className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
-                isActive && !settingsMode && !dashboardMode
+                isActive && !settingsMode && !dashboardMode && !mailMode
                   ? 'bg-primary-100 text-primary-700'
                   : 'text-surface-500 hover:bg-surface-100 hover:text-surface-700'
               }`}
             >
-              <Icon size={20} strokeWidth={isActive && !settingsMode && !dashboardMode ? 2.2 : 1.8} />
+              <Icon size={20} strokeWidth={isActive && !settingsMode && !dashboardMode && !mailMode ? 2.2 : 1.8} />
             </button>
           )
         })}

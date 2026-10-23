@@ -54,12 +54,17 @@ def _has_pending_candidate(contact_id: str, customer_id: str) -> bool:
 
 
 def _comm_html_col(conn) -> str:
-    """Return the column name for cleaned HTML content in communications.
+    """Return the SQL expression for a communication's HTML body (alias ``comm``).
 
-    v18+ schema uses 'cleaned_html'; pre-v18 uses 'body_html'.
+    v18+ stores ``original_html`` and, only when a cleaning step changed
+    it, ``cleaned_html`` (Mail Client TDD D-10, v10.36); readers take the
+    cleaned copy when present and fall back to the original. Pre-v18
+    schemas have a single ``body_html``.
     """
     cols = {r[1] for r in conn.execute("PRAGMA table_info(communications)").fetchall()}
-    return "cleaned_html" if "cleaned_html" in cols else "body_html"
+    if "cleaned_html" in cols:
+        return "COALESCE(comm.cleaned_html, comm.original_html)"
+    return "comm.body_html"
 
 
 def _conversation_children(conn, conversation_id: str, html_col: str) -> list[dict]:
@@ -80,7 +85,7 @@ def _conversation_children(conn, conversation_id: str, html_col: str) -> list[di
     for ch in children_rows:
         latest_comm = conn.execute(
             "SELECT comm.channel, comm.sender_name, comm.timestamp, "
-            f"       comm.{html_col} AS cleaned_html, comm.snippet "
+            f"       {html_col} AS cleaned_html, comm.snippet "
             "FROM communications comm "
             "JOIN conversation_communications cc ON cc.communication_id = comm.id "
             "WHERE cc.conversation_id = ? "
@@ -118,8 +123,8 @@ def health():
 
 @router.get("/version")
 def version_api(request: Request):
-    from ...version import get_version
-    return get_version()
+    from ...version import get_build_id, get_version
+    return {**get_version(), "build": get_build_id()}
 
 
 # ------------------------------------------------------------------
@@ -1399,7 +1404,7 @@ def conversation_preview_api(request: Request, conversation_id: str):
         recent_comms = conn.execute(
             "SELECT comm.id, comm.channel, comm.subject, comm.sender_name, "
             "       comm.sender_address, comm.timestamp, comm.snippet, "
-            f"       comm.direction, comm.{html_col} AS cleaned_html, "
+            f"       comm.direction, {html_col} AS cleaned_html, "
             "       (SELECT cp.contact_id FROM communication_participants cp "
             "        WHERE cp.communication_id = comm.id AND cp.role = 'from' "
             "        LIMIT 1) AS sender_contact_id, "
@@ -1497,6 +1502,9 @@ def conversation_preview_api(request: Request, conversation_id: str):
         "ai_status": conv.get("ai_status"),
         "triage_result": conv.get("triage_result"),
         "dismissed": bool(conv.get("dismissed")),
+        "done_at": conv.get("done_at"),
+        "reopened_at": conv.get("reopened_at"),
+        "reopened_reason": conv.get("reopened_reason"),
         "channel_breakdown": channel_breakdown,
         "account_owner_email": account_owner_email,
         "participants": participants,
@@ -1564,7 +1572,7 @@ def conversation_full_api(request: Request, conversation_id: str):
         comms = conn.execute(
             "SELECT comm.id, comm.channel, comm.direction, comm.subject, "
             "       comm.sender_name, comm.sender_address, comm.timestamp, "
-            f"       comm.snippet, comm.{html_col} AS cleaned_html, comm.ai_summary, "
+            f"       comm.snippet, {html_col} AS cleaned_html, comm.ai_summary, "
             "       cc.is_primary, cc.assignment_source, "
             "       (SELECT cp.contact_id FROM communication_participants cp "
             "        WHERE cp.communication_id = comm.id AND cp.role = 'from' "
@@ -1730,6 +1738,14 @@ def conversation_full_api(request: Request, conversation_id: str):
             if u:
                 updated_by_name = u["name"]
 
+        done_by_name = None
+        if conv.get("done_by"):
+            u = conn.execute(
+                "SELECT name FROM users WHERE id = ?", (conv["done_by"],)
+            ).fetchone()
+            if u:
+                done_by_name = u["name"]
+
         # Children (for aggregate conversations)
         is_aggregate = bool(conv.get("is_aggregate"))
         children = (
@@ -1833,6 +1849,10 @@ def conversation_full_api(request: Request, conversation_id: str):
         "dismissed": bool(conv.get("dismissed")),
         "dismissed_reason": conv.get("dismissed_reason"),
         "dismissed_at": conv.get("dismissed_at"),
+        "done_at": conv.get("done_at"),
+        "done_by_name": done_by_name,
+        "reopened_at": conv.get("reopened_at"),
+        "reopened_reason": conv.get("reopened_reason"),
         "stale_after_days": conv.get("stale_after_days"),
         "closed_after_days": conv.get("closed_after_days"),
         "channel_breakdown": channel_breakdown,
@@ -2312,6 +2332,17 @@ def note_detail_api(request: Request, note_id: str):
 # Cross-entity search
 # ------------------------------------------------------------------
 
+def _fts_match(like_pattern: str) -> str:
+    """Turn the global search's ``%q%`` pattern into a safe FTS5 phrase
+    (each word quoted, prefix-matched) for the communications index."""
+    from ...mail_search import _fts_term
+
+    words = like_pattern.strip("%").split()
+    if not words:
+        return '""'
+    return " ".join(_fts_term(w + "*") for w in words)
+
+
 @router.get("/search")
 def search_entities(
     request: Request,
@@ -2437,11 +2468,15 @@ def search_entities(
         {
             "entity_type": "communication",
             "label": "Communications",
+            # Full-text (MAIL-12): subject, body, and participants via the
+            # communications_fts index, newest first. The LIKE on subject and
+            # sender is kept as an OR so a partial token still matches.
             "count_sql": (
                 "SELECT COUNT(*) FROM communications comm "
                 "JOIN provider_accounts pa ON pa.id = comm.account_id "
                 "WHERE pa.customer_id = ? AND (comm.subject LIKE ? COLLATE NOCASE "
-                "  OR comm.sender_address LIKE ? COLLATE NOCASE)"
+                "  OR comm.sender_address LIKE ? COLLATE NOCASE "
+                "  OR comm.id IN (SELECT comm_id FROM communications_fts WHERE communications_fts MATCH ?))"
             ),
             "results_sql": (
                 "SELECT comm.id, comm.subject AS name, "
@@ -2450,11 +2485,12 @@ def search_entities(
                 "FROM communications comm "
                 "JOIN provider_accounts pa ON pa.id = comm.account_id "
                 "WHERE pa.customer_id = ? AND (comm.subject LIKE ? COLLATE NOCASE "
-                "  OR comm.sender_address LIKE ? COLLATE NOCASE) "
-                "ORDER BY comm.subject COLLATE NOCASE LIMIT ?"
+                "  OR comm.sender_address LIKE ? COLLATE NOCASE "
+                "  OR comm.id IN (SELECT comm_id FROM communications_fts WHERE communications_fts MATCH ?)) "
+                "ORDER BY comm.timestamp DESC LIMIT ?"
             ),
-            "count_params": lambda cid, pat: (cid, pat, pat),
-            "results_params": lambda cid, pat, lim: (cid, pat, pat, lim),
+            "count_params": lambda cid, pat: (cid, pat, pat, _fts_match(pat)),
+            "results_params": lambda cid, pat, lim: (cid, pat, pat, _fts_match(pat), lim),
         },
     ]
 
@@ -2615,6 +2651,15 @@ def settings_system(request: Request):
         "default_phone_country": get_setting(cid, "default_phone_country") or "US",
         "allow_self_registration": get_setting(cid, "allow_self_registration") or "false",
         "email_history_window": get_setting(cid, "email_history_window") or "90d",
+        "summarize_settle_minutes": get_setting(cid, "summarize_settle_minutes") or "15",
+        "summarize_max_per_sync": get_setting(cid, "summarize_max_per_sync") or "500",
+        "mail_sync_interval_seconds": get_setting(cid, "mail_sync_interval_seconds") or "120",
+        "mail_mark_read_dwell_ms": get_setting(cid, "mail_mark_read_dwell_ms") or "1500",
+        "mail_undo_send_seconds": get_setting(cid, "mail_undo_send_seconds") or "10",
+        "mail_backfill_enabled": get_setting(cid, "mail_backfill_enabled") or "true",
+        "mail_backfill_batch_size": get_setting(cid, "mail_backfill_batch_size") or "200",
+        "mail_awaiting_reply_days": get_setting(cid, "mail_awaiting_reply_days") or "3",
+        "mail_awaiting_window_days": get_setting(cid, "mail_awaiting_window_days") or "30",
     }
 
 
@@ -2636,11 +2681,31 @@ async def settings_system_update(request: Request):
     _SYSTEM_KEYS = [
         "company_name", "default_timezone", "sync_enabled",
         "default_phone_country", "allow_self_registration", "email_history_window",
+        "summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds",
+        "mail_mark_read_dwell_ms", "mail_undo_send_seconds",
+        "mail_backfill_enabled", "mail_backfill_batch_size", "mail_awaiting_reply_days",
+        "mail_awaiting_window_days",
     ]
     for key in _SYSTEM_KEYS:
         val = body.get(key)
-        if val is not None:
-            set_setting(cid, key, str(val), scope="system")
+        if val is None:
+            continue
+        if key == "mail_backfill_enabled":
+            val = "true" if str(val).lower() in ("true", "1", "yes") else "false"
+        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds", "mail_mark_read_dwell_ms", "mail_undo_send_seconds", "mail_backfill_batch_size", "mail_awaiting_reply_days", "mail_awaiting_window_days"):
+            try:
+                val = max(0, int(val))
+            except (TypeError, ValueError):
+                return JSONResponse({"error": f"{key} must be a whole number"}, status_code=400)
+            if key == "mail_sync_interval_seconds":
+                val = max(60, val)
+            if key == "mail_backfill_batch_size":
+                val = min(500, max(10, val))
+            if key == "mail_awaiting_reply_days":
+                val = min(60, max(1, val))
+            if key == "mail_awaiting_window_days":
+                val = min(365, max(7, val))
+        set_setting(cid, key, str(val), scope="system")
 
     return {"ok": True}
 
@@ -2810,6 +2875,31 @@ def settings_accounts(request: Request):
             ).fetchall()
             accounts = [dict(r) for r in rows]
 
+    # Scope state (Mail Client MAIL-06): an account whose saved token lacks a
+    # scope the application now requests must be reconnected before any
+    # write-back; the UI shows a "Needs reconnect" state from these fields.
+    from ...auth import missing_scopes as _missing_scopes
+
+    from ...mail_notify import notification_mode as _notification_mode
+    from ...scheduler import get_scheduler
+    sched = get_scheduler()
+    sched_accounts = (sched.status()["accounts"] if sched is not None and sched.running else {})
+
+    for a in accounts:
+        path = a.get("auth_token_path")
+        missing = _missing_scopes(Path(path)) if path else list(config.GOOGLE_SCOPES)
+        a["auth_status"] = a.get("auth_status") or "ok"
+        a["needs_reauth"] = bool(missing) or a["auth_status"] == "needs_reauth"
+        a["missing_scopes"] = [s.rsplit("/", 1)[-1] for s in missing]
+        a["token_present"] = bool(path) and Path(path).exists()
+        a["notifications"] = _notification_mode(cid, uid, a["id"])
+        st = sched_accounts.get(a["id"]) or {}
+        a["sync"] = {
+            "running": bool(st.get("running")), "next_due_at": st.get("next_due_at"),
+            "last_started": st.get("last_started"), "last_finished": st.get("last_finished"),
+            "scheduled": a["is_active"] == 1 and a["auth_status"] == "ok" and bool(sched_accounts),
+        }
+
     # Strip sensitive fields
     for a in accounts:
         a.pop("auth_token_path", None)
@@ -2820,14 +2910,28 @@ def settings_accounts(request: Request):
 
 @router.put("/settings/accounts/{account_id}")
 async def settings_account_update(request: Request, account_id: str):
-    """Update a provider account's display name."""
+    """Update a provider account's display name and/or label colour."""
     try:
         body = await request.json()
     except Exception:
         return JSONResponse({"error": "Invalid JSON"}, status_code=400)
 
-    display_name = (body.get("display_name") or "").strip()
     now = datetime.now(timezone.utc).isoformat()
+    sets, vals = [], []
+    if "display_name" in body:
+        sets.append("display_name = ?")
+        vals.append((body.get("display_name") or "").strip() or None)
+    if "color" in body:
+        # Label colour for the account chip (#rrggbb) or null to clear it.
+        color = body.get("color")
+        if color is not None:
+            color = str(color).strip().lower()
+            if not re.fullmatch(r"#[0-9a-f]{6}", color):
+                return JSONResponse({"error": "color must be #rrggbb"}, status_code=400)
+        sets.append("color = ?")
+        vals.append(color)
+    if not sets:
+        return JSONResponse({"error": "Nothing to update"}, status_code=400)
 
     with get_connection() as conn:
         account = conn.execute(
@@ -2838,11 +2942,64 @@ async def settings_account_update(request: Request, account_id: str):
             return JSONResponse({"error": "Account not found"}, status_code=404)
 
         conn.execute(
-            "UPDATE provider_accounts SET display_name = ?, updated_at = ? WHERE id = ?",
-            (display_name or None, now, account_id),
+            f"UPDATE provider_accounts SET {', '.join(sets)}, updated_at = ? WHERE id = ?",
+            (*vals, now, account_id),
         )
 
     return {"ok": True}
+
+
+@router.put("/settings/accounts/{account_id}/notifications")
+async def settings_account_notifications(request: Request, account_id: str):
+    """Per-user, per-account new-mail notification mode (MAIL-39):
+    ``{"mode": "all" | "known_contacts" | "none"}``."""
+    from ...mail_notify import set_notification_mode
+
+    uid = request.state.user["id"]
+    cid = request.state.customer_id
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+    with get_connection() as conn:
+        ok = conn.execute(
+            "SELECT 1 FROM provider_accounts pa JOIN user_provider_accounts upa ON upa.account_id = pa.id "
+            "WHERE pa.id = ? AND pa.customer_id = ? AND upa.user_id = ?", (account_id, cid, uid)).fetchone()
+    if not ok:
+        return JSONResponse({"error": "Account not found"}, status_code=404)
+    try:
+        mode = set_notification_mode(cid, uid, account_id, str(body.get("mode", "")))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "mode": mode}
+
+
+@router.delete("/settings/accounts/{account_id}")
+def settings_account_disconnect(request: Request, account_id: str, mode: str = "keep"):
+    """Disconnect an account (MAIL-38). ``mode=keep`` removes the saved
+    sign-in and stops syncing but keeps every message as history;
+    ``mode=delete`` also deletes the account's messages, conversations,
+    calendar events, labels, and outbound mail. Owner of the account or an
+    administrator."""
+    from ...account_health import disconnect_account
+
+    uid = request.state.user["id"]
+    cid = request.state.customer_id
+    if mode not in ("keep", "delete"):
+        return JSONResponse({"error": "mode must be keep or delete"}, status_code=400)
+    with get_connection() as conn:
+        acct = conn.execute(
+            "SELECT id FROM provider_accounts WHERE id = ? AND customer_id = ?", (account_id, cid)).fetchone()
+        if not acct:
+            return JSONResponse({"error": "Account not found"}, status_code=404)
+        role = conn.execute(
+            "SELECT role FROM user_provider_accounts WHERE user_id = ? AND account_id = ?",
+            (uid, account_id)).fetchone()
+        if request.state.user["role"] != "admin" and not (role and role["role"] == "owner"):
+            return JSONResponse({"error": "Only the account's owner or an administrator can disconnect it"},
+                                status_code=403)
+        result = disconnect_account(conn, account_id, delete_data=(mode == "delete"))
+    return {"ok": True, **result}
 
 
 @router.post("/settings/accounts/{account_id}/toggle-active")
@@ -3256,13 +3413,43 @@ async def outbound_update(request: Request, email_id: str):
 
 
 @router.post("/outbound-emails/{email_id}/send")
-def outbound_send(request: Request, email_id: str):
-    """Send a draft."""
-    from ...outbound import send_email
+async def outbound_send(request: Request, email_id: str):
+    """Send a draft — at once, after an undo window, or at a scheduled time.
+
+    Body (optional): ``{"delay_seconds": 10}`` queues it to send after the
+    window (the Mail Client default comes from ``mail_undo_send_seconds``);
+    ``{"scheduled_send_at": "<ISO UTC>"}`` queues it for that time. A
+    queued email can be pulled back with ``/undo`` until it goes out.
+    """
+    from datetime import timedelta
+
+    from ...outbound import queue_send, send_email
+    from ...settings import get_setting
 
     uid = request.state.user["id"]
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    body = body or {}
+    scheduled = body.get("scheduled_send_at")
+    delay = body.get("delay_seconds")
+    if delay is None and body.get("undo", False):
+        delay = int(get_setting(request.state.customer_id, "mail_undo_send_seconds") or 10)
+
     with get_connection() as conn:
         try:
+            if scheduled:
+                try:
+                    when = datetime.fromisoformat(str(scheduled).replace("Z", "+00:00"))
+                except ValueError:
+                    return JSONResponse({"error": "scheduled_send_at must be an ISO timestamp"}, status_code=400)
+                if when.tzinfo is None:
+                    when = when.replace(tzinfo=timezone.utc)
+                return queue_send(conn, queue_id=email_id, user_id=uid, send_at=when.astimezone(timezone.utc).isoformat())
+            if delay is not None and int(delay) > 0:
+                when = datetime.now(timezone.utc) + timedelta(seconds=int(delay))
+                return queue_send(conn, queue_id=email_id, user_id=uid, send_at=when.isoformat())
             result = send_email(conn, queue_id=email_id, user_id=uid)
             if result.get("status") == "failed":
                 return JSONResponse(result, status_code=502)
@@ -3271,6 +3458,68 @@ def outbound_send(request: Request, email_id: str):
             return JSONResponse({"error": str(exc)}, status_code=400)
         except Exception as exc:
             return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@router.post("/outbound-emails/{email_id}/undo")
+def outbound_undo(request: Request, email_id: str):
+    """Pull a queued email back to draft before it goes out."""
+    from ...outbound import undo_send
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        ok = undo_send(conn, queue_id=email_id, user_id=uid)
+    if not ok:
+        return JSONResponse({"error": "Too late — the message has already been sent"}, status_code=409)
+    return {"ok": True, "status": "draft"}
+
+
+@router.get("/outbound-emails/{email_id}/attachments")
+def outbound_attachments_list(request: Request, email_id: str):
+    from ...outbound import get_queue_record, list_attachments
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        rec = get_queue_record(conn, queue_id=email_id)
+        if not rec or rec["created_by"] != uid:
+            return JSONResponse({"error": "Not found"}, status_code=404)
+        return list_attachments(conn, queue_id=email_id)
+
+
+@router.post("/outbound-emails/{email_id}/attachments")
+async def outbound_attachments_add(request: Request, email_id: str):
+    """Attach one or more files (multipart ``files``) to a draft."""
+    from ...outbound import add_attachment
+
+    uid = request.state.user["id"]
+    form = await request.form()
+    uploads = form.getlist("files") or ([form["file"]] if "file" in form else [])
+    if not uploads:
+        return JSONResponse({"error": "No files"}, status_code=400)
+    limit = config.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    out = []
+    with get_connection() as conn:
+        for up in uploads:
+            data = await up.read()
+            if len(data) > limit:
+                return JSONResponse({"error": f"{up.filename} exceeds {config.MAX_UPLOAD_SIZE_MB} MB"}, status_code=413)
+            try:
+                out.append(add_attachment(conn, queue_id=email_id, user_id=uid, filename=up.filename or "attachment",
+                                          mime_type=up.content_type, data=data))
+            except ValueError as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+    return out
+
+
+@router.delete("/outbound-emails/{email_id}/attachments/{attachment_id}")
+def outbound_attachments_delete(request: Request, email_id: str, attachment_id: str):
+    from ...outbound import remove_attachment
+
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        ok = remove_attachment(conn, queue_id=email_id, user_id=uid, attachment_id=attachment_id)
+    if not ok:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return {"ok": True}
 
 
 @router.post("/outbound-emails/{email_id}/cancel")
@@ -3603,13 +3852,23 @@ def dashboard_api(request: Request):
 
 @router.post("/sync")
 def sync_trigger_api(request: Request):
-    """Start a background full sync; 409 if one is already running."""
+    """Start a background full sync; 409 if one is already running.
+
+    With the scheduler running (MAIL-13) this requests an immediate run
+    of every account on its own thread; otherwise the legacy single-slot
+    thread runs the pipeline.
+    """
+    from ...scheduler import get_scheduler
     from ...sync_service import start_background_sync
 
-    uid = request.state.user["id"] if request.state.user else ""
-    started = start_background_sync(
-        customer_id=request.state.customer_id, user_id=uid,
-    )
+    sched = get_scheduler()
+    if sched is not None and sched.running:
+        started = sched.request_run()
+    else:
+        uid = request.state.user["id"] if request.state.user else ""
+        started = start_background_sync(
+            customer_id=request.state.customer_id, user_id=uid,
+        )
     if not started:
         return JSONResponse(
             {"error": "A sync is already running"}, status_code=409,
@@ -3619,7 +3878,63 @@ def sync_trigger_api(request: Request):
 
 @router.get("/sync/status")
 def sync_status_api(request: Request):
-    """Status of the current/most recent background sync."""
+    """Status of the current/most recent background sync, plus the
+    scheduler's per-account view when it is running."""
+    from ...scheduler import get_scheduler
     from ...sync_service import sync_status
 
-    return sync_status()
+    sched = get_scheduler()
+    if sched is not None and sched.running:
+        out = sched.legacy_status()
+        out["scheduler"] = sched.status()
+        return out
+    out = sync_status()
+    out["scheduler"] = {"enabled": False}
+    return out
+
+
+@router.post("/sync/pause")
+def sync_pause_api(request: Request):
+    """Admin: stop timed syncs (manual Sync Now still works)."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    from ...scheduler import get_scheduler
+    sched = get_scheduler()
+    if sched is None or not sched.running:
+        return JSONResponse({"error": "Scheduler is not running"}, status_code=409)
+    sched.pause()
+    return {"paused": True}
+
+
+@router.post("/sync/resume")
+def sync_resume_api(request: Request):
+    """Admin: resume timed syncs."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    from ...scheduler import get_scheduler
+    sched = get_scheduler()
+    if sched is None or not sched.running:
+        return JSONResponse({"error": "Scheduler is not running"}, status_code=409)
+    sched.resume()
+    return {"paused": False}
+
+
+@router.post("/settings/accounts/{account_id}/sync")
+def settings_account_sync_now(request: Request, account_id: str):
+    """Sync one account now (owner or shared user of that account)."""
+    uid = request.state.user["id"]
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT pa.id FROM provider_accounts pa JOIN user_provider_accounts upa "
+            "ON upa.account_id = pa.id WHERE pa.id = ? AND upa.user_id = ? AND pa.is_active = 1",
+            (account_id, uid),
+        ).fetchone()
+    if not row:
+        return JSONResponse({"error": "Account not found"}, status_code=404)
+    from ...scheduler import get_scheduler
+    sched = get_scheduler()
+    if sched is None or not sched.running:
+        return JSONResponse(
+            {"error": "Scheduler is not running; use Sync Now on the Dashboard"}, status_code=409)
+    sched.request_run(account_id)
+    return {"status": "requested", "account_id": account_id}

@@ -196,7 +196,7 @@ class TestSyncContactEmail:
         _insert_account()
 
         mock_creds = MagicMock()
-        with patch("poc.sync.fetch_threads", return_value=([], None)) as mock_fetch, \
+        with patch("poc.gmail_client.fetch_threads", return_value=([], None)) as mock_fetch, \
              patch("poc.auth.get_credentials_for_account", return_value=mock_creds):
             sync_contact_email(
                 cid, "90d", customer_id=CUST_ID, user_id=USER_ID,
@@ -223,7 +223,7 @@ class TestSyncContactEmail:
         _insert_account()
 
         mock_creds = MagicMock()
-        with patch("poc.sync.fetch_threads", return_value=([], None)) as mock_fetch, \
+        with patch("poc.gmail_client.fetch_threads", return_value=([], None)) as mock_fetch, \
              patch("poc.auth.get_credentials_for_account", return_value=mock_creds):
             sync_contact_email(
                 cid, "180d", customer_id=CUST_ID, user_id=USER_ID,
@@ -244,7 +244,7 @@ class TestSyncContactEmail:
         _insert_account()
 
         mock_creds = MagicMock()
-        with patch("poc.sync.fetch_threads", return_value=([], None)) as mock_fetch, \
+        with patch("poc.gmail_client.fetch_threads", return_value=([], None)) as mock_fetch, \
              patch("poc.auth.get_credentials_for_account", return_value=mock_creds):
             sync_contact_email(
                 cid, "all", customer_id=CUST_ID, user_id=USER_ID,

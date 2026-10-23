@@ -18,6 +18,26 @@ _HARDCODED_DEFAULTS = {
     "default_phone_country": "US",
     "allow_self_registration": "false",
     "email_history_window": "90d",
+    # Summarization cost controls (Mail Client MAIL-19)
+    "summarize_settle_minutes": "15",
+    "summarize_max_per_sync": "500",
+    # Mail action outbox: attempts before a transient failure is dead-lettered (MAIL-14)
+    "mail_action_retry_max": "8",
+    # Scheduler: seconds between timed syncs per account, never below 60 (MAIL-13)
+    "mail_sync_interval_seconds": "120",
+    # Mail attachment cache budget in megabytes (MAIL-15)
+    "mail_attachment_cache_mb": "2048",
+    # Milliseconds a thread stays open before it is marked read; 0 disables (MAIL-27)
+    "mail_mark_read_dwell_ms": "1500",
+    # Seconds a sent message waits (and can be undone) before it goes out (MAIL-35)
+    "mail_undo_send_seconds": "10",
+    # Historical backfill beyond the initial window: on/off and messages per batch (MAIL-11)
+    "mail_backfill_enabled": "true",
+    "mail_backfill_batch_size": "200",
+    # Days without an answer before a sent thread is listed as awaiting a reply (MAIL-47)
+    "mail_awaiting_reply_days": "3",
+    # ...and only messages sent within this many days count; older silence is history
+    "mail_awaiting_window_days": "30",
 }
 
 

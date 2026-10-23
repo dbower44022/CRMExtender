@@ -16,29 +16,20 @@ export function MergeContactsModal({ contactIds, onClose }: MergeContactsModalPr
   const preview = useMergePreview()
   const merge = useMergeContacts()
 
-  const [survivingId, setSurvivingId] = useState<string>('')
-  const [chosenName, setChosenName] = useState<string>('')
-  const [chosenSource, setChosenSource] = useState<string>('')
+  // Until the user picks, the surviving contact is the first one and the
+  // name and source after the merge are the surviving contact's own.
+  const [pickedSurvivingId, setSurvivingId] = useState<string | null>(null)
+  const [pickedName, setChosenName] = useState<string | null>(null)
+  const [pickedSource, setChosenSource] = useState<string | null>(null)
+
+  const survivingId = pickedSurvivingId ?? preview.data?.contacts[0]?.id ?? ''
+  const surviving = preview.data?.contacts.find((c) => c.id === survivingId)
+  const chosenName = pickedName ?? surviving?.name ?? preview.data?.conflicts.name[0] ?? ''
+  const chosenSource = pickedSource ?? surviving?.source ?? preview.data?.conflicts.source[0] ?? ''
 
   useEffect(() => {
     preview.mutate(contactIds)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Set defaults when preview loads
-  useEffect(() => {
-    if (preview.data) {
-      const contacts = preview.data.contacts
-      if (contacts.length > 0 && !survivingId) {
-        setSurvivingId(contacts[0].id)
-      }
-      if (preview.data.conflicts.name.length > 0 && !chosenName) {
-        setChosenName(preview.data.conflicts.name[0])
-      }
-      if (preview.data.conflicts.source.length > 0 && !chosenSource) {
-        setChosenSource(preview.data.conflicts.source[0])
-      }
-    }
-  }, [preview.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleConfirm = () => {
     const absorbedIds = contactIds.filter((id) => id !== survivingId)
@@ -46,7 +37,7 @@ export function MergeContactsModal({ contactIds, onClose }: MergeContactsModalPr
       {
         surviving_id: survivingId,
         absorbed_ids: absorbedIds,
-        chosen_name: chosenName || undefined,
+        chosen_name: chosenName.trim() || undefined,
         chosen_source: chosenSource || undefined,
       },
       {
@@ -173,12 +164,21 @@ export function MergeContactsModal({ contactIds, onClose }: MergeContactsModalPr
                 </div>
               </div>
 
-              {/* Conflict resolution: name */}
-              {preview.data.conflicts.name.length > 1 && (
-                <div className="mb-5">
-                  <h3 className="mb-2 text-sm font-medium text-surface-700">
-                    Choose name
-                  </h3>
+              {/* Name after the merge: the surviving contact's name unless
+                  another listed name is picked or a name is typed. */}
+              <div className="mb-5">
+                <h3 className="mb-2 text-sm font-medium text-surface-700">
+                  Name after merge
+                </h3>
+                <input
+                  type="text"
+                  value={chosenName}
+                  onChange={(e) => setChosenName(e.target.value)}
+                  aria-label="Name after merge"
+                  placeholder="Contact name"
+                  className="mb-2 w-full rounded-md border border-surface-200 px-3 py-1.5 text-sm text-surface-900 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
+                />
+                {preview.data.conflicts.name.length > 1 && (
                   <div className="flex flex-wrap gap-2">
                     {preview.data.conflicts.name.map((name: string) => (
                       <label
@@ -200,8 +200,8 @@ export function MergeContactsModal({ contactIds, onClose }: MergeContactsModalPr
                       </label>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Conflict resolution: source */}
               {preview.data.conflicts.source.length > 1 && (

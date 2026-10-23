@@ -67,10 +67,13 @@ export function GlobalSearchModal() {
     return items
   }, [displayData])
 
-  // Reset focused index when results change
-  useEffect(() => {
+  // Reset focus to the first result whenever the result count changes, and to
+  // -1 (nothing focused) when the results empty out.
+  const [prevItemCount, setPrevItemCount] = useState(flatItems.length)
+  if (flatItems.length !== prevItemCount) {
+    setPrevItemCount(flatItems.length)
     setFocusedIndex(flatItems.length > 0 ? 0 : -1)
-  }, [flatItems.length])
+  }
 
   // Auto-focus input on mount and when returning to search mode
   useEffect(() => {
@@ -313,13 +316,19 @@ function GroupedResults({
   onShiftSelect: (entityType: string, item: SearchResultItem) => void
   onShowAll?: (group: SearchGroup) => void
 }) {
-  let runningIndex = 0
+  // Flat index of each group's first result, so keyboard focus can address
+  // every row across groups with a single running counter.
+  const groupStartIndexes: number[] = []
+  groups.reduce((offset, group) => {
+    groupStartIndexes.push(offset)
+    return offset + group.results.length
+  }, 0)
 
   return (
     <div className="py-1">
-      {groups.map((group) => {
+      {groups.map((group, groupIdx) => {
         const Icon = ENTITY_ICONS[group.entity_type]
-        const groupStartIndex = runningIndex
+        const groupStartIndex = groupStartIndexes[groupIdx]
         const items = group.results
 
         const rows = items.map((item, i) => {
@@ -337,8 +346,6 @@ function GroupedResults({
             />
           )
         })
-
-        runningIndex += items.length
 
         return (
           <div key={group.entity_type}>

@@ -3,7 +3,7 @@ import { get, put, post, del } from './client.ts'
 
 // --- Types ---
 
-interface Profile {
+export interface Profile {
   id: string
   name: string
   email: string
@@ -13,13 +13,31 @@ interface Profile {
   date_format: string | null
 }
 
-interface SystemSettings {
+export interface SystemSettings {
   company_name: string
   default_timezone: string
   sync_enabled: string
   default_phone_country: string
   allow_self_registration: string
   email_history_window: string
+  /** Minutes a thread must be quiet before it is summarized (MAIL-19). */
+  summarize_settle_minutes: string
+  /** Max conversations summarized per sync run; "0" = unlimited (MAIL-19). */
+  summarize_max_per_sync: string
+  /** Seconds between timed syncs per account, minimum 60 (MAIL-13). */
+  mail_sync_interval_seconds: string
+  /** Milliseconds an open thread waits before being marked read; "0" disables (MAIL-27). */
+  mail_mark_read_dwell_ms: string
+  /** Seconds a sent message can be undone before it goes out; "0" sends at once (MAIL-35). */
+  mail_undo_send_seconds: string
+  /** "true" while the historical backfill fetches older mail one batch per sync (MAIL-11). */
+  mail_backfill_enabled?: string
+  /** Messages fetched per backfill batch, 10–500 (MAIL-11). */
+  mail_backfill_batch_size?: string
+  /** Days without an answer before a sent thread is listed under Awaiting reply, 1–60 (MAIL-47). */
+  mail_awaiting_reply_days?: string
+  /** Only messages sent within this many days count as awaiting, 7–365 (MAIL-47). */
+  mail_awaiting_window_days?: string
 }
 
 interface UserRecord {
@@ -38,11 +56,33 @@ interface ProviderAccount {
   provider: string
   email_address: string
   display_name: string | null
+  /** Label colour (#rrggbb) for the account chip, or null. */
+  color: string | null
   is_active: number
   initial_sync_done: number
   last_synced_at: string | null
   created_at: string
   updated_at: string
+  /** The saved token lacks a scope the app now requests (MAIL-06). */
+  needs_reauth: boolean
+  /** Short names of the missing scopes, e.g. ["gmail.modify"]. */
+  missing_scopes: string[]
+  token_present: boolean
+  /** ok | needs_reauth (saved sign-in failed) | disconnected (MAIL-38). */
+  auth_status: 'ok' | 'needs_reauth' | 'disconnected'
+  auth_error: string | null
+  last_sync_error: string | null
+  last_sync_error_at: string | null
+  /** New-mail pop-ups for this account, per user (MAIL-39). */
+  notifications: 'all' | 'known_contacts' | 'none'
+  sync: {
+    running: boolean
+    next_due_at: string | null
+    last_started: string | null
+    last_finished: string | null
+    /** False when the scheduler is off or the account is inactive or parked. */
+    scheduled: boolean
+  }
 }
 
 export interface CalendarEntry {
@@ -196,13 +236,15 @@ export function useUpdateAccount() {
   return useMutation({
     mutationFn: ({
       accountId,
-      display_name,
+      ...fields
     }: {
       accountId: string
-      display_name: string
-    }) => put<{ ok: boolean }>(`/settings/accounts/${accountId}`, { display_name }),
+      display_name?: string
+      color?: string | null
+    }) => put<{ ok: boolean }>(`/settings/accounts/${accountId}`, fields),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'accounts'] })
+      qc.invalidateQueries({ queryKey: ['mail'] })
     },
   })
 }
@@ -217,6 +259,43 @@ export function useToggleAccount() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'accounts'] })
       qc.invalidateQueries({ queryKey: ['settings', 'calendars'] })
+    },
+  })
+}
+
+/** Ask the scheduler to sync one account now (MAIL-38). */
+export function useSyncAccountNow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (accountId: string) =>
+      post<{ status: string; account_id: string }>(`/settings/accounts/${accountId}/sync`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'accounts'] })
+    },
+  })
+}
+
+/** New-mail notification mode for one account (MAIL-39). */
+export function useSetAccountNotifications() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ accountId, mode }: { accountId: string; mode: 'all' | 'known_contacts' | 'none' }) =>
+      put<{ ok: boolean; mode: string }>(`/settings/accounts/${accountId}/notifications`, { mode }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'accounts'] })
+    },
+  })
+}
+
+/** Disconnect an account: keep its mail as history, or delete it all (MAIL-38). */
+export function useDisconnectAccount() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ accountId, mode }: { accountId: string; mode: 'keep' | 'delete' }) =>
+      del<{ ok: boolean; deleted: boolean; communications?: number }>(`/settings/accounts/${accountId}?mode=${mode}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'accounts'] })
+      qc.invalidateQueries({ queryKey: ['mail'] })
     },
   })
 }

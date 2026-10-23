@@ -89,10 +89,10 @@ class TestExpiredCursorBackfill:
         from poc.sync import incremental_sync
 
         gap_email = _email("Missed during the gap", datetime.now(timezone.utc))
-        with patch("poc.sync.fetch_history", side_effect=HistoryExpiredError("expired")), \
-             patch("poc.sync.fetch_threads",
+        with patch("poc.gmail_client.fetch_history", side_effect=HistoryExpiredError("expired")), \
+             patch("poc.gmail_client.fetch_threads",
                    return_value=([[gap_email]], None)) as mock_threads, \
-             patch("poc.sync.get_history_id", return_value="fresh-cursor"):
+             patch("poc.gmail_client.get_history_id", return_value="fresh-cursor"):
             result = incremental_sync(
                 ACCOUNT_ID, MagicMock(),
                 customer_id=CUST_ID, user_id=USER_ID,
@@ -127,9 +127,9 @@ class TestExpiredCursorBackfill:
                 customer_id=CUST_ID, created_by=USER_ID,
             )
 
-        with patch("poc.sync.fetch_history", side_effect=HistoryExpiredError("expired")), \
-             patch("poc.sync.fetch_threads", return_value=([], None)) as mock_threads, \
-             patch("poc.sync.get_history_id", return_value="fresh-cursor"):
+        with patch("poc.gmail_client.fetch_history", side_effect=HistoryExpiredError("expired")), \
+             patch("poc.gmail_client.fetch_threads", return_value=([], None)) as mock_threads, \
+             patch("poc.gmail_client.get_history_id", return_value="fresh-cursor"):
             incremental_sync(
                 ACCOUNT_ID, MagicMock(),
                 customer_id=CUST_ID, user_id=USER_ID,
@@ -144,8 +144,8 @@ class TestExpiredCursorBackfill:
         """Non-404 failures abort the sync without advancing the cursor."""
         from poc.sync import incremental_sync
 
-        with patch("poc.sync.fetch_history", side_effect=RuntimeError("boom")), \
-             patch("poc.sync.get_history_id", return_value="fresh-cursor"):
+        with patch("poc.gmail_client.fetch_history", side_effect=RuntimeError("boom")), \
+             patch("poc.gmail_client.get_history_id", return_value="fresh-cursor"):
             with pytest.raises(RuntimeError):
                 incremental_sync(
                     ACCOUNT_ID, MagicMock(),

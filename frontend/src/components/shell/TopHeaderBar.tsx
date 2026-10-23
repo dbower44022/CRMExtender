@@ -21,6 +21,7 @@ export function TopHeaderBar() {
   const settingsMode = useNavigationStore((s) => s.settingsMode)
   const settingsTab = useNavigationStore((s) => s.settingsTab)
   const dashboardMode = useNavigationStore((s) => s.dashboardMode)
+  const mailMode = useNavigationStore((s) => s.mailMode)
   const openSearchModal = useLayoutStore((s) => s.openSearchModal)
   const openCompose = useComposeStore((s) => s.openCompose)
   const { data: registry } = useEntityRegistry()
@@ -34,6 +35,8 @@ export function TopHeaderBar() {
       <nav className="flex items-center gap-1.5 text-sm">
         {dashboardMode ? (
           <span className="font-medium text-surface-700">Dashboard</span>
+        ) : mailMode ? (
+          <span className="font-medium text-surface-700">Mail</span>
         ) : settingsMode ? (
           <>
             <span className="font-medium text-surface-700">Settings</span>

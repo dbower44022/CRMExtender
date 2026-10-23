@@ -832,3 +832,29 @@ class TestRegistryEditable:
                     assert "SELECT" not in fdef.sql.upper(), (
                         f"{et_key}.{fk}: editable field has subquery SQL"
                     )
+
+
+class TestDemotable:
+    """Adaptive Grid Intelligence PRD §12.4: registry-declared demotion exemption."""
+
+    def test_account_column_is_not_demotable(self):
+        from dataclasses import asdict
+        from poc.views.registry import ENTITY_TYPES
+        fd = ENTITY_TYPES["conversation"].fields["account_name"]
+        assert fd.demotable is False
+        assert asdict(fd)["demotable"] is False  # reaches the frontend via /entity-types
+
+    def test_default_is_demotable(self):
+        from poc.views.registry import ENTITY_TYPES
+        assert ENTITY_TYPES["conversation"].fields["title"].demotable is True
+
+
+class TestBuildId:
+    """v10.43: the version route names the served bundle so the page can reload itself."""
+
+    def test_build_id_from_index_html(self, tmp_path):
+        from poc.version import get_build_id
+        idx = tmp_path / "index.html"
+        idx.write_text('<script type="module" crossorigin src="/app/assets/index-Cu-zHl_g.js"></script>')
+        assert get_build_id(idx) == "index-Cu-zHl_g"
+        assert get_build_id(tmp_path / "missing.html") is None

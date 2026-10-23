@@ -1,27 +1,5 @@
 import { useNavigationStore } from '../../stores/navigation.ts'
-import type { QuickFilter } from '../../types/api.ts'
-
-interface QuickFilterDef {
-  label: string
-  filter: QuickFilter
-}
-
-const QUICK_FILTERS: Record<string, QuickFilterDef[]> = {
-  contact: [
-    { label: 'Active', filter: { field_key: 'status', operator: 'equals', value: 'active' } },
-    { label: 'Inactive', filter: { field_key: 'status', operator: 'equals', value: 'inactive' } },
-  ],
-  company: [
-    { label: 'Active', filter: { field_key: 'status', operator: 'equals', value: 'active' } },
-  ],
-  conversation: [
-    { label: 'Open', filter: { field_key: 'status', operator: 'equals', value: 'open' } },
-    { label: 'Closed', filter: { field_key: 'status', operator: 'equals', value: 'closed' } },
-  ],
-  event: [
-    { label: 'Upcoming', filter: { field_key: 'start', operator: 'is_after', value: new Date().toISOString().slice(0, 10) } },
-  ],
-}
+import { QUICK_FILTERS } from '../../lib/quickFilterDefs.ts'
 
 export function QuickFilters() {
   const activeEntityType = useNavigationStore((s) => s.activeEntityType)
@@ -31,8 +9,12 @@ export function QuickFilters() {
   const defs = QUICK_FILTERS[activeEntityType]
   if (!defs || defs.length === 0) return null
 
+  // Done conversations are hidden until a status chip is active (Base PRD §6.4).
+  const doneHidden =
+    activeEntityType === 'conversation' && !quickFilters.some((qf) => qf.field_key === 'status')
+
   return (
-    <div className="flex items-center gap-1.5 pt-1.5">
+    <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
       {defs.map((def) => {
         const isActive = quickFilters.some(
           (qf) =>
@@ -54,6 +36,9 @@ export function QuickFilters() {
           </button>
         )
       })}
+      {doneHidden && (
+        <span className="text-[11px] text-surface-400">Done conversations are hidden. Click Done to see them.</span>
+      )}
     </div>
   )
 }

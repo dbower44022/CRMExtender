@@ -110,14 +110,91 @@ export function useUpdateDraft() {
   })
 }
 
+export interface SendOptions {
+  /** Hold the message for the undo window (server default, MAIL-35). */
+  undo?: boolean
+  /** Hold the message for this many seconds instead of the default window. */
+  delay_seconds?: number
+  /** Send at this time (ISO) instead of now. */
+  scheduled_send_at?: string
+}
+
 export function useSendEmail() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (draftId: string) =>
-      post<SendResult>(`/outbound-emails/${draftId}/send`),
+    mutationFn: ({ draftId, ...opts }: { draftId: string } & SendOptions) =>
+      post<SendResult & { scheduled_send_at?: string }>(`/outbound-emails/${draftId}/send`, opts),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['outbound-drafts'] })
     },
+  })
+}
+
+/** Pull a queued message back to draft before it goes out (MAIL-35). */
+export function useUndoSend() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (draftId: string) => post<{ ok: boolean; status: string }>(`/outbound-emails/${draftId}/undo`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['outbound-drafts'] })
+    },
+  })
+}
+
+export function useDraft(draftId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['outbound-draft', draftId],
+    queryFn: () => get<OutboundDraft>(`/outbound-emails/${draftId}`),
+    enabled: !!draftId,
+  })
+}
+
+// --- Outbound attachments (MAIL-35) ---
+
+export interface OutboundAttachment {
+  id: string
+  filename: string
+  mime_type: string | null
+  size_bytes: number | null
+}
+
+export function useDraftAttachments(draftId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['outbound-attachments', draftId],
+    queryFn: () => get<OutboundAttachment[]>(`/outbound-emails/${draftId}/attachments`),
+    enabled: !!draftId,
+  })
+}
+
+/** Multipart upload; the JSON client cannot send files. */
+export async function uploadDraftAttachments(draftId: string, files: File[]): Promise<OutboundAttachment[]> {
+  const form = new FormData()
+  for (const f of files) form.append('files', f, f.name)
+  const res = await fetch(`/api/v1/outbound-emails/${encodeURIComponent(draftId)}/attachments`, {
+    method: 'POST', credentials: 'same-origin', body: form,
+  })
+  if (!res.ok) {
+    let msg = res.statusText
+    try { msg = (await res.json()).error || msg } catch { /* text body */ }
+    throw new Error(msg)
+  }
+  return res.json()
+}
+
+export function useUploadDraftAttachments() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ draftId, files }: { draftId: string; files: File[] }) => uploadDraftAttachments(draftId, files),
+    onSuccess: (_d, v) => { qc.invalidateQueries({ queryKey: ['outbound-attachments', v.draftId] }) },
+  })
+}
+
+export function useRemoveDraftAttachment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ draftId, attachmentId }: { draftId: string; attachmentId: string }) =>
+      del<{ ok: boolean }>(`/outbound-emails/${draftId}/attachments/${attachmentId}`),
+    onSuccess: (_d, v) => { qc.invalidateQueries({ queryKey: ['outbound-attachments', v.draftId] }) },
   })
 }
 

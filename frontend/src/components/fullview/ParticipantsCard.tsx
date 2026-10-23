@@ -19,6 +19,9 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 export function ParticipantsCard({ participants, providerAccount, senderName, senderAddress, onClose }: ParticipantsCardProps) {
+  const setActiveEntityType = useNavigationStore((s) => s.setActiveEntityType)
+  const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
+
   // Synthesize a sender entry if no 'from' participant exists but we have top-level sender data
   const hasSenderParticipant = participants.some((p) => p.role === 'from')
   const allParticipants: CommunicationFullParticipant[] = hasSenderParticipant
@@ -40,9 +43,6 @@ export function ParticipantsCard({ participants, providerAccount, senderName, se
       : participants
 
   if (allParticipants.length === 0) return null
-
-  const setActiveEntityType = useNavigationStore((s) => s.setActiveEntityType)
-  const setSelectedRow = useNavigationStore((s) => s.setSelectedRow)
 
   return (
     <div id="participants-card" className="rounded-lg border border-surface-200 bg-white">

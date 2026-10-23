@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 25.9
-**Last Updated:** 10-12-26 17:28
+**Version:** 25.10
+**Last Updated:** 10-22-26 23:02
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V25.10 (10-22-26):** v10.44 — Linux desktop deployment: `deploy/desktop/` adds a systemd user service (starts at login, restarts on failure, port 8000), a start-menu entry with icon, a launcher that starts the service and opens the browser, and `install-desktop.sh` (install / restart / status / logs / uninstall). Owner decision 10-22-26: always-on service (option B) over start-on-demand, because the mail scheduler, snooze returns and awaiting-reply tracking assume a running server. Documented in `deploy/README.md`.
 
 > **V25.9 (10-12-26):** v10.42 — MAIL-44 cross-account duplicates shown as one thread in the unified views (schema v33; `mail-client-prd.md` 1.34, `mail-client-tdd.md` 1.25 D-47). Also on 10-12-26: live database corruption recovered (two bad WAL pages), the live file moved out of Dropbox to `~/crmextender-data/` (`POC_DB_PATH`), nightly `python -m poc backup` to `~/db-archive/CRMExtender/` (v10.41, 03:00 cron), and v10.40 quieted draft-autosave fetch warnings.
 

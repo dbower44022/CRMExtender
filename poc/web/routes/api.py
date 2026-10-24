@@ -2659,6 +2659,7 @@ def settings_system(request: Request):
         "email_history_window": get_setting(cid, "email_history_window") or "90d",
         "summarize_settle_minutes": get_setting(cid, "summarize_settle_minutes") or "15",
         "summarize_max_per_sync": get_setting(cid, "summarize_max_per_sync") or "500",
+        "summarize_batch_threshold": get_setting(cid, "summarize_batch_threshold") or "50",
         "mail_sync_interval_seconds": get_setting(cid, "mail_sync_interval_seconds") or "120",
         "mail_mark_read_dwell_ms": get_setting(cid, "mail_mark_read_dwell_ms") or "1500",
         "mail_undo_send_seconds": get_setting(cid, "mail_undo_send_seconds") or "10",
@@ -2690,7 +2691,8 @@ async def settings_system_update(request: Request):
     _SYSTEM_KEYS = [
         "company_name", "default_timezone", "sync_enabled",
         "default_phone_country", "allow_self_registration", "email_history_window",
-        "summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds",
+        "summarize_settle_minutes", "summarize_max_per_sync", "summarize_batch_threshold",
+        "mail_sync_interval_seconds",
         "mail_mark_read_dwell_ms", "mail_undo_send_seconds",
         "mail_backfill_enabled", "mail_backfill_batch_size", "mail_awaiting_reply_days",
         "mail_awaiting_window_days",
@@ -2717,7 +2719,7 @@ async def settings_system_update(request: Request):
             continue
         if key in ("mail_backfill_enabled", "conversation_timers_enabled"):
             val = "true" if str(val).lower() in ("true", "1", "yes") else "false"
-        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "mail_sync_interval_seconds", "mail_mark_read_dwell_ms", "mail_undo_send_seconds", "mail_backfill_batch_size", "mail_awaiting_reply_days", "mail_awaiting_window_days"):
+        if key in ("summarize_settle_minutes", "summarize_max_per_sync", "summarize_batch_threshold", "mail_sync_interval_seconds", "mail_mark_read_dwell_ms", "mail_undo_send_seconds", "mail_backfill_batch_size", "mail_awaiting_reply_days", "mail_awaiting_window_days"):
             try:
                 val = max(0, int(val))
             except (TypeError, ValueError):
@@ -2733,6 +2735,22 @@ async def settings_system_update(request: Request):
         set_setting(cid, key, str(val), scope="system")
 
     return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Settings: AI usage (admin only) — Mail Client MAIL-49
+# ------------------------------------------------------------------
+
+@router.get("/settings/ai-usage")
+def settings_ai_usage(request: Request):
+    """Token accounting: totals for today / 30 days / all time, by model and
+    mode, plus the summary batches still open or recently ended."""
+    if request.state.user["role"] != "admin":
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+    from ...ai_usage import usage_report
+
+    with get_connection() as conn:
+        return usage_report(conn)
 
 
 # ------------------------------------------------------------------

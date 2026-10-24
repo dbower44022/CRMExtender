@@ -925,8 +925,8 @@ def cmd_migrate(args: argparse.Namespace) -> None:
     import importlib
     import sqlite3 as _sqlite3
 
-    LATEST_VERSION = 35
-    MIGRATIONS = list(range(2, LATEST_VERSION + 1))  # [2, 3, ..., 35]
+    LATEST_VERSION = 36
+    MIGRATIONS = list(range(2, LATEST_VERSION + 1))  # [2, 3, ..., 36]
 
     db_path = args.db
     if not db_path:

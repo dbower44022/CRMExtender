@@ -29,6 +29,9 @@ log = logging.getLogger(__name__)
 DEFAULT_INTERVAL_SECONDS = 120
 MIN_INTERVAL_SECONDS = 60
 TICK_SECONDS = 5.0
+#: Seconds between checks of open summary batches (MAIL-49); skipped when none are open.
+BATCH_POLL_INTERVAL_SECONDS = 60
+
 #: Seconds between conversation lifecycle passes (Conversation TDD §9.17); the first runs on the first tick.
 LIFECYCLE_INTERVAL_SECONDS = 3600
 
@@ -61,6 +64,7 @@ class SyncScheduler:
         self.paused = False
         self.started_at: datetime | None = None
         self._lifecycle_last: datetime | None = None
+        self._batch_poll_last: datetime | None = None
         #: account_id -> state dict
         self._accounts: dict[str, dict] = {}
         self._workers: dict[str, threading.Thread] = {}
@@ -250,6 +254,14 @@ class SyncScheduler:
                 run_lifecycle_pass(now_iso=now.isoformat())
             except Exception:
                 log.exception("Conversation lifecycle pass failed")
+        # Open summary batches: fetch results once a minute (MAIL-49)
+        if self._batch_poll_last is None or now - self._batch_poll_last >= timedelta(seconds=BATCH_POLL_INTERVAL_SECONDS):
+            self._batch_poll_last = now
+            try:
+                from .summary_batches import poll_summary_batches
+                poll_summary_batches(now_iso=now.isoformat())
+            except Exception:
+                log.exception("Summary batch poll failed")
         return started
 
     def _start_account(self, account: dict, st: dict) -> None:

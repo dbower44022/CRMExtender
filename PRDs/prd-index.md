@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 25.10
-**Last Updated:** 10-22-26 23:02
+**Version:** 25.11
+**Last Updated:** 10-24-26 18:27
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V25.11 (10-24-26):** v10.46 — MAIL-49 token accounting and batch summarization (schema v36; `mail-client-prd.md` 1.35, `mail-client-tdd.md` 1.26 D-48): every Anthropic call recorded with tokens and an estimated cost from a dated price table, Settings → System shows today / 30 days / all time by model and mode, and bulk summarization above `summarize_batch_threshold` goes to a half-price Message Batch polled by the scheduler. Owner decision 10-23-26: full scope kept although the backfill had already completed; the batch path serves the next bulk event. Also shipped between index entries: v10.45 (10-23-26) conversation timers — stale and timed close (CONV-DN-09, 11–14; schema v35) — and the Linux desktop deployment plus public site under v10.44 (V25.10).
 
 > **V25.10 (10-22-26):** v10.44 — Linux desktop deployment: `deploy/desktop/` adds a systemd user service (starts at login, restarts on failure, port 8000), a start-menu entry with icon, a launcher that starts the service and opens the browser, and `install-desktop.sh` (install / restart / status / logs / uninstall). Owner decision 10-22-26: always-on service (option B) over start-on-demand, because the mail scheduler, snooze returns and awaiting-reply tracking assume a running server. Documented in `deploy/README.md`.
 

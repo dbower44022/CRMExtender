@@ -413,6 +413,55 @@ CREATE TABLE IF NOT EXISTS mail_awaiting_dismissed (
     PRIMARY KEY (account_id, thread_id)
 );
 
+-- Token accounting: one row per Anthropic call or batch result (v36, MAIL-49)
+CREATE TABLE IF NOT EXISTS ai_usage (
+    id                          TEXT PRIMARY KEY,
+    occurred_at                 TEXT NOT NULL,
+    customer_id                 TEXT,
+    purpose                     TEXT NOT NULL,            -- 'summary'
+    mode                        TEXT NOT NULL,            -- 'live' | 'batch'
+    model                       TEXT NOT NULL,
+    conversation_id             TEXT,
+    batch_id                    TEXT,
+    request_id                  TEXT,
+    input_tokens                INTEGER NOT NULL DEFAULT 0,
+    output_tokens               INTEGER NOT NULL DEFAULT 0,
+    cache_creation_input_tokens INTEGER NOT NULL DEFAULT 0,
+    cache_read_input_tokens     INTEGER NOT NULL DEFAULT 0,
+    cost_usd                    REAL,                     -- estimate from poc/ai_pricing.py; NULL if unpriced
+    created_at                  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_occurred ON ai_usage(occurred_at);
+
+-- Message Batches submitted for bulk summarization (v36, MAIL-49)
+CREATE TABLE IF NOT EXISTS ai_batches (
+    id               TEXT PRIMARY KEY,                    -- provider batch id
+    customer_id      TEXT,
+    purpose          TEXT NOT NULL,
+    model            TEXT NOT NULL,
+    status           TEXT NOT NULL,                       -- 'in_progress' | 'ended' | 'failed'
+    submitted_count  INTEGER NOT NULL DEFAULT 0,
+    succeeded        INTEGER NOT NULL DEFAULT 0,
+    errored          INTEGER NOT NULL DEFAULT 0,
+    expired          INTEGER NOT NULL DEFAULT 0,
+    canceled         INTEGER NOT NULL DEFAULT 0,
+    created_at       TEXT NOT NULL,
+    last_checked_at  TEXT,
+    ended_at         TEXT,
+    processed_at     TEXT,
+    error            TEXT
+);
+CREATE TABLE IF NOT EXISTS ai_batch_items (
+    batch_id        TEXT NOT NULL REFERENCES ai_batches(id) ON DELETE CASCADE,
+    custom_id       TEXT NOT NULL,
+    conversation_id TEXT NOT NULL,
+    result_type     TEXT,                                  -- succeeded | errored | expired | canceled
+    error           TEXT,
+    processed_at    TEXT,
+    PRIMARY KEY (batch_id, custom_id)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_batch_items_conv ON ai_batch_items(conversation_id, processed_at);
+
 -- Conversation ↔ Communication M:N join
 CREATE TABLE IF NOT EXISTS conversation_communications (
     conversation_id   TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,

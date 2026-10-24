@@ -1346,6 +1346,67 @@ def _conversation_owner_email(conn, conversation_id: str) -> str | None:
     return row["email_address"] if row else None
 
 
+def load_conversation_for_summary(conv_id: str, conv_row=None) -> Conversation:
+    """Rebuild the :class:`Conversation` object the summarizer prompt needs."""
+    if conv_row is None:
+        with get_connection() as conn:
+            conv_row = conn.execute("SELECT * FROM conversations WHERE id = ?", (conv_id,)).fetchone()
+    with get_connection() as conn:
+        comm_rows = conn.execute(
+            """SELECT c.* FROM communications c
+               JOIN conversation_communications cc ON cc.communication_id = c.id
+               WHERE cc.conversation_id = ?
+               ORDER BY c.timestamp""",
+            (conv_id,),
+        ).fetchall()
+
+    emails = []
+    for cr in comm_rows:
+        with get_connection() as conn:
+            rec_rows = conn.execute(
+                "SELECT * FROM communication_participants WHERE communication_id = ?",
+                (cr["id"],),
+            ).fetchall()
+        emails.append(ParsedEmail.from_row(cr, recipients=rec_rows))
+
+    conv = Conversation(
+        thread_id=conv_id,
+        title=(conv_row["title"] if conv_row is not None else "") or "",
+        emails=emails,
+        participants=[],
+    )
+    all_participants: dict[str, None] = {}
+    for em in conv.emails:
+        for p in em.all_participants:
+            all_participants[p] = None
+    conv.participants = list(all_participants.keys())
+    return conv
+
+
+def apply_summary(conv_id: str, summary) -> int:
+    """Store a successful summary on its conversation; returns tags stored.
+
+    Shared by the live pass and the batch result pass (MAIL-49) so both
+    write the same columns and extract the same tags.
+    """
+    update = summary.to_update_dict()
+    with get_connection() as conn:
+        conn.execute(
+            """UPDATE conversations
+               SET ai_summary = ?, ai_status = ?, ai_action_items = ?,
+                   ai_topics = ?, ai_summarized_at = ?, updated_at = ?
+               WHERE id = ?""",
+            (
+                update["ai_summary"], update["ai_status"],
+                update["ai_action_items"], update["ai_topics"],
+                update["ai_summarized_at"], _now_iso(), conv_id,
+            ),
+        )
+    if summary.key_topics:
+        return _store_tags(conv_id, summary.key_topics)
+    return 0
+
+
 def process_conversations(
     account_id: str | None,
     creds: Credentials | None,
@@ -1355,6 +1416,7 @@ def process_conversations(
     *,
     settle_minutes: int | None = None,
     max_per_run: int | None = None,
+    batch_threshold: int | None = None,
 ) -> tuple[int, int, int]:
     """Summarize conversations that need processing.
 
@@ -1369,6 +1431,12 @@ def process_conversations(
     means unlimited) are summarized per call, newest first, so a large
     backlog is worked off across runs instead of in one unbounded bill.
 
+    Bulk work goes to a Message Batch (MAIL-49, TDD D-48): when more than
+    ``batch_threshold`` settled conversations are waiting (0 or ``None``
+    disables batching), all of them are submitted as one batch at half
+    price and applied when it ends, instead of being summarized live.
+    Conversations with a batch request still open are left to that batch.
+
     ``account_id``, ``creds``, and ``user_email`` may be ``None``: the
     pass is global across accounts, and when ``user_email`` is ``None``
     each conversation's owning mailbox address is looked up for the
@@ -1382,21 +1450,45 @@ def process_conversations(
 
     settle = SUMMARIZE_SETTLE_MINUTES if settle_minutes is None else max(0, int(settle_minutes))
     cap = SUMMARIZE_MAX_PER_SYNC if max_per_run is None else max(0, int(max_per_run))
+    threshold = max(0, int(batch_threshold or 0))
     cutoff = (datetime.now(timezone.utc) - timedelta(minutes=settle)).isoformat()
 
-    # Find conversations needing summarization that have settled
+    # Find conversations needing summarization that have settled and are
+    # not already waiting on an open batch request.
     with get_connection() as conn:
         rows = conn.execute(
             """SELECT * FROM conversations
                WHERE ai_summarized_at IS NULL
                  AND dismissed = 0
                  AND (last_activity_at IS NULL OR last_activity_at <= ?)
+                 AND id NOT IN (SELECT conversation_id FROM ai_batch_items WHERE processed_at IS NULL)
                ORDER BY last_activity_at DESC""",
             (cutoff,),
         ).fetchall()
 
     if not rows:
         log.info("No conversations need processing")
+        return 0, 0, 0
+
+    if not config.ANTHROPIC_API_KEY:
+        return 0, 0, 0
+
+    def owner_for(conv_id: str) -> str:
+        if user_email:
+            return user_email
+        with get_connection() as conn:
+            return _conversation_owner_email(conn, conv_id) or ""
+
+    if threshold and len(rows) > threshold:
+        from .summary_batches import submit_summary_batch
+
+        customer_id = rows[0]["customer_id"] if "customer_id" in rows[0].keys() else None
+        batch_id = submit_summary_batch(
+            [(r["id"], load_conversation_for_summary(r["id"], r), owner_for(r["id"])) for r in rows],
+            customer_id=customer_id,
+        )
+        log.info("Processing: %d settled conversations exceed the batch threshold (%d); "
+                 "submitted as batch %s", len(rows), threshold, batch_id)
         return 0, 0, 0
 
     skipped = 0
@@ -1406,75 +1498,18 @@ def process_conversations(
 
     summarized_count = 0
     tag_count = 0
+    client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
 
     for conv_row in rows:
         conv_id = conv_row["id"]
+        conv = load_conversation_for_summary(conv_id, conv_row)
+        owner_email = owner_for(conv_id)
 
-        # Summarize (only if API key is set)
-        if not config.ANTHROPIC_API_KEY:
-            continue
-
-        # Load communications for this conversation via join
-        with get_connection() as conn:
-            comm_rows = conn.execute(
-                """SELECT c.* FROM communications c
-                   JOIN conversation_communications cc ON cc.communication_id = c.id
-                   WHERE cc.conversation_id = ?
-                   ORDER BY c.timestamp""",
-                (conv_id,),
-            ).fetchall()
-
-        emails = []
-        for cr in comm_rows:
-            with get_connection() as conn:
-                rec_rows = conn.execute(
-                    "SELECT * FROM communication_participants WHERE communication_id = ?",
-                    (cr["id"],),
-                ).fetchall()
-            emails.append(ParsedEmail.from_row(cr, recipients=rec_rows))
-
-        # Reconstruct Conversation object for summarization
-        conv = Conversation(
-            thread_id=conv_id,
-            title=conv_row["title"] or "",
-            emails=emails,
-            participants=[],
-        )
-
-        # Collect participants
-        all_participants: dict[str, None] = {}
-        for em in conv.emails:
-            for p in em.all_participants:
-                all_participants[p] = None
-        conv.participants = list(all_participants.keys())
-
-        owner_email = user_email
-        if not owner_email:
-            with get_connection() as conn:
-                owner_email = _conversation_owner_email(conn, conv_id) or ""
-
-        client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
         summary = summarize_conversation(conv, client, owner_email, claude_limiter)
 
         if not summary.error:
-            update = summary.to_update_dict()
-            with get_connection() as conn:
-                conn.execute(
-                    """UPDATE conversations
-                       SET ai_summary = ?, ai_status = ?, ai_action_items = ?,
-                           ai_topics = ?, ai_summarized_at = ?, updated_at = ?
-                       WHERE id = ?""",
-                    (
-                        update["ai_summary"], update["ai_status"],
-                        update["ai_action_items"], update["ai_topics"],
-                        update["ai_summarized_at"], _now_iso(), conv_id,
-                    ),
-                )
+            tag_count += apply_summary(conv_id, summary)
             summarized_count += 1
-
-            # Extract and normalize tags
-            if summary.key_topics:
-                tag_count += _store_tags(conv_id, summary.key_topics)
 
     log.info(
         "Processing complete: %d summarized, %d tags, %d deferred to the next run",

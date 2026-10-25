@@ -24,6 +24,8 @@ export interface SystemSettings {
   summarize_settle_minutes: string
   /** Max conversations summarized per sync run; "0" = unlimited (MAIL-19). */
   summarize_max_per_sync: string
+  /** Settled conversations above this count go to a Message Batch at half price; "0" = always live (MAIL-49). */
+  summarize_batch_threshold?: string
   /** Seconds between timed syncs per account, minimum 60 (MAIL-13). */
   mail_sync_interval_seconds: string
   /** Milliseconds an open thread waits before being marked read; "0" disables (MAIL-27). */
@@ -38,6 +40,12 @@ export interface SystemSettings {
   mail_awaiting_reply_days?: string
   /** Only messages sent within this many days count as awaiting, 7–365 (MAIL-47). */
   mail_awaiting_window_days?: string
+  /** Days of silence before a conversation is stale, 1–365 (Conversation Base PRD §6.4). */
+  conversation_stale_days?: string
+  /** Days of silence before a conversation is done, 1–365, never below stale. */
+  conversation_done_days?: string
+  /** "true" while the hourly timer pass runs. */
+  conversation_timers_enabled?: string
 }
 
 interface UserRecord {
@@ -130,6 +138,53 @@ export function useChangePassword() {
       new_password: string
       confirm_password: string
     }) => put<{ ok: boolean }>('/settings/password', data),
+  })
+}
+
+// --- AI usage (MAIL-49) ---
+
+export interface AiUsageTotals {
+  calls: number
+  input_tokens: number
+  output_tokens: number
+  cache_creation_input_tokens: number
+  cache_read_input_tokens: number
+  cost_usd: number
+  unpriced_calls: number
+}
+
+export interface AiUsageBatch {
+  id: string
+  purpose: string
+  model: string
+  status: string
+  submitted_count: number
+  succeeded: number
+  errored: number
+  expired: number
+  canceled: number
+  created_at: string
+  last_checked_at: string | null
+  ended_at: string | null
+  processed_at: string | null
+  error: string | null
+}
+
+export interface AiUsageReport {
+  price_table_date: string
+  model: string
+  generated_at: string
+  periods: { today: AiUsageTotals; last_30_days: AiUsageTotals; all_time: AiUsageTotals }
+  by_model_30_days: (AiUsageTotals & { model: string; mode: string })[]
+  batches: AiUsageBatch[]
+}
+
+export function useAiUsage() {
+  return useQuery({
+    queryKey: ['settings', 'ai-usage'],
+    queryFn: () => get<AiUsageReport>('/settings/ai-usage'),
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
   })
 }
 

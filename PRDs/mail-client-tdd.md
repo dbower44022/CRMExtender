@@ -1,7 +1,7 @@
 # Mail Client — TDD
 
-**Version:** 1.25
-**Last Updated:** 10-12-26 17:28
+**Version:** 1.26
+**Last Updated:** 10-24-26 18:27
 **Status:** Approved 10-08-26 by the product owner — living document; D-01–D-14 approved, D-15–D-47 written back during the build and binding until revised here
 **Scope:** Functional Area
 **Parent Document:** [mail-client-prd.md]
@@ -445,6 +445,16 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 **Constraints/Tradeoffs:** Flags shown for a merged row are the winning copy's; reading a message in one mailbox does not mark its twin read in the other until the owner acts on the merged row (the action then covers both). Search results and new-mail pop-ups still work per account. On the live database the rebuild found 33 shared Message-IDs forming 28 groups over 56 threads among the three active accounts (10-12-26); the retired SCORE mailbox's rows carry no Message-ID header (their pre-v23 state was frozen) and so never link.
 
+### D-48 Token accounting is a ledger per call; bulk summarization goes to a Message Batch above a count threshold
+
+**Decision:** Every Anthropic call writes one row to `ai_usage` (time, purpose, mode `live` or `batch`, model, conversation, batch id, request id, the four token counts, and `cost_usd`). The cost is an estimate computed at write time from `poc/ai_pricing.py`, a price table in code that carries its own date (`PRICE_TABLE_DATE`) and is shown beside every figure; an unpriced model stores `NULL` and is counted separately rather than guessed. The summarization pass (`process_conversations`) routes by count: when more settled conversations than `summarize_batch_threshold` are waiting (default 50; 0 disables), all of them are submitted as one Message Batch (`poc/summary_batches.py`) built from the same `build_summary_params` the live call uses, recorded in `ai_batches` / `ai_batch_items`, and left alone by the live pass until the batch is processed. The scheduler polls open batches once a minute; an ended batch's succeeded results go through `apply_summary`, the same store step as a live summary, with usage recorded at the batch discount; errored, expired, canceled or missing items are marked processed without a summary, which returns the conversation to the next live pass.
+
+**Rationale:** The deferred cost decisions (backfill window, re-summarization, the MAIL-46 token budget) all need measured spend, not estimates from prompt size; a ledger per call is the smallest thing that gives it and it also prices the batch path honestly. A count threshold, not conversation age, decides batching because age cannot tell a new account's recent mail from a backfill: both arrive as a burst, and a burst is exactly when a one-hour delay is worth a half-price bill. Sharing the request builder and the store step between the two paths keeps one prompt and one parser.
+
+**Alternatives Rejected:** Reading cost from the Anthropic usage API — needs an admin key and reports by organization, not by conversation. A cost setting the owner edits — stale silently; a dated table in code is at least visibly dated. Batching by conversation age — see rationale. Capping the batch at `summarize_max_per_sync` — the cap bounds a live bill; a batch is half price and asynchronous, so it is bounded only by the API's request limit (10,000 per batch here).
+
+**Constraints/Tradeoffs:** `cost_usd` is an estimate: list prices change and cache pricing is approximated where Anthropic publishes no separate figure. A batched conversation shows no summary for up to an hour (the API's usual turnaround; 24 hours at most). Results are keyed by `custom_id`, never by position. The live pass skips conversations with an open batch item, so a batch that the API never ends holds those conversations until the poll marks it failed; `install-desktop.sh logs` shows the poll's warnings. The ledger grows by one row per summary; at the current volume that is a few thousand rows a year.
+
 ### D-18 Adapters call the HTTP client through the module object
 
 **Decision:** `GmailProvider` calls `gmail_client.<function>` via the imported module, never `from gmail_client import <function>`.
@@ -471,6 +481,7 @@ Technical decisions for the Mail Client functional area and its child [email-pro
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.26 | 10-24-26 18:27 | Claude (Claude Code) | Write-back for MAIL-49 (v10.46): D-48 — per-call usage ledger with a dated price table; count-threshold routing to Message Batches; shared request builder and store step. |
 | 1.25 | 10-12-26 17:28 | Claude (Claude Code) | Write-back for MAIL-44: D-47 (thread groups by shared Message-ID; merged only in multi-account views). |
 | 1.24 | 10-11-26 19:32 | Claude (Claude Code) | Write-back for MAIL-47: D-46 (awaiting reply computed on read; opt-outs stored). |
 | 1.23 | 10-11-26 14:14 | Claude (Claude Code) | Write-back for Phase 1 close-out (v10.36): D-43 backfill job, D-44 snooze, D-45 one HTML body (D-10 delivered). |

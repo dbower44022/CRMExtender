@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { formatTimestamp } from '../../lib/formatTimestamp.ts'
-import { reopenReasonLabel } from '../../lib/conversationStatus.ts'
+import { doneReasonLabel, reopenReasonLabel } from '../../lib/conversationStatus.ts'
 import type { ConversationFullData } from '../../types/api.ts'
 
 interface ConversationMetadataCardProps {
@@ -32,6 +32,9 @@ export function ConversationMetadataCard({ data }: ConversationMetadataCardProps
             {data.done_by_name && (
               <MetadataRow label="Done by" value={data.done_by_name} />
             )}
+            {data.done_reason && (
+              <MetadataRow label="Done reason" value={doneReasonLabel(data.done_reason)} />
+            )}
             {data.reopened_at && (
               <MetadataRow label="Reopened" value={formatTimestamp(data.reopened_at)} />
             )}
@@ -52,12 +55,18 @@ export function ConversationMetadataCard({ data }: ConversationMetadataCardProps
                 )}
               </>
             )}
-            {data.stale_after_days != null && (
-              <MetadataRow label="Stale After" value={`${data.stale_after_days} days`} />
-            )}
-            {data.closed_after_days != null && (
-              <MetadataRow label="Auto-Close After" value={`${data.closed_after_days} days`} />
-            )}
+            <MetadataRow
+              label="Stale After"
+              value={data.stale_after_days != null
+                ? `${data.stale_after_days} days`
+                : `${data.stale_after_days_default} days (default)`}
+            />
+            <MetadataRow
+              label="Done After"
+              value={data.closed_after_days != null
+                ? `${data.closed_after_days} days`
+                : `${data.closed_after_days_default} days (default)`}
+            />
             <MetadataRow label="Created" value={formatTimestamp(data.created_at)} />
             <MetadataRow label="Updated" value={formatTimestamp(data.updated_at)} />
             {data.created_by_name && (

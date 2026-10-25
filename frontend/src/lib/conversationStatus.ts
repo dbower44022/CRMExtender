@@ -42,6 +42,16 @@ export function isConversationDone(status: string | null | undefined): boolean {
   return status === CONVERSATION_STATUS_DONE
 }
 
+const DONE_REASONS: Record<string, string> = {
+  user: 'Marked done',
+  timer: 'Silent past the done threshold',
+}
+
+export function doneReasonLabel(reason: string | null | undefined): string {
+  if (!reason) return ''
+  return DONE_REASONS[reason] ?? reason
+}
+
 export function reopenReasonLabel(reason: string | null | undefined): string {
   if (!reason) return ''
   return REOPEN_REASONS[reason] ?? reason

@@ -21,6 +21,8 @@ _HARDCODED_DEFAULTS = {
     # Summarization cost controls (Mail Client MAIL-19)
     "summarize_settle_minutes": "15",
     "summarize_max_per_sync": "500",
+    # Settled conversations above this count go to a Message Batch at half price; 0 = always live (MAIL-49)
+    "summarize_batch_threshold": "50",
     # Mail action outbox: attempts before a transient failure is dead-lettered (MAIL-14)
     "mail_action_retry_max": "8",
     # Scheduler: seconds between timed syncs per account, never below 60 (MAIL-13)
@@ -38,6 +40,10 @@ _HARDCODED_DEFAULTS = {
     "mail_awaiting_reply_days": "3",
     # ...and only messages sent within this many days count; older silence is history
     "mail_awaiting_window_days": "30",
+    # Conversation timers (Conversation Base PRD §6.4): silence before stale / done, and the switch
+    "conversation_stale_days": "14",
+    "conversation_done_days": "30",
+    "conversation_timers_enabled": "true",
 }
 
 

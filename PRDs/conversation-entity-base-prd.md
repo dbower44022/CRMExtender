@@ -1,10 +1,12 @@
 # Conversation — Entity Base PRD
 
-**Version:** 1.1
-**Last Updated:** 10-22-26 22:55
-**Status:** Draft — V1.1 adds the user-marked Done state (release v10.44, schema v34)
+**Version:** 1.2
+**Last Updated:** 10-23-26 01:10
+**Status:** Draft — V1.2 adds the timed stale and timed close transitions (release v10.45, schema v35)
 **Product PRD:** [CRMExtender Product PRD]
 
+> **V1.2 (10-23-26): Timers.** The stale and timed-close transitions deferred in V1.1 as CONV-DN-09 are now specified and built. Two decisions approved by the product owner on 10-23-26: (1) a timed close writes the same `done` value as the user, with a new Done Reason field (`user` | `timer`) telling them apart; (2) the thresholds are system settings (stale after 14 days, done after 30 days) that a conversation may override, with the per-conversation copies every row carried blanked so the settings govern. Routine rules: the pass runs hourly in the scheduler and at server start; it touches only active and stale conversations; the silence clock starts at the later of last activity and a user Reopen; stale clears on any new communication; a timers-enabled setting is the kill switch. Sections changed: 1.4, 6.1, 6.4, §12 (CONV-DN-09 closed, CONV-DN-11–14 and CONV-DNT-13–18 added).
+>
 > **V1.1 (10-22-26): Done state.** A user can mark a conversation Done so the conversations grid is cleaned of finished threads, and a done conversation returns to active when a new inbound communication joins it. Six decisions approved by the product owner on 10-22-26: (1) Done is a value of System Status, replacing the never-implemented `closed`; (2) only inbound communications reopen, the user's own sends do not; (3) the timed stale and auto-close transitions stay deferred; (4) the grid hides done conversations unless a filter names System Status; (5) Mark Done and Reopen are offered on the row context menu, the Content Tool Bar in bulk mode, the Preview Card, and the full View, with no keyboard key; (6) Done At, Done By, Reopened At and Reopened Reason are recorded, last occurrence only, and every new communication queues a fresh summary. The dismissed fields are untouched (§6.5). Sections changed: 1.4, 6.1, 6.3, 6.4 (new), 6.5 (new), KP-3, KP-7 (new), 8.9–8.11 (new), 12 (new), 13 (new).
 
 ---
@@ -44,9 +46,10 @@ Every intelligence layer above the atomic Communication (AI summarization, statu
 | Subject | Derived from email subject, or user-defined. Display name field. | No | Direct | Yes | Yes | Free text |
 | Is Aggregate | Whether this is an organizational container for child Conversations. **Immutable after creation.** | Yes | System (set on creation) | No | Yes | Boolean. Default: false. |
 | Description | Optional description of scope. Primarily useful for aggregate Conversations. | No | Direct | No | No | Free text |
-| System Status | Lifecycle state. `active` until the user marks the conversation Done; returns to `active` when a new inbound communication joins it (§6.4). `stale` is reserved for the deferred timer. | Yes | Override (user marks Done or reopens; §6.4) | Yes | Yes | `active`, `stale`, `done` |
+| System Status | Lifecycle state. `active` while there is recent activity; `stale` after the stale threshold of silence; `done` when the user marks it or after the done threshold of silence. Returns to `active` on new activity as §6.1 and §6.4 define. | Yes | Override (user marks Done or reopens; the timer moves the rest; §6.4) | Yes | Yes | `active`, `stale`, `done` |
 | Done At | When the user marked the conversation Done. Cleared on reopen. | No | System | Yes | Yes | Timestamp |
-| Done By | User who marked the conversation Done. Cleared on reopen. | No | System | No | Yes | Reference to User |
+| Done By | User who marked the conversation Done. Empty for a timed close. Cleared on reopen. | No | System | No | Yes | Reference to User |
+| Done Reason | How the conversation became Done. Cleared on reopen. | No | System | No | Yes | `user` (Mark Done), `timer` (silence past the done threshold) |
 | Reopened At | When the conversation last returned from Done to active. | No | System | Yes | Yes | Timestamp |
 | Reopened Reason | Why the conversation last reopened. | No | System | No | Yes | `inbound` (a new inbound communication joined), `user` (the user chose Reopen) |
 | AI Status | Semantic status from AI analysis. NULL until AI processes. | No | Override | Yes | Yes | `open`, `closed`, `uncertain` |
@@ -59,8 +62,8 @@ Every intelligence layer above the atomic Communication (AI summarization, statu
 | Channel Breakdown | JSON-encoded count by channel. For aggregates: merged across direct + children. | No | Computed | No | No | JSON object |
 | First Activity At | Timestamp of earliest communication. For aggregates: MIN across direct + children. | No | Computed | Yes | Yes | Timestamp |
 | Last Activity At | Timestamp of most recent communication. Drives system_status transitions. For aggregates: MAX across direct + children. | No | Computed | Yes | Yes | Timestamp |
-| Stale After Days | Configurable threshold for stale detection. Display-only until the deferred timer task (CONV-DN-09) is built. | No | Direct | No | No | Positive integer. Default: 14. |
-| Closed After Days | Configurable threshold for timed close. Display-only until the deferred timer task (CONV-DN-09) is built. | No | Direct | No | No | Positive integer. Default: 30. |
+| Stale After Days | Per-conversation override of the system setting "stale after days" (default 14). Empty means the setting applies. Editing the override is part of the deferred full View write path. | No | Direct (deferred) | No | No | Positive integer or empty. |
+| Closed After Days | Per-conversation override of the system setting "done after days" (default 30). Empty means the setting applies. Editing the override is part of the deferred full View write path. | No | Direct (deferred) | No | No | Positive integer or empty. |
 | Status | Record lifecycle. | Yes, defaults to active | System | Yes | Yes | `active`, `archived` |
 | Created By | User who created the record (NULL for auto-formed). | No | System | No | Yes | Reference to User |
 | Created At | Record creation timestamp. | Yes | System | Yes | Yes | Timestamp |
@@ -229,15 +232,15 @@ Entity associations are independent at every level. If aggregate "Lease Negotiat
 
 ### 6.1 Three Status Dimensions
 
-**System Status (status)** — lifecycle state. User-managed as of V1.1; the timed transitions are deferred:
+**System Status (status)** — lifecycle state, moved by the user and by the timer (§6.4):
 
 | Value | Trigger |
 |---|---|
-| `active` | Default on creation. A `done` or `stale` conversation returns here when a new inbound communication joins it, or when the user chooses Reopen. |
-| `stale` | Reserved: no activity for N days (stale_after_days, default: 14). Nothing sets it until the deferred timer task (CONV-DN-09) is built. |
-| `done` | The user marks the conversation Done (§6.4). Whether the deferred timer also sets `done` after M days of silence (closed_after_days, default: 30), or needs a value of its own, is decided when CONV-DN-09 is designed. |
+| `active` | Default on creation. A `stale` conversation returns here when any new communication joins it. A `done` conversation returns here when a new inbound communication joins it, or when the user chooses Reopen. |
+| `stale` | Silent for the stale threshold (system setting, default 14 days; per-conversation override). Set by the timer pass. |
+| `done` | The user marks the conversation Done, or the timer finds it silent for the done threshold (system setting, default 30 days; per-conversation override). Done Reason records which. |
 
-Transitions: `active` → `done` by user action. `done` → `active` by user action (Reopen) or by a new inbound communication. A communication the user sends never changes System Status. The V1.0 value name `closed` is renamed `done` so that the word "closed" keeps a single meaning in the product, as an AI Status value.
+Transitions: `active` → `stale` → `done` by the timer; `active` → `done` by user action. `stale` → `active` on any new communication. `done` → `active` by user action (Reopen) or by a new inbound communication. A communication the user sends never reopens a done conversation. The V1.0 value name `closed` is renamed `done` so that the word "closed" keeps a single meaning in the product, as an AI Status value.
 
 **AI Status (ai_status)** — Semantic, from AI analysis:
 
@@ -270,13 +273,13 @@ Implementation note (V1.1): the PoC stores System Status in the single `status` 
 
 **Reopening.** Two things reopen a done conversation. First, the user chooses Reopen on any of the same surfaces: System Status returns to `active`, Reopened At is set, Reopened Reason is `user`, and Done At and Done By are cleared. Second, a new inbound communication joins the conversation, through mail sync or through manual assignment: the same field changes apply with Reopened Reason `inbound`. A communication the user sends, whether composed in the product or synced from the Sent folder, joins the conversation and updates its activity but never reopens it. Provider drafts never join a conversation and so never reopen one.
 
-**Default view.** The conversations grid hides done conversations unless the view's filters, saved or quick, include a condition on System Status. The quick filter row offers Active, Done, and the three AI Status chips, prefixed "AI" so that Done and AI closed cannot be misread as the same thing. A one-line note under the chips says that done conversations are hidden until Done is clicked. The Preview Card and the full View open a done conversation by direct link regardless of the rule.
+**Default view.** The conversations grid hides done conversations unless the view's filters, saved or quick, include a condition on System Status. The quick filter row offers Active, Stale, Done, and the three AI Status chips, prefixed "AI" so that Done and AI closed cannot be misread as the same thing. Stale conversations stay visible with an amber badge. A one-line note under the chips says that done conversations are hidden until Done is clicked. The Preview Card and the full View open a done conversation by direct link regardless of the rule.
 
 **Summaries.** Marking Done has no effect on summarization. Any new communication that joins a conversation, inbound or outbound, queues a fresh AI summary whether or not the conversation is done.
 
 **Undo.** Every Mark Done shows a confirmation toast with an Undo link that reopens the conversation with Reopened Reason `user`.
 
-**Timers (deferred).** The V1.0 automatic stale and auto-close transitions are not implemented. Stale After Days and Closed After Days remain display-only. The work is tracked as CONV-DN-09 and needs its own decision on whether a timed close shares the `done` value or gets a value of its own, because a word that means both "I finished this" and "nothing happened lately" cannot be read from the grid.
+**Timers.** A timer pass runs once an hour inside the scheduler and once at server start. It looks only at `active` and `stale` conversations that are not dismissed, and moves each one by its silence: `active` becomes `stale` past the stale threshold; `active` or `stale` becomes `done` past the done threshold, with Done Reason `timer` and Done By empty; `stale` returns to `active` if activity has arrived since. Silence is measured from the later of Last Activity and a user Reopen, so a conversation the user reopens is not closed again on the next pass. The timer never touches a `done` conversation, whoever or whatever closed it. The thresholds are the system settings "stale after days" (default 14) and "done after days" (default 30), on the Settings page beside the mail settings; a conversation's own Stale After Days or Closed After Days, when set, overrides the setting for that conversation. The done threshold is never below the stale threshold. A third setting, "timers enabled", switches the pass off without losing anything. A timed close reopens exactly as a user close does. On the live database at first run (10-23-26) the defaults moved 2,032 of 2,247 conversations to `done`, including 330 whose last message was the user's own; the mail client's Awaiting reply list stops tracking those at 30 days as well.
 
 ### 6.5 Dismissed Is a Different State
 
@@ -543,7 +546,11 @@ Implementation tracking for §6.4, §6.5, KP-7 and §8.9–8.11. Technical decis
 - [x] CONV-DN-06: Row context menu — Mark Done or Reopen in single-row mode; Mark Done (n) and Reopen (n) in bulk mode. Content Tool Bar bulk mode — Mark Done (n) and Reopen (n).
 - [x] CONV-DN-07: Preview Card and full View — Mark Done or Reopen button beside the status badge; Done badge in grey; Metadata card rows for Done At, Done By, Reopened At, Reopened Reason.
 - [x] CONV-DN-08: Undo link on the Mark Done toast.
-- [ ] CONV-DN-09 (deferred, not in v10.44): Timed stale and auto-close transitions in the scheduler, with the decision on whether a timed close shares the `done` value.
+- [x] CONV-DN-09: Timed stale and timed close — decided 10-23-26 (timed close shares `done`; thresholds are settings with per-conversation override) and built as CONV-DN-11 to CONV-DN-14 in v10.45.
+- [x] CONV-DN-11: Schema v35 — Done Reason column; per-conversation threshold copies blanked so the settings govern; `done_reason = 'user'` stamped on existing user closes.
+- [x] CONV-DN-12: Timer pass — hourly and at server start in the scheduler; active → stale → done by silence; stale → active on activity; silence clock from the later of last activity and a user Reopen; done rows and dismissed rows untouched; kill switch honored.
+- [x] CONV-DN-13: Settings — stale after days (1–365, default 14), done after days (1–365, default 30, never below stale), timers enabled; on the Settings page and the settings API.
+- [x] CONV-DN-14: Surfaces — Stale quick filter chip; link helper clears stale on any new communication; Metadata card shows Done Reason, and marks a threshold as "(default)" when the conversation carries no override.
 - [ ] CONV-DN-10 (deferred, not in v10.44): Hide dismissed conversations in the grid; recompute counts and activity after a communications-grid archive.
 
 ### 12.2 Test Plan
@@ -560,6 +567,12 @@ Implementation tracking for §6.4, §6.5, KP-7 and §8.9–8.11. Technical decis
 - [x] CONV-DNT-10: Mark Done leaves AI Status and the dismissed fields unchanged.
 - [x] CONV-DNT-11 (front end): the conversation quick-filter definitions contain Active and Done chips on System Status and AI-prefixed chips on AI Status.
 - [x] CONV-DNT-12 (front end): the status badge helper renders `done` as "Done" in the grey style and `active` as "Active" in the green style.
+- [x] CONV-DNT-13: Migration v35 adds Done Reason, blanks threshold copies equal to the old defaults, keeps a non-default value as an override, stamps `user` on existing user closes, and is idempotent.
+- [x] CONV-DNT-14: Timer pass moves active → stale past the stale threshold and active or stale → done past the done threshold with Done Reason `timer` and Done By empty.
+- [x] CONV-DNT-15: Timer pass leaves done and dismissed conversations alone, returns a stale conversation with fresh activity to active, and measures silence from a user Reopen.
+- [x] CONV-DNT-16: Timer pass honors a per-conversation override and the timers-enabled switch.
+- [x] CONV-DNT-17: Settings API clamps the thresholds to 1–365 and keeps done after days at or above stale after days; the scheduler runs the pass once per interval and at start.
+- [x] CONV-DNT-18 (front end): the conversation quick-filter definitions contain Active, Stale and Done; Done Reason labels render.
 
 ---
 
@@ -567,5 +580,6 @@ Implementation tracking for §6.4, §6.5, KP-7 and §8.9–8.11. Technical decis
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.2 | 10-23-26 01:10 | Claude (Claude Code) | Timers: §1.4 Done Reason and threshold overrides, §6.1 timer transitions, §6.4 Timers paragraph and Stale chip, §12 CONV-DN-09 closed and CONV-DN-11–14 / CONV-DNT-13–18 added. Two decisions approved by Doug 10-23-26. Release v10.45, schema v35. |
 | 1.1 | 10-22-26 22:55 | Claude (Claude Code) | Done state: §1.4 fields, §6.1 values and transitions, §6.3 note, §6.4 Done and Reopen, §6.5 dismissed, KP-3 step 1, KP-7, §8.9–8.11, §12 tasks and tests. Six decisions approved by Doug 10-22-26; design session 10-11-26 (`docs/prompts/conversation-done-state-kickoff.md`). |
 | 1.0 | 02-23-26 | Doug (Claude.ai) | Original document. |

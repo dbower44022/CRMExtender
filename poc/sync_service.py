@@ -199,12 +199,14 @@ def post_sync_pass(
         from .settings import get_setting
         settle = get_setting(customer_id, "summarize_settle_minutes")
         cap = get_setting(customer_id, "summarize_max_per_sync")
+        batch_threshold = get_setting(customer_id, "summarize_batch_threshold")
         triaged, summarized, _topics = process_conversations(
             None, None, None,
             rate_limiter=gmail_limiter,
             claude_limiter=claude_limiter,
             settle_minutes=int(settle) if settle else None,
             max_per_run=int(cap) if cap else None,
+            batch_threshold=int(batch_threshold) if batch_threshold else None,
         )
         out["triaged"] += triaged
         out["summarized"] += summarized

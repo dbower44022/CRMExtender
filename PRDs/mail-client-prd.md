@@ -1,7 +1,7 @@
 # Mail Client — Functional Area PRD
 
-**Version:** 1.34
-**Last Updated:** 10-12-26 17:28
+**Version:** 1.35
+**Last Updated:** 10-24-26 18:27
 **Status:** Approved 10-08-26 by the product owner — Phases 0–2 complete; Phase 3 in progress — MAIL-47, MAIL-44 done (v10.42, 10-12-26) plus first-look fixes; Phases 3–5 not started
 **Product PRD:** [PRD.md] (docs/), [product-tdd.md]
 **Master Glossary:** [glossary.md]
@@ -128,6 +128,7 @@ New mail arriving in an inbox folder raises an in-application notification (toas
 | `mail.action_retry_max` | Attempts before a queued provider action is marked failed | integer | 8 | system | admin |
 | `summarize_settle_minutes` | Minutes a thread must be quiet before it is summarized; 0 summarizes on every sync (added 10-08-26, MAIL-19) | integer | 15 | system | admin |
 | `summarize_max_per_sync` | Conversations summarized per sync run, newest first; 0 means unlimited (added 10-08-26, MAIL-19) | integer | 500 | system | admin |
+| `summarize_batch_threshold` | Settled conversations above this count are sent as one Message Batch at half price instead of live calls; 0 always summarizes live (added 10-24-26, MAIL-49) | integer | 50 | system | admin |
 
 **Scope values:** `system` (one value for the tenant), `provider` (per provider account, overriding system), `user` (per-user preference).
 
@@ -445,8 +446,8 @@ Phase 4 — CRM-only intelligence
 - [ ] MAIL-46: Priority inbox: rule layer (known contact, direct address, owner replied) then AI classifier with per-sync token budget
 - [x] MAIL-47: Awaiting-reply tracking from sent mail without an answer; reminder list and nudge action — v10.39, 10-11-26 (`poc/mail_awaiting.py`: a thread whose newest message is the owner's, sent to someone, older than `mail_awaiting_reply_days` (default 3) but sent within `mail_awaiting_window_days` (default 30), both on Settings → System, with nothing since is listed under the new **Awaiting reply** folder (unified and per account, count badge, `g` then `w`); computed on read, so a stored reply clears it; trash, spam, and drafts never count. Thread rows show days waiting; the bar offers **Nudge** (opens a reply-all to the owner's last message, addressed to its original recipients) and **Stop waiting** (`mail_awaiting_dismissed`, schema v32; `POST /mail/awaiting/{account}/{thread}/dismiss|restore`, owner-only). TDD D-46)
 - [ ] MAIL-48: AI reply draft from conversation summary and thread, inserted into the composer for review
-- [ ] MAIL-49: Batch API use for backfill summarization; token accounting visible in Settings → System
-- [ ] MAIL-50: Tests for MAIL-46–49 (MAIL-47 covered by `tests/test_mail_awaiting.py`, 10-11-26)
+- [x] MAIL-49: Batch API use for backfill summarization; token accounting visible in Settings → System — v10.46, 10-24-26 (`poc/ai_usage.py`, `poc/ai_pricing.py`, `poc/summary_batches.py`; schema v36: `ai_usage`, `ai_batches`, `ai_batch_items`. Every live call and batch result is recorded with its tokens and an estimated cost from a dated price table; Settings → System shows today / 30 days / all time, by model and mode, and open batches. Bulk work — more settled conversations than `summarize_batch_threshold` — goes to one Message Batch, polled by the scheduler once a minute and applied through the same store step as a live summary; errored or expired items return to the live pass. Scope note: the backfill was already complete when this shipped, so the batch path serves the next bulk event — a new account, a wider backfill window, or a forced re-summarization. TDD D-48.)
+- [ ] MAIL-50: Tests for MAIL-46–49 (MAIL-47 covered by `tests/test_mail_awaiting.py`, 10-11-26; MAIL-49 covered by `tests/test_ai_usage.py`, 10-24-26)
 
 Phase 5 — Hardening
 - [ ] MAIL-51: Encrypted credential storage replacing token files
@@ -509,6 +510,7 @@ Phase 5 — Hardening
 
 | Rev | Date (MM-DD-YY HH:MM) | Author | Change |
 |---|---|---|---|
+| 1.35 | 10-24-26 18:27 | Claude (Claude Code) | MAIL-49 checked off (v10.46): token accounting and batch summarization; `summarize_batch_threshold` added to §3.1; MAIL-50 notes the new tests. |
 | 1.34 | 10-12-26 17:28 | Claude (Claude Code) | MAIL-44 checked off (v10.42): cross-account duplicates shown as one thread in unified views. |
 | 1.33 | 10-11-26 19:32 | Claude (Claude Code) | MAIL-47 checked off (v10.39): Awaiting reply folder, Nudge, Stop waiting, threshold setting. First Phase 3 task. |
 | 1.32 | 10-11-26 19:09 | Claude (Claude Code) | v10.38 first-look fix on MAIL-25: the message frame never shows its own vertical scrollbar (a dark bar down the reading pane on wide promotional mail under a dark desktop theme); height is measured from the body plus any horizontal scrollbar; frame controls forced light. |

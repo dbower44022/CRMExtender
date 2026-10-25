@@ -8,6 +8,7 @@ import {
 } from '../../api/settings.ts'
 import { DuplicateThresholds } from './DuplicateThresholds.tsx'
 import { VersionInfo } from './VersionInfo.tsx'
+import { AiUsage } from './AiUsage.tsx'
 
 export function SystemSettings() {
   const { data: settings, isLoading } = useSystemSettings()
@@ -29,11 +30,15 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
   const [emailHistoryWindow, setEmailHistoryWindow] = useState(settings.email_history_window)
   const [settleMinutes, setSettleMinutes] = useState(settings.summarize_settle_minutes ?? '15')
   const [maxPerSync, setMaxPerSync] = useState(settings.summarize_max_per_sync ?? '500')
+  const [batchThreshold, setBatchThreshold] = useState(settings.summarize_batch_threshold ?? '50')
   const [syncInterval, setSyncInterval] = useState(settings.mail_sync_interval_seconds ?? '120')
   const [backfillEnabled, setBackfillEnabled] = useState((settings.mail_backfill_enabled ?? 'true') === 'true')
   const [backfillBatch, setBackfillBatch] = useState(settings.mail_backfill_batch_size ?? '200')
   const [awaitingDays, setAwaitingDays] = useState(settings.mail_awaiting_reply_days ?? '3')
   const [awaitingWindow, setAwaitingWindow] = useState(settings.mail_awaiting_window_days ?? '30')
+  const [staleDays, setStaleDays] = useState(settings.conversation_stale_days ?? '14')
+  const [doneDays, setDoneDays] = useState(settings.conversation_done_days ?? '30')
+  const [timersEnabled, setTimersEnabled] = useState((settings.conversation_timers_enabled ?? 'true') === 'true')
   const [syncEnabled, setSyncEnabled] = useState(settings.sync_enabled === 'true')
   const [allowSelfReg, setAllowSelfReg] = useState(settings.allow_self_registration === 'true')
 
@@ -46,11 +51,15 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
         email_history_window: emailHistoryWindow,
         summarize_settle_minutes: settleMinutes,
         summarize_max_per_sync: maxPerSync,
+        summarize_batch_threshold: batchThreshold,
         mail_sync_interval_seconds: syncInterval,
         mail_backfill_enabled: backfillEnabled ? 'true' : 'false',
         mail_backfill_batch_size: backfillBatch,
         mail_awaiting_reply_days: awaitingDays,
         mail_awaiting_window_days: awaitingWindow,
+        conversation_stale_days: staleDays,
+        conversation_done_days: doneDays,
+        conversation_timers_enabled: timersEnabled ? 'true' : 'false',
         sync_enabled: syncEnabled ? 'true' : 'false',
         allow_self_registration: allowSelfReg ? 'true' : 'false',
       },
@@ -170,6 +179,23 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
           </div>
         </div>
 
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700">
+            Batch summaries above (conversations)
+          </label>
+          <input
+            type="number"
+            min={0}
+            step={10}
+            value={batchThreshold}
+            onChange={(e) => setBatchThreshold(e.target.value)}
+            className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            When more settled conversations than this are waiting, such as after a new account or a backfill, they are sent as one batch at half price and the summaries arrive within about an hour instead of at once. 0 always summarizes live.
+          </p>
+        </div>
+
         <div className="flex items-center gap-3">
           <label className="relative inline-flex cursor-pointer items-center">
             <input
@@ -265,6 +291,53 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
           </p>
         </div>
 
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700">
+            Conversation stale after (days)
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={365}
+            value={staleDays}
+            onChange={(e) => setStaleDays(e.target.value)}
+            className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            A conversation silent for this many days shows as Stale. Any new message makes it active again.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-surface-700">
+            Conversation done after (days)
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={365}
+            value={doneDays}
+            onChange={(e) => setDoneDays(e.target.value)}
+            className="w-full rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            A conversation silent for this many days is marked Done and leaves the grid. A reply from the other side reopens it. Never below the stale threshold.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <input
+            id="conversation-timers-enabled"
+            type="checkbox"
+            checked={timersEnabled}
+            onChange={(e) => setTimersEnabled(e.target.checked)}
+            className="h-4 w-4 rounded border-surface-300"
+          />
+          <label htmlFor="conversation-timers-enabled" className="text-sm text-surface-700">
+            Conversation timers on (hourly stale and done pass)
+          </label>
+        </div>
+
         <div className="flex items-center gap-3">
           <label className="relative inline-flex cursor-pointer items-center">
             <input
@@ -289,6 +362,7 @@ function SystemSettingsForm({ settings }: { settings: SystemSettingsData }) {
         </button>
 
         <DuplicateThresholds />
+        <AiUsage />
         <VersionInfo />
       </div>
     </div>

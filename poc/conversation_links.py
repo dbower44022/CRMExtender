@@ -18,7 +18,10 @@ from datetime import datetime, timezone
 log = logging.getLogger(__name__)
 
 STATUS_ACTIVE = "active"
+STATUS_STALE = "stale"
 STATUS_DONE = "done"
+
+DONE_REASON_USER = "user"
 
 REOPEN_INBOUND = "inbound"
 REOPEN_USER = "user"
@@ -87,7 +90,13 @@ def link_communications(
     status_row = conn.execute(
         "SELECT status FROM conversations WHERE id = ?", (conversation_id,)
     ).fetchone()
-    if status_row and status_row["status"] == STATUS_DONE:
+    if status_row and status_row["status"] == STATUS_STALE:
+        # Stale measures silence, so any new communication ends it (TDD §9.18).
+        conn.execute(
+            "UPDATE conversations SET status = ?, updated_at = ? WHERE id = ?",
+            (STATUS_ACTIVE, now, conversation_id),
+        )
+    elif status_row and status_row["status"] == STATUS_DONE:
         placeholders = ",".join("?" * len(newly_linked))
         inbound = conn.execute(
             f"SELECT 1 FROM communications WHERE id IN ({placeholders}) "
@@ -98,7 +107,7 @@ def link_communications(
             conn.execute(
                 """UPDATE conversations
                    SET status = ?, reopened_at = ?, reopened_reason = ?,
-                       done_at = NULL, done_by = NULL, updated_at = ?
+                       done_at = NULL, done_by = NULL, done_reason = NULL, updated_at = ?
                    WHERE id = ?""",
                 (STATUS_ACTIVE, now, REOPEN_INBOUND, now, conversation_id),
             )
@@ -125,11 +134,11 @@ def mark_done(
     for conv_id in conversation_ids:
         cur = conn.execute(
             """UPDATE conversations
-               SET status = ?, done_at = ?, done_by = ?,
+               SET status = ?, done_at = ?, done_by = ?, done_reason = ?,
                    reopened_at = NULL, reopened_reason = NULL,
                    updated_at = ?, updated_by = ?
                WHERE id = ? AND (status IS NULL OR status != ?)""",
-            (STATUS_DONE, now, user_id, now, user_id, conv_id, STATUS_DONE),
+            (STATUS_DONE, now, user_id, DONE_REASON_USER, now, user_id, conv_id, STATUS_DONE),
         )
         if cur.rowcount:
             changed.append(conv_id)
@@ -154,7 +163,7 @@ def reopen(
         cur = conn.execute(
             """UPDATE conversations
                SET status = ?, reopened_at = ?, reopened_reason = ?,
-                   done_at = NULL, done_by = NULL,
+                   done_at = NULL, done_by = NULL, done_reason = NULL,
                    updated_at = ?, updated_by = ?
                WHERE id = ? AND status = ?""",
             (STATUS_ACTIVE, now, REOPEN_USER, now, user_id, conv_id, STATUS_DONE),

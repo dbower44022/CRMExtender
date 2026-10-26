@@ -1,8 +1,10 @@
 # CRMExtender — PRD Index
 
-**Version:** 25.11
-**Last Updated:** 10-24-26 18:27
+**Version:** 25.12
+**Last Updated:** 10-26-26 12:00
 **Purpose:** Living index of all Product Requirements Documents and Technical Design Documents for CRMExtender. Reference this at the start of any PRD development session for orientation.
+
+> **V25.12 (10-26-26):** Session close before a reboot. Records v10.43 (10-12-26), which earlier notes skipped: the version route names the served page bundle and the page reloads itself after a server restart on a newer build, so releases no longer need a hard reload by hand. Working tree clean at v10.46; the desktop service (V25.10) restarts the server at login. First measured AI usage from the v10.46 ledger (10-24-26 to 10-26-26, 16 live summaries on `claude-opus-5-5`): about 1,220 input and 400 output tokens per summary, $0.013 per summary on average, $0.21 in total; the 10-23-26 plan estimated $0.024, so the real figure is roughly half. No batch has been needed yet. The summarization model decision stays open until two weeks of data exist.
 
 > **V25.11 (10-24-26):** v10.46 — MAIL-49 token accounting and batch summarization (schema v36; `mail-client-prd.md` 1.35, `mail-client-tdd.md` 1.26 D-48): every Anthropic call recorded with tokens and an estimated cost from a dated price table, Settings → System shows today / 30 days / all time by model and mode, and bulk summarization above `summarize_batch_threshold` goes to a half-price Message Batch polled by the scheduler. Owner decision 10-23-26: full scope kept although the backfill had already completed; the batch path serves the next bulk event. Also shipped between index entries: v10.45 (10-23-26) conversation timers — stale and timed close (CONV-DN-09, 11–14; schema v35) — and the Linux desktop deployment plus public site under v10.44 (V25.10).
 
